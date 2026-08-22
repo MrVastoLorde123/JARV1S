@@ -1,15 +1,10 @@
-import sqlite3
-from pathlib import Path
 from datetime import datetime
-
+from src.database import get_connection
 from memory_validator import validate_memory
 
 
-DATABASE_PATH = Path("data/processed/jarvis.db")
-
-
 def create_memory_table():
-    connection = sqlite3.connect(DATABASE_PATH)
+    connection = get_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -36,6 +31,32 @@ def create_memory_table():
     print("Memory table ready.")
 
 
+def find_active_memory(memory_key):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            memory_key,
+            content,
+            category,
+            confidence,
+            importance,
+            status
+        FROM memories
+        WHERE memory_key = ?
+          AND status = 'ACTIVE'
+        LIMIT 1
+    """, (memory_key,))
+
+    memory = cursor.fetchone()
+
+    connection.close()
+
+    return memory
+
+
 def add_memory(
     content,
     category,
@@ -56,9 +77,14 @@ def add_memory(
         "status": status,
     }
 
+    # ---------------------------------------------------------
+    # STEP 1 — Validate
+    # ---------------------------------------------------------
+
     validation = validate_memory(memory)
 
     if not validation["valid"]:
+
         print("Memory rejected.")
 
         for error in validation["errors"]:
@@ -66,10 +92,35 @@ def add_memory(
 
         return None
 
+    # ---------------------------------------------------------
+    # STEP 2 — Normalize
+    # ---------------------------------------------------------
+
     category = category.upper()
     status = status.upper()
 
-    connection = sqlite3.connect(DATABASE_PATH)
+    # ---------------------------------------------------------
+    # STEP 3 — Check for existing ACTIVE memory
+    # ---------------------------------------------------------
+
+    existing_memory = find_active_memory(memory_key)
+
+    if existing_memory is not None:
+
+        print("Memory already exists.")
+
+        print()
+        print("Existing memory:")
+        print("-" * 60)
+        print(existing_memory)
+
+        return existing_memory[0]
+
+    # ---------------------------------------------------------
+    # STEP 4 — Insert new memory
+    # ---------------------------------------------------------
+
+    connection = get_connection()
     cursor = connection.cursor()
 
     timestamp = datetime.now().isoformat()
@@ -109,7 +160,7 @@ def add_memory(
 
 
 def list_memories():
-    connection = sqlite3.connect(DATABASE_PATH)
+    connection = get_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -131,30 +182,3 @@ def list_memories():
     connection.close()
 
     return memories
-
-
-if __name__ == "__main__":
-
-    create_memory_table()
-
-    print()
-    print("Testing valid memory...")
-
-    memory_id = add_memory(
-        content="User is actively learning PCVUE v17.",
-        category="SKILL",
-        memory_key="pcvue_skill",
-        confidence=0.95,
-        importance=0.90,
-        status="ACTIVE"
-    )
-
-    if memory_id is not None:
-        print(f"Created memory #{memory_id}")
-
-    print()
-    print("Current memories:")
-    print("-" * 60)
-
-    for memory in list_memories():
-        print(memory)
