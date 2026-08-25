@@ -1,16 +1,16 @@
 """
-JARVIS Memory Formation Engine
+JARVIS Memory Formation Engine.
 
-This module is responsible for converting conversation turns
-into structured memories.
+Memory Formation converts explicit user statements from a conversation
+into structured, validated, deduplicated memories.
 
-Memory Formation is the point where JARVIS stops merely
-retrieving knowledge and starts maintaining its own
-structured knowledge base under explicit rules.
+V1 is deliberately conservative.
+
+The AI response is NOT treated as direct evidence for a memory.
 
 Pipeline:
 
-    Conversation Turn
+    User Statement
         |
     Candidate Extraction
         |
@@ -18,152 +18,81 @@ Pipeline:
         |
     Deduplication
         |
-    Memory Store + Evidence Store
+    Memory Store
+        |
+    Evidence Store
+
+The user statement itself becomes DIRECT evidence.
+
+Future versions may support AI-assisted candidate extraction, but any
+AI-derived candidate must remain distinguishable from direct user evidence.
 """
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+import re
 
-from src.memory.memory_validator import (
-    validate_memory,
-    VALID_CATEGORIES,
-)
-
-from src.memory.memory_retrieval import (
-    get_memory,
-)
-
+from src.memory.evidence_store import add_evidence
+from src.memory.memory_retrieval import search_memories
 from src.memory.memory_store import (
     add_memory,
     find_active_memory,
 )
-
-from src.memory.evidence_store import (
-    add_evidence,
-)
+from src.memory.memory_validator import validate_memory
 
 
-# -----------------------------------------------------------------
-# Extraction Rules
-# -----------------------------------------------------------------
-#
-# V1 uses deterministic keyword-based extraction.
-#
-# Each rule maps a trigger pattern to a memory category.
-# The extraction engine scans the assistant response for
-# these patterns and produces candidate memories.
-#
-# This approach is intentionally conservative.
-# It is better to miss a memory than to create a false one.
-# -----------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Formation Defaults
+# ---------------------------------------------------------------------
 
-EXTRACTION_RULES = (
+DEFAULT_CONFIDENCE = 0.85
+DEFAULT_IMPORTANCE = 0.50
 
-    {
-        "keywords": (
-            "user is learning",
-            "user is studying",
-            "user is working on",
-            "user is building",
-            "user is developing",
-            "user is using",
-            "user is practicing",
-        ),
-        "category": "SKILL",
-    },
-
-    {
-        "keywords": (
-            "user's goal",
-            "user wants to",
-            "user intends to",
-            "user plans to",
-        ),
-        "category": "GOAL",
-    },
-
-    {
-        "keywords": (
-            "user prefers",
-            "user likes",
-            "user wants",
-            "user chose",
-            "user's preference",
-        ),
-        "category": "PREFERENCE",
-    },
-
-    {
-        "keywords": (
-            "user's project",
-            "user is building",
-            "user is developing",
-            "user is creating",
-            "the project",
-        ),
-        "category": "PROJECT",
-    },
-
-    {
-        "keywords": (
-            "user works at",
-            "user lives in",
-            "user's name",
-            "user is from",
-            "user's age",
-            "user was born",
-        ),
-        "category": "PERSONAL",
-    },
-
-    {
-        "keywords": (
-            "user's workflow",
-            "user typically",
-            "user usually",
-            "user always",
-        ),
-        "category": "WORKFLOW",
-    },
-
-)
+DIRECT_EVIDENCE_TYPE = "DIRECT"
+REPEATED_EVIDENCE_TYPE = "REPEATED"
 
 
-# -----------------------------------------------------------------
-# Candidate Memory
-# -----------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Data Models
+# ---------------------------------------------------------------------
 
-@dataclass
+
+@dataclass(frozen=True)
 class CandidateMemory:
     """
-    A potential memory extracted from a conversation turn.
-
-    Candidate memories are validated and deduplicated before
-    being persisted.
+    A potential memory extracted from an explicit user statement.
     """
 
     content: str
     category: str
     memory_key: str
 
-    confidence: float = 0.7
-    importance: float = 0.5
+    subject: str
+
+    confidence: float = DEFAULT_CONFIDENCE
+    importance: float = DEFAULT_IMPORTANCE
 
     evidence_text: str = ""
-    evidence_type: str = "DIRECT"
+    evidence_type: str = DIRECT_EVIDENCE_TYPE
 
-    source_turn: str = ""
+    source_role: str = "user"
 
 
-# -----------------------------------------------------------------
-# Formation Result
-# -----------------------------------------------------------------
+@dataclass(frozen=True)
+class FormationDetail:
+    """
+    Describes one candidate's outcome.
+    """
+
+    action: str
+    memory_key: str
+    memory_id: int | None = None
+    errors: tuple[str, ...] = ()
+
 
 @dataclass(frozen=True)
 class FormationResult:
     """
-    The outcome of processing a conversation turn
-    through the memory formation pipeline.
+    Result of processing one conversation turn.
     """
 
     candidates_extracted: int = 0
@@ -171,290 +100,874 @@ class FormationResult:
     memories_deduplicated: int = 0
     evidence_added: int = 0
 
-    details: tuple = ()
+    details: tuple[FormationDetail, ...] = ()
+
+    errors: tuple[str, ...] = ()
 
 
-# -----------------------------------------------------------------
-# Extraction
-# -----------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Text Helpers
+# ---------------------------------------------------------------------
 
-def _normalize_key(text):
+
+def _normalize_key(text: str) -> str:
     """
-    Create a memory key from a text fragment.
+    Convert text into a stable identifier.
 
-    Keys are lowercase, underscore-separated identifiers
-    used for deduplication.
+    Example:
+
+        "PCVUE v17" -> "pcvue_v17"
     """
 
     key = text.strip().casefold()
 
-    key = (
-        key.replace(" ", "_")
-        .replace("-", "_")
-        .replace(".", "")
-        .replace(",", "")
-        .replace("'", "")
-        .replace("\"", "")
+    key = re.sub(
+        r"[^a-z0-9]+",
+        "_",
+        key,
     )
 
-    # Collapse multiple underscores.
-    while "__" in key:
-        key = key.replace("__", "_")
-
-    # Remove leading/trailing underscores.
     key = key.strip("_")
 
     return key
 
 
-def _extract_claim(line, keyword):
+def _normalize_subject(text: str) -> str:
     """
-    Extract the meaningful claim from a line
-    that matched a keyword trigger.
-
-    Returns the portion of the line starting
-    from the keyword match.
+    Normalize a candidate subject for storage and deduplication.
     """
 
-    lower = line.casefold()
-    position = lower.find(keyword)
+    text = text.strip()
 
-    if position < 0:
+    text = re.sub(
+        r"\s+",
+        " ",
+        text,
+    )
+
+    text = text.rstrip(
+        ".,!?;:"
+    )
+
+    return text.strip()
+
+
+def _meaningful_tokens(text: str) -> set[str]:
+    """
+    Return useful alphanumeric tokens from a subject.
+
+    Very common conversational words are ignored.
+    """
+
+    stop_words = {
+        "a",
+        "an",
+        "and",
+        "for",
+        "in",
+        "is",
+        "it",
+        "my",
+        "of",
+        "on",
+        "the",
+        "to",
+        "with",
+    }
+
+    tokens = re.findall(
+        r"\b[a-zA-Z0-9][a-zA-Z0-9_-]*\b",
+        text.casefold(),
+    )
+
+    return {
+        token
+        for token in tokens
+        if token not in stop_words
+    }
+
+
+def _split_sentences(text: str) -> list[str]:
+    """
+    Split a user message into individual statements.
+
+    V1 deliberately uses simple deterministic splitting.
+    """
+
+    if not text or not text.strip():
+        return []
+
+    parts = re.split(
+        r"(?:\r?\n+)|(?<=[.!?])\s+",
+        text.strip(),
+    )
+
+    return [
+        part.strip()
+        for part in parts
+        if part.strip()
+    ]
+
+
+# ---------------------------------------------------------------------
+# Candidate Rule Definitions
+# ---------------------------------------------------------------------
+
+
+_SKILL_RULES = (
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(?:currently\s+)?learning\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is learning {subject}.",
+    ),
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(?:currently\s+)?studying\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is studying {subject}.",
+    ),
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(?:currently\s+)?using\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User uses {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+work\s+with\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User works with {subject}.",
+    ),
+)
+
+
+_PROJECT_RULES = (
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(?:currently\s+)?building\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is building {subject}.",
+    ),
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(?:currently\s+)?developing\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is developing {subject}.",
+    ),
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(?:currently\s+)?working\s+on\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is working on {subject}.",
+    ),
+)
+
+
+_PREFERENCE_RULES = (
+    (
+        re.compile(
+            r"^i\s+prefer\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User prefers {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+like\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User likes {subject}.",
+    ),
+    (
+        re.compile(
+            r"^my\s+preference\s+is\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User's preference is {subject}.",
+    ),
+)
+
+
+_GOAL_RULES = (
+    (
+        re.compile(
+            r"^i\s+want\s+to\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User wants to {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+plan\s+to\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User plans to {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+intend\s+to\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User intends to {subject}.",
+    ),
+    (
+        re.compile(
+            r"^my\s+goal\s+is\s+to\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User's goal is to {subject}.",
+    ),
+)
+
+
+_PERSONAL_RULES = (
+    (
+        re.compile(
+            r"^my\s+name\s+is\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User's name is {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+live\s+in\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User lives in {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+work\s+at\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User works at {subject}.",
+    ),
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+from\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is from {subject}.",
+    ),
+    (
+        re.compile(
+            r"^(?:i\s+am|i'm)\s+"
+            r"(\d{1,3})\s+years?\s+old$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User is {subject} years old.",
+    ),
+)
+
+
+_WORKFLOW_RULES = (
+    (
+        re.compile(
+            r"^i\s+usually\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User usually {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+typically\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User typically {subject}.",
+    ),
+    (
+        re.compile(
+            r"^i\s+always\s+(.+)$",
+            re.IGNORECASE,
+        ),
+        lambda subject:
+            f"User always {subject}.",
+    ),
+)
+
+
+RULE_GROUPS = (
+    (
+        "SKILL",
+        "_skill",
+        _SKILL_RULES,
+    ),
+    (
+        "PROJECT",
+        "_project",
+        _PROJECT_RULES,
+    ),
+    (
+        "PREFERENCE",
+        "_preference",
+        _PREFERENCE_RULES,
+    ),
+    (
+        "GOAL",
+        "_goal",
+        _GOAL_RULES,
+    ),
+    (
+        "PERSONAL",
+        "_personal",
+        _PERSONAL_RULES,
+    ),
+    (
+        "WORKFLOW",
+        "_workflow",
+        _WORKFLOW_RULES,
+    ),
+)
+
+
+# ---------------------------------------------------------------------
+# Candidate Extraction
+# ---------------------------------------------------------------------
+
+
+def _build_memory_key(
+    category: str,
+    subject: str,
+    suffix: str,
+) -> str:
+    """
+    Build a deterministic candidate memory key.
+    """
+
+    normalized_subject = _normalize_key(
+        subject
+    )
+
+    if not normalized_subject:
         return ""
 
-    claim = line[position:].strip()
+    return (
+        f"{normalized_subject}"
+        f"{suffix}"
+    )
 
-    # Remove trailing periods for cleaner storage.
-    if claim.endswith("."):
-        claim = claim[:-1].strip()
 
-    return claim
+def _build_candidate(
+    category: str,
+    suffix: str,
+    subject: str,
+    content: str,
+    evidence_text: str,
+) -> CandidateMemory | None:
+    """
+    Construct a candidate after basic normalization.
+    """
+
+    subject = _normalize_subject(
+        subject
+    )
+
+    content = _normalize_subject(
+        content
+    )
+
+    if not subject:
+        return None
+
+    if len(subject) < 2:
+        return None
+
+    memory_key = _build_memory_key(
+        category,
+        subject,
+        suffix,
+    )
+
+    if not memory_key:
+        return None
+
+    return CandidateMemory(
+        content=content,
+        category=category,
+        memory_key=memory_key,
+        subject=subject,
+        confidence=DEFAULT_CONFIDENCE,
+        importance=DEFAULT_IMPORTANCE,
+        evidence_text=(
+            evidence_text.strip()
+        ),
+        evidence_type=DIRECT_EVIDENCE_TYPE,
+        source_role="user",
+    )
+
+
+def _extract_candidate_from_sentence(
+    sentence: str,
+) -> CandidateMemory | None:
+    """
+    Attempt to extract one memory candidate from one
+    explicit user statement.
+
+    Only the first matching rule is used.
+    """
+
+    sentence = sentence.strip()
+
+    if not sentence:
+        return None
+
+    for (
+        category,
+        suffix,
+        rules,
+    ) in RULE_GROUPS:
+
+        for pattern, builder in rules:
+
+            match = pattern.match(
+                sentence
+            )
+
+            if match is None:
+                continue
+
+            subject = (
+                match.group(1).strip()
+            )
+
+            content = builder(
+                subject
+            )
+
+            return _build_candidate(
+                category=category,
+                suffix=suffix,
+                subject=subject,
+                content=content,
+                evidence_text=sentence,
+            )
+
+    return None
 
 
 def extract_candidates(
-    user_query,
-    assistant_response,
-):
+    user_query: str,
+    assistant_response: str | None = None,
+) -> list[CandidateMemory]:
     """
-    Scan a conversation turn and extract candidate memories.
+    Extract conservative memory candidates from the USER message.
 
-    V1 extraction is rule-based and conservative.
-    Only explicit statements matching known patterns
-    are extracted.
+    The assistant response is intentionally not used as direct
+    evidence.
+
+    It remains an argument because memory formation happens after
+    a completed conversation turn and future versions may use the
+    assistant response for separate reasoning.
 
     Returns:
         list[CandidateMemory]
     """
 
-    if not assistant_response or not assistant_response.strip():
+    if not isinstance(
+        user_query,
+        str,
+    ):
         return []
+
+    sentences = _split_sentences(
+        user_query
+    )
 
     candidates = []
 
-    lines = assistant_response.strip().splitlines()
+    seen_keys = set()
 
-    for line in lines:
+    for sentence in sentences:
 
-        line = line.strip()
+        candidate = (
+            _extract_candidate_from_sentence(
+                sentence
+            )
+        )
 
-        if not line:
+        if candidate is None:
             continue
 
-        lower_line = line.casefold()
+        if candidate.memory_key in seen_keys:
+            continue
 
-        for rule in EXTRACTION_RULES:
+        seen_keys.add(
+            candidate.memory_key
+        )
 
-            for keyword in rule["keywords"]:
-
-                if keyword not in lower_line:
-                    continue
-
-                claim = _extract_claim(
-                    line,
-                    keyword,
-                )
-
-                if len(claim) < 10:
-                    continue
-
-                memory_key = _normalize_key(claim)
-
-                if not memory_key:
-                    continue
-
-                candidate = CandidateMemory(
-                    content=claim,
-                    category=rule["category"],
-                    memory_key=memory_key,
-                    confidence=0.7,
-                    importance=0.5,
-                    evidence_text=line,
-                    evidence_type="DIRECT",
-                    source_turn=user_query,
-                )
-
-                candidates.append(candidate)
-
-                # One match per line is enough.
-                break
-
-            else:
-                continue
-
-            break
+        candidates.append(
+            candidate
+        )
 
     return candidates
 
 
-# -----------------------------------------------------------------
-# Formation Engine
-# -----------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Deduplication
+# ---------------------------------------------------------------------
 
-def process_turn(
-    user_query,
-    assistant_response,
-    conversation_id=None,
-    message_id=None,
+
+def _find_existing_memory(
+    candidate: CandidateMemory,
 ):
     """
-    Run the full memory formation pipeline on a single
-    conversation turn.
+    Find an existing active memory.
 
-    Steps:
+    Strategy:
 
-        1. Extract candidates from the assistant response.
-        2. Validate each candidate.
-        3. Deduplicate against existing active memories.
-        4. Persist new memories with evidence.
+    1. Exact memory-key match.
+    2. Deterministic subject search within the same category.
 
-    Returns:
-        FormationResult
+    This allows a manually created memory such as:
+
+        pcvue_skill
+
+    to match a later automatically generated candidate whose
+    generated key may be:
+
+        pcvue_v17_skill
+    """
+
+    exact = find_active_memory(
+        candidate.memory_key
+    )
+
+    if exact is not None:
+        return exact
+
+    subject_tokens = (
+        _meaningful_tokens(
+            candidate.subject
+        )
+    )
+
+    if not subject_tokens:
+        return None
+
+    search_results = search_memories(
+        candidate.subject,
+        limit=10,
+    )
+
+    for result in search_results:
+
+        if result.category != candidate.category:
+            continue
+
+        memory_tokens = (
+            _meaningful_tokens(
+                result.content
+            )
+        )
+
+        if not memory_tokens:
+            continue
+
+        matching_tokens = (
+            subject_tokens
+            & memory_tokens
+        )
+
+        coverage = (
+            len(matching_tokens)
+            / len(subject_tokens)
+        )
+
+        if (
+            coverage >= 0.8
+            or subject_tokens.issubset(
+                memory_tokens
+            )
+        ):
+            return (
+                result.memory_id,
+                result.memory_key,
+                result.content,
+                result.category,
+                result.confidence,
+                result.importance,
+                result.status,
+            )
+
+    return None
+
+
+# ---------------------------------------------------------------------
+# Formation
+# ---------------------------------------------------------------------
+
+
+def _validate_candidate(
+    candidate: CandidateMemory,
+):
+    """
+    Validate a candidate using the existing memory validator.
+    """
+
+    return validate_memory({
+        "content": candidate.content,
+        "category": candidate.category,
+        "confidence": candidate.confidence,
+        "importance": candidate.importance,
+        "status": "CANDIDATE",
+    })
+
+
+def process_turn(
+    user_query: str,
+    assistant_response: str | None,
+    conversation_id: str | None = None,
+    message_id: str | None = None,
+    source_created_at: str | None = None,
+) -> FormationResult:
+    """
+    Process one completed conversation turn.
+
+    Memory formation is based on explicit USER statements.
+
+    Parameters:
+
+        user_query:
+            The user's message.
+
+        assistant_response:
+            The generated assistant response.
+
+            This is not used as direct memory evidence.
+
+        conversation_id:
+            Optional persistent conversation ID.
+
+            Only pass this when the conversation exists in the
+            persistent conversations table.
+
+        message_id:
+            Optional persistent source message ID.
+
+        source_created_at:
+            Timestamp of the user's source message.
     """
 
     candidates = extract_candidates(
-        user_query,
-        assistant_response,
+        user_query=user_query,
+        assistant_response=assistant_response,
     )
 
     if not candidates:
         return FormationResult()
 
-    created = 0
-    deduplicated = 0
-    evidence_count = 0
+    memories_created = 0
+    memories_deduplicated = 0
+    evidence_added = 0
+
     details = []
+    errors = []
 
     for candidate in candidates:
 
-        # ---------------------------------------------------------
-        # Step 1 — Validate
-        # ---------------------------------------------------------
-
-        validation = validate_memory({
-            "content": candidate.content,
-            "category": candidate.category,
-            "confidence": candidate.confidence,
-            "importance": candidate.importance,
-            "status": "CANDIDATE",
-        })
+        validation = _validate_candidate(
+            candidate
+        )
 
         if not validation["valid"]:
-            details.append({
-                "action": "rejected",
-                "memory_key": candidate.memory_key,
-                "errors": validation["errors"],
-            })
+
+            details.append(
+                FormationDetail(
+                    action="rejected",
+                    memory_key=(
+                        candidate.memory_key
+                    ),
+                    errors=tuple(
+                        validation["errors"]
+                    ),
+                )
+            )
+
             continue
 
-        # ---------------------------------------------------------
-        # Step 2 — Deduplication
-        # ---------------------------------------------------------
-
-        existing = find_active_memory(
-            candidate.memory_key,
+        existing = _find_existing_memory(
+            candidate
         )
 
         if existing is not None:
 
-            # Memory already exists.
-            # Add corroborating evidence instead.
-
             existing_id = existing[0]
 
-            if candidate.evidence_text:
+            evidence_id = add_evidence(
+                memory_id=existing_id,
+                evidence_text=(
+                    candidate.evidence_text
+                ),
+                evidence_type=(
+                    REPEATED_EVIDENCE_TYPE
+                ),
+                confidence=(
+                    candidate.confidence
+                ),
+                conversation_id=(
+                    conversation_id
+                ),
+                message_id=(
+                    message_id
+                ),
+                source_created_at=(
+                    source_created_at
+                ),
+            )
 
-                evidence_id = add_evidence(
-                    memory_id=existing_id,
-                    evidence_text=candidate.evidence_text,
-                    evidence_type="CORROBORATING",
-                    confidence=candidate.confidence,
-                    conversation_id=conversation_id,
-                    message_id=message_id,
+            if evidence_id is None:
+
+                errors.append(
+                    "Failed to add repeated "
+                    f"evidence for "
+                    f"{candidate.memory_key}."
                 )
 
-                if evidence_id is not None:
-                    evidence_count += 1
+            else:
 
-            deduplicated += 1
+                evidence_added += 1
 
-            details.append({
-                "action": "deduplicated",
-                "memory_key": candidate.memory_key,
-                "existing_memory_id": existing_id,
-            })
+            memories_deduplicated += 1
+
+            details.append(
+                FormationDetail(
+                    action="deduplicated",
+                    memory_key=(
+                        candidate.memory_key
+                    ),
+                    memory_id=existing_id,
+                )
+            )
 
             continue
-
-        # ---------------------------------------------------------
-        # Step 3 — Persist
-        # ---------------------------------------------------------
 
         memory_id = add_memory(
             content=candidate.content,
             category=candidate.category,
             memory_key=candidate.memory_key,
+            source_conversation_id=(
+                conversation_id
+            ),
             confidence=candidate.confidence,
             importance=candidate.importance,
             status="ACTIVE",
         )
 
         if memory_id is None:
-            details.append({
-                "action": "failed",
-                "memory_key": candidate.memory_key,
-            })
-            continue
 
-        created += 1
-
-        # ---------------------------------------------------------
-        # Step 4 — Evidence
-        # ---------------------------------------------------------
-
-        if candidate.evidence_text:
-
-            evidence_id = add_evidence(
-                memory_id=memory_id,
-                evidence_text=candidate.evidence_text,
-                evidence_type=candidate.evidence_type,
-                confidence=candidate.confidence,
-                conversation_id=conversation_id,
-                message_id=message_id,
+            error_message = (
+                "Failed to create memory "
+                f"{candidate.memory_key}."
             )
 
-            if evidence_id is not None:
-                evidence_count += 1
+            errors.append(
+                error_message
+            )
 
-        details.append({
-            "action": "created",
-            "memory_key": candidate.memory_key,
-            "memory_id": memory_id,
-        })
+            details.append(
+                FormationDetail(
+                    action="failed",
+                    memory_key=(
+                        candidate.memory_key
+                    ),
+                    errors=(
+                        error_message,
+                    ),
+                )
+            )
+
+            continue
+
+        memories_created += 1
+
+        evidence_id = add_evidence(
+            memory_id=memory_id,
+            evidence_text=(
+                candidate.evidence_text
+            ),
+            evidence_type=(
+                candidate.evidence_type
+            ),
+            confidence=(
+                candidate.confidence
+            ),
+            conversation_id=(
+                conversation_id
+            ),
+            message_id=(
+                message_id
+            ),
+            source_created_at=(
+                source_created_at
+            ),
+        )
+
+        if evidence_id is None:
+
+            errors.append(
+                "Memory created but evidence "
+                f"could not be stored for "
+                f"{candidate.memory_key}."
+            )
+
+        else:
+
+            evidence_added += 1
+
+        details.append(
+            FormationDetail(
+                action="created",
+                memory_key=(
+                    candidate.memory_key
+                ),
+                memory_id=memory_id,
+            )
+        )
 
     return FormationResult(
-        candidates_extracted=len(candidates),
-        memories_created=created,
-        memories_deduplicated=deduplicated,
-        evidence_added=evidence_count,
+        candidates_extracted=len(
+            candidates
+        ),
+        memories_created=memories_created,
+        memories_deduplicated=(
+            memories_deduplicated
+        ),
+        evidence_added=evidence_added,
         details=tuple(details),
+        errors=tuple(errors),
     )

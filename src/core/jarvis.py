@@ -9,27 +9,28 @@ from src.memory.memory_formation import process_turn
 
 class JARVIS:
     """
-    Core orchestration layer for the JARVIS system.
+    Core orchestration layer for JARVIS.
 
     JARVIS coordinates:
+
         user request
+        conversation state
         context construction
         AI request creation
         AI provider execution
-        memory formation
+        optional memory formation
 
-    It does not directly access databases, memories,
-    or provider-specific implementations.
+    JARVIS does not directly access databases or provider
+    implementations.
     """
 
     def __init__(
-            self,
-            ai_service: AIService,
-            context_options: ContextOptions | None = None,
-            conversation: ConversationState | None = None,
-            enable_memory_formation: bool = False,
+        self,
+        ai_service: AIService,
+        context_options: ContextOptions | None = None,
+        conversation: ConversationState | None = None,
+        enable_memory_formation: bool = False,
     ):
-
         self.ai_service = ai_service
 
         self.context_options = (
@@ -49,12 +50,18 @@ class JARVIS:
         )
 
     def ask(
-            self,
-            query: str,
-            provider_name: str | None = None,
+        self,
+        query: str,
+        provider_name: str | None = None,
     ) -> JARVISResponse:
+        """
+        Process one user request.
+        """
 
-        if not isinstance(query, str):
+        if not isinstance(
+            query,
+            str,
+        ):
             raise TypeError(
                 "JARVIS query must be a string."
             )
@@ -66,6 +73,10 @@ class JARVIS:
                 "JARVIS query cannot be empty."
             )
 
+        # ---------------------------------------------------------
+        # 1. Record the user turn.
+        # ---------------------------------------------------------
+
         self.conversation.add_turn(
             "user",
             query,
@@ -74,6 +85,20 @@ class JARVIS:
         state_snapshot = (
             self.conversation.snapshot()
         )
+
+        # The newest state turn is the user's source message.
+        source_created_at = None
+
+        if state_snapshot.turns:
+            source_created_at = (
+                state_snapshot
+                .turns[-1]
+                .timestamp
+            )
+
+        # ---------------------------------------------------------
+        # 2. Build provider-neutral context.
+        # ---------------------------------------------------------
 
         context = build_context(
             query,
@@ -85,10 +110,18 @@ class JARVIS:
             ),
         )
 
+        # ---------------------------------------------------------
+        # 3. Create provider-neutral AI request.
+        # ---------------------------------------------------------
+
         request = AIRequest(
             task=query,
             context=context,
         )
+
+        # ---------------------------------------------------------
+        # 4. Ask the configured AI provider.
+        # ---------------------------------------------------------
 
         ai_response = self.ai_service.generate(
             request,
@@ -99,20 +132,26 @@ class JARVIS:
             ai_response.content
         )
 
+        # ---------------------------------------------------------
+        # 5. Record the assistant turn.
+        # ---------------------------------------------------------
+
         self.conversation.add_turn(
             "assistant",
             response_content,
         )
 
-        # -------------------------------------------------
-        # Memory Formation
+        # ---------------------------------------------------------
+        # 6. Optional memory formation.
         #
-        # After each turn, JARVIS decides whether to
-        # form new memories from the conversation.
+        # Important:
+        # The temporary ConversationState ID is NOT passed as
+        # conversation_id because it may not exist in the
+        # persistent conversations table.
         #
-        # This is a JARVIS-level decision.
-        # The AI provider knows nothing about it.
-        # -------------------------------------------------
+        # A persistent conversation ID can be supplied later
+        # once conversation persistence exists.
+        # ---------------------------------------------------------
 
         formation_result = None
 
@@ -121,10 +160,16 @@ class JARVIS:
             formation_result = process_turn(
                 user_query=query,
                 assistant_response=response_content,
-                conversation_id=(
-                    self.conversation.conversation_id
+                conversation_id=None,
+                message_id=None,
+                source_created_at=(
+                    source_created_at
                 ),
             )
+
+        # ---------------------------------------------------------
+        # 7. Build JARVIS-level metadata.
+        # ---------------------------------------------------------
 
         metadata = {
             "context_items": len(
@@ -142,6 +187,7 @@ class JARVIS:
         }
 
         if formation_result is not None:
+
             metadata["memory_formation"] = {
                 "candidates_extracted": (
                     formation_result
@@ -158,6 +204,9 @@ class JARVIS:
                 "evidence_added": (
                     formation_result
                     .evidence_added
+                ),
+                "errors": (
+                    formation_result.errors
                 ),
             }
 

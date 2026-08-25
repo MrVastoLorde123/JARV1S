@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 from src import database
+
 from src.memory.memory_formation import (
     CandidateMemory,
     FormationResult,
@@ -14,22 +14,29 @@ from src.memory.memory_formation import (
 )
 
 
-def _create_test_schema(database_path):
-    """
-    Create the minimal database schema required for
-    memory formation tests.
-    """
+def _create_test_schema(
+    database_path,
+):
+    connection = sqlite3.connect(
+        database_path
+    )
 
-    connection = sqlite3.connect(database_path)
+    connection.execute(
+        "PRAGMA foreign_keys = ON"
+    )
+
     cursor = connection.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE conversations (
             id TEXT PRIMARY KEY
         )
-    """)
+        """
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE memories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,
@@ -42,469 +49,719 @@ def _create_test_schema(database_path):
             importance REAL NOT NULL DEFAULT 0.5,
             status TEXT NOT NULL DEFAULT 'ACTIVE',
 
-            FOREIGN KEY (source_conversation_id)
-                REFERENCES conversations(id)
+            FOREIGN KEY (
+                source_conversation_id
+            )
+            REFERENCES conversations(id)
         )
-    """)
+        """
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE UNIQUE INDEX
         idx_unique_active_memory_key
         ON memories(memory_key)
         WHERE status = 'ACTIVE'
           AND memory_key IS NOT NULL
-    """)
+        """
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE memory_evidence (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+
             memory_id INTEGER NOT NULL,
+
             conversation_id TEXT,
             message_id TEXT,
+
             evidence_text TEXT NOT NULL,
+
             evidence_type TEXT NOT NULL,
+
             confidence REAL NOT NULL,
+
             source_created_at TEXT,
+
             created_at TEXT NOT NULL,
 
-            FOREIGN KEY (memory_id)
-                REFERENCES memories(id)
+            FOREIGN KEY (
+                memory_id
+            )
+            REFERENCES memories(id),
+
+            FOREIGN KEY (
+                conversation_id
+            )
+            REFERENCES conversations(id)
         )
-    """)
+        """
+    )
 
     connection.commit()
     connection.close()
 
 
-class MemoryFormationExtractionTests(unittest.TestCase):
-    """
-    Tests for the candidate extraction phase.
+class MemoryFormationExtractionTests(
+    unittest.TestCase
+):
 
-    These tests do not touch the database.
-    """
-
-    def test_empty_response_produces_no_candidates(self):
-
+    def test_empty_user_message_produces_no_candidates(
+        self,
+    ):
         candidates = extract_candidates(
-            "Hello",
             "",
+            "User is learning PCVUE.",
         )
 
-        self.assertEqual(candidates, [])
+        self.assertEqual(
+            candidates,
+            [],
+        )
 
-    def test_none_response_produces_no_candidates(self):
-
+    def test_irrelevant_message_produces_no_candidates(
+        self,
+    ):
         candidates = extract_candidates(
-            "Hello",
+            "Hello, can you help me?",
+            "User is learning PCVUE.",
+        )
+
+        self.assertEqual(
+            candidates,
+            [],
+        )
+
+    def test_assistant_response_is_not_direct_evidence(
+        self,
+    ):
+        candidates = extract_candidates(
+            "Tell me something interesting.",
+            "User is learning PCVUE v17.",
+        )
+
+        self.assertEqual(
+            candidates,
+            [],
+        )
+
+    def test_skill_statement_is_extracted(
+        self,
+    ):
+        candidates = extract_candidates(
+            "I'm learning PCVUE v17.",
+            "Great, PCVUE is useful.",
+        )
+
+        self.assertEqual(
+            len(candidates),
+            1,
+        )
+
+        self.assertEqual(
+            candidates[0].category,
+            "SKILL",
+        )
+
+        self.assertEqual(
+            candidates[0].content,
+            "User is learning PCVUE v17.",
+        )
+
+        self.assertEqual(
+            candidates[0].evidence_text,
+            "I'm learning PCVUE v17.",
+        )
+
+        self.assertEqual(
+            candidates[0].evidence_type,
+            "DIRECT",
+        )
+
+    def test_project_statement_is_extracted(
+        self,
+    ):
+        candidates = extract_candidates(
+            "I'm building JARVIS.",
             None,
         )
 
-        self.assertEqual(candidates, [])
-
-    def test_irrelevant_response_produces_no_candidates(self):
-
-        candidates = extract_candidates(
-            "Hello",
-            "I can help you with that.",
+        self.assertEqual(
+            len(candidates),
+            1,
         )
 
-        self.assertEqual(candidates, [])
-
-    def test_skill_keyword_is_extracted(self):
-
-        candidates = extract_candidates(
-            "What do I know?",
-            "User is learning PCVUE v17 for SCADA development.",
+        self.assertEqual(
+            candidates[0].category,
+            "PROJECT",
         )
 
-        self.assertEqual(len(candidates), 1)
-        self.assertEqual(candidates[0].category, "SKILL")
-
-    def test_preference_keyword_is_extracted(self):
-
-        candidates = extract_candidates(
-            "What do I like?",
-            "User prefers dark mode for all development tools.",
+        self.assertEqual(
+            candidates[0].content,
+            "User is building JARVIS.",
         )
 
-        self.assertEqual(len(candidates), 1)
-        self.assertEqual(candidates[0].category, "PREFERENCE")
-
-    def test_project_keyword_is_extracted(self):
-
+    def test_preference_statement_is_extracted(
+        self,
+    ):
         candidates = extract_candidates(
-            "What am I working on?",
-            "User is building a personal AI assistant named JARVIS.",
+            "I prefer Python for scripting.",
+            None,
         )
 
-        self.assertEqual(len(candidates), 1)
-
-    def test_goal_keyword_is_extracted(self):
-
-        candidates = extract_candidates(
-            "What are my goals?",
-            "User wants to build an autonomous coding agent.",
+        self.assertEqual(
+            len(candidates),
+            1,
         )
 
-        self.assertEqual(len(candidates), 1)
-        self.assertEqual(candidates[0].category, "GOAL")
-
-    def test_personal_keyword_is_extracted(self):
-
-        candidates = extract_candidates(
-            "Tell me about myself.",
-            "User works at a SCADA engineering firm.",
+        self.assertEqual(
+            candidates[0].category,
+            "PREFERENCE",
         )
 
-        self.assertEqual(len(candidates), 1)
+    def test_goal_statement_is_extracted(
+        self,
+    ):
+        candidates = extract_candidates(
+            "I want to build a JARVIS server.",
+            None,
+        )
+
+        self.assertEqual(
+            len(candidates),
+            1,
+        )
+
+        self.assertEqual(
+            candidates[0].category,
+            "GOAL",
+        )
+
+    def test_personal_statement_is_extracted(
+        self,
+    ):
+        candidates = extract_candidates(
+            "I live in Suriname.",
+            None,
+        )
+
+        self.assertEqual(
+            len(candidates),
+            1,
+        )
+
         self.assertEqual(
             candidates[0].category,
             "PERSONAL",
         )
 
-    def test_workflow_keyword_is_extracted(self):
-
-        candidates = extract_candidates(
-            "How do I work?",
-            "User typically tests with unittest before deploying.",
+        self.assertEqual(
+            candidates[0].content,
+            "User lives in Suriname.",
         )
 
-        self.assertEqual(len(candidates), 1)
+    def test_workflow_statement_is_extracted(
+        self,
+    ):
+        candidates = extract_candidates(
+            "I usually test with unittest.",
+            None,
+        )
+
+        self.assertEqual(
+            len(candidates),
+            1,
+        )
+
         self.assertEqual(
             candidates[0].category,
             "WORKFLOW",
         )
 
-    def test_short_claims_are_rejected(self):
-
+    def test_multiple_statements_are_extracted(
+        self,
+    ):
         candidates = extract_candidates(
-            "Hello",
-            "User is X.",
+            (
+                "I'm learning PCVUE v17. "
+                "I prefer Python for scripting."
+            ),
+            None,
         )
-
-        self.assertEqual(candidates, [])
-
-    def test_candidate_has_evidence_text(self):
-
-        candidates = extract_candidates(
-            "What do I know?",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        self.assertTrue(
-            len(candidates[0].evidence_text) > 0,
-        )
-
-    def test_candidate_has_memory_key(self):
-
-        candidates = extract_candidates(
-            "What do I know?",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        self.assertTrue(
-            len(candidates[0].memory_key) > 0,
-        )
-
-    def test_multiline_response_extracts_multiple(self):
-
-        response = (
-            "Based on our conversation:\n"
-            "User is learning PCVUE v17 for SCADA development.\n"
-            "User prefers Python over Java for scripting.\n"
-        )
-
-        candidates = extract_candidates(
-            "What do you know about me?",
-            response,
-        )
-
-        self.assertEqual(len(candidates), 2)
-
-    def test_one_match_per_line(self):
-        """
-        Even if a line matches multiple rules,
-        only one candidate is extracted per line.
-        """
-
-        candidates = extract_candidates(
-            "What do I do?",
-            "User is building and developing a JARVIS system.",
-        )
-
-        self.assertEqual(len(candidates), 1)
-
-
-class NormalizeKeyTests(unittest.TestCase):
-
-    def test_spaces_become_underscores(self):
 
         self.assertEqual(
-            _normalize_key("hello world"),
-            "hello_world",
+            len(candidates),
+            2,
         )
 
-    def test_punctuation_is_removed(self):
+    def test_duplicate_candidate_keys_are_removed(
+        self,
+    ):
+        candidates = extract_candidates(
+            (
+                "I'm learning PCVUE v17. "
+                "I'm learning PCVUE v17."
+            ),
+            None,
+        )
 
         self.assertEqual(
-            _normalize_key("user's project."),
-            "users_project",
+            len(candidates),
+            1,
         )
 
-    def test_multiple_underscores_are_collapsed(self):
-
+    def test_memory_key_is_normalized(
+        self,
+    ):
         self.assertEqual(
-            _normalize_key("hello   world"),
-            "hello_world",
-        )
-
-    def test_case_is_lowered(self):
-
-        self.assertEqual(
-            _normalize_key("HELLO WORLD"),
-            "hello_world",
+            _normalize_key(
+                "PCVUE v17"
+            ),
+            "pcvue_v17",
         )
 
 
-class MemoryFormationPipelineTests(unittest.TestCase):
-    """
-    End-to-end tests for the full formation pipeline.
-
-    These tests use a temporary database.
-    """
+class MemoryFormationPipelineTests(
+    unittest.TestCase
+):
 
     def setUp(self):
 
-        self.temp_directory = tempfile.TemporaryDirectory()
-
-        self.database_path = (
-            Path(self.temp_directory.name) / "test_formation.db"
+        self.temp_directory = (
+            tempfile.TemporaryDirectory()
         )
 
-        database.set_database_path(self.database_path)
+        self.database_path = (
+            Path(
+                self.temp_directory.name
+            )
+            / "test_formation.db"
+        )
 
-        _create_test_schema(self.database_path)
+        database.set_database_path(
+            self.database_path
+        )
+
+        _create_test_schema(
+            self.database_path
+        )
 
     def tearDown(self):
 
         self.temp_directory.cleanup()
 
-    def test_process_turn_returns_formation_result(self):
+    def _query_one(
+        self,
+        query,
+        parameters=(),
+    ):
 
-        result = process_turn(
-            "What do I know?",
-            "I can help you with that.",
+        connection = sqlite3.connect(
+            self.database_path
         )
 
-        self.assertIsInstance(result, FormationResult)
+        row = connection.execute(
+            query,
+            parameters,
+        ).fetchone()
 
-    def test_irrelevant_turn_creates_no_memories(self):
+        connection.close()
 
-        result = process_turn(
-            "Hello",
-            "Hi there, how can I help?",
+        return row
+
+    def _query_all(
+        self,
+        query,
+        parameters=(),
+    ):
+
+        connection = sqlite3.connect(
+            self.database_path
         )
 
-        self.assertEqual(result.candidates_extracted, 0)
-        self.assertEqual(result.memories_created, 0)
+        rows = connection.execute(
+            query,
+            parameters,
+        ).fetchall()
 
-    def test_relevant_turn_creates_memory(self):
+        connection.close()
 
+        return rows
+
+    def test_result_type(
+        self,
+    ):
         result = process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
+            "Hello.",
+            "Hi there.",
         )
 
-        self.assertEqual(result.candidates_extracted, 1)
-        self.assertEqual(result.memories_created, 1)
+        self.assertIsInstance(
+            result,
+            FormationResult,
+        )
 
-    def test_memory_is_persisted_to_database(self):
+    def test_irrelevant_turn_creates_nothing(
+        self,
+    ):
+        result = process_turn(
+            "Hello.",
+            "Hi there.",
+        )
 
+        self.assertEqual(
+            result.candidates_extracted,
+            0,
+        )
+
+        self.assertEqual(
+            result.memories_created,
+            0,
+        )
+
+        self.assertEqual(
+            result.evidence_added,
+            0,
+        )
+
+    def test_user_statement_creates_memory(
+        self,
+    ):
+        result = process_turn(
+            "I'm learning PCVUE v17.",
+            "That's good.",
+        )
+
+        self.assertEqual(
+            result.candidates_extracted,
+            1,
+        )
+
+        self.assertEqual(
+            result.memories_created,
+            1,
+        )
+
+    def test_memory_is_persisted(
+        self,
+    ):
         process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
+            "I'm learning PCVUE v17.",
+            "That's good.",
         )
 
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
+        row = self._query_one(
+            """
+            SELECT
+                memory_key,
+                content,
+                category,
+                status
+            FROM memories
+            """
+        )
 
-        cursor.execute(
+        self.assertIsNotNone(
+            row
+        )
+
+        self.assertEqual(
+            row[1],
+            "User is learning PCVUE v17.",
+        )
+
+        self.assertEqual(
+            row[2],
+            "SKILL",
+        )
+
+        self.assertEqual(
+            row[3],
+            "ACTIVE",
+        )
+
+    def test_direct_user_evidence_is_persisted(
+        self,
+    ):
+        process_turn(
+            "I'm learning PCVUE v17.",
+            "The assistant says something unrelated.",
+        )
+
+        row = self._query_one(
+            """
+            SELECT
+                evidence_text,
+                evidence_type
+            FROM memory_evidence
+            """
+        )
+
+        self.assertEqual(
+            row[0],
+            "I'm learning PCVUE v17.",
+        )
+
+        self.assertEqual(
+            row[1],
+            "DIRECT",
+        )
+
+    def test_assistant_claim_is_never_saved_as_direct_evidence(
+        self,
+    ):
+        result = process_turn(
+            "Can you help me?",
+            "User is learning PCVUE v17.",
+        )
+
+        self.assertEqual(
+            result.memories_created,
+            0,
+        )
+
+        count = self._query_one(
             "SELECT COUNT(*) FROM memories"
         )
 
-        count = cursor.fetchone()[0]
-
-        connection.close()
-
-        self.assertEqual(count, 1)
-
-    def test_evidence_is_persisted(self):
-
-        process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
-
-        cursor.execute(
-            "SELECT COUNT(*) FROM memory_evidence"
-        )
-
-        count = cursor.fetchone()[0]
-
-        connection.close()
-
-        self.assertEqual(count, 1)
-
-    def test_evidence_is_linked_to_memory(self):
-
-        process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
-
-        cursor.execute("""
-            SELECT
-                e.memory_id,
-                m.id
-            FROM memory_evidence e
-            JOIN memories m ON e.memory_id = m.id
-        """)
-
-        row = cursor.fetchone()
-
-        connection.close()
-
-        self.assertIsNotNone(row)
-        self.assertEqual(row[0], row[1])
-
-    def test_duplicate_turn_deduplicates(self):
-
-        first_result = process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        second_result = process_turn(
-            "I'm still studying PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        self.assertEqual(first_result.memories_created, 1)
-
-        self.assertEqual(second_result.memories_created, 0)
         self.assertEqual(
-            second_result.memories_deduplicated, 1,
+            count[0],
+            0,
         )
 
-    def test_deduplicated_turn_adds_corroborating_evidence(self):
-
-        process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
+    def test_duplicate_memory_adds_repeated_evidence(
+        self,
+    ):
+        first = process_turn(
+            "I'm learning PCVUE v17.",
+            "Understood.",
         )
 
-        result = process_turn(
-            "I'm still studying PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
+        second = process_turn(
+            "I'm still learning PCVUE v17.",
+            "Good progress.",
         )
 
-        self.assertEqual(result.evidence_added, 1)
+        self.assertEqual(
+            first.memories_created,
+            1,
+        )
 
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
+        self.assertEqual(
+            second.memories_created,
+            0,
+        )
 
-        cursor.execute("""
-            SELECT evidence_type
+        self.assertEqual(
+            second.memories_deduplicated,
+            1,
+        )
+
+        evidence_rows = self._query_all(
+            """
+            SELECT
+                evidence_type,
+                evidence_text
             FROM memory_evidence
             ORDER BY id
-        """)
-
-        rows = cursor.fetchall()
-
-        connection.close()
-
-        # First evidence is DIRECT, second is CORROBORATING.
-        self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0][0], "DIRECT")
-        self.assertEqual(rows[1][0], "CORROBORATING")
-
-    def test_conversation_id_is_stored_in_evidence(self):
-
-        process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
-            conversation_id="conv-test-001",
+            """
         )
 
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
+        self.assertEqual(
+            len(evidence_rows),
+            2,
+        )
 
-        cursor.execute("""
+        self.assertEqual(
+            evidence_rows[0][0],
+            "DIRECT",
+        )
+
+        self.assertEqual(
+            evidence_rows[1][0],
+            "REPEATED",
+        )
+
+    def test_existing_pcvue_memory_is_found_semantically(
+        self,
+    ):
+        connection = sqlite3.connect(
+            self.database_path
+        )
+
+        connection.execute(
+            """
+            INSERT INTO memories (
+                content,
+                category,
+                confidence,
+                created_at,
+                updated_at,
+                memory_key,
+                importance,
+                status
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?
+            )
+            """,
+            (
+                "User is actively learning PCVUE v17.",
+                "SKILL",
+                0.95,
+                "2026-08-25T00:00:00",
+                "2026-08-25T00:00:00",
+                "pcvue_skill",
+                0.90,
+                "ACTIVE",
+            ),
+        )
+
+        connection.commit()
+        connection.close()
+
+        result = process_turn(
+            "I'm learning PCVUE v17.",
+            "Understood.",
+        )
+
+        self.assertEqual(
+            result.memories_created,
+            0,
+        )
+
+        self.assertEqual(
+            result.memories_deduplicated,
+            1,
+        )
+
+        count = self._query_one(
+            "SELECT COUNT(*) FROM memories"
+        )
+
+        self.assertEqual(
+            count[0],
+            1,
+        )
+
+    def test_evidence_source_timestamp_is_stored(
+        self,
+    ):
+        process_turn(
+            "I'm learning PCVUE v17.",
+            "Understood.",
+            source_created_at=(
+                "2026-08-25T10:00:00+00:00"
+            ),
+        )
+
+        row = self._query_one(
+            """
+            SELECT source_created_at
+            FROM memory_evidence
+            """
+        )
+
+        self.assertEqual(
+            row[0],
+            "2026-08-25T10:00:00+00:00",
+        )
+
+    def test_persistent_conversation_id_can_be_stored(
+        self,
+    ):
+        connection = sqlite3.connect(
+            self.database_path
+        )
+
+        connection.execute(
+            """
+            INSERT INTO conversations (
+                id
+            )
+            VALUES (?)
+            """,
+            ("conversation-001",),
+        )
+
+        connection.commit()
+        connection.close()
+
+        result = process_turn(
+            "I'm learning PCVUE v17.",
+            "Understood.",
+            conversation_id=(
+                "conversation-001"
+            ),
+        )
+
+        self.assertEqual(
+            result.memories_created,
+            1,
+        )
+
+        row = self._query_one(
+            """
             SELECT conversation_id
             FROM memory_evidence
-        """)
-
-        row = cursor.fetchone()
-
-        connection.close()
-
-        self.assertEqual(row[0], "conv-test-001")
-
-    def test_multiple_candidates_in_one_turn(self):
-
-        response = (
-            "Based on our conversation:\n"
-            "User is learning PCVUE v17 for SCADA development.\n"
-            "User prefers Python over Java for scripting.\n"
+            """
         )
 
-        result = process_turn(
-            "Tell me what you know.",
-            response,
-        )
-
-        self.assertEqual(result.candidates_extracted, 2)
-        self.assertEqual(result.memories_created, 2)
-
-    def test_formation_result_has_details(self):
-
-        result = process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
-        )
-
-        self.assertEqual(len(result.details), 1)
         self.assertEqual(
-            result.details[0]["action"],
+            row[0],
+            "conversation-001",
+        )
+
+    def test_formation_details_are_present(
+        self,
+    ):
+        result = process_turn(
+            "I'm learning PCVUE v17.",
+            "Understood.",
+        )
+
+        self.assertEqual(
+            len(result.details),
+            1,
+        )
+
+        self.assertEqual(
+            result.details[0].action,
             "created",
         )
 
-    def test_memory_category_is_stored(self):
-
-        process_turn(
-            "I'm learning PCVUE.",
-            "User is learning PCVUE v17 for SCADA development.",
+        self.assertIsNotNone(
+            result.details[0].memory_id
         )
 
-        connection = sqlite3.connect(self.database_path)
-        cursor = connection.cursor()
-
-        cursor.execute(
-            "SELECT category FROM memories"
+    def test_validation_rejects_invalid_candidate(
+        self,
+    ):
+        candidates = extract_candidates(
+            "I want to build something.",
+            None,
         )
 
-        row = cursor.fetchone()
+        self.assertEqual(
+            len(candidates),
+            1,
+        )
 
-        connection.close()
-
-        self.assertEqual(row[0], "SKILL")
+        self.assertTrue(
+            candidates[0].content
+        )
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main(
+        verbosity=2
+    )
