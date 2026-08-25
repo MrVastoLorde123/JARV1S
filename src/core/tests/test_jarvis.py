@@ -216,6 +216,23 @@ class JARVISTests(
 
         self.temp_directory.cleanup()
 
+    def _query_one(
+            self,
+            query,
+            parameters=(),
+    ):
+        connection = sqlite3.connect(
+            self.database_path
+        )
+
+        try:
+            return connection.execute(
+                query,
+                parameters,
+            ).fetchone()
+        finally:
+            connection.close()
+
     def test_jarvis_returns_jarvis_response(
         self,
     ):
@@ -519,15 +536,9 @@ class JARVISTests(
             response.metadata,
         )
 
-        memory_count = (
-            sqlite3.connect(
-                self.database_path
-            )
-            .execute(
-                "SELECT COUNT(*) FROM memories"
-            )
-            .fetchone()[0]
-        )
+        memory_count = self._query_one(
+            "SELECT COUNT(*) FROM memories"
+        )[0]
 
         self.assertEqual(
             memory_count,
@@ -580,19 +591,13 @@ class JARVISTests(
             1,
         )
 
-        memory_row = (
-            sqlite3.connect(
-                self.database_path
-            )
-            .execute(
-                """
-                SELECT
-                    content,
-                    category
-                FROM memories
-                """
-            )
-            .fetchone()
+        memory_row = self._query_one(
+            """
+            SELECT
+                content,
+                category
+            FROM memories
+            """
         )
 
         self.assertEqual(
@@ -624,19 +629,13 @@ class JARVISTests(
             "I'm learning PCVUE.",
         )
 
-        evidence_row = (
-            sqlite3.connect(
-                self.database_path
-            )
-            .execute(
-                """
-                SELECT
-                    evidence_text,
-                    evidence_type
-                FROM memory_evidence
-                """
-            )
-            .fetchone()
+        evidence_row = self._query_one(
+            """
+            SELECT
+                evidence_text,
+                evidence_type
+            FROM memory_evidence
+            """
         )
 
         self.assertEqual(

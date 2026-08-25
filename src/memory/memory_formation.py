@@ -40,10 +40,6 @@ from src.memory.memory_store import (
 from src.memory.memory_validator import validate_memory
 
 
-# ---------------------------------------------------------------------
-# Formation Defaults
-# ---------------------------------------------------------------------
-
 DEFAULT_CONFIDENCE = 0.85
 DEFAULT_IMPORTANCE = 0.50
 
@@ -51,21 +47,13 @@ DIRECT_EVIDENCE_TYPE = "DIRECT"
 REPEATED_EVIDENCE_TYPE = "REPEATED"
 
 
-# ---------------------------------------------------------------------
-# Data Models
-# ---------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class CandidateMemory:
-    """
-    A potential memory extracted from an explicit user statement.
-    """
+    """A potential memory extracted from an explicit user statement."""
 
     content: str
     category: str
     memory_key: str
-
     subject: str
 
     confidence: float = DEFAULT_CONFIDENCE
@@ -73,15 +61,12 @@ class CandidateMemory:
 
     evidence_text: str = ""
     evidence_type: str = DIRECT_EVIDENCE_TYPE
-
     source_role: str = "user"
 
 
 @dataclass(frozen=True)
 class FormationDetail:
-    """
-    Describes one candidate's outcome.
-    """
+    """Describes one candidate's formation outcome."""
 
     action: str
     memory_key: str
@@ -91,9 +76,7 @@ class FormationDetail:
 
 @dataclass(frozen=True)
 class FormationResult:
-    """
-    Result of processing one conversation turn.
-    """
+    """Result of processing one conversation turn."""
 
     candidates_extracted: int = 0
     memories_created: int = 0
@@ -101,13 +84,7 @@ class FormationResult:
     evidence_added: int = 0
 
     details: tuple[FormationDetail, ...] = ()
-
     errors: tuple[str, ...] = ()
-
-
-# ---------------------------------------------------------------------
-# Text Helpers
-# ---------------------------------------------------------------------
 
 
 def _normalize_key(text: str) -> str:
@@ -115,7 +92,6 @@ def _normalize_key(text: str) -> str:
     Convert text into a stable identifier.
 
     Example:
-
         "PCVUE v17" -> "pcvue_v17"
     """
 
@@ -127,15 +103,11 @@ def _normalize_key(text: str) -> str:
         key,
     )
 
-    key = key.strip("_")
-
-    return key
+    return key.strip("_")
 
 
 def _normalize_subject(text: str) -> str:
-    """
-    Normalize a candidate subject for storage and deduplication.
-    """
+    """Normalize a candidate subject."""
 
     text = text.strip()
 
@@ -152,12 +124,26 @@ def _normalize_subject(text: str) -> str:
     return text.strip()
 
 
-def _meaningful_tokens(text: str) -> set[str]:
+def _normalize_content(text: str) -> str:
     """
-    Return useful alphanumeric tokens from a subject.
+    Normalize generated memory content.
 
-    Very common conversational words are ignored.
+    Unlike subjects, memory content keeps its terminal punctuation.
     """
+
+    text = text.strip()
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text,
+    )
+
+    return text
+
+
+def _meaningful_tokens(text: str) -> set[str]:
+    """Return useful alphanumeric tokens from text."""
 
     stop_words = {
         "a",
@@ -188,11 +174,7 @@ def _meaningful_tokens(text: str) -> set[str]:
 
 
 def _split_sentences(text: str) -> list[str]:
-    """
-    Split a user message into individual statements.
-
-    V1 deliberately uses simple deterministic splitting.
-    """
+    """Split a user message into deterministic statement units."""
 
     if not text or not text.strip():
         return []
@@ -209,16 +191,12 @@ def _split_sentences(text: str) -> list[str]:
     ]
 
 
-# ---------------------------------------------------------------------
-# Candidate Rule Definitions
-# ---------------------------------------------------------------------
-
-
 _SKILL_RULES = (
     (
         re.compile(
             r"^(?:i\s+am|i'm)\s+"
-            r"(?:currently\s+)?learning\s+(.+)$",
+            r"(?:(?:currently|still)\s+)?"
+            r"learning\s+(.+)$",
             re.IGNORECASE,
         ),
         lambda subject:
@@ -227,7 +205,8 @@ _SKILL_RULES = (
     (
         re.compile(
             r"^(?:i\s+am|i'm)\s+"
-            r"(?:currently\s+)?studying\s+(.+)$",
+            r"(?:(?:currently|still)\s+)?"
+            r"studying\s+(.+)$",
             re.IGNORECASE,
         ),
         lambda subject:
@@ -236,7 +215,8 @@ _SKILL_RULES = (
     (
         re.compile(
             r"^(?:i\s+am|i'm)\s+"
-            r"(?:currently\s+)?using\s+(.+)$",
+            r"(?:(?:currently|still)\s+)?"
+            r"using\s+(.+)$",
             re.IGNORECASE,
         ),
         lambda subject:
@@ -257,7 +237,8 @@ _PROJECT_RULES = (
     (
         re.compile(
             r"^(?:i\s+am|i'm)\s+"
-            r"(?:currently\s+)?building\s+(.+)$",
+            r"(?:(?:currently|still)\s+)?"
+            r"building\s+(.+)$",
             re.IGNORECASE,
         ),
         lambda subject:
@@ -266,7 +247,8 @@ _PROJECT_RULES = (
     (
         re.compile(
             r"^(?:i\s+am|i'm)\s+"
-            r"(?:currently\s+)?developing\s+(.+)$",
+            r"(?:(?:currently|still)\s+)?"
+            r"developing\s+(.+)$",
             re.IGNORECASE,
         ),
         lambda subject:
@@ -275,7 +257,8 @@ _PROJECT_RULES = (
     (
         re.compile(
             r"^(?:i\s+am|i'm)\s+"
-            r"(?:currently\s+)?working\s+on\s+(.+)$",
+            r"(?:(?:currently|still)\s+)?"
+            r"working\s+on\s+(.+)$",
             re.IGNORECASE,
         ),
         lambda subject:
@@ -422,42 +405,13 @@ _WORKFLOW_RULES = (
 
 
 RULE_GROUPS = (
-    (
-        "SKILL",
-        "_skill",
-        _SKILL_RULES,
-    ),
-    (
-        "PROJECT",
-        "_project",
-        _PROJECT_RULES,
-    ),
-    (
-        "PREFERENCE",
-        "_preference",
-        _PREFERENCE_RULES,
-    ),
-    (
-        "GOAL",
-        "_goal",
-        _GOAL_RULES,
-    ),
-    (
-        "PERSONAL",
-        "_personal",
-        _PERSONAL_RULES,
-    ),
-    (
-        "WORKFLOW",
-        "_workflow",
-        _WORKFLOW_RULES,
-    ),
+    ("SKILL", "_skill", _SKILL_RULES),
+    ("PROJECT", "_project", _PROJECT_RULES),
+    ("PREFERENCE", "_preference", _PREFERENCE_RULES),
+    ("GOAL", "_goal", _GOAL_RULES),
+    ("PERSONAL", "_personal", _PERSONAL_RULES),
+    ("WORKFLOW", "_workflow", _WORKFLOW_RULES),
 )
-
-
-# ---------------------------------------------------------------------
-# Candidate Extraction
-# ---------------------------------------------------------------------
 
 
 def _build_memory_key(
@@ -465,9 +419,7 @@ def _build_memory_key(
     subject: str,
     suffix: str,
 ) -> str:
-    """
-    Build a deterministic candidate memory key.
-    """
+    """Build a deterministic candidate memory key."""
 
     normalized_subject = _normalize_key(
         subject
@@ -489,15 +441,13 @@ def _build_candidate(
     content: str,
     evidence_text: str,
 ) -> CandidateMemory | None:
-    """
-    Construct a candidate after basic normalization.
-    """
+    """Construct a normalized candidate."""
 
     subject = _normalize_subject(
         subject
     )
 
-    content = _normalize_subject(
+    content = _normalize_content(
         content
     )
 
@@ -523,9 +473,7 @@ def _build_candidate(
         subject=subject,
         confidence=DEFAULT_CONFIDENCE,
         importance=DEFAULT_IMPORTANCE,
-        evidence_text=(
-            evidence_text.strip()
-        ),
+        evidence_text=evidence_text.strip(),
         evidence_type=DIRECT_EVIDENCE_TYPE,
         source_role="user",
     )
@@ -534,12 +482,7 @@ def _build_candidate(
 def _extract_candidate_from_sentence(
     sentence: str,
 ) -> CandidateMemory | None:
-    """
-    Attempt to extract one memory candidate from one
-    explicit user statement.
-
-    Only the first matching rule is used.
-    """
+    """Attempt to extract one candidate from one user statement."""
 
     sentence = sentence.strip()
 
@@ -561,9 +504,12 @@ def _extract_candidate_from_sentence(
             if match is None:
                 continue
 
-            subject = (
-                match.group(1).strip()
+            subject = _normalize_subject(
+                match.group(1)
             )
+
+            if not subject:
+                return None
 
             content = builder(
                 subject
@@ -587,15 +533,7 @@ def extract_candidates(
     """
     Extract conservative memory candidates from the USER message.
 
-    The assistant response is intentionally not used as direct
-    evidence.
-
-    It remains an argument because memory formation happens after
-    a completed conversation turn and future versions may use the
-    assistant response for separate reasoning.
-
-    Returns:
-        list[CandidateMemory]
+    The assistant response is intentionally not used as direct evidence.
     """
 
     if not isinstance(
@@ -604,15 +542,12 @@ def extract_candidates(
     ):
         return []
 
-    sentences = _split_sentences(
-        user_query
-    )
-
     candidates = []
-
     seen_keys = set()
 
-    for sentence in sentences:
+    for sentence in _split_sentences(
+        user_query
+    ):
 
         candidate = (
             _extract_candidate_from_sentence(
@@ -637,30 +572,17 @@ def extract_candidates(
     return candidates
 
 
-# ---------------------------------------------------------------------
-# Deduplication
-# ---------------------------------------------------------------------
-
-
 def _find_existing_memory(
     candidate: CandidateMemory,
 ):
     """
     Find an existing active memory.
 
-    Strategy:
+    First attempt:
+        exact memory key
 
-    1. Exact memory-key match.
-    2. Deterministic subject search within the same category.
-
-    This allows a manually created memory such as:
-
-        pcvue_skill
-
-    to match a later automatically generated candidate whose
-    generated key may be:
-
-        pcvue_v17_skill
+    Second attempt:
+        deterministic subject search within the same category
     """
 
     exact = find_active_memory(
@@ -670,10 +592,8 @@ def _find_existing_memory(
     if exact is not None:
         return exact
 
-    subject_tokens = (
-        _meaningful_tokens(
-            candidate.subject
-        )
+    subject_tokens = _meaningful_tokens(
+        candidate.subject
     )
 
     if not subject_tokens:
@@ -689,10 +609,8 @@ def _find_existing_memory(
         if result.category != candidate.category:
             continue
 
-        memory_tokens = (
-            _meaningful_tokens(
-                result.content
-            )
+        memory_tokens = _meaningful_tokens(
+            result.content
         )
 
         if not memory_tokens:
@@ -727,17 +645,10 @@ def _find_existing_memory(
     return None
 
 
-# ---------------------------------------------------------------------
-# Formation
-# ---------------------------------------------------------------------
-
-
 def _validate_candidate(
     candidate: CandidateMemory,
 ):
-    """
-    Validate a candidate using the existing memory validator.
-    """
+    """Validate a candidate using the existing memory validator."""
 
     return validate_memory({
         "content": candidate.content,
@@ -758,29 +669,9 @@ def process_turn(
     """
     Process one completed conversation turn.
 
-    Memory formation is based on explicit USER statements.
+    The memory is formed from the user's explicit statement.
 
-    Parameters:
-
-        user_query:
-            The user's message.
-
-        assistant_response:
-            The generated assistant response.
-
-            This is not used as direct memory evidence.
-
-        conversation_id:
-            Optional persistent conversation ID.
-
-            Only pass this when the conversation exists in the
-            persistent conversations table.
-
-        message_id:
-            Optional persistent source message ID.
-
-        source_created_at:
-            Timestamp of the user's source message.
+    The assistant response is never treated as DIRECT evidence.
     """
 
     candidates = extract_candidates(
@@ -839,12 +730,8 @@ def process_turn(
                 confidence=(
                     candidate.confidence
                 ),
-                conversation_id=(
-                    conversation_id
-                ),
-                message_id=(
-                    message_id
-                ),
+                conversation_id=conversation_id,
+                message_id=message_id,
                 source_created_at=(
                     source_created_at
                 ),
@@ -926,12 +813,8 @@ def process_turn(
             confidence=(
                 candidate.confidence
             ),
-            conversation_id=(
-                conversation_id
-            ),
-            message_id=(
-                message_id
-            ),
+            conversation_id=conversation_id,
+            message_id=message_id,
             source_created_at=(
                 source_created_at
             ),
