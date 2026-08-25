@@ -22,6 +22,8 @@ Implemented:
 - Evidence and provenance
 - Memory retrieval
 - Context building
+- Conversation state tracking & bounded context V1
+- Automated memory formation pipeline
 - Provider-neutral AI interface
 - AI service / provider orchestration
 - Local AI provider
@@ -41,9 +43,28 @@ Current local model baseline:
 
 ---
 
-## Architecture
+## Documentation Index
 
-At a high level:
+### 📐 Architecture Guides
+- [Architecture Overview](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/overview.md) — Subsystem hierarchy & core principles
+- [AI Architecture](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/ai.md) — Provider-neutral intelligence layer & capabilities
+- [Context Architecture](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/context.md) — Context builder boundary, options & packages
+- [Memory Architecture](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/memory.md) — Formation pipeline, retrieval & evidence linking
+
+### 📜 Architecture Decision Records (ADRs)
+- [ADR-001: Separate JARVIS from AI Providers](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/001-jarvis-ai-seperation.md)
+- [ADR-002: Separate Memory from Evidence](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/002-memory-evidence.md)
+- [ADR-003: Introduce a Dedicated Context Layer](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/003-context-layer.md)
+- [ADR-004: Local-First AI Development](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/004-local-first-ai.md)
+- [ADR-005: Automated Memory Formation Pipeline](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/005-memory-formation.md)
+
+### 🛠️ Developer Setup & Guides
+- [Local AI Setup Guide](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/development/local-ai.md) — Server execution, llama.cpp & CUDA configuration
+- [Testing & QA Guide](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/development/testing.md) — Running test suites, isolation rules & patterns
+
+---
+
+## High-Level Architecture
 
 ```text
                          JARVIS
@@ -56,9 +77,9 @@ At a high level:
      |         |             |          |             |
   Memory    Evidence         |      AI Service     Providers
      |         |             |          |             |
-     +----+----+             |      +---+---+         |
-          |                  |      |       |         |
-      Retrieval              |    Local   OpenAI     ...
+  Formation  Retrieval       |      +---+---+         |
+     |         |             |      |       |         |
+     +----+----+             |    Local   OpenAI     ...
           |                  |
           +--------+---------+
                    |
@@ -69,3 +90,4 @@ At a high level:
               AI Provider
                    |
               AIResponse
+```

@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyCharm
+.idea/
+
+# Local databases & raw data
+data/processed/*.db
+data/raw/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+*.swp

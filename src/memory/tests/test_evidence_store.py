@@ -1,16 +1,10 @@
 import sqlite3
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 
-MEMORY_DIRECTORY = Path(__file__).resolve().parent.parent
-
-if str(MEMORY_DIRECTORY) not in sys.path:
-    sys.path.insert(0, str(MEMORY_DIRECTORY))
-
-import evidence_store
+from src.memory import evidence_store
 from src import database
 
 class EvidenceStoreTests(unittest.TestCase):

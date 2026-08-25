@@ -302,6 +302,50 @@ class JARVISTests(unittest.TestCase):
             state_text,
         )
 
+    def test_memory_formation_disabled_by_default(self):
+        response = self.jarvis.ask(
+            "What do you know?"
+        )
+
+        self.assertNotIn(
+            "memory_formation",
+            response.metadata
+        )
+
+    def test_memory_formation_can_be_enabled(self):
+        class MemoryExtractingFakeProvider(AIProvider):
+            def generate(self, request: AIRequest) -> AIResponse:
+                return AIResponse(
+                    content="User is learning PCVUE v17.",
+                    provider="fake",
+                    model="fake-model",
+                )
+            def capabilities(self):
+                return AICapabilities(text_generation=True)
+            def provider_name(self):
+                return "fake"
+
+        ai_service = AIService(default_provider="fake")
+        ai_service.register_provider(MemoryExtractingFakeProvider())
+
+        jarvis = JARVIS(
+            ai_service=ai_service,
+            enable_memory_formation=True,
+        )
+
+        response = jarvis.ask(
+            "I'm learning PCVUE."
+        )
+
+        self.assertIn(
+            "memory_formation",
+            response.metadata
+        )
+        self.assertEqual(
+            response.metadata["memory_formation"]["candidates_extracted"],
+            1
+        )
+
 
 if __name__ == "__main__":
     unittest.main(

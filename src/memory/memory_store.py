@@ -1,6 +1,6 @@
 from datetime import datetime
 from src.database import get_connection
-from memory_validator import validate_memory
+from src.memory.memory_validator import validate_memory
 
 
 def create_memory_table():
