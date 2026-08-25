@@ -5,6 +5,7 @@ from src.context.models import (
     MEMORY,
     EVIDENCE,
     HISTORY,
+    STATE,
     PRIVATE,
 )
 
@@ -12,6 +13,8 @@ from src.memory.memory_retrieval import (
     search_memories,
     get_memory_with_evidence,
 )
+
+from src.core.conversation_models import StateSnapshot
 
 
 DEFAULT_INSTRUCTIONS = (
@@ -76,6 +79,102 @@ def _build_evidence_item(evidence):
         },
     )
 
+def _build_state_items(
+    state_snapshot,
+    max_turns,
+):
+    """
+    Convert active ConversationState into provider-neutral
+    ContextItems.
+
+    Always preserve the active topic/task, then include only
+    the most recent conversation turns.
+    """
+
+    if not isinstance(
+        state_snapshot,
+        StateSnapshot,
+    ):
+        raise TypeError(
+            "state_snapshot must be a StateSnapshot."
+        )
+
+    if max_turns < 0:
+        raise ValueError(
+            "max_turns cannot be negative."
+        )
+
+    items = []
+
+    if state_snapshot.active_topic:
+
+        items.append(
+            ContextItem(
+                source_type=STATE,
+                content=(
+                    "Active conversation topic: "
+                    f"{state_snapshot.active_topic}"
+                ),
+                relevance_score=1.0,
+                privacy_level=PRIVATE,
+                provenance={
+                    "conversation_id":
+                        state_snapshot.conversation_id,
+                    "state_field":
+                        "active_topic",
+                },
+            )
+        )
+
+    if state_snapshot.active_task:
+
+        items.append(
+            ContextItem(
+                source_type=STATE,
+                content=(
+                    "Active conversation task: "
+                    f"{state_snapshot.active_task}"
+                ),
+                relevance_score=1.0,
+                privacy_level=PRIVATE,
+                provenance={
+                    "conversation_id":
+                        state_snapshot.conversation_id,
+                    "state_field":
+                        "active_task",
+                },
+            )
+        )
+
+    recent_turns = (
+        state_snapshot.turns[-max_turns:]
+        if max_turns > 0
+        else ()
+    )
+
+    for turn in recent_turns:
+
+        items.append(
+            ContextItem(
+                source_type=STATE,
+                content=(
+                    f"{turn.role}: "
+                    f"{turn.content}"
+                ),
+                relevance_score=0.8,
+                privacy_level=PRIVATE,
+                provenance={
+                    "conversation_id":
+                        state_snapshot.conversation_id,
+                    "state_field":
+                        "turn",
+                    "turn_timestamp":
+                        turn.timestamp,
+                },
+            )
+        )
+
+    return items
 
 def _normalize_history_item(item):
     """
@@ -112,6 +211,7 @@ def build_context(
     query,
     options=None,
     history_items=None,
+    state_snapshot=None,
 ):
     """
     Build a provider-neutral ContextPackage.
@@ -203,6 +303,19 @@ def build_context(
             items.append(item)
 
             history_count += 1
+
+    if (
+        options.include_state
+        and state_snapshot is not None
+    ):
+        state_items = _build_state_items(
+            state_snapshot,
+            options.max_state_turns,
+        )
+
+        items.extend(
+            state_items
+        )
 
     metadata = {
         "builder_version": "1.0",

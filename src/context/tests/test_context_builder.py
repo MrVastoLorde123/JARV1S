@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from src.core.conversation import ConversationState
 
 from src import database
 
@@ -15,6 +16,7 @@ from src.context.models import (
     MEMORY,
     EVIDENCE,
     HISTORY,
+    STATE,
     PRIVATE,
 )
 
@@ -469,6 +471,218 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertNotIn(
             "ChatCompletion",
             str(context)
+        )
+
+    def test_state_is_included(self):
+        conversation = ConversationState()
+
+        conversation.set_topic(
+            "PCVUE troubleshooting"
+        )
+
+        conversation.set_task(
+            "Find the cause of the Modbus issue."
+        )
+
+        conversation.add_turn(
+            "user",
+            "The value is stuck at 99.4."
+        )
+
+        snapshot = conversation.snapshot()
+
+        context = build_context(
+            "Why is this happening?",
+            state_snapshot=snapshot,
+        )
+
+        state_items = [
+            item
+            for item in context.items
+            if item.source_type == STATE
+        ]
+
+        self.assertGreaterEqual(
+            len(state_items),
+            3
+        )
+
+    def test_state_provenance_is_preserved(self):
+        conversation = ConversationState(
+            conversation_id="state-test"
+        )
+
+        conversation.set_topic(
+            "Modbus troubleshooting"
+        )
+
+        snapshot = conversation.snapshot()
+
+        context = build_context(
+            "What are we working on?",
+            state_snapshot=snapshot,
+        )
+
+        state_item = next(
+            item
+            for item in context.items
+            if item.source_type == STATE
+        )
+
+        self.assertEqual(
+            state_item.provenance[
+                "conversation_id"
+            ],
+            "state-test"
+        )
+
+    def test_state_uses_recent_turns(self):
+
+        conversation = ConversationState()
+
+        for number in range(1, 6):
+            conversation.add_turn(
+                "user",
+                f"Message {number}"
+            )
+
+        snapshot = conversation.snapshot()
+
+        options = ContextOptions(
+            max_state_turns=2
+        )
+
+        context = build_context(
+            "What was recent?",
+            options=options,
+            state_snapshot=snapshot,
+        )
+
+        state_items = [
+            item
+            for item in context.items
+            if item.source_type == STATE
+        ]
+
+        state_text = [
+            item.content
+            for item in state_items
+        ]
+
+        self.assertEqual(
+            len(state_items),
+            2
+        )
+
+        self.assertIn(
+            "Message 4",
+            state_text[0]
+        )
+
+        self.assertIn(
+            "Message 5",
+            state_text[1]
+        )
+
+    def test_state_preserves_topic_and_task_with_recent_turn_limit(self):
+
+        conversation = ConversationState()
+
+        conversation.set_topic(
+            "Modbus troubleshooting"
+        )
+
+        conversation.set_task(
+            "Find the cause of the register issue."
+        )
+
+        for number in range(1, 5):
+            conversation.add_turn(
+                "user",
+                f"Message {number}"
+            )
+
+        snapshot = conversation.snapshot()
+
+        options = ContextOptions(
+            max_state_turns=1
+        )
+
+        context = build_context(
+            "Continue troubleshooting.",
+            options=options,
+            state_snapshot=snapshot,
+        )
+
+        state_items = [
+            item
+            for item in context.items
+            if item.source_type == STATE
+        ]
+
+        self.assertEqual(
+            len(state_items),
+            3
+        )
+
+        state_text = "\n".join(
+            item.content
+            for item in state_items
+        )
+
+        self.assertIn(
+            "Modbus troubleshooting",
+            state_text
+        )
+
+        self.assertIn(
+            "Find the cause of the register issue.",
+            state_text
+        )
+
+        self.assertIn(
+            "Message 4",
+            state_text
+        )
+
+    def test_zero_state_turns_preserves_topic_and_task(self):
+
+        conversation = ConversationState()
+
+        conversation.set_topic(
+            "PCVUE"
+        )
+
+        conversation.set_task(
+            "Learn the HMI workflow."
+        )
+
+        conversation.add_turn(
+            "user",
+            "This turn should not be included."
+        )
+
+        snapshot = conversation.snapshot()
+
+        options = ContextOptions(
+            max_state_turns=0
+        )
+
+        context = build_context(
+            "What are we doing?",
+            options=options,
+            state_snapshot=snapshot,
+        )
+
+        state_items = [
+            item
+            for item in context.items
+            if item.source_type == STATE
+        ]
+
+        self.assertEqual(
+            len(state_items),
+            2
         )
 
 

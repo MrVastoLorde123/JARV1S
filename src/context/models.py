@@ -5,6 +5,7 @@ from typing import Any
 MEMORY = "MEMORY"
 EVIDENCE = "EVIDENCE"
 HISTORY = "HISTORY"
+STATE = "STATE"
 
 PRIVATE = "PRIVATE"
 INTERNAL = "INTERNAL"
@@ -41,10 +42,12 @@ class ContextOptions:
     include_memories: bool = True
     include_evidence: bool = True
     include_history: bool = False
+    include_state: bool = True
 
     max_memories: int = 10
     max_evidence: int = 20
     max_history: int = 30
+    max_state_turns: int = 10
 
 
 @dataclass(frozen=True)
