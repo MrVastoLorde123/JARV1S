@@ -18,6 +18,10 @@ from src.context.models import (
     ContextOptions,
 )
 
+from src.core.conversation_store import (
+    ConversationStore,
+)
+
 from src.core.jarvis import JARVIS
 from src.core.models import JARVISResponse
 
@@ -38,7 +42,31 @@ def _create_test_schema(
     cursor.execute(
         """
         CREATE TABLE conversations (
-            id TEXT PRIMARY KEY
+            id TEXT PRIMARY KEY,
+            title TEXT,
+            created_at REAL,
+            updated_at REAL,
+            is_archived INTEGER,
+            is_starred INTEGER
+        )
+        """
+    )
+
+    cursor.execute(
+        """
+        CREATE TABLE messages (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at REAL,
+            parent_id TEXT,
+
+            FOREIGN KEY (
+                conversation_id
+            )
+            REFERENCES conversations(id)
+            ON DELETE CASCADE
         )
         """
     )
@@ -96,7 +124,12 @@ def _create_test_schema(
             FOREIGN KEY (
                 conversation_id
             )
-            REFERENCES conversations(id)
+            REFERENCES conversations(id),
+
+            FOREIGN KEY (
+                message_id
+            )
+            REFERENCES messages(id)
         )
         """
     )
@@ -108,6 +141,9 @@ def _create_test_schema(
 class FakeAIProvider(
     AIProvider
 ):
+    """
+    Deterministic fake provider for JARVIS unit tests.
+    """
 
     def generate(
         self,
@@ -141,6 +177,13 @@ class FakeAIProvider(
 class MemoryExtractingFakeProvider(
     AIProvider
 ):
+    """
+    Fake provider whose response contains an assistant-side claim.
+
+    This exists specifically to verify that Memory Formation
+    uses the user's statement as DIRECT evidence rather than
+    the assistant response.
+    """
 
     def generate(
         self,
@@ -217,10 +260,11 @@ class JARVISTests(
         self.temp_directory.cleanup()
 
     def _query_one(
-            self,
-            query,
-            parameters=(),
+        self,
+        query,
+        parameters=(),
     ):
+
         connection = sqlite3.connect(
             self.database_path
         )
@@ -644,6 +688,72 @@ class JARVISTests(
                 "I'm learning PCVUE.",
                 "DIRECT",
             ),
+        )
+
+    def test_persistent_conversation_survives_new_jarvis_instance(
+        self,
+    ):
+
+        conversation_store = (
+            ConversationStore()
+        )
+
+        first_jarvis = JARVIS(
+            ai_service=self.ai_service,
+            conversation_store=(
+                conversation_store
+            ),
+        )
+
+        first_response = (
+            first_jarvis.ask(
+                "I'm working on JARVIS persistence."
+            )
+        )
+
+        conversation_id = (
+            first_response.metadata[
+                "conversation_id"
+            ]
+        )
+
+        second_jarvis = JARVIS(
+            ai_service=self.ai_service,
+            conversation_store=(
+                conversation_store
+            ),
+            conversation_id=conversation_id,
+        )
+
+        second_response = (
+            second_jarvis.ask(
+                "What did we just discuss?"
+            )
+        )
+
+        state_items = [
+            item
+            for item in second_response.context.items
+            if item.source_type == "STATE"
+        ]
+
+        state_text = "\n".join(
+            item.content
+            for item in state_items
+        )
+
+        self.assertIn(
+            "I'm working on JARVIS persistence.",
+            state_text,
+        )
+
+        self.assertEqual(
+            (
+                second_jarvis
+                .conversation
+                .conversation_id
+            ),
+            conversation_id,
         )
 
 

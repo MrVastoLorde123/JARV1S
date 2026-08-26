@@ -11,22 +11,26 @@ from src.core.conversation_models import (
 
 class ConversationState:
     """
-    Temporary working state for an active JARVIS conversation.
+    Active working state for a JARVIS conversation.
 
-    This object is intentionally separate from:
-        - long-term memory
-        - historical conversation storage
-        - AI provider state
+    Persistent storage is handled by ConversationStore.
+
+    ConversationState itself remains responsible for:
+        - active turns
+        - active topic
+        - active task
+        - session metadata
     """
 
     def __init__(
         self,
         conversation_id=None,
+        created_at=None,
+        updated_at=None,
     ):
-
         timestamp = (
-            datetime.now(timezone.utc)
-            .isoformat()
+            created_at
+            or self._timestamp()
         )
 
         self._conversation_id = (
@@ -35,7 +39,10 @@ class ConversationState:
         )
 
         self._created_at = timestamp
-        self._updated_at = timestamp
+        self._updated_at = (
+            updated_at
+            or timestamp
+        )
 
         self._turns = []
 
@@ -44,34 +51,74 @@ class ConversationState:
 
         self._metadata = {}
 
+    @staticmethod
+    def _timestamp():
+        return (
+            datetime.now(
+                timezone.utc
+            ).isoformat()
+        )
+
+    @classmethod
+    def restore(
+        cls,
+        conversation_id,
+        created_at,
+        updated_at,
+        turns=(),
+        active_topic=None,
+        active_task=None,
+        metadata=None,
+    ):
+        """
+        Restore a ConversationState from persistent storage.
+
+        This is intentionally a classmethod so persistence logic
+        does not need to mutate private state fields externally.
+        """
+
+        state = cls(
+            conversation_id=conversation_id,
+            created_at=created_at,
+            updated_at=updated_at,
+        )
+
+        state._turns = list(turns)
+
+        state._active_topic = (
+            active_topic
+        )
+
+        state._active_task = (
+            active_task
+        )
+
+        state._metadata = dict(
+            metadata or {}
+        )
+
+        return state
+
     @property
     def conversation_id(self):
-
         return self._conversation_id
 
     @property
     def active_topic(self):
-
         return self._active_topic
 
     @property
     def active_task(self):
-
         return self._active_task
 
     def _touch(self):
-
-        self._updated_at = (
-            datetime.now(timezone.utc)
-            .isoformat()
-        )
+        self._updated_at = self._timestamp()
 
     def add_turn(
         self,
         role,
         content,
     ):
-
         if role not in (
             USER,
             ASSISTANT,
@@ -82,7 +129,7 @@ class ConversationState:
 
         if not isinstance(
             content,
-            str
+            str,
         ):
             raise TypeError(
                 "Turn content must be a string."
@@ -98,11 +145,7 @@ class ConversationState:
         turn = Turn(
             role=role,
             content=content,
-            timestamp=(
-                datetime.now(
-                    timezone.utc
-                ).isoformat()
-            ),
+            timestamp=self._timestamp(),
         )
 
         self._turns.append(turn)
@@ -113,7 +156,6 @@ class ConversationState:
         self,
         limit=10,
     ):
-
         if limit < 0:
             raise ValueError(
                 "Turn limit cannot be negative."
@@ -130,7 +172,6 @@ class ConversationState:
         self,
         topic,
     ):
-
         if topic is None:
             self._active_topic = None
             self._touch()
@@ -138,7 +179,7 @@ class ConversationState:
 
         if not isinstance(
             topic,
-            str
+            str,
         ):
             raise TypeError(
                 "Conversation topic must be a string."
@@ -156,7 +197,6 @@ class ConversationState:
         self,
         task,
     ):
-
         if task is None:
             self._active_task = None
             self._touch()
@@ -164,7 +204,7 @@ class ConversationState:
 
         if not isinstance(
             task,
-            str
+            str,
         ):
             raise TypeError(
                 "Conversation task must be a string."
@@ -179,9 +219,7 @@ class ConversationState:
         self._touch()
 
     def clear_task(self):
-
         self._active_task = None
-
         self._touch()
 
     def set_metadata(
@@ -189,10 +227,9 @@ class ConversationState:
         key,
         value,
     ):
-
         if not isinstance(
             key,
-            str
+            str,
         ):
             raise TypeError(
                 "Metadata key must be a string."
@@ -203,7 +240,6 @@ class ConversationState:
         self._touch()
 
     def snapshot(self):
-
         return StateSnapshot(
             conversation_id=(
                 self._conversation_id
@@ -223,4 +259,3 @@ class ConversationState:
                 self._metadata
             ),
         )
-    

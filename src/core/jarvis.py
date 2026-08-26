@@ -1,10 +1,29 @@
 from src.ai.models import AIRequest
 from src.ai.service import AIService
-from src.context.context_builder import build_context
-from src.context.models import ContextOptions
-from src.core.conversation import ConversationState
-from src.core.models import JARVISResponse
-from src.memory.memory_formation import process_turn
+
+from src.context.context_builder import (
+    build_context,
+)
+
+from src.context.models import (
+    ContextOptions,
+)
+
+from src.core.conversation import (
+    ConversationState,
+)
+
+from src.core.conversation_store import (
+    ConversationStore,
+)
+
+from src.core.models import (
+    JARVISResponse,
+)
+
+from src.memory.memory_formation import (
+    process_turn,
+)
 
 
 class JARVIS:
@@ -15,13 +34,11 @@ class JARVIS:
 
         user request
         conversation state
+        persistence
         context construction
         AI request creation
         AI provider execution
         optional memory formation
-
-    JARVIS does not directly access databases or provider
-    implementations.
     """
 
     def __init__(
@@ -29,6 +46,8 @@ class JARVIS:
         ai_service: AIService,
         context_options: ContextOptions | None = None,
         conversation: ConversationState | None = None,
+        conversation_store: ConversationStore | None = None,
+        conversation_id: str | None = None,
         enable_memory_formation: bool = False,
     ):
         self.ai_service = ai_service
@@ -39,14 +58,69 @@ class JARVIS:
             else ContextOptions()
         )
 
-        self.conversation = (
-            conversation
-            if conversation is not None
-            else ConversationState()
+        self.conversation_store = (
+            conversation_store
         )
 
         self._enable_memory_formation = (
             enable_memory_formation
+        )
+
+        if conversation is not None:
+
+            self.conversation = (
+                conversation
+            )
+
+        elif conversation_store is not None:
+
+            if conversation_id is not None:
+
+                restored = (
+                    conversation_store
+                    .load_state(
+                        conversation_id
+                    )
+                )
+
+                if restored is None:
+                    raise ValueError(
+                        "Persistent conversation "
+                        "does not exist."
+                    )
+
+                self.conversation = (
+                    restored
+                )
+
+            else:
+
+                record = (
+                    conversation_store
+                    .create_conversation()
+                )
+
+                self.conversation = (
+                    conversation_store
+                    .load_state(
+                        record.conversation_id
+                    )
+                )
+
+        else:
+
+            self.conversation = (
+                ConversationState()
+            )
+
+    def _persist_state(
+        self,
+    ):
+        if self.conversation_store is None:
+            return
+
+        self.conversation_store.save_state(
+            self.conversation.snapshot()
         )
 
     def ask(
@@ -54,9 +128,6 @@ class JARVIS:
         query: str,
         provider_name: str | None = None,
     ) -> JARVISResponse:
-        """
-        Process one user request.
-        """
 
         if not isinstance(
             query,
@@ -74,7 +145,7 @@ class JARVIS:
             )
 
         # ---------------------------------------------------------
-        # 1. Record the user turn.
+        # 1. Record the user turn in active state.
         # ---------------------------------------------------------
 
         self.conversation.add_turn(
@@ -82,19 +153,54 @@ class JARVIS:
             query,
         )
 
-        state_snapshot = (
+        user_snapshot = (
             self.conversation.snapshot()
         )
 
-        # The newest state turn is the user's source message.
         source_created_at = None
 
-        if state_snapshot.turns:
+        if user_snapshot.turns:
+
             source_created_at = (
-                state_snapshot
+                user_snapshot
                 .turns[-1]
                 .timestamp
             )
+
+        user_message_id = None
+
+        if self.conversation_store is not None:
+
+            previous_message_id = (
+                self._get_last_persistent_message_id()
+            )
+
+            stored_user_message = (
+                self.conversation_store
+                .append_message(
+                    conversation_id=(
+                        self.conversation
+                        .conversation_id
+                    ),
+                    role="user",
+                    content=query,
+                    parent_id=(
+                        previous_message_id
+                    ),
+                    created_at=(
+                        source_created_at
+                    ),
+                )
+            )
+
+            user_message_id = (
+                stored_user_message[
+                    "message_id"
+                ]
+            )
+
+        # Persist state even before AI generation.
+        self._persist_state()
 
         # ---------------------------------------------------------
         # 2. Build provider-neutral context.
@@ -104,14 +210,14 @@ class JARVIS:
             query,
             options=self.context_options,
             state_snapshot=(
-                state_snapshot
+                user_snapshot
                 if self.context_options.include_state
                 else None
             ),
         )
 
         # ---------------------------------------------------------
-        # 3. Create provider-neutral AI request.
+        # 3. Create AI request.
         # ---------------------------------------------------------
 
         request = AIRequest(
@@ -120,7 +226,7 @@ class JARVIS:
         )
 
         # ---------------------------------------------------------
-        # 4. Ask the configured AI provider.
+        # 4. Ask the AI provider.
         # ---------------------------------------------------------
 
         ai_response = self.ai_service.generate(
@@ -133,7 +239,7 @@ class JARVIS:
         )
 
         # ---------------------------------------------------------
-        # 5. Record the assistant turn.
+        # 5. Record assistant response.
         # ---------------------------------------------------------
 
         self.conversation.add_turn(
@@ -141,16 +247,42 @@ class JARVIS:
             response_content,
         )
 
+        assistant_created_at = None
+
+        if (
+            self.conversation.snapshot().turns
+        ):
+
+            assistant_created_at = (
+                self.conversation
+                .snapshot()
+                .turns[-1]
+                .timestamp
+            )
+
+        if self.conversation_store is not None:
+
+            self.conversation_store.append_message(
+                conversation_id=(
+                    self.conversation
+                    .conversation_id
+                ),
+                role="assistant",
+                content=response_content,
+                parent_id=user_message_id,
+                created_at=(
+                    assistant_created_at
+                ),
+            )
+
         # ---------------------------------------------------------
-        # 6. Optional memory formation.
-        #
-        # Important:
-        # The temporary ConversationState ID is NOT passed as
-        # conversation_id because it may not exist in the
-        # persistent conversations table.
-        #
-        # A persistent conversation ID can be supplied later
-        # once conversation persistence exists.
+        # 6. Persist state again after assistant response.
+        # ---------------------------------------------------------
+
+        self._persist_state()
+
+        # ---------------------------------------------------------
+        # 7. Optional memory formation.
         # ---------------------------------------------------------
 
         formation_result = None
@@ -160,15 +292,21 @@ class JARVIS:
             formation_result = process_turn(
                 user_query=query,
                 assistant_response=response_content,
-                conversation_id=None,
-                message_id=None,
+                conversation_id=(
+                    self.conversation
+                    .conversation_id
+                    if self.conversation_store
+                    is not None
+                    else None
+                ),
+                message_id=user_message_id,
                 source_created_at=(
                     source_created_at
                 ),
             )
 
         # ---------------------------------------------------------
-        # 7. Build JARVIS-level metadata.
+        # 8. Response metadata.
         # ---------------------------------------------------------
 
         metadata = {
@@ -182,13 +320,20 @@ class JARVIS:
                 ai_response.model
             ),
             "conversation_id": (
-                self.conversation.conversation_id
+                self.conversation
+                .conversation_id
+            ),
+            "persistent": (
+                self.conversation_store
+                is not None
             ),
         }
 
         if formation_result is not None:
 
-            metadata["memory_formation"] = {
+            metadata[
+                "memory_formation"
+            ] = {
                 "candidates_extracted": (
                     formation_result
                     .candidates_extracted
@@ -216,3 +361,28 @@ class JARVIS:
             context=context,
             metadata=metadata,
         )
+
+    def _get_last_persistent_message_id(
+        self,
+    ):
+        """
+        Retrieve the latest persisted message ID.
+
+        Used to maintain the linear parent chain.
+        """
+
+        if self.conversation_store is None:
+            return None
+
+        rows = (
+            self.conversation_store
+            .get_messages(
+                self.conversation
+                .conversation_id
+            )
+        )
+
+        if not rows:
+            return None
+
+        return rows[-1][0]

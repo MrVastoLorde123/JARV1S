@@ -291,6 +291,56 @@ class ConversationStateTests(
             "test_value"
         )
 
+    def test_state_can_be_restored(self):
+        original = ConversationState(
+            conversation_id="conversation-001"
+        )
+
+        original.set_topic(
+            "Persistent conversation"
+        )
+
+        original.set_task(
+            "Verify restoration"
+        )
+
+        original.add_turn(
+            USER,
+            "Hello."
+        )
+
+        snapshot = original.snapshot()
+
+        restored = ConversationState.restore(
+            conversation_id=snapshot.conversation_id,
+            created_at=snapshot.created_at,
+            updated_at=snapshot.updated_at,
+            turns=snapshot.turns,
+            active_topic=snapshot.active_topic,
+            active_task=snapshot.active_task,
+            metadata=snapshot.metadata,
+        )
+
+        self.assertEqual(
+            restored.conversation_id,
+            "conversation-001"
+        )
+
+        self.assertEqual(
+            restored.active_topic,
+            "Persistent conversation"
+        )
+
+        self.assertEqual(
+            restored.active_task,
+            "Verify restoration"
+        )
+
+        self.assertEqual(
+            restored.get_recent_turns()[0].content,
+            "Hello."
+        )
+
 
 if __name__ == "__main__":
     unittest.main(
