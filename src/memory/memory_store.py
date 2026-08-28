@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import datetime
 from src.database import get_connection
 from src.memory.memory_validator import validate_memory
@@ -182,3 +183,176 @@ def list_memories():
     connection.close()
 
     return memories
+
+def get_memory(memory_id):
+    """
+    Retrieve one memory by ID.
+    """
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            memory_key,
+            content,
+            category,
+            confidence,
+            importance,
+            status
+        FROM memories
+        WHERE id = ?
+        LIMIT 1
+    """, (memory_id,))
+
+    memory = cursor.fetchone()
+
+    connection.close()
+
+    return memory
+
+
+def update_memory(
+    memory_id,
+    content=None,
+    confidence=None,
+    importance=None,
+):
+    """
+    Update mutable fields of an existing memory.
+
+    The memory identity/category are intentionally not changed
+    by this operation.
+    """
+
+    existing = get_memory(
+        memory_id
+    )
+
+    if existing is None:
+        return False
+
+    current_content = existing[2]
+    current_confidence = existing[4]
+    current_importance = existing[5]
+
+    if content is None:
+        content = current_content
+
+    if confidence is None:
+        confidence = current_confidence
+
+    if importance is None:
+        importance = current_importance
+
+    validation = validate_memory({
+        "content": content,
+        "category": existing[3],
+        "memory_key": existing[1],
+        "confidence": confidence,
+        "importance": importance,
+        "status": existing[6],
+    })
+
+    if not validation["valid"]:
+        return False
+
+    timestamp = datetime.now().isoformat()
+
+    connection = get_connection()
+
+    try:
+
+        connection.execute("""
+            UPDATE memories
+            SET
+                content = ?,
+                confidence = ?,
+                importance = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (
+            content,
+            confidence,
+            importance,
+            timestamp,
+            memory_id,
+        ))
+
+        connection.commit()
+
+    except sqlite3.Error:
+
+        connection.rollback()
+
+        return False
+
+    finally:
+
+        connection.close()
+
+    return True
+
+
+def update_memory_status(
+    memory_id,
+    status,
+):
+    """
+    Update the status of an existing memory.
+    """
+
+    existing = get_memory(
+        memory_id
+    )
+
+    if existing is None:
+        return False
+
+    status = status.upper()
+
+    validation = validate_memory({
+        "content": existing[2],
+        "category": existing[3],
+        "memory_key": existing[1],
+        "confidence": existing[4],
+        "importance": existing[5],
+        "status": status,
+    })
+
+    if not validation["valid"]:
+        return False
+
+    timestamp = datetime.now().isoformat()
+
+    connection = get_connection()
+
+    try:
+
+        connection.execute("""
+            UPDATE memories
+            SET
+                status = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (
+            status,
+            timestamp,
+            memory_id,
+        ))
+
+        connection.commit()
+
+    except sqlite3.Error:
+
+        connection.rollback()
+
+        return False
+
+    finally:
+
+        connection.close()
+
+    return True

@@ -2,11 +2,9 @@
 JARVIS Memory Formation Engine.
 
 Memory Formation converts explicit user statements from a conversation
-into structured, validated, deduplicated memories.
-
-V1 is deliberately conservative.
-
-The AI response is NOT treated as direct evidence for a memory.
+into structured memory candidates, asks a MemoryDecisionService what
+should happen to each candidate, and delegates the resulting mutation
+to a MemoryDecisionExecutor.
 
 Pipeline:
 
@@ -16,40 +14,76 @@ Pipeline:
         |
     Validation
         |
-    Deduplication
+    Existing Memory Lookup
         |
-    Memory Store
+    Memory Decision Service
         |
-    Evidence Store
+    Memory Decision
+        |
+    Memory Decision Executor
+        |
+    Memory / Evidence Store
 
-The user statement itself becomes DIRECT evidence.
+Important boundaries:
 
-Future versions may support AI-assisted candidate extraction, but any
-AI-derived candidate must remain distinguishable from direct user evidence.
+    - Candidate extraction does not mutate the database.
+    - Decision providers do not mutate the database.
+    - The decision service does not mutate the database.
+    - The executor is the mutation boundary.
+    - Assistant responses are never treated as DIRECT evidence.
 """
+
 
 from dataclasses import dataclass
 import re
 
-from src.memory.evidence_store import add_evidence
-from src.memory.memory_retrieval import search_memories
-from src.memory.memory_store import (
-    add_memory,
-    find_active_memory,
+from src.memory.memory_decision import (
+    MemoryDecisionService,
 )
-from src.memory.memory_validator import validate_memory
 
+from src.memory.memory_decision_executor import (
+    MemoryDecisionExecutor,
+)
+
+from src.memory.memory_decision_models import (
+    CREATE,
+    CONFIRM,
+    UPDATE,
+    CONTRADICT,
+    IGNORE,
+    MemoryDecisionContext,
+)
+
+from src.memory.providers.deterministic_memory_decision import (
+    DeterministicMemoryDecisionProvider,
+)
+
+from src.memory.memory_models import (
+    CandidateMemory,
+)
+
+from src.memory.memory_retrieval import (
+    get_memory,
+    search_memories,
+)
+
+from src.memory.memory_validator import (
+    validate_memory,
+)
 
 DEFAULT_CONFIDENCE = 0.85
 DEFAULT_IMPORTANCE = 0.50
 
 DIRECT_EVIDENCE_TYPE = "DIRECT"
+
 REPEATED_EVIDENCE_TYPE = "REPEATED"
 
 
 @dataclass(frozen=True)
 class CandidateMemory:
-    """A potential memory extracted from an explicit user statement."""
+    """
+    A potential memory extracted from an explicit user statement.
+    """
 
     content: str
     category: str
@@ -66,7 +100,9 @@ class CandidateMemory:
 
 @dataclass(frozen=True)
 class FormationDetail:
-    """Describes one candidate's formation outcome."""
+    """
+    Describes one candidate's formation outcome.
+    """
 
     action: str
     memory_key: str
@@ -76,15 +112,32 @@ class FormationDetail:
 
 @dataclass(frozen=True)
 class FormationResult:
-    """Result of processing one conversation turn."""
+    """
+    Result of processing one conversation turn.
+    """
 
     candidates_extracted: int = 0
+
     memories_created: int = 0
+
     memories_deduplicated: int = 0
+
+    memories_updated: int = 0
+
+    memories_contradicted: int = 0
+
+    memories_ignored: int = 0
+
     evidence_added: int = 0
 
     details: tuple[FormationDetail, ...] = ()
+
     errors: tuple[str, ...] = ()
+
+
+# ---------------------------------------------------------------------
+# Normalization helpers
+# ---------------------------------------------------------------------
 
 
 def _normalize_key(text: str) -> str:
@@ -92,6 +145,7 @@ def _normalize_key(text: str) -> str:
     Convert text into a stable identifier.
 
     Example:
+
         "PCVUE v17" -> "pcvue_v17"
     """
 
@@ -107,7 +161,9 @@ def _normalize_key(text: str) -> str:
 
 
 def _normalize_subject(text: str) -> str:
-    """Normalize a candidate subject."""
+    """
+    Normalize a candidate subject.
+    """
 
     text = text.strip()
 
@@ -126,9 +182,7 @@ def _normalize_subject(text: str) -> str:
 
 def _normalize_content(text: str) -> str:
     """
-    Normalize generated memory content.
-
-    Unlike subjects, memory content keeps its terminal punctuation.
+    Normalize memory content without destroying terminal punctuation.
     """
 
     text = text.strip()
@@ -142,8 +196,12 @@ def _normalize_content(text: str) -> str:
     return text
 
 
-def _meaningful_tokens(text: str) -> set[str]:
-    """Return useful alphanumeric tokens from text."""
+def _meaningful_tokens(
+    text: str,
+) -> set[str]:
+    """
+    Return useful alphanumeric tokens from text.
+    """
 
     stop_words = {
         "a",
@@ -159,6 +217,8 @@ def _meaningful_tokens(text: str) -> set[str]:
         "the",
         "to",
         "with",
+        "user",
+        "still",
     }
 
     tokens = re.findall(
@@ -173,8 +233,12 @@ def _meaningful_tokens(text: str) -> set[str]:
     }
 
 
-def _split_sentences(text: str) -> list[str]:
-    """Split a user message into deterministic statement units."""
+def _split_sentences(
+    text: str,
+) -> list[str]:
+    """
+    Split a user message into deterministic statement units.
+    """
 
     if not text or not text.strip():
         return []
@@ -189,6 +253,11 @@ def _split_sentences(text: str) -> list[str]:
         for part in parts
         if part.strip()
     ]
+
+
+# ---------------------------------------------------------------------
+# Extraction rules
+# ---------------------------------------------------------------------
 
 
 _SKILL_RULES = (
@@ -405,13 +474,42 @@ _WORKFLOW_RULES = (
 
 
 RULE_GROUPS = (
-    ("SKILL", "_skill", _SKILL_RULES),
-    ("PROJECT", "_project", _PROJECT_RULES),
-    ("PREFERENCE", "_preference", _PREFERENCE_RULES),
-    ("GOAL", "_goal", _GOAL_RULES),
-    ("PERSONAL", "_personal", _PERSONAL_RULES),
-    ("WORKFLOW", "_workflow", _WORKFLOW_RULES),
+    (
+        "SKILL",
+        "_skill",
+        _SKILL_RULES,
+    ),
+    (
+        "PROJECT",
+        "_project",
+        _PROJECT_RULES,
+    ),
+    (
+        "PREFERENCE",
+        "_preference",
+        _PREFERENCE_RULES,
+    ),
+    (
+        "GOAL",
+        "_goal",
+        _GOAL_RULES,
+    ),
+    (
+        "PERSONAL",
+        "_personal",
+        _PERSONAL_RULES,
+    ),
+    (
+        "WORKFLOW",
+        "_workflow",
+        _WORKFLOW_RULES,
+    ),
 )
+
+
+# ---------------------------------------------------------------------
+# Candidate construction
+# ---------------------------------------------------------------------
 
 
 def _build_memory_key(
@@ -419,7 +517,12 @@ def _build_memory_key(
     subject: str,
     suffix: str,
 ) -> str:
-    """Build a deterministic candidate memory key."""
+    """
+    Build a deterministic candidate memory key.
+
+    Category is intentionally not included in the current key because
+    legacy memory keys and semantic matching already define identity.
+    """
 
     normalized_subject = _normalize_key(
         subject
@@ -441,7 +544,6 @@ def _build_candidate(
     content: str,
     evidence_text: str,
 ) -> CandidateMemory | None:
-    """Construct a normalized candidate."""
 
     subject = _normalize_subject(
         subject
@@ -482,7 +584,6 @@ def _build_candidate(
 def _extract_candidate_from_sentence(
     sentence: str,
 ) -> CandidateMemory | None:
-    """Attempt to extract one candidate from one user statement."""
 
     sentence = sentence.strip()
 
@@ -495,7 +596,10 @@ def _extract_candidate_from_sentence(
         rules,
     ) in RULE_GROUPS:
 
-        for pattern, builder in rules:
+        for (
+            pattern,
+            builder,
+        ) in rules:
 
             match = pattern.match(
                 sentence
@@ -533,7 +637,8 @@ def extract_candidates(
     """
     Extract conservative memory candidates from the USER message.
 
-    The assistant response is intentionally not used as direct evidence.
+    assistant_response is accepted for API compatibility and future
+    analysis, but is intentionally ignored for direct evidence.
     """
 
     if not isinstance(
@@ -543,6 +648,7 @@ def extract_candidates(
         return []
 
     candidates = []
+
     seen_keys = set()
 
     for sentence in _split_sentences(
@@ -572,83 +678,146 @@ def extract_candidates(
     return candidates
 
 
+# ---------------------------------------------------------------------
+# Existing-memory lookup
+# ---------------------------------------------------------------------
+
+
 def _find_existing_memory(
     candidate: CandidateMemory,
 ):
     """
-    Find an existing active memory.
+    Find an existing ACTIVE memory.
 
-    First attempt:
-        exact memory key
+    Always returns:
 
-    Second attempt:
-        deterministic subject search within the same category
+        MemoryResult | None
+
+    Exact memory-key matches are preferred.
+
+    Semantic matching compares the full candidate claim against
+    existing memory content so that a more-specific candidate can
+    still identify the older, less-specific memory.
     """
 
-    exact = find_active_memory(
+    # ---------------------------------------------------------
+    # 1. Exact memory-key lookup
+    # ---------------------------------------------------------
+
+    exact = get_memory(
         candidate.memory_key
     )
 
     if exact is not None:
         return exact
 
-    subject_tokens = _meaningful_tokens(
-        candidate.subject
+    # ---------------------------------------------------------
+    # 2. Semantic search
+    # ---------------------------------------------------------
+
+    candidate_tokens = _meaningful_tokens(
+        candidate.content
     )
 
-    if not subject_tokens:
+    if not candidate_tokens:
         return None
 
     search_results = search_memories(
-        candidate.subject,
+        candidate.content,
         limit=10,
     )
+
+    best_match = None
+    best_score = 0.0
 
     for result in search_results:
 
         if result.category != candidate.category:
             continue
 
-        memory_tokens = _meaningful_tokens(
+        existing_tokens = _meaningful_tokens(
             result.content
         )
 
-        if not memory_tokens:
+        if not existing_tokens:
             continue
 
-        matching_tokens = (
-            subject_tokens
-            & memory_tokens
+        shared_tokens = (
+            candidate_tokens
+            & existing_tokens
         )
 
-        coverage = (
-            len(matching_tokens)
-            / len(subject_tokens)
+        if not shared_tokens:
+            continue
+
+        candidate_coverage = (
+            len(shared_tokens)
+            / len(candidate_tokens)
         )
+
+        existing_coverage = (
+            len(shared_tokens)
+            / len(existing_tokens)
+        )
+
+        # -----------------------------------------------------
+        # Strong match in either direction:
+        #
+        # 1. Candidate is mostly represented by existing
+        # 2. Existing is fully represented by candidate
+        #
+        # The second case is critical for UPDATE.
+        # -----------------------------------------------------
 
         if (
-            coverage >= 0.8
-            or subject_tokens.issubset(
-                memory_tokens
-            )
+            candidate_coverage >= 0.80
+            or existing_coverage >= 0.80
         ):
-            return (
-                result.memory_id,
-                result.memory_key,
-                result.content,
-                result.category,
-                result.confidence,
-                result.importance,
-                result.status,
+
+            score = max(
+                candidate_coverage,
+                existing_coverage,
             )
 
-    return None
+            if score > best_score:
+
+                best_score = score
+                best_match = result
+
+    return best_match
+
+def _formation_action_name(
+    decision_action: str,
+) -> str:
+    """
+    Translate canonical MemoryDecision actions into the
+    historical FormationDetail action vocabulary.
+    """
+
+    return {
+        CREATE: "created",
+        CONFIRM: "deduplicated",
+        UPDATE: "updated",
+        CONTRADICT: "contradicted",
+        IGNORE: "ignored",
+    }.get(
+        decision_action,
+        "failed",
+    )
+
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
 
 
 def _validate_candidate(
     candidate: CandidateMemory,
 ):
-    """Validate a candidate using the existing memory validator."""
+    """
+    Validate a candidate before asking the decision layer
+    what should happen to it.
+    """
 
     return validate_memory({
         "content": candidate.content,
@@ -659,17 +828,61 @@ def _validate_candidate(
     })
 
 
+# ---------------------------------------------------------------------
+# Default decision stack
+# ---------------------------------------------------------------------
+
+
+def _build_default_decision_service():
+    """
+    Construct the default deterministic decision stack.
+
+    This is kept in a helper so callers can inject a different
+    provider later without changing Memory Formation.
+    """
+
+    service = MemoryDecisionService(
+        default_provider="deterministic"
+    )
+
+    service.register_provider(
+        DeterministicMemoryDecisionProvider()
+    )
+
+    return service
+
+
+# ---------------------------------------------------------------------
+# Formation pipeline
+# ---------------------------------------------------------------------
+
+
 def process_turn(
     user_query: str,
     assistant_response: str | None,
     conversation_id: str | None = None,
     message_id: str | None = None,
     source_created_at: str | None = None,
+    decision_service: MemoryDecisionService | None = None,
+    executor: MemoryDecisionExecutor | None = None,
+    decision_provider: str | None = None,
 ) -> FormationResult:
     """
     Process one completed conversation turn.
 
-    The memory is formed from the user's explicit statement.
+    The architecture is:
+
+        extraction
+            ->
+        validation
+            ->
+        existing-memory lookup
+            ->
+        decision service
+            ->
+        decision
+            ->
+        executor
 
     The assistant response is never treated as DIRECT evidence.
     """
@@ -682,11 +895,28 @@ def process_turn(
     if not candidates:
         return FormationResult()
 
+    if decision_service is None:
+        decision_service = (
+            _build_default_decision_service()
+        )
+
+    if executor is None:
+        executor = MemoryDecisionExecutor()
+
     memories_created = 0
+
     memories_deduplicated = 0
+
+    memories_updated = 0
+
+    memories_contradicted = 0
+
+    memories_ignored = 0
+
     evidence_added = 0
 
     details = []
+
     errors = []
 
     for candidate in candidates:
@@ -715,71 +945,30 @@ def process_turn(
             candidate
         )
 
-        if existing is not None:
-
-            existing_id = existing[0]
-
-            evidence_id = add_evidence(
-                memory_id=existing_id,
-                evidence_text=(
-                    candidate.evidence_text
-                ),
-                evidence_type=(
-                    REPEATED_EVIDENCE_TYPE
-                ),
-                confidence=(
-                    candidate.confidence
-                ),
-                conversation_id=conversation_id,
-                message_id=message_id,
-                source_created_at=(
-                    source_created_at
-                ),
+        decision_context = (
+            MemoryDecisionContext(
+                candidate=candidate,
+                existing_memory=existing,
             )
-
-            if evidence_id is None:
-
-                errors.append(
-                    "Failed to add repeated "
-                    f"evidence for "
-                    f"{candidate.memory_key}."
-                )
-
-            else:
-
-                evidence_added += 1
-
-            memories_deduplicated += 1
-
-            details.append(
-                FormationDetail(
-                    action="deduplicated",
-                    memory_key=(
-                        candidate.memory_key
-                    ),
-                    memory_id=existing_id,
-                )
-            )
-
-            continue
-
-        memory_id = add_memory(
-            content=candidate.content,
-            category=candidate.category,
-            memory_key=candidate.memory_key,
-            source_conversation_id=(
-                conversation_id
-            ),
-            confidence=candidate.confidence,
-            importance=candidate.importance,
-            status="ACTIVE",
         )
 
-        if memory_id is None:
+        try:
+
+            decision = (
+                decision_service.decide(
+                    decision_context,
+                    provider_name=(
+                        decision_provider
+                    ),
+                )
+            )
+
+        except Exception as exc:
 
             error_message = (
-                "Failed to create memory "
-                f"{candidate.memory_key}."
+                "Memory decision failed for "
+                f"{candidate.memory_key}: "
+                f"{exc}"
             )
 
             errors.append(
@@ -800,45 +989,125 @@ def process_turn(
 
             continue
 
-        memories_created += 1
+        try:
 
-        evidence_id = add_evidence(
-            memory_id=memory_id,
-            evidence_text=(
-                candidate.evidence_text
-            ),
-            evidence_type=(
-                candidate.evidence_type
-            ),
-            confidence=(
-                candidate.confidence
-            ),
-            conversation_id=conversation_id,
-            message_id=message_id,
-            source_created_at=(
-                source_created_at
-            ),
-        )
-
-        if evidence_id is None:
-
-            errors.append(
-                "Memory created but evidence "
-                f"could not be stored for "
-                f"{candidate.memory_key}."
+            execution = executor.execute(
+                decision=decision,
+                conversation_id=(
+                    conversation_id
+                ),
+                message_id=message_id,
+                source_created_at=(
+                    source_created_at
+                ),
             )
 
-        else:
+        except Exception as exc:
+
+            error_message = (
+                "Memory execution failed for "
+                f"{candidate.memory_key}: "
+                f"{exc}"
+            )
+
+            errors.append(
+                error_message
+            )
+
+            details.append(
+                FormationDetail(
+                    action="failed",
+                    memory_key=(
+                        candidate.memory_key
+                    ),
+                    memory_id=(
+                        decision.memory_id
+                    ),
+                    errors=(
+                        error_message,
+                    ),
+                )
+            )
+
+            continue
+
+        action = decision.action
+
+        if action == CREATE:
+
+            if execution.status == "SUCCESS":
+
+                memories_created += 1
+
+            else:
+
+                errors.append(
+                    execution.reason
+                )
+
+        elif action == CONFIRM:
+
+            if execution.status == "SUCCESS":
+
+                memories_deduplicated += 1
+
+            else:
+
+                errors.append(
+                    execution.reason
+                )
+
+        elif action == UPDATE:
+
+            if execution.status == "SUCCESS":
+
+                memories_updated += 1
+
+            else:
+
+                errors.append(
+                    execution.reason
+                )
+
+        elif action == CONTRADICT:
+
+            if execution.status == "SUCCESS":
+
+                memories_contradicted += 1
+
+            else:
+
+                errors.append(
+                    execution.reason
+                )
+
+        elif action == IGNORE:
+
+            memories_ignored += 1
+
+        if execution.evidence_id is not None:
 
             evidence_added += 1
 
+        detail_errors = ()
+
+        if execution.status == "FAILED":
+
+            detail_errors = (
+                execution.reason,
+            )
+
         details.append(
             FormationDetail(
-                action="created",
-                memory_key=(
-                    candidate.memory_key
+                action=_formation_action_name(
+                    decision.action
                 ),
-                memory_id=memory_id,
+                memory_key=candidate.memory_key,
+                memory_id=(
+                        execution.memory_id
+                        or decision.memory_id
+                ),
+                errors=detail_errors,
             )
         )
 
@@ -849,6 +1118,15 @@ def process_turn(
         memories_created=memories_created,
         memories_deduplicated=(
             memories_deduplicated
+        ),
+        memories_updated=(
+            memories_updated
+        ),
+        memories_contradicted=(
+            memories_contradicted
+        ),
+        memories_ignored=(
+            memories_ignored
         ),
         evidence_added=evidence_added,
         details=tuple(details),

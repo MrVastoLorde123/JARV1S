@@ -6,13 +6,15 @@ from pathlib import Path
 from src import database
 
 from src.memory.memory_formation import (
-    CandidateMemory,
     FormationResult,
     extract_candidates,
     process_turn,
     _normalize_key,
 )
 
+from src.memory.memory_models import (
+    CandidateMemory,
+)
 
 def _create_test_schema(
     database_path,
