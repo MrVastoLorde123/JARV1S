@@ -9,6 +9,7 @@ from src.ai.models import (
 from src.ai.provider import AIProvider
 from src.ai.service import AIService
 
+from src.commands.handler import CommandHandler
 from src.commands.models import CommandResult
 from src.commands.registry import CommandRegistry
 from src.commands.service import CommandService
@@ -59,7 +60,10 @@ class IntegrationAIProvider(AIProvider):
         return "integration"
 
 
-class IntegrationCommandHandler:
+class IntegrationCommandHandler(CommandHandler):
+    def command_name(self):
+        return "TEST"
+
     def execute(self, request):
         return CommandResult(
             success=True,
@@ -81,7 +85,6 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
 
         self.command_registry = CommandRegistry()
         self.command_registry.register(
-            "TEST",
             IntegrationCommandHandler(),
         )
         self.command_service = CommandService(
