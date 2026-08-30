@@ -12,12 +12,15 @@ class JARVISResponse:
 
     The user-facing answer is stored in `content`.
 
-    The original AI response and the context used to
-    produce it are preserved for provenance and debugging.
+    Conversation responses preserve the original AI response and
+    context used to produce it. Command and execution responses
+    may not have either and therefore store None.
     """
 
     content: str
-    ai_response: AIResponse
-    context: ContextPackage
+
+    ai_response: AIResponse | None
+
+    context: ContextPackage | None
 
     metadata: dict[str, Any]
