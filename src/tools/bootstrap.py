@@ -12,10 +12,15 @@ step, not done here.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from pathlib import Path
+from typing import Iterable, Optional, Union
 
 from .confirmation import ConfirmationProvider
 from .gate import PolicyGate
+from .handlers.list_directory import ListDirectoryHandler
+from .handlers.read_file import ReadFileHandler
+from .handlers.search_files import SearchFilesHandler
+from .handlers.write_file import WriteFileHandler
 from .policy import DefaultPolicy, Policy
 from .protocol import ToolHandler
 from .registry import ToolRegistry
@@ -75,3 +80,40 @@ def build_tool_stack(
         confirmation_provider,
     )
     return ToolStack(registry=registry, service=service, gate=gate)
+
+
+def build_workspace_tool_stack(
+    base_dir: Union[str, Path],
+    *,
+    registry: Optional[ToolRegistry] = None,
+    policy: Optional[Policy] = None,
+    confirmation_provider: Optional[ConfirmationProvider] = None,
+    read_file: Optional[ReadFileHandler] = None,
+    list_directory: Optional[ListDirectoryHandler] = None,
+    search_files: Optional[SearchFilesHandler] = None,
+    write_file: Optional[WriteFileHandler] = None,
+) -> ToolStack:
+    """Build the standard workspace capability set in one call.
+
+    The resulting stack contains the four filesystem capabilities that
+    currently define the workspace subsystem: read, list, search, and
+    write.  Callers do not need to know handler construction or
+    registration details; policy and confirmation still belong to the
+    shared ``PolicyGate`` created by ``build_tool_stack``.
+
+    Optional handler overrides exist for advanced callers that need
+    custom tool configuration while retaining the same composition
+    boundary.
+    """
+    handlers: list[ToolHandler] = [
+        read_file if read_file is not None else ReadFileHandler(base_dir),
+        list_directory if list_directory is not None else ListDirectoryHandler(base_dir),
+        search_files if search_files is not None else SearchFilesHandler(base_dir),
+        write_file if write_file is not None else WriteFileHandler(base_dir),
+    ]
+    return build_tool_stack(
+        handlers,
+        registry=registry,
+        policy=policy,
+        confirmation_provider=confirmation_provider,
+    )
