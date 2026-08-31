@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Iterator, List, Union
+from typing import Dict, List, Union
 
 from ..models import RiskLevel, ToolDefinition, ToolError, ToolRequest, ToolResult
 from ..workspace import Workspace, WorkspacePathError
@@ -103,9 +103,18 @@ class SearchFilesHandler:
             return self._failure(request, "path_not_found", f"no such path: {raw_path}")
 
         if candidate.is_file():
-            files = [candidate]
+            files = iter((candidate,))
         elif candidate.is_dir():
-            files = self._iter_files(candidate, recursive=recursive)
+            files = (
+                path
+                for path in self._workspace.iter_paths(
+                    candidate,
+                    recursive=recursive,
+                    include_hidden=False,
+                    follow_symlinks=False,
+                )
+                if path.is_file() and not path.is_symlink()
+            )
         else:
             return self._failure(request, "unsupported_path", f"path is not a regular file or directory: {raw_path}")
 
@@ -160,25 +169,6 @@ class SearchFilesHandler:
             },
             invocation_id=request.invocation_id,
         )
-
-    def _iter_files(self, directory: Path, *, recursive: bool) -> Iterator[Path]:
-        if not recursive:
-            for child in sorted(directory.iterdir(), key=lambda p: p.name):
-                if child.name.startswith(".") or child.is_symlink():
-                    continue
-                if child.is_file():
-                    yield child
-            return
-
-        for path in sorted(directory.rglob("*"), key=lambda p: p.as_posix()):
-            if path.name.startswith(".") or path.is_symlink():
-                continue
-            try:
-                path.resolve().relative_to(self._base_dir)
-            except ValueError:
-                continue
-            if path.is_file():
-                yield path
 
     def _failure(self, request: ToolRequest, code: str, message: str) -> ToolResult:
         return ToolResult(
