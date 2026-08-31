@@ -1,15 +1,16 @@
-"""Shared workspace boundary for filesystem-backed tools.
+"""Shared workspace boundary and traversal policy for filesystem-backed tools.
 
-The workspace owns only the common filesystem safety boundary: one resolved
-base directory and safe resolution of request-relative paths. Individual
-handlers remain responsible for their own capability semantics, limits,
-and result schemas.
+The workspace owns only common filesystem safety behavior: one resolved base
+ directory, safe resolution of request-relative paths, and bounded traversal
+that never follows symlinks outside the workspace. Individual handlers remain
+responsible for capability semantics, limits, and result schemas.
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
-from typing import Union
+from typing import Iterator, Union
 
 
 class WorkspacePathError(ValueError):
@@ -64,3 +65,79 @@ class Workspace:
     def relative_path(self, path: Path) -> str:
         """Return a workspace-relative POSIX path."""
         return path.relative_to(self._base_dir).as_posix()
+
+    def iter_paths(
+        self,
+        directory: Path,
+        *,
+        recursive: bool,
+        include_hidden: bool = False,
+        follow_symlinks: bool = False,
+    ) -> Iterator[Path]:
+        """Yield paths below an already-resolved workspace directory.
+
+        Traversal is deterministic. Symlinked directories are reported as
+        entries but are never descended into unless explicitly requested.
+        Even when requested, paths whose resolved targets escape the workspace
+        are skipped.
+        """
+        try:
+            directory.relative_to(self._base_dir)
+        except ValueError as exc:
+            raise WorkspacePathError(
+                "path_outside_base_dir",
+                f"resolved path escapes the allowed workspace directory: {directory}",
+            ) from exc
+
+        if not recursive:
+            for child in sorted(directory.iterdir(), key=lambda p: p.name):
+                if not include_hidden and child.name.startswith("."):
+                    continue
+                if not follow_symlinks and child.is_symlink():
+                    yield child
+                    continue
+                yield child
+            return
+
+        def on_walk_error(exc: OSError) -> None:
+            # Callers that need walk diagnostics can provide their own walker;
+            # this shared primitive intentionally skips inaccessible branches.
+            del exc
+
+        for root, dirnames, filenames in os.walk(
+            directory,
+            onerror=on_walk_error,
+            followlinks=follow_symlinks,
+        ):
+            root_path = Path(root)
+            dirnames.sort()
+            filenames.sort()
+
+            if not include_hidden:
+                dirnames[:] = [name for name in dirnames if not name.startswith(".")]
+                filenames[:] = [name for name in filenames if not name.startswith(".")]
+
+            safe_dirnames = []
+            for name in dirnames:
+                candidate = root_path / name
+                if candidate.is_symlink() and not follow_symlinks:
+                    yield candidate
+                    continue
+                try:
+                    candidate.resolve().relative_to(self._base_dir)
+                except ValueError:
+                    continue
+                safe_dirnames.append(name)
+                yield candidate
+            dirnames[:] = safe_dirnames
+
+            for name in filenames:
+                candidate = root_path / name
+                if candidate.is_symlink() and not follow_symlinks:
+                    yield candidate
+                    continue
+                try:
+                    candidate.resolve().relative_to(self._base_dir)
+                except ValueError:
+                    continue
+                yield candidate
