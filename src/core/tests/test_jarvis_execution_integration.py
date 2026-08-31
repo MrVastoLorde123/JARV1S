@@ -9,8 +9,8 @@ from src.ai.models import (
 from src.ai.provider import AIProvider
 from src.ai.service import AIService
 
-from src.commands.handler import CommandHandler
 from src.commands.models import CommandResult
+from src.commands.handler import CommandHandler
 from src.commands.registry import CommandRegistry
 from src.commands.service import CommandService
 
@@ -97,6 +97,37 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
         self.executor = Mock()
         self.plan = self._plan()
 
+        self.task = TaskRequest(
+            content="Test confirmation execution.",
+            task_type=TaskType.TOOL,
+        )
+        self.confirmation_task = TaskRequest(
+            content="Test cancellation execution.",
+            task_type=TaskType.TOOL,
+        )
+
+        self.allowed_policy = ExecutionPolicyResult(
+            decision=PolicyDecision.ALLOW,
+            plan=self.plan,
+        )
+        self.confirmation_policy = ExecutionPolicyResult(
+            decision=PolicyDecision.REQUIRE_CONFIRMATION,
+            plan=self.plan,
+        )
+
+        self.planner.plan.return_value = self.plan
+        self.validator.validate.return_value = PlanValidationResult(
+            valid=True,
+            plan=self.plan,
+        )
+        self.policy.evaluate.return_value = self.confirmation_policy
+        self.policy.authorize_confirmed.return_value = self.allowed_policy
+        self.executor.execute.return_value = PlanExecutionResult(
+            plan_id=self.plan.plan_id,
+            status=PlanExecutionStatus.COMPLETED,
+            steps=(),
+        )
+
         self.jarvis = JARVIS(
             ai_service=self.ai_service,
             request_router=self.router,
@@ -169,14 +200,8 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
     def test_normal_conversation_uses_ai_path(self):
         response = self.jarvis.ask("Hello JARVIS.")
 
-        self.assertEqual(
-            response.metadata["route"],
-            "CONVERSATION",
-        )
-        self.assertEqual(
-            response.content,
-            "Integration response.",
-        )
+        self.assertEqual(response.metadata["route"], "CONVERSATION")
+        self.assertEqual(response.content, "Integration response.")
         self.assertEqual(self.provider.calls, 1)
         self.planner.plan.assert_not_called()
         self.validator.validate.assert_not_called()
@@ -202,7 +227,6 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
         )
 
         self.jarvis.ask_task(task)
-
         self.planner.plan.assert_called_once_with(task)
 
     def test_plan_reaches_validator(self):
@@ -213,7 +237,6 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
         )
 
         self.jarvis.ask_task(task)
-
         self.validator.validate.assert_called_once_with(self.plan)
 
     def test_invalid_plan_stops_before_policy(self):
@@ -377,9 +400,7 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
         self.assertEqual(turns[1].role, "assistant")
 
     def test_memory_formation_remains_on_conversation_path(self):
-        response = self.jarvis.ask(
-            "Remember this conversation."
-        )
+        response = self.jarvis.ask("Remember this conversation.")
 
         self.assertEqual(
             response.metadata["route"],
@@ -391,20 +412,15 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
         self.policy.evaluate.assert_not_called()
         self.executor.execute.assert_not_called()
 
-    def test_confirmation_does_not_replan(self):
+    def test_confirmation_does_not_replan_when_no_pending_operation(self):
         self.jarvis.ask("/CONFIRM")
         self.planner.plan.assert_not_called()
 
     def test_confirmation_executes_exact_staged_plan(self):
-        response = self.jarvis.ask_task(
-            self.task
-        )
+        response = self.jarvis.ask_task(self.task)
 
-        operation_id = (
-            response.metadata["operation_id"]
-        )
-
-        self.planner.plan.assert_called_once()
+        operation_id = response.metadata["operation_id"]
+        self.planner.plan.assert_called_once_with(self.task)
 
         self.executor.execute.reset_mock()
 
@@ -412,6 +428,9 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
             f"/CONFIRM {operation_id}"
         )
 
+        self.policy.authorize_confirmed.assert_called_once_with(
+            self.plan
+        )
         self.executor.execute.assert_called_once_with(
             self.plan,
             self.allowed_policy,
@@ -423,7 +442,6 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
 
     def test_confirmation_does_not_replan(self):
         self.jarvis.ask_task(self.task)
-
         self.planner.plan.reset_mock()
 
         self.jarvis.ask("/CONFIRM")
@@ -435,13 +453,10 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
             self.confirmation_task
         )
 
-        operation_id = (
-            response.metadata["operation_id"]
-        )
+        operation_id = response.metadata["operation_id"]
 
-        self.jarvis.ask(
-            f"/CANCEL {operation_id}"
-        )
+        self.executor.execute.reset_mock()
+        self.jarvis.ask(f"/CANCEL {operation_id}")
 
         self.executor.execute.assert_not_called()
 
@@ -450,9 +465,7 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
             self.confirmation_task
         )
 
-        operation_id = (
-            response.metadata["operation_id"]
-        )
+        operation_id = response.metadata["operation_id"]
 
         pending = (
             self.jarvis
@@ -460,9 +473,7 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
             .get(operation_id)
         )
 
-        pending.metadata["plan_fingerprint"] = (
-            "tampered"
-        )
+        pending.metadata["plan_fingerprint"] = "tampered"
 
         result = self.jarvis.ask(
             f"/CONFIRM {operation_id}"
@@ -475,7 +486,6 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
             result.content.lower(),
         )
 
-        
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
