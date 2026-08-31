@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from src.tools.bootstrap import build_tool_stack
+from src.tools.confirmation import AutoApproveConfirmationProvider
 from src.tools.handlers.list_directory import ListDirectoryHandler
 from src.tools.handlers.read_file import ReadFileHandler
 from src.tools.handlers.search_files import SearchFilesHandler
@@ -18,6 +19,11 @@ class FilesystemCapabilityCohesionTests(unittest.TestCase):
     These tests intentionally verify only behavior that should be common
     across capabilities. Capability-specific errors remain distinct where
     the operation semantics differ.
+
+    The stack uses an approving confirmation provider because these tests
+    are validating filesystem behavior, not the policy boundary itself.
+    Write-tool confirmation behavior is covered by the dedicated
+    write-file integration tests.
     """
 
     def setUp(self) -> None:
@@ -36,7 +42,10 @@ class FilesystemCapabilityCohesionTests(unittest.TestCase):
             "list_directory": ListDirectoryHandler(self.base_dir),
             "write_file": WriteFileHandler(self.base_dir),
         }
-        self.stack = build_tool_stack(self.handlers.values())
+        self.stack = build_tool_stack(
+            self.handlers.values(),
+            confirmation_provider=AutoApproveConfirmationProvider(),
+        )
 
     def request(self, tool_name: str, **arguments: object) -> ToolRequest:
         return ToolRequest(
@@ -149,14 +158,15 @@ class FilesystemCapabilityCohesionTests(unittest.TestCase):
         self.assertTrue(read.success)
         self.assertEqual(read.content["content"], "needle\n")
 
-        # The final write deliberately stops at the policy boundary until
-        # the caller supplies confirmation. The capability set remains
-        # composable without JARVIS knowing any handler implementation.
         write = self.stack.gate.invoke(
             self.request("write_file", path="result.txt", content="done")
         )
-        self.assertFalse(write.success)
-        self.assertEqual(write.error.code, "confirmation_required")
+        self.assertTrue(write.success)
+        self.assertEqual(write.content["path"], "result.txt")
+        self.assertEqual(
+            (self.base_dir / "result.txt").read_text(encoding="utf-8"),
+            "done",
+        )
 
 
 if __name__ == "__main__":
