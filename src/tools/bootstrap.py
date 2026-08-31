@@ -88,28 +88,25 @@ def build_workspace_tool_stack(
     registry: Optional[ToolRegistry] = None,
     policy: Optional[Policy] = None,
     confirmation_provider: Optional[ConfirmationProvider] = None,
-    read_file: Optional[ReadFileHandler] = None,
-    list_directory: Optional[ListDirectoryHandler] = None,
-    search_files: Optional[SearchFilesHandler] = None,
-    write_file: Optional[WriteFileHandler] = None,
 ) -> ToolStack:
     """Build the standard workspace capability set in one call.
 
     The resulting stack contains the four filesystem capabilities that
     currently define the workspace subsystem: read, list, search, and
-    write.  Callers do not need to know handler construction or
-    registration details; policy and confirmation still belong to the
-    shared ``PolicyGate`` created by ``build_tool_stack``.
+    write. Construction and registration remain inside this factory so
+    callers do not need to know the individual handler classes just to
+    obtain the standard workspace capability set.
 
-    Optional handler overrides exist for advanced callers that need
-    custom tool configuration while retaining the same composition
-    boundary.
+    All four handlers are constructed from the same ``base_dir``. The
+    handlers enforce the same workspace boundary independently, while
+    ``build_tool_stack`` supplies their shared registry, service, and
+    policy gate.
     """
     handlers: list[ToolHandler] = [
-        read_file if read_file is not None else ReadFileHandler(base_dir),
-        list_directory if list_directory is not None else ListDirectoryHandler(base_dir),
-        search_files if search_files is not None else SearchFilesHandler(base_dir),
-        write_file if write_file is not None else WriteFileHandler(base_dir),
+        ReadFileHandler(base_dir),
+        ListDirectoryHandler(base_dir),
+        SearchFilesHandler(base_dir),
+        WriteFileHandler(base_dir),
     ]
     return build_tool_stack(
         handlers,
