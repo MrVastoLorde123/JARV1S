@@ -110,7 +110,7 @@ class ReadFileHandler:
             success=True,
             tool_name=self.TOOL_NAME,
             content={
-                "path": Path(raw_path).as_posix(),
+                "path": self._workspace.relative_path(candidate),
                 "content": content,
                 "size_bytes": size_bytes,
             },
