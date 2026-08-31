@@ -6,7 +6,7 @@ from src.core.execution_confirmation_models import (
 )
 
 from src.core.execution_planner import ExecutionPlanner
-from src.core.task_models import TaskRequest
+from src.core.task_models import TaskRequest, TaskType
 
 
 class ExecutionConfirmationModelTests(
@@ -17,8 +17,8 @@ class ExecutionConfirmationModelTests(
 
         self.plan = self.planner.plan(
             TaskRequest(
-                description="Perform a test action.",
-                task_type="ACTION",
+                content="Perform a test action.",
+                task_type=TaskType.ACTION,
             )
         )
 
