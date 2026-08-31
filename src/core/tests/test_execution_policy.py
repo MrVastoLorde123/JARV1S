@@ -301,6 +301,80 @@ class ExecutionPolicyTests(
             second,
         )
 
+    def test_confirmed_confirmation_required_plan_becomes_allowed(
+            self,
+    ):
+        plan = self._plan(
+            self._step("USE_TOOL")
+        )
+
+        result = self.policy.authorize_confirmed(
+            plan
+        )
+
+        self.assertEqual(
+            result.decision,
+            PolicyDecision.ALLOW,
+        )
+
+        self.assertTrue(
+            result.metadata["confirmation_authorized"]
+        )
+
+    def test_confirmed_allowed_plan_remains_allowed(
+            self,
+    ):
+        plan = self._plan(
+            self._step(
+                "PROVIDE_INFORMATION"
+            )
+        )
+
+        result = self.policy.authorize_confirmed(
+            plan
+        )
+
+        self.assertEqual(
+            result.decision,
+            PolicyDecision.ALLOW,
+        )
+
+    def test_confirmed_denied_plan_remains_denied(
+            self,
+    ):
+        plan = self._plan(
+            self._step(
+                "UNCLASSIFIED_TASK"
+            )
+        )
+
+        result = self.policy.authorize_confirmed(
+            plan
+        )
+
+        self.assertEqual(
+            result.decision,
+            PolicyDecision.DENY,
+        )
+
+    def test_authorize_confirmed_does_not_modify_plan(
+            self,
+    ):
+        plan = self._plan(
+            self._step("USE_TOOL")
+        )
+
+        before = plan
+
+        result = self.policy.authorize_confirmed(
+            plan
+        )
+
+        self.assertEqual(
+            result.plan,
+            before,
+        )
+
 
 if __name__ == "__main__":
     unittest.main(

@@ -5,6 +5,11 @@ from src.commands.models import (
     CommandResult,
 )
 
+from src.core.execution_confirmation import (
+    ExecutionConfirmationService,
+    execution_plan_fingerprint,
+)
+
 from src.commands.parser import (
     CommandParser,
 )
@@ -100,19 +105,22 @@ class JARVIS:
     """
 
     def __init__(
-        self,
-        ai_service: AIService,
-        context_options: ContextOptions | None = None,
-        conversation: ConversationState | None = None,
-        conversation_store: ConversationStore | None = None,
-        conversation_id: str | None = None,
-        enable_memory_formation: bool = False,
-        request_router: RequestRouter | None = None,
-        command_service: CommandService | None = None,
-        execution_planner: ExecutionPlanner | None = None,
-        plan_validator: PlanValidator | None = None,
-        execution_policy=None,
-        plan_executor: PlanExecutor | None = None,
+            self,
+            ai_service: AIService,
+            context_options: ContextOptions | None = None,
+            conversation: ConversationState | None = None,
+            conversation_store: ConversationStore | None = None,
+            conversation_id: str | None = None,
+            enable_memory_formation: bool = False,
+            request_router: RequestRouter | None = None,
+            command_service: CommandService | None = None,
+            execution_planner: ExecutionPlanner | None = None,
+            plan_validator: PlanValidator | None = None,
+            execution_policy=None,
+            plan_executor: PlanExecutor | None = None,
+            execution_confirmation_service: (
+                    ExecutionConfirmationService | None
+            ) = None,
     ):
         self.ai_service = ai_service
 
@@ -170,6 +178,12 @@ class JARVIS:
             plan_executor
             if plan_executor is not None
             else PlanExecutor()
+        )
+
+        self.execution_confirmation_service = (
+            execution_confirmation_service
+            if execution_confirmation_service is not None
+            else ExecutionConfirmationService()
         )
 
         if conversation is not None:
@@ -296,9 +310,33 @@ class JARVIS:
         )
 
     def _handle_command(
-        self,
-        text: str,
+            self,
+            text: str,
     ) -> JARVISResponse:
+
+        parsed = self.command_service.parser.parse(
+            text
+        )
+
+        if (
+                parsed is not None
+                and parsed.name == "CONFIRM"
+                and self.execution_confirmation_service.get_pending()
+                is not None
+        ):
+            return self._confirm_execution(
+                parsed.arguments
+            )
+
+        if (
+                parsed is not None
+                and parsed.name == "CANCEL"
+                and self.execution_confirmation_service.get_pending()
+                is not None
+        ):
+            return self._cancel_execution(
+                parsed.arguments
+            )
 
         result = self.command_service.execute_text(
             text
@@ -328,8 +366,8 @@ class JARVIS:
         )
 
     def _handle_task(
-        self,
-        task: TaskRequest,
+            self,
+            task: TaskRequest,
     ) -> JARVISResponse:
 
         plan = self.execution_planner.plan(
@@ -355,11 +393,54 @@ class JARVIS:
             )
 
         if (
-            policy.decision
-            == PolicyDecision.REQUIRE_CONFIRMATION
+                policy.decision
+                == PolicyDecision.REQUIRE_CONFIRMATION
         ):
-            return self._policy_response(
-                policy
+            pending = (
+                self.execution_confirmation_service.stage(
+                    plan,
+                    metadata={
+                        "policy_decision": (
+                            policy.decision.value
+                        ),
+                        "plan_fingerprint": (
+                            execution_plan_fingerprint(
+                                plan
+                            )
+                        ),
+                    },
+                )
+            )
+
+            return JARVISResponse(
+                content=(
+                    "The task is ready for execution, "
+                    "but confirmation is required.\n\n"
+                    f"Operation ID: "
+                    f"{pending.operation_id}\n"
+                    f"Task: "
+                    f"{plan.task_description}\n\n"
+                    "Use /CONFIRM to authorize it "
+                    "or /CANCEL to discard it."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "TASK",
+                    "stage": "CONFIRMATION",
+                    "plan_id": plan.plan_id,
+                    "operation_id": (
+                        pending.operation_id
+                    ),
+                    "plan_fingerprint": (
+                        pending.metadata[
+                            "plan_fingerprint"
+                        ]
+                    ),
+                    "policy_decision": (
+                        policy.decision.value
+                    ),
+                },
             )
 
         execution = self.plan_executor.execute(
@@ -725,3 +806,229 @@ class JARVIS:
             return None
 
         return rows[-1][0]
+
+    def _cancel_execution(
+            self,
+            arguments: tuple[str, ...],
+    ) -> JARVISResponse:
+
+        if len(arguments) > 1:
+            return JARVISResponse(
+                content=(
+                    "/CANCEL accepts zero or one "
+                    "operation ID."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "COMMAND",
+                    "command": "CANCEL",
+                    "success": False,
+                },
+            )
+
+        operation_id = (
+            arguments[0]
+            if arguments
+            else None
+        )
+
+        operation = (
+            self.execution_confirmation_service
+            .cancel(operation_id)
+        )
+
+        if operation is None:
+            return JARVISResponse(
+                content=(
+                    "No matching pending execution "
+                    "operation was found."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "COMMAND",
+                    "command": "CANCEL",
+                    "success": False,
+                },
+            )
+
+        return JARVISResponse(
+            content=(
+                "Execution cancelled.\n\n"
+                f"Operation ID: "
+                f"{operation.operation_id}"
+            ),
+            ai_response=None,
+            context=None,
+            metadata={
+                "route": "COMMAND",
+                "command": "CANCEL",
+                "success": True,
+                "operation_id": (
+                    operation.operation_id
+                ),
+                "operation_status": (
+                    operation.status.value
+                ),
+            },
+        )
+
+    def _confirm_execution(
+            self,
+            arguments: tuple[str, ...],
+    ) -> JARVISResponse:
+
+        if len(arguments) > 1:
+            return JARVISResponse(
+                content=(
+                    "/CONFIRM accepts zero or one "
+                    "operation ID."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "COMMAND",
+                    "command": "CONFIRM",
+                    "success": False,
+                },
+            )
+
+        operation_id = (
+            arguments[0]
+            if arguments
+            else None
+        )
+
+        if operation_id is None:
+            operation = (
+                self.execution_confirmation_service
+                .get_pending()
+            )
+        else:
+            operation = (
+                self.execution_confirmation_service
+                .get(operation_id)
+            )
+
+        if operation is None:
+            return JARVISResponse(
+                content=(
+                    "No matching pending execution "
+                    "operation was found."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "COMMAND",
+                    "command": "CONFIRM",
+                    "success": False,
+                },
+            )
+
+        expected_fingerprint = (
+            operation.metadata.get(
+                "plan_fingerprint"
+            )
+        )
+
+        actual_fingerprint = (
+            execution_plan_fingerprint(
+                operation.plan
+            )
+        )
+
+        if (
+                expected_fingerprint
+                != actual_fingerprint
+        ):
+            return JARVISResponse(
+                content=(
+                    "Execution blocked: the staged "
+                    "plan no longer matches its "
+                    "original fingerprint."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "COMMAND",
+                    "command": "CONFIRM",
+                    "success": False,
+                    "stage": "FINGERPRINT",
+                    "operation_id": (
+                        operation.operation_id
+                    ),
+                },
+            )
+
+        validation = (
+            self.plan_validator.validate(
+                operation.plan
+            )
+        )
+
+        if not validation.valid:
+            return self._validation_response(
+                validation
+            )
+
+        policy = (
+            self.execution_policy
+            .authorize_confirmed(
+                operation.plan
+            )
+        )
+
+        if (
+                policy.decision
+                != PolicyDecision.ALLOW
+        ):
+            return self._policy_response(
+                policy
+            )
+
+        confirmed = (
+            self.execution_confirmation_service
+            .confirm(
+                operation.operation_id
+            )
+        )
+
+        if confirmed is None:
+            return JARVISResponse(
+                content=(
+                    "The execution operation "
+                    "could not be confirmed."
+                ),
+                ai_response=None,
+                context=None,
+                metadata={
+                    "route": "COMMAND",
+                    "command": "CONFIRM",
+                    "success": False,
+                },
+            )
+
+        execution = (
+            self.plan_executor.execute(
+                confirmed.plan,
+                policy,
+            )
+        )
+
+        response = self._execution_response(
+            execution,
+            confirmed.plan,
+            policy,
+        )
+
+        response.metadata.update(
+            {
+                "confirmation": True,
+                "operation_id": (
+                    confirmed.operation_id
+                ),
+            }
+        )
+
+        return response

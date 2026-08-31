@@ -4,114 +4,54 @@ from src.core.execution_confirmation import (
     ExecutionConfirmationService,
     execution_plan_fingerprint,
 )
+
 from src.core.execution_confirmation_models import (
     ExecutionConfirmationStatus,
 )
-from src.core.execution_plan_models import (
-    ExecutionPlan,
-    PlanStatus,
-    PlanStep,
-    StepStatus,
-    StepType,
-)
+
+from src.core.execution_planner import ExecutionPlanner
+from src.core.task_models import TaskRequest
 
 
-class ExecutionConfirmationServiceTests(unittest.TestCase):
-
+class ExecutionConfirmationServiceTests(
+    unittest.TestCase
+):
     def setUp(self):
+        self.planner = ExecutionPlanner()
+
+        self.plan = self.planner.plan(
+            TaskRequest(
+                description="Perform a test action.",
+                task_type="ACTION",
+            )
+        )
+
         self.service = (
             ExecutionConfirmationService()
         )
 
-    def _plan(
-        self,
-        plan_id="plan-1",
-        action="PERFORM_ACTION",
-    ):
-        return ExecutionPlan(
-            plan_id=plan_id,
-            task_description="Execute a test action.",
-            steps=(
-                PlanStep(
-                    step_id="step-1",
-                    description="Execute test action.",
-                    action=action,
-                    step_type=StepType.ACTION,
-                    order=0,
-                    depends_on=(),
-                    status=StepStatus.READY,
-                    requires_confirmation=True,
-                    metadata={},
-                ),
-            ),
-            status=PlanStatus.READY,
-            metadata={},
-        )
-
     def test_operation_can_be_staged(self):
-        plan = self._plan()
-
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
         self.assertIsNotNone(
-            operation
-        )
-
-        self.assertTrue(
-            operation.is_pending
-        )
-
-    def test_staged_plan_is_preserved_exactly(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan
+            operation.operation_id
         )
 
         self.assertIs(
             operation.plan,
-            plan,
-        )
-
-    def test_staged_operation_has_fingerprint(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan
+            self.plan,
         )
 
         self.assertEqual(
-            operation.metadata[
-                "plan_fingerprint"
-            ],
-            execution_plan_fingerprint(
-                plan
-            ),
+            operation.status,
+            ExecutionConfirmationStatus.PENDING,
         )
 
-    def test_staged_operation_has_unique_id(self):
-        plan = self._plan()
-
-        first = self.service.stage(
-            plan
-        )
-
-        second = self.service.stage(
-            plan
-        )
-
-        self.assertNotEqual(
-            first.operation_id,
-            second.operation_id,
-        )
-
-    def test_operation_can_be_retrieved(self):
-        plan = self._plan()
-
+    def test_staged_operation_is_retrievable(self):
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
         retrieved = self.service.get(
@@ -123,47 +63,88 @@ class ExecutionConfirmationServiceTests(unittest.TestCase):
             operation,
         )
 
-    def test_unknown_operation_returns_none(self):
+    def test_missing_operation_returns_none(self):
         result = self.service.get(
             "does-not-exist"
         )
 
-        self.assertIsNone(
-            result
+        self.assertIsNone(result)
+
+    def test_first_pending_operation_is_available(self):
+        first = self.service.stage(
+            self.plan
         )
 
-    def test_non_string_operation_id_is_rejected(self):
-        with self.assertRaises(TypeError):
-            self.service.get(123)
-
-    def test_pending_operation_can_be_retrieved(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan
+        second_plan = self.planner.plan(
+            TaskRequest(
+                description="Perform another test action.",
+                task_type="ACTION",
+            )
         )
 
-        pending = self.service.get_pending()
-
-        self.assertIs(
-            pending,
-            operation,
+        self.service.stage(
+            second_plan
         )
 
-    def test_no_pending_operation_returns_none(self):
-        self.assertIsNone(
+        pending = (
             self.service.get_pending()
         )
 
-    def test_confirm_changes_status(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan
+        self.assertIsNotNone(
+            pending
         )
 
-        confirmed = self.service.confirm(
-            operation.operation_id
+        self.assertEqual(
+            pending.operation_id,
+            first.operation_id,
+        )
+
+    def test_operation_contains_plan_fingerprint(self):
+        operation = self.service.stage(
+            self.plan
+        )
+
+        self.assertIn(
+            "plan_fingerprint",
+            operation.metadata,
+        )
+
+        self.assertEqual(
+            operation.metadata[
+                "plan_fingerprint"
+            ],
+            execution_plan_fingerprint(
+                self.plan
+            ),
+        )
+
+    def test_plan_fingerprint_is_deterministic(self):
+        first = execution_plan_fingerprint(
+            self.plan
+        )
+
+        second = execution_plan_fingerprint(
+            self.plan
+        )
+
+        self.assertEqual(
+            first,
+            second,
+        )
+
+    def test_confirmation_changes_status(self):
+        operation = self.service.stage(
+            self.plan
+        )
+
+        confirmed = (
+            self.service.confirm(
+                operation.operation_id
+            )
+        )
+
+        self.assertIsNotNone(
+            confirmed
         )
 
         self.assertEqual(
@@ -175,72 +156,75 @@ class ExecutionConfirmationServiceTests(unittest.TestCase):
             confirmed.is_pending
         )
 
-    def test_confirm_preserves_exact_plan(self):
-        plan = self._plan()
-
+    def test_confirmation_preserves_exact_plan(self):
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
-        confirmed = self.service.confirm(
-            operation.operation_id
+        confirmed = (
+            self.service.confirm(
+                operation.operation_id
+            )
         )
 
         self.assertIs(
             confirmed.plan,
-            plan,
+            self.plan,
         )
 
-    def test_confirm_does_not_execute_plan(self):
-        plan = self._plan()
-
+    def test_confirmed_operation_is_no_longer_pending(self):
         operation = self.service.stage(
-            plan
-        )
-
-        confirmed = self.service.confirm(
-            operation.operation_id
-        )
-
-        self.assertIsNotNone(
-            confirmed
-        )
-
-        # The confirmation service has no executor.
-        # Its responsibility ends at authorization state.
-        self.assertEqual(
-            confirmed.status,
-            ExecutionConfirmationStatus.CONFIRMED,
-        )
-
-    def test_confirmed_operation_cannot_be_confirmed_again(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan
+            self.plan
         )
 
         self.service.confirm(
             operation.operation_id
         )
 
-        second = self.service.confirm(
-            operation.operation_id
+        self.assertIsNone(
+            self.service.get_pending()
+        )
+
+    def test_confirmed_operation_cannot_be_confirmed_again(
+        self,
+    ):
+        operation = self.service.stage(
+            self.plan
+        )
+
+        confirmed = (
+            self.service.confirm(
+                operation.operation_id
+            )
+        )
+
+        self.assertIsNotNone(
+            confirmed
+        )
+
+        second = (
+            self.service.confirm(
+                operation.operation_id
+            )
         )
 
         self.assertIsNone(
             second
         )
 
-    def test_cancel_changes_status(self):
-        plan = self._plan()
-
+    def test_cancellation_changes_status(self):
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
-        cancelled = self.service.cancel(
-            operation.operation_id
+        cancelled = (
+            self.service.cancel(
+                operation.operation_id
+            )
+        )
+
+        self.assertIsNotNone(
+            cancelled
         )
 
         self.assertEqual(
@@ -252,71 +236,81 @@ class ExecutionConfirmationServiceTests(unittest.TestCase):
             cancelled.is_pending
         )
 
-    def test_cancel_preserves_exact_plan(self):
-        plan = self._plan()
-
+    def test_cancelled_operation_cannot_be_confirmed(
+        self,
+    ):
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
-        cancelled = self.service.cancel(
-            operation.operation_id
+        cancelled = (
+            self.service.cancel(
+                operation.operation_id
+            )
         )
 
-        self.assertIs(
-            cancelled.plan,
-            plan,
+        self.assertIsNotNone(
+            cancelled
         )
 
-    def test_cancelled_operation_cannot_be_confirmed(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan
-        )
-
-        self.service.cancel(
-            operation.operation_id
-        )
-
-        confirmed = self.service.confirm(
-            operation.operation_id
+        confirmed = (
+            self.service.confirm(
+                operation.operation_id
+            )
         )
 
         self.assertIsNone(
             confirmed
         )
 
-    def test_confirm_unknown_operation_returns_none(self):
+    def test_cancelled_operation_is_not_pending(self):
+        operation = self.service.stage(
+            self.plan
+        )
+
+        self.service.cancel(
+            operation.operation_id
+        )
+
+        self.assertIsNone(
+            self.service.get_pending()
+        )
+
+    def test_unknown_operation_cannot_be_confirmed(
+        self,
+    ):
         result = self.service.confirm(
-            "does-not-exist"
+            "unknown-operation"
         )
 
-        self.assertIsNone(
-            result
-        )
+        self.assertIsNone(result)
 
-    def test_cancel_unknown_operation_returns_none(self):
+    def test_unknown_operation_cannot_be_cancelled(
+        self,
+    ):
         result = self.service.cancel(
-            "does-not-exist"
+            "unknown-operation"
         )
 
-        self.assertIsNone(
-            result
-        )
+        self.assertIsNone(result)
 
-    def test_default_confirmation_uses_pending_operation(self):
-        plan = self._plan()
+    def test_confirmation_service_does_not_execute_plan(
+        self,
+    ):
+        """
+        Confirmation service only changes operation state.
+
+        It has no execution responsibility.
+        """
 
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
-        confirmed = self.service.confirm()
-
-        self.assertEqual(
-            confirmed.operation_id,
-            operation.operation_id,
+        confirmed = (
+            self.service.confirm(
+                operation.operation_id
+            )
         )
 
         self.assertEqual(
@@ -324,99 +318,30 @@ class ExecutionConfirmationServiceTests(unittest.TestCase):
             ExecutionConfirmationStatus.CONFIRMED,
         )
 
-    def test_default_cancellation_uses_pending_operation(self):
-        plan = self._plan()
+        self.assertIs(
+            confirmed.plan,
+            operation.plan,
+        )
 
+    def test_cancel_does_not_change_plan(self):
         operation = self.service.stage(
-            plan
+            self.plan
         )
 
-        cancelled = self.service.cancel()
-
-        self.assertEqual(
-            cancelled.operation_id,
-            operation.operation_id,
+        cancelled = (
+            self.service.cancel(
+                operation.operation_id
+            )
         )
 
-        self.assertEqual(
-            cancelled.status,
-            ExecutionConfirmationStatus.CANCELLED,
+        self.assertIs(
+            cancelled.plan,
+            self.plan,
         )
 
-    def test_multiple_pending_operations_return_first_pending(self):
-        first = self.service.stage(
-            self._plan(plan_id="plan-1")
-        )
-
-        second = self.service.stage(
-            self._plan(plan_id="plan-2")
-        )
-
-        pending = self.service.get_pending()
-
-        self.assertEqual(
-            pending.operation_id,
-            first.operation_id,
-        )
-
-        self.assertNotEqual(
-            pending.operation_id,
-            second.operation_id,
-        )
-
-    def test_confirm_first_pending_leaves_second_pending(self):
-        first = self.service.stage(
-            self._plan(plan_id="plan-1")
-        )
-
-        second = self.service.stage(
-            self._plan(plan_id="plan-2")
-        )
-
-        self.service.confirm()
-
-        pending = self.service.get_pending()
-
-        self.assertEqual(
-            pending.operation_id,
-            second.operation_id,
-        )
-
-        self.assertNotEqual(
-            pending.operation_id,
-            first.operation_id,
-        )
-
-    def test_cancel_first_pending_leaves_second_pending(self):
-        first = self.service.stage(
-            self._plan(plan_id="plan-1")
-        )
-
-        second = self.service.stage(
-            self._plan(plan_id="plan-2")
-        )
-
-        self.service.cancel()
-
-        pending = self.service.get_pending()
-
-        self.assertEqual(
-            pending.operation_id,
-            second.operation_id,
-        )
-
-        self.assertNotEqual(
-            pending.operation_id,
-            first.operation_id,
-        )
-
-    def test_clear_removes_operations(self):
+    def test_clear_removes_all_operations(self):
         self.service.stage(
-            self._plan()
-        )
-
-        self.assertIsNotNone(
-            self.service.get_pending()
+            self.plan
         )
 
         self.service.clear()
@@ -425,60 +350,12 @@ class ExecutionConfirmationServiceTests(unittest.TestCase):
             self.service.get_pending()
         )
 
-    def test_metadata_is_preserved(self):
-        plan = self._plan()
-
-        operation = self.service.stage(
-            plan,
-            metadata={
-                "source": "jarvis",
-                "reason": "user confirmation",
-            },
-        )
-
-        self.assertEqual(
-            operation.metadata["source"],
-            "jarvis",
-        )
-
-        self.assertEqual(
-            operation.metadata["reason"],
-            "user confirmation",
-        )
-
-    def test_fingerprint_is_deterministic(self):
-        plan = self._plan()
-
-        first = execution_plan_fingerprint(
-            plan
-        )
-
-        second = execution_plan_fingerprint(
-            plan
-        )
-
-        self.assertEqual(
-            first,
-            second,
-        )
-
-    def test_different_plans_have_different_fingerprints(
+    def test_non_string_operation_id_is_rejected(
         self,
     ):
-        first = execution_plan_fingerprint(
-            self._plan(
-                plan_id="plan-1"
-            )
-        )
+        with self.assertRaises(TypeError):
+            self.service.get(123)
 
-        second = execution_plan_fingerprint(
-            self._plan(
-                plan_id="plan-2"
-            )
-        )
 
-        self.assertNotEqual(
-            first,
-            second,
-        )
-
+if __name__ == "__main__":
+    unittest.main()

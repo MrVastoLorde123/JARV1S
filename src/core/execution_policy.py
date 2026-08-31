@@ -14,7 +14,7 @@ class ExecutionPolicy:
     Deterministic V1 execution policy.
 
     The policy decides whether a structurally valid plan
-    may proceed to a future execution layer.
+    may proceed to execution.
 
     It does not execute anything.
 
@@ -87,14 +87,12 @@ class ExecutionPolicy:
             )
 
         issues = []
-
         requires_confirmation = False
 
         for step in plan.steps:
 
             action = (
-                step.action.strip()
-                .upper()
+                step.action.strip().upper()
             )
 
             decision = (
@@ -188,6 +186,53 @@ class ExecutionPolicy:
                 ),
             },
         )
+
+    def authorize_confirmed(
+        self,
+        plan: ExecutionPlan,
+    ) -> ExecutionPolicyResult:
+        """
+        Re-evaluate an exact plan after explicit user
+        confirmation.
+
+        Confirmation does not bypass policy.
+
+        ALLOW
+            remains ALLOW.
+
+        REQUIRE_CONFIRMATION
+            becomes ALLOW because the required confirmation
+            has now been supplied.
+
+        DENY
+            remains DENY.
+
+        The plan itself is never modified.
+        """
+
+        result = self.evaluate(plan)
+
+        if result.decision == PolicyDecision.DENY:
+            return result
+
+        if (
+            result.decision
+            == PolicyDecision.REQUIRE_CONFIRMATION
+        ):
+            return ExecutionPolicyResult(
+                decision=PolicyDecision.ALLOW,
+                plan=result.plan,
+                issues=result.issues,
+                metadata={
+                    **result.metadata,
+                    "confirmation_authorized": True,
+                    "authorization_mode": (
+                        "explicit_confirmation"
+                    ),
+                },
+            )
+
+        return result
 
 
 def evaluate_plan(

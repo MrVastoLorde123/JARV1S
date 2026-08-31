@@ -391,6 +391,91 @@ class JARVISExecutionIntegrationTests(unittest.TestCase):
         self.policy.evaluate.assert_not_called()
         self.executor.execute.assert_not_called()
 
+    def test_confirmation_does_not_replan(self):
+        self.jarvis.ask("/CONFIRM")
+        self.planner.plan.assert_not_called()
+
+    def test_confirmation_executes_exact_staged_plan(self):
+        response = self.jarvis.ask_task(
+            self.task
+        )
+
+        operation_id = (
+            response.metadata["operation_id"]
+        )
+
+        self.planner.plan.assert_called_once()
+
+        self.executor.execute.reset_mock()
+
+        confirmation = self.jarvis.ask(
+            f"/CONFIRM {operation_id}"
+        )
+
+        self.executor.execute.assert_called_once_with(
+            self.plan,
+            self.allowed_policy,
+        )
+
+        self.assertTrue(
+            confirmation.metadata["confirmation"]
+        )
+
+    def test_confirmation_does_not_replan(self):
+        self.jarvis.ask_task(self.task)
+
+        self.planner.plan.reset_mock()
+
+        self.jarvis.ask("/CONFIRM")
+
+        self.planner.plan.assert_not_called()
+
+    def test_cancelled_operation_never_reaches_executor(self):
+        response = self.jarvis.ask_task(
+            self.confirmation_task
+        )
+
+        operation_id = (
+            response.metadata["operation_id"]
+        )
+
+        self.jarvis.ask(
+            f"/CANCEL {operation_id}"
+        )
+
+        self.executor.execute.assert_not_called()
+
+    def test_confirmation_blocks_changed_plan(self):
+        response = self.jarvis.ask_task(
+            self.confirmation_task
+        )
+
+        operation_id = (
+            response.metadata["operation_id"]
+        )
+
+        pending = (
+            self.jarvis
+            .execution_confirmation_service
+            .get(operation_id)
+        )
+
+        pending.metadata["plan_fingerprint"] = (
+            "tampered"
+        )
+
+        result = self.jarvis.ask(
+            f"/CONFIRM {operation_id}"
+        )
+
+        self.executor.execute.assert_not_called()
+
+        self.assertIn(
+            "fingerprint",
+            result.content.lower(),
+        )
+
+        
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
