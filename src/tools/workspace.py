@@ -101,6 +101,7 @@ class Workspace:
             if on_error is not None:
                 on_error(exc)
 
+        paths: list[Path] = []
         for root, dirnames, filenames in os.walk(
             directory,
             onerror=handle_error,
@@ -118,23 +119,26 @@ class Workspace:
             for name in dirnames:
                 candidate = root_path / name
                 if candidate.is_symlink() and not follow_symlinks:
-                    yield candidate
+                    paths.append(candidate)
                     continue
                 try:
                     candidate.resolve().relative_to(self._base_dir)
                 except ValueError:
                     continue
                 safe_dirnames.append(name)
-                yield candidate
+                paths.append(candidate)
             dirnames[:] = safe_dirnames
 
             for name in filenames:
                 candidate = root_path / name
                 if candidate.is_symlink() and not follow_symlinks:
-                    yield candidate
+                    paths.append(candidate)
                     continue
                 try:
                     candidate.resolve().relative_to(self._base_dir)
                 except ValueError:
                     continue
-                yield candidate
+                paths.append(candidate)
+
+        paths.sort(key=lambda path: self.relative_path(path))
+        yield from paths
