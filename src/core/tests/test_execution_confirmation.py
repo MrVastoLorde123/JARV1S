@@ -10,7 +10,7 @@ from src.core.execution_confirmation_models import (
 )
 
 from src.core.execution_planner import ExecutionPlanner
-from src.core.task_models import TaskRequest
+from src.core.task_models import TaskRequest, TaskType
 
 
 class ExecutionConfirmationServiceTests(
@@ -21,8 +21,8 @@ class ExecutionConfirmationServiceTests(
 
         self.plan = self.planner.plan(
             TaskRequest(
-                description="Perform a test action.",
-                task_type="ACTION",
+                content="Perform a test action.",
+                task_type=TaskType.ACTION,
             )
         )
 
@@ -77,8 +77,8 @@ class ExecutionConfirmationServiceTests(
 
         second_plan = self.planner.plan(
             TaskRequest(
-                description="Perform another test action.",
-                task_type="ACTION",
+                content="Perform another test action.",
+                task_type=TaskType.ACTION,
             )
         )
 
@@ -154,6 +154,29 @@ class ExecutionConfirmationServiceTests(
 
         self.assertFalse(
             confirmed.is_pending
+        )
+
+    def test_confirmed_operation_remains_retrievable(self):
+        operation = self.service.stage(
+            self.plan
+        )
+
+        confirmed = self.service.confirm(
+            operation.operation_id
+        )
+
+        retrieved = self.service.get(
+            operation.operation_id
+        )
+
+        self.assertIs(
+            retrieved,
+            confirmed,
+        )
+
+        self.assertEqual(
+            retrieved.status,
+            ExecutionConfirmationStatus.CONFIRMED,
         )
 
     def test_confirmation_preserves_exact_plan(self):
@@ -234,6 +257,29 @@ class ExecutionConfirmationServiceTests(
 
         self.assertFalse(
             cancelled.is_pending
+        )
+
+    def test_cancelled_operation_remains_retrievable(self):
+        operation = self.service.stage(
+            self.plan
+        )
+
+        cancelled = self.service.cancel(
+            operation.operation_id
+        )
+
+        retrieved = self.service.get(
+            operation.operation_id
+        )
+
+        self.assertIs(
+            retrieved,
+            cancelled,
+        )
+
+        self.assertEqual(
+            retrieved.status,
+            ExecutionConfirmationStatus.CANCELLED,
         )
 
     def test_cancelled_operation_cannot_be_confirmed(
