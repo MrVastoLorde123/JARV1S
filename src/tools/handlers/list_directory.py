@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from ..models import RiskLevel, ToolDefinition, ToolError, ToolRequest, ToolResult
 from ..workspace import Workspace, WorkspacePathError
@@ -112,7 +111,15 @@ class ListDirectoryHandler:
         errors: List[Dict[str, str]] = []
         truncated = False
 
-        for path in self._iter_paths(target_dir, recursive, include_hidden, errors):
+        for path in self._workspace.iter_paths(
+            target_dir,
+            recursive=recursive,
+            include_hidden=include_hidden,
+            follow_symlinks=False,
+            on_error=lambda exc: errors.append(
+                {"path": getattr(exc, "filename", "") or "", "message": str(exc)}
+            ),
+        ):
             if len(entries) >= self._max_entries:
                 truncated = True
                 break
@@ -120,37 +127,6 @@ class ListDirectoryHandler:
 
         entries.sort(key=lambda entry: entry["path"])
         return entries, truncated, errors
-
-    def _iter_paths(
-        self,
-        target_dir: Path,
-        recursive: bool,
-        include_hidden: bool,
-        errors: List[Dict[str, str]],
-    ) -> Iterator[Path]:
-        if not recursive:
-            for child in sorted(target_dir.iterdir(), key=lambda p: p.name):
-                if not include_hidden and child.name.startswith("."):
-                    continue
-                yield child
-            return
-
-        def on_walk_error(exc: OSError) -> None:
-            errors.append({"path": getattr(exc, "filename", "") or "", "message": str(exc)})
-
-        for root, dirnames, filenames in os.walk(
-            target_dir, onerror=on_walk_error, followlinks=False
-        ):
-            root_path = Path(root)
-            dirnames.sort()
-            filenames.sort()
-            if not include_hidden:
-                dirnames[:] = [d for d in dirnames if not d.startswith(".")]
-                filenames[:] = [f for f in filenames if not f.startswith(".")]
-            for name in dirnames:
-                yield root_path / name
-            for name in filenames:
-                yield root_path / name
 
     def _make_entry(self, path: Path) -> Dict[str, object]:
         relative_path = self._workspace.relative_path(path)
