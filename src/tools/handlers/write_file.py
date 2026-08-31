@@ -129,8 +129,7 @@ class WriteFileHandler:
             return self._failure(
                 request,
                 "content_too_large",
-                f"content is {size_bytes} bytes, exceeds the {self._max_file_size_bytes} "
-                "byte limit for this tool",
+                f"content is {size_bytes} bytes, exceeds the {self._max_file_size_bytes} byte limit for this tool",
             )
 
         requested = Path(raw_path)
@@ -148,15 +147,16 @@ class WriteFileHandler:
             return self._failure(
                 request,
                 "path_outside_base_dir",
-                f"resolved path escapes the allowed workspace directory: {raw_path}",
+                f"resolved path escapes the allowed workspace: {raw_path}",
             )
 
-        if candidate.exists() and not candidate.is_file():
+        target_existed = candidate.exists()
+        if target_existed and not candidate.is_file():
             return self._failure(
                 request, "not_a_file", f"target path is not a regular file: {raw_path}"
             )
 
-        if candidate.exists() and not overwrite:
+        if target_existed and not overwrite:
             return self._failure(
                 request,
                 "file_exists",
@@ -196,7 +196,7 @@ class WriteFileHandler:
             content={
                 "path": requested.as_posix(),
                 "size_bytes": size_bytes,
-                "overwritten": overwrite and candidate.exists(),
+                "overwritten": target_existed,
             },
             invocation_id=request.invocation_id,
         )
