@@ -1,7 +1,7 @@
 """Shared workspace boundary and traversal policy for filesystem-backed tools.
 
 The workspace owns only common filesystem safety behavior: one resolved base
- directory, safe resolution of request-relative paths, and bounded traversal
+directory, safe resolution of request-relative paths, and bounded traversal
 that never follows symlinks outside the workspace. Individual handlers remain
 responsible for capability semantics, limits, and result schemas.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Iterator, Union
+from typing import Callable, Iterator, Union
 
 
 class WorkspacePathError(ValueError):
@@ -73,13 +73,14 @@ class Workspace:
         recursive: bool,
         include_hidden: bool = False,
         follow_symlinks: bool = False,
+        on_error: Callable[[OSError], None] | None = None,
     ) -> Iterator[Path]:
         """Yield paths below an already-resolved workspace directory.
 
-        Traversal is deterministic. Symlinked directories are reported as
-        entries but are never descended into unless explicitly requested.
-        Even when requested, paths whose resolved targets escape the workspace
-        are skipped.
+        Traversal is deterministic and workspace-confined. Symlinked entries
+        are yielded but are not descended into by default. When traversal
+        encounters an inaccessible path, ``on_error`` receives the ``OSError``
+        when supplied; otherwise the branch is skipped.
         """
         try:
             directory.relative_to(self._base_dir)
@@ -93,20 +94,16 @@ class Workspace:
             for child in sorted(directory.iterdir(), key=lambda p: p.name):
                 if not include_hidden and child.name.startswith("."):
                     continue
-                if not follow_symlinks and child.is_symlink():
-                    yield child
-                    continue
                 yield child
             return
 
-        def on_walk_error(exc: OSError) -> None:
-            # Callers that need walk diagnostics can provide their own walker;
-            # this shared primitive intentionally skips inaccessible branches.
-            del exc
+        def handle_error(exc: OSError) -> None:
+            if on_error is not None:
+                on_error(exc)
 
         for root, dirnames, filenames in os.walk(
             directory,
-            onerror=on_walk_error,
+            onerror=handle_error,
             followlinks=follow_symlinks,
         ):
             root_path = Path(root)
