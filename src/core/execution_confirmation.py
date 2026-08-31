@@ -114,6 +114,11 @@ class ExecutionConfirmationService:
         self,
         operation_id: str,
     ) -> ExecutionPendingOperation | None:
+        """
+        Retrieve an operation regardless of lifecycle status.
+
+        Returns None only when the operation ID does not exist.
+        """
 
         if not isinstance(operation_id, str):
             raise TypeError(
@@ -197,6 +202,11 @@ class ExecutionConfirmationService:
         self,
         operation_id: str | None,
     ) -> ExecutionPendingOperation | None:
+        """
+        Resolve an operation only when it is pending.
+
+        None means "use the first pending operation".
+        """
 
         if operation_id is not None:
             operation = self._operations.get(
@@ -212,17 +222,3 @@ class ExecutionConfirmationService:
             return operation
 
         return self.get_pending()
-
-    def get(self, operation_id):
-        return self._operations.get(operation_id)
-
-    def _resolve_pending(self, operation_id):
-        operation = self._operations.get(operation_id)
-
-        if operation is None:
-            return None
-
-        if not operation.is_pending:
-            return None
-
-        return operation
