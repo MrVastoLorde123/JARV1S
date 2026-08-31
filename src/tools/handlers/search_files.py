@@ -7,7 +7,7 @@ future "find what I was working on" workflows:
 * confined to a fixed ``base_dir``
 * absolute paths rejected
 * resolved paths must remain inside ``base_dir``
-* symbolic links that resolve outside the workspace are rejected
+* symbolic links are never followed as searchable files
 * binary/oversized files are skipped rather than loaded into memory
 * result count and per-file size are bounded
 * deterministic traversal and output ordering
@@ -19,7 +19,7 @@ changes workspace state.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Union
 
 from ..models import RiskLevel, ToolDefinition, ToolError, ToolRequest, ToolResult
 
@@ -148,7 +148,11 @@ class SearchFilesHandler:
             )
 
         request_max_results = request.arguments.get("max_results", self._max_results)
-        if not isinstance(request_max_results, int) or isinstance(request_max_results, bool) or request_max_results <= 0:
+        if (
+            not isinstance(request_max_results, int)
+            or isinstance(request_max_results, bool)
+            or request_max_results <= 0
+        ):
             return self._failure(
                 request,
                 "invalid_argument",
@@ -180,17 +184,23 @@ class SearchFilesHandler:
         if candidate.is_file():
             files = [candidate]
         elif candidate.is_dir():
-            files = list(self._iter_files(candidate, recursive=recursive))
+            files = self._iter_files(candidate, recursive=recursive)
         else:
-            return self._failure(request, "unsupported_path", f"path is not a regular file or directory: {raw_path}")
+            return self._failure(
+                request,
+                "unsupported_path",
+                f"path is not a regular file or directory: {raw_path}",
+            )
 
         needle = raw_query if case_sensitive else raw_query.casefold()
         matches: List[Dict[str, object]] = []
         files_scanned = 0
         files_skipped = 0
+        truncated = False
 
         for path in files:
             if len(matches) >= result_limit:
+                truncated = True
                 break
 
             try:
@@ -217,6 +227,7 @@ class SearchFilesHandler:
                                 }
                             )
                             if len(matches) >= result_limit:
+                                truncated = True
                                 break
             except (UnicodeDecodeError, OSError):
                 files_skipped += 1
@@ -230,9 +241,7 @@ class SearchFilesHandler:
                 "recursive": recursive,
                 "case_sensitive": case_sensitive,
                 "matches": matches,
-                "truncated": len(matches) >= result_limit and result_limit < self._max_results or (
-                    len(matches) >= result_limit and any(True for _ in ())
-                ),
+                "truncated": truncated,
                 "files_scanned": files_scanned,
                 "files_skipped": files_skipped,
             },
@@ -241,8 +250,7 @@ class SearchFilesHandler:
 
     def _iter_files(self, directory: Path, *, recursive: bool) -> Iterator[Path]:
         if not recursive:
-            children = sorted(directory.iterdir(), key=lambda p: p.name)
-            for child in children:
+            for child in sorted(directory.iterdir(), key=lambda p: p.name):
                 if child.name.startswith(".") or child.is_symlink():
                     continue
                 if child.is_file():
