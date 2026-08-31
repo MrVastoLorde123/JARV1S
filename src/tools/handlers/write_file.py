@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Union
+from pathlib import Path
 
 from ..models import RiskLevel, ToolDefinition, ToolError, ToolRequest, ToolResult
 from ..workspace import Workspace, WorkspacePathError
@@ -118,7 +118,7 @@ class WriteFileHandler:
                 return self._failure(request, code, message)
 
         try:
-            self._workspace.ensure_within(parent.resolve(), display_path=raw_path)
+            self._workspace.ensure_within(parent, display_path=raw_path)
         except WorkspacePathError as exc:
             return self._failure(request, exc.code, exc.message)
 
@@ -132,7 +132,7 @@ class WriteFileHandler:
             success=True,
             tool_name=self.TOOL_NAME,
             content={
-                "path": Path(raw_path).as_posix(),
+                "path": self._workspace.relative_path(candidate),
                 "size_bytes": size_bytes,
                 "overwritten": target_existed,
             },
