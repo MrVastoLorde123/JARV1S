@@ -88,7 +88,8 @@ class ReadFileHandler:
         try:
             size_bytes = candidate.stat().st_size
         except OSError as exc:
-            return self._failure(request, "io_error", str(exc))
+            code, message = self._workspace.runtime_error(exc)
+            return self._failure(request, code, message)
 
         if size_bytes > self._max_file_size_bytes:
             return self._failure(
@@ -102,13 +103,14 @@ class ReadFileHandler:
         except UnicodeDecodeError as exc:
             return self._failure(request, "decode_error", f"could not decode file as {encoding!r}: {exc}")
         except OSError as exc:
-            return self._failure(request, "io_error", str(exc))
+            code, message = self._workspace.runtime_error(exc)
+            return self._failure(request, code, message)
 
         return ToolResult(
             success=True,
             tool_name=self.TOOL_NAME,
             content={
-                "path": Path(raw_path).as_posix(),
+                "path": self._workspace.relative_path(candidate),
                 "content": content,
                 "size_bytes": size_bytes,
             },
