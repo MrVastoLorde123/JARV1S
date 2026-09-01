@@ -6,6 +6,7 @@ from src.core.execution_executor_models import PlanExecutionResult
 from src.core.execution_plan_models import ExecutionPlan
 from src.core.execution_policy import ExecutionPolicy
 from src.core.execution_policy_models import ExecutionPolicyResult, PolicyDecision
+from src.core.execution_state import ExecutionState
 from src.core.plan_executor import PlanExecutor
 from src.core.plan_validator import PlanValidator
 from src.core.task_models import TaskRequest
@@ -17,6 +18,7 @@ class ExecutionObservation:
 
     plan: ExecutionPlan
     execution: PlanExecutionResult
+    state: ExecutionState
     metadata: dict = field(default_factory=dict)
 
     @property
@@ -160,6 +162,7 @@ class GuardedExecutionLoop:
             observation = ExecutionObservation(
                 plan=plan,
                 execution=execution,
+                state=ExecutionState.from_execution(task.content, execution),
                 metadata={"iteration": iteration},
             )
             observations.append(observation)
