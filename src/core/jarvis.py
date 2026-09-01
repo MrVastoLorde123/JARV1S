@@ -76,6 +76,11 @@ from src.core.task_models import (
     TaskRequest,
 )
 
+from src.core.tool_execution import (
+    ToolInvoker,
+    ToolPlanStepHandler,
+)
+
 from src.memory.memory_formation import (
     process_turn,
 )
@@ -121,6 +126,7 @@ class JARVIS:
             execution_confirmation_service: (
                     ExecutionConfirmationService | None
             ) = None,
+            tool_invoker: ToolInvoker | None = None,
     ):
         self.ai_service = ai_service
 
@@ -185,6 +191,14 @@ class JARVIS:
             if execution_confirmation_service is not None
             else ExecutionConfirmationService()
         )
+
+        self.tool_invoker = tool_invoker
+
+        if tool_invoker is not None:
+            self.plan_executor.register_handler(
+                ToolPlanStepHandler.ACTION,
+                ToolPlanStepHandler(tool_invoker),
+            )
 
         if conversation is not None:
 
