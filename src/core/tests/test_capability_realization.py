@@ -5,25 +5,21 @@ from src.core.capability_catalog import CapabilityCatalog
 from src.core.capability_realization import CapabilityRealizationService
 from src.core.capability_selection import CapabilityCandidate
 from src.core.capability_selection_service import CapabilitySelectionService
+from src.core.tool_execution import ToolCapabilityGateway
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
 
 
 class FakeGateway:
     def __init__(self, definitions):
         self._definitions = tuple(definitions)
+        self.invocations = []
 
     def list_definitions(self):
         return self._definitions
 
-
-class FakeArgumentPlanner:
-    def __init__(self, arguments=None):
-        self.arguments = dict(arguments or {})
-        self.calls = []
-
-    def propose(self, intent, capability):
-        self.calls.append((intent, capability))
-        return dict(self.arguments)
+    def invoke(self, request):
+        self.invocations.append(request)
+        raise AssertionError("Capability realization must never invoke tools")
 
 
 def definition(name, description, schema):
@@ -39,15 +35,27 @@ def definition(name, description, schema):
 
 class CapabilityRealizationTests(unittest.TestCase):
     def _service(self, definitions, arguments=None):
-        catalog = CapabilityCatalog(FakeGateway(definitions))
+        gateway = FakeGateway(definitions)
+        self.assertIsInstance(gateway, ToolCapabilityGateway)
+        catalog = CapabilityCatalog(gateway)
         selector = __import__(
             "src.core.capability_selection",
             fromlist=["DeterministicCapabilitySelector"],
         ).DeterministicCapabilitySelector()
         selection_service = CapabilitySelectionService(catalog, selector)
-        argument_planner = FakeArgumentPlanner(arguments)
+
+        class FakeArgumentPlanner:
+            def __init__(self):
+                self.arguments = dict(arguments or {})
+                self.calls = []
+
+            def propose(self, intent, capability):
+                self.calls.append((intent, capability))
+                return dict(self.arguments)
+
+        argument_planner = FakeArgumentPlanner()
         invocation_service = CapabilityInvocationService(argument_planner)
-        return CapabilityRealizationService(selection_service, invocation_service), argument_planner
+        return CapabilityRealizationService(selection_service, invocation_service), argument_planner, gateway
 
     def test_selects_best_capability(self):
         read = definition("read_file", "read a file from the workspace", {
@@ -60,7 +68,7 @@ class CapabilityRealizationTests(unittest.TestCase):
             "required": ["query"],
             "properties": {"query": {"type": "string"}},
         })
-        service, _ = self._service([read, search], {"path": "README.md"})
+        service, _, _ = self._service([read, search], {"path": "README.md"})
 
         result = service.realize("read file")
 
@@ -74,7 +82,7 @@ class CapabilityRealizationTests(unittest.TestCase):
             "required": ["path"],
             "properties": {"path": {"type": "string"}},
         })
-        service, planner = self._service([read], {"path": "src/core/jarvis.py"})
+        service, planner, _ = self._service([read], {"path": "src/core/jarvis.py"})
 
         result = service.realize("inspect jarvis")
 
@@ -89,7 +97,7 @@ class CapabilityRealizationTests(unittest.TestCase):
 
     def test_no_matching_capability_is_not_silently_realized(self):
         read = definition("read_file", "read a file", {"type": "object"})
-        service, _ = self._service([read])
+        service, _, _ = self._service([read])
 
         with self.assertRaises(LookupError):
             service.realize("send an email")
@@ -100,16 +108,17 @@ class CapabilityRealizationTests(unittest.TestCase):
             "required": ["path"],
             "properties": {"path": {"type": "string"}},
         })
-        service, _ = self._service([read], {"path": "README.md"})
+        service, _, gateway = self._service([read], {"path": "README.md"})
 
         result = service.realize("read file")
 
         self.assertIsInstance(result.request, ToolRequest)
         self.assertEqual(result.request.tool_name, "read_file")
+        self.assertEqual(gateway.invocations, [])
 
     def test_empty_intent_is_rejected(self):
         read = definition("read_file", "read a file", {"type": "object"})
-        service, _ = self._service([read])
+        service, _, _ = self._service([read])
 
         with self.assertRaises(ValueError):
             service.realize("   ")
