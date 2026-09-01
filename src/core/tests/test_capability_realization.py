@@ -84,11 +84,11 @@ class CapabilityRealizationTests(unittest.TestCase):
         })
         service, planner, _ = self._service([read], {"path": "src/core/jarvis.py"})
 
-        result = service.realize("inspect jarvis")
+        result = service.realize("read jarvis")
 
         self.assertEqual(len(planner.calls), 1)
         intent, candidate = planner.calls[0]
-        self.assertEqual(intent, "inspect jarvis")
+        self.assertEqual(intent, "read jarvis")
         self.assertIsInstance(candidate, CapabilityCandidate)
         self.assertEqual(result.request, ToolRequest(
             tool_name="read_file",
