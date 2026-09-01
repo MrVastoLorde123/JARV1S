@@ -18,8 +18,8 @@ class ExecutionObservation:
 
     plan: ExecutionPlan
     execution: PlanExecutionResult
-    metadata: dict = field(default_factory=dict)
     state: ExecutionState | None = None
+    metadata: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if not isinstance(self.plan, ExecutionPlan):
@@ -45,7 +45,7 @@ class ExecutionObservation:
 
 @dataclass(frozen=True)
 class ContinuationDecision:
-    """Whether an objective is complete or needs another plan."""
+    """Provider-neutral decision derived from execution state."""
 
     action: str
     reason: str
@@ -71,19 +71,38 @@ ContinuationPlanner = Callable[[TaskRequest, ExecutionObservation], TaskRequest 
 
 
 class ExecutionContinuationService:
-    """Turn an execution observation into a conservative continuation decision."""
+    """
+    Derive a conservative continuation decision from provider-neutral state.
+
+    The state explicitly declares which control-level actions remain legal.
+    This service never invents an action outside that declaration.
+    """
 
     def decide(
         self,
-        observation: ExecutionObservation,
+        state: ExecutionState | ExecutionObservation,
     ) -> ContinuationDecision:
-        if not isinstance(observation, ExecutionObservation):
-            raise TypeError("observation must be an ExecutionObservation.")
-        if observation.success:
-            return ContinuationDecision("COMPLETE", "Plan completed successfully.")
+        if isinstance(state, ExecutionObservation):
+            state = state.state
+        if not isinstance(state, ExecutionState):
+            raise TypeError("state must be an ExecutionState or ExecutionObservation.")
+
+        allowed = state.next_allowed_actions
+        if "COMPLETE" in allowed:
+            return ContinuationDecision(
+                "COMPLETE",
+                "Execution state marks the objective complete.",
+            )
+
+        if "CORRECT" in allowed:
+            return ContinuationDecision(
+                "CONTINUE",
+                "Execution state permits a corrective continuation.",
+            )
+
         return ContinuationDecision(
-            "CONTINUE",
-            "Execution failed; a corrective plan may be proposed.",
+            "STOP",
+            "Execution state does not permit continuation.",
         )
 
 
@@ -179,15 +198,15 @@ class GuardedExecutionLoop:
             observation = ExecutionObservation(
                 plan=plan,
                 execution=execution,
-                metadata={"iteration": iteration},
                 state=ExecutionState.from_execution(task.content, execution),
+                metadata={"iteration": iteration},
             )
             observations.append(observation)
 
-            decision = self.continuation.decide(observation)
+            decision = self.continuation.decide(observation.state)
             if not decision.should_continue:
                 return ExecutionLoopResult(
-                    status="COMPLETED",
+                    status="COMPLETED" if decision.action == "COMPLETE" else "CORRECTION_REQUIRED",
                     iterations=iteration,
                     observations=tuple(observations),
                     last_policy=policy,
