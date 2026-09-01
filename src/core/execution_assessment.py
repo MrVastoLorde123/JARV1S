@@ -79,15 +79,27 @@ class ExecutionAssessmentService:
             )
 
         if state.status in (PlanExecutionStatus.FAILED, PlanExecutionStatus.BLOCKED):
+            has_blocker = bool(state.unresolved_requirements)
+            situation = (
+                "blocked"
+                if has_blocker
+                else "partial_progress"
+                if state.completed_steps
+                else "no_progress"
+            )
             return ExecutionAssessment(
                 goal=state.goal,
-                situation="blocked",
+                situation=situation,
                 completed=state.completed_steps,
                 remaining=state.unresolved_requirements,
                 blockers=state.unresolved_requirements,
                 useful_outputs=state.available_outputs,
                 recommended_next_action=(
-                    "CORRECT" if "CORRECT" in state.next_allowed_actions else None
+                    "CORRECT" if "CORRECT" in state.next_allowed_actions else (
+                        state.next_allowed_actions[0]
+                        if state.next_allowed_actions and situation == "no_progress"
+                        else None
+                    )
                 ),
             )
 
