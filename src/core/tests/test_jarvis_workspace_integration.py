@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from pathlib import Path
 
 from src.ai.service import AIService
 from src.core.jarvis import JARVIS
