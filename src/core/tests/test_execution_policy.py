@@ -72,7 +72,7 @@ class ExecutionPolicyTests(
             PolicyDecision.ALLOW,
         )
 
-    def test_tool_plan_requires_confirmation(
+    def test_tool_plan_delegates_risk_to_tool_layer(
         self,
     ):
         plan = self._plan(
@@ -87,7 +87,7 @@ class ExecutionPolicyTests(
 
         self.assertEqual(
             result.decision,
-            PolicyDecision.REQUIRE_CONFIRMATION,
+            PolicyDecision.ALLOW,
         )
 
     def test_action_plan_requires_confirmation(
@@ -182,7 +182,7 @@ class ExecutionPolicyTests(
         )
 
         second = self._step(
-            "USE_TOOL",
+            "PERFORM_ACTION",
             step_id="step-2",
             order=1,
         )
@@ -205,7 +205,7 @@ class ExecutionPolicyTests(
         self,
     ):
         first = self._step(
-            "USE_TOOL",
+            "PERFORM_ACTION",
             step_id="step-1",
             order=0,
         )
@@ -301,11 +301,32 @@ class ExecutionPolicyTests(
             second,
         )
 
-    def test_confirmed_confirmation_required_plan_becomes_allowed(
+    def test_confirmed_tool_plan_remains_allowed(
             self,
     ):
         plan = self._plan(
             self._step("USE_TOOL")
+        )
+
+        result = self.policy.authorize_confirmed(
+            plan
+        )
+
+        self.assertEqual(
+            result.decision,
+            PolicyDecision.ALLOW,
+        )
+
+        self.assertNotIn(
+            "confirmation_authorized",
+            result.metadata,
+        )
+
+    def test_confirmed_confirmation_required_plan_becomes_allowed(
+            self,
+    ):
+        plan = self._plan(
+            self._step("PERFORM_ACTION")
         )
 
         result = self.policy.authorize_confirmed(
@@ -361,7 +382,7 @@ class ExecutionPolicyTests(
             self,
     ):
         plan = self._plan(
-            self._step("USE_TOOL")
+            self._step("PERFORM_ACTION")
         )
 
         before = plan
