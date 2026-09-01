@@ -1,17 +1,10 @@
-from types import MethodType
-
 from src.core.execution_loop import GuardedExecutionLoop
 from src.core.model_continuation import ModelContinuationPlanner
 from src.core.models import JARVISResponse
 
 
 class JARVISExecutionAdapter:
-    """Attach the guarded M3 execution loop to an existing JARVIS instance.
-
-    The adapter replaces only the task-execution seam already called by
-    JARVIS.ask(). The loop itself still owns the full validator -> policy ->
-    confirmation -> executor path.
-    """
+    """Attach the guarded M3 execution loop to an existing JARVIS instance."""
 
     def __init__(self, jarvis, max_iterations: int = 3, continuation_planner=None):
         if jarvis is None:
@@ -35,7 +28,13 @@ class JARVISExecutionAdapter:
 
     def install(self):
         """Install this adapter on the JARVIS instance and return the instance."""
-        self.jarvis._handle_task = MethodType(self._handle_task, self.jarvis)
+
+        adapter = self
+
+        def handle_task(instance, task):
+            return adapter._handle_task(task)
+
+        self.jarvis._handle_task = handle_task.__get__(self.jarvis, type(self.jarvis))
         self.jarvis.execution_adapter = self
         return self.jarvis
 
@@ -46,7 +45,7 @@ class JARVISExecutionAdapter:
             del self.jarvis.execution_adapter
         return self.jarvis
 
-    def _handle_task(self, jarvis, task):
+    def _handle_task(self, task):
         result = self.loop.run(
             task,
             corrective_planner=self.continuation_planner.propose,
