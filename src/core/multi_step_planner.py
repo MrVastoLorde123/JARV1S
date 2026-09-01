@@ -53,7 +53,11 @@ class MultiStepExecutionPlanner:
         previous_step_id: str | None = None
 
         for index, subtask in enumerate(subtasks, start=1):
-            subplan = self.step_planner.plan(subtask, progress=progress)
+            # ExecutionProgress describes the aggregate objective, while each
+            # composed subtask has its own objective. Do not forward the
+            # aggregate progress into child planning or their objective checks
+            # will (correctly) reject the mismatched goal.
+            subplan = self.step_planner.plan(subtask)
             for source_step in subplan.steps:
                 step_id = f"step-{len(combined_steps) + 1}"
                 depends_on = (previous_step_id,) if previous_step_id is not None else ()
