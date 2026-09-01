@@ -195,7 +195,7 @@ class GuardedExecutionLoopTests(unittest.TestCase):
             steps=(),
         )
         observation = ExecutionObservation(plan("p1"), execution)
-        decision = ExecutionContinuationService().decide(observation)
+        decision = ExecutionContinuationService().decide(observation.state)
         self.assertEqual(decision.action, "COMPLETE")
         self.assertFalse(decision.should_continue)
         self.assertEqual(observation.state.status, PlanExecutionStatus.COMPLETED)
