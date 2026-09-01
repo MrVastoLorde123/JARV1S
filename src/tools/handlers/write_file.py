@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Union
+from pathlib import Path
 
 from ..models import RiskLevel, ToolDefinition, ToolError, ToolRequest, ToolResult
 from ..workspace import Workspace, WorkspacePathError
@@ -114,28 +114,25 @@ class WriteFileHandler:
             try:
                 parent.mkdir(parents=True, exist_ok=True)
             except OSError as exc:
-                return self._failure(request, "io_error", str(exc))
+                code, message = self._workspace.runtime_error(exc)
+                return self._failure(request, code, message)
 
-        # Re-check the resolved parent after optional directory creation.
         try:
-            self._workspace.relative_path(parent.resolve())
-        except ValueError:
-            return self._failure(
-                request,
-                "path_outside_base_dir",
-                f"resolved parent directory escapes the allowed workspace: {raw_path}",
-            )
+            self._workspace.ensure_within(parent, display_path=raw_path)
+        except WorkspacePathError as exc:
+            return self._failure(request, exc.code, exc.message)
 
         try:
             candidate.write_text(content, encoding="utf-8", newline="")
         except OSError as exc:
-            return self._failure(request, "io_error", str(exc))
+            code, message = self._workspace.runtime_error(exc)
+            return self._failure(request, code, message)
 
         return ToolResult(
             success=True,
             tool_name=self.TOOL_NAME,
             content={
-                "path": Path(raw_path).as_posix(),
+                "path": self._workspace.relative_path(candidate),
                 "size_bytes": size_bytes,
                 "overwritten": target_existed,
             },

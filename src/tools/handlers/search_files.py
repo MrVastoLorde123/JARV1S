@@ -159,7 +159,7 @@ class SearchFilesHandler:
             tool_name=self.TOOL_NAME,
             content={
                 "query": raw_query,
-                "path": Path(raw_path).as_posix(),
+                "path": self._workspace.relative_path(candidate),
                 "recursive": recursive,
                 "case_sensitive": case_sensitive,
                 "matches": matches,

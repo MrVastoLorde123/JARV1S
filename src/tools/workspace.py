@@ -1,9 +1,9 @@
 """Shared workspace boundary and traversal policy for filesystem-backed tools.
 
-The workspace owns only common filesystem safety behavior: one resolved base
-directory, safe resolution of request-relative paths, and bounded traversal
-that never follows symlinks outside the workspace. Individual handlers remain
-responsible for capability semantics, limits, and result schemas.
+The workspace owns common filesystem safety behavior: one resolved base
+directory, safe resolution of request-relative paths, workspace-relative
+reporting, and bounded traversal. Individual handlers remain responsible for
+capability semantics, limits, and result schemas.
 """
 
 from __future__ import annotations
@@ -25,6 +25,10 @@ class WorkspacePathError(ValueError):
 class Workspace:
     """A fixed, resolved directory that bounds filesystem tool access."""
 
+    INVALID_ARGUMENT = "invalid_argument"
+    PATH_OUTSIDE_BASE_DIR = "path_outside_base_dir"
+    IO_ERROR = "io_error"
+
     def __init__(self, base_dir: Union[str, Path]) -> None:
         resolved_base = Path(base_dir).resolve()
         if not resolved_base.is_dir():
@@ -39,32 +43,39 @@ class Workspace:
     def resolve_path(self, raw_path: str) -> Path:
         """Resolve a request-relative path and enforce the workspace boundary."""
         if not isinstance(raw_path, str) or not raw_path.strip():
-            raise WorkspacePathError(
-                "invalid_argument",
-                "path must be a non-empty string",
-            )
+            raise WorkspacePathError(self.INVALID_ARGUMENT, "path must be a non-empty string")
 
         requested = Path(raw_path)
         if requested.is_absolute():
             raise WorkspacePathError(
-                "path_outside_base_dir",
+                self.PATH_OUTSIDE_BASE_DIR,
                 "absolute paths are not allowed; provide a path relative to the tool's workspace directory",
             )
 
         candidate = (self._base_dir / requested).resolve()
-        try:
-            candidate.relative_to(self._base_dir)
-        except ValueError as exc:
-            raise WorkspacePathError(
-                "path_outside_base_dir",
-                f"resolved path escapes the allowed workspace directory: {raw_path}",
-            ) from exc
+        return self.ensure_within(candidate, display_path=raw_path)
 
-        return candidate
+    def ensure_within(self, path: Path, *, display_path: str | None = None) -> Path:
+        """Assert that ``path`` resolves inside the workspace and return it."""
+        resolved = path.resolve()
+        try:
+            resolved.relative_to(self._base_dir)
+        except ValueError as exc:
+            shown = display_path if display_path is not None else str(path)
+            raise WorkspacePathError(
+                self.PATH_OUTSIDE_BASE_DIR,
+                f"resolved path escapes the allowed workspace directory: {shown}",
+            ) from exc
+        return path
 
     def relative_path(self, path: Path) -> str:
         """Return a workspace-relative POSIX path."""
-        return path.relative_to(self._base_dir).as_posix()
+        relative = path.relative_to(self._base_dir)
+        return relative.as_posix() or "."
+
+    def runtime_error(self, exc: OSError) -> tuple[str, str]:
+        """Translate runtime filesystem failures into the shared tool vocabulary."""
+        return self.IO_ERROR, str(exc)
 
     def iter_paths(
         self,
@@ -82,13 +93,7 @@ class Workspace:
         encounters an inaccessible path, ``on_error`` receives the ``OSError``
         when supplied; otherwise the branch is skipped.
         """
-        try:
-            directory.relative_to(self._base_dir)
-        except ValueError as exc:
-            raise WorkspacePathError(
-                "path_outside_base_dir",
-                f"resolved path escapes the allowed workspace directory: {directory}",
-            ) from exc
+        self.ensure_within(directory)
 
         if not recursive:
             for child in sorted(directory.iterdir(), key=lambda p: p.name):
@@ -122,8 +127,8 @@ class Workspace:
                     paths.append(candidate)
                     continue
                 try:
-                    candidate.resolve().relative_to(self._base_dir)
-                except ValueError:
+                    self.ensure_within(candidate)
+                except WorkspacePathError:
                     continue
                 safe_dirnames.append(name)
                 paths.append(candidate)
@@ -135,8 +140,8 @@ class Workspace:
                     paths.append(candidate)
                     continue
                 try:
-                    candidate.resolve().relative_to(self._base_dir)
-                except ValueError:
+                    self.ensure_within(candidate)
+                except WorkspacePathError:
                     continue
                 paths.append(candidate)
 
