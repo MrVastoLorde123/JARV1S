@@ -34,14 +34,35 @@ class ModelContinuationPlanner:
         if state is None:
             raise ValueError("execution observation must contain execution state.")
 
+        progress = observation.progress
+        progress_context = (
+            progress.to_context()
+            if progress is not None
+            else {
+                "goal": state.goal,
+                "attempt_count": 1,
+                "current": state.to_context(),
+                "completed_steps_across_attempts": state.completed_steps,
+                "available_outputs_across_attempts": tuple(
+                    {"step_id": item.step_id, "value": item.value}
+                    for item in state.available_outputs
+                ),
+                "unresolved_requirements": state.unresolved_requirements,
+                "next_allowed_actions": state.next_allowed_actions,
+                "attempts": (state.to_context(),),
+            }
+        )
+
         prompt = (
-            "Propose the next corrective task for this failed objective. "
+            "Propose the next corrective task for this objective. "
+            "Use the accumulated execution progress to avoid repeating "
+            "completed work and to address what remains unresolved. "
             "Return ONLY JSON with keys 'task' and 'task_type'. "
             "task_type must be one of INFORMATION, ACTION, TOOL, UNKNOWN. "
             "Do not claim that the task was executed.\n\n"
             f"Original task: {task.content}\n"
             f"Original task type: {task.task_type.value}\n"
-            f"Execution state: {json.dumps(state.to_context(), default=str)}\n"
+            f"Accumulated execution progress: {json.dumps(progress_context, default=str)}\n"
         )
 
         response = self.ai_service.generate(
@@ -53,6 +74,7 @@ class ModelContinuationPlanner:
                     "execution_status": observation.execution.status.value,
                     "failed_steps": state.failed_steps,
                     "execution_state": state.to_context(),
+                    "execution_progress": progress_context,
                 },
                 metadata={"purpose": "execution_correction"},
             ),
