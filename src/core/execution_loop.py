@@ -18,8 +18,8 @@ class ExecutionObservation:
 
     plan: ExecutionPlan
     execution: PlanExecutionResult
-    state: ExecutionState | None = None
     metadata: dict = field(default_factory=dict)
+    state: ExecutionState | None = None
 
     def __post_init__(self):
         if not isinstance(self.plan, ExecutionPlan):
@@ -179,8 +179,8 @@ class GuardedExecutionLoop:
             observation = ExecutionObservation(
                 plan=plan,
                 execution=execution,
-                state=ExecutionState.from_execution(task.content, execution),
                 metadata={"iteration": iteration},
+                state=ExecutionState.from_execution(task.content, execution),
             )
             observations.append(observation)
 
