@@ -126,9 +126,12 @@ class TestSearch(SearchFilesHandlerTestCase):
             )
         )
 
+        print("DEBUG RESULT:", result.content)
+
         self.assertTrue(result.success)
         self.assertEqual(len(result.content["matches"]), 2)
         self.assertTrue(result.content["truncated"])
+
 
     def test_tool_level_limit_cannot_be_exceeded_by_request(self) -> None:
         self.write("matches.txt", "needle\nneedle\nneedle\n")
@@ -145,7 +148,7 @@ class TestSearch(SearchFilesHandlerTestCase):
         self.assertTrue(result.content["truncated"])
 
     def test_oversized_file_is_skipped(self) -> None:
-        handler = SearchFilesHandler(self.base_dir, max_file_size_bytes=5)
+        handler = SearchFilesHandler(self.base_dir, max_file_size_bytes=6)
         self.write("small.txt", "needle")
         self.write("large.txt", "x" * 100)
 
@@ -154,9 +157,11 @@ class TestSearch(SearchFilesHandlerTestCase):
         )
 
         self.assertTrue(result.success)
-        self.assertEqual([m["path"] for m in result.content["matches"]], ["small.txt"])
+        self.assertEqual(
+            [m["path"] for m in result.content["matches"]],
+            ["small.txt"],
+        )
         self.assertEqual(result.content["files_skipped"], 1)
-
 
 class TestArgumentsAndSafety(SearchFilesHandlerTestCase):
     def test_missing_query_is_rejected(self) -> None:
