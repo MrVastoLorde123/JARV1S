@@ -6,21 +6,32 @@ from src.core.models import JARVISResponse
 class JARVISExecutionAdapter:
     """Attach the guarded M3 execution loop to an existing JARVIS instance."""
 
-    def __init__(self, jarvis, max_iterations: int = 3, continuation_planner=None):
+    def __init__(
+        self,
+        jarvis,
+        max_iterations: int = 3,
+        continuation_planner=None,
+        execution_planner=None,
+    ):
         if jarvis is None:
             raise TypeError("jarvis is required.")
         if not isinstance(max_iterations, int) or max_iterations < 1:
             raise ValueError("max_iterations must be a positive integer.")
 
+        planner = execution_planner or jarvis.execution_planner
+        if not hasattr(planner, "plan") or not callable(planner.plan):
+            raise TypeError("execution_planner must expose plan(task).")
+
         self.jarvis = jarvis
         self.loop = GuardedExecutionLoop(
-            planner=jarvis.execution_planner,
+            planner=planner,
             validator=jarvis.plan_validator,
             policy=jarvis.execution_policy,
             executor=jarvis.plan_executor,
             confirmation=jarvis.execution_confirmation_service,
             max_iterations=max_iterations,
         )
+        self.execution_planner = planner
         self.continuation_planner = continuation_planner or ModelContinuationPlanner(
             jarvis.ai_service
         )
@@ -157,14 +168,21 @@ class JARVISExecutionAdapter:
                     step.step_id for step in observation.execution.failed_steps
                 ),
                 "execution_outputs": outputs,
+                "planner": observation.plan.metadata.get("planner"),
             },
         )
 
 
-def install_execution_loop(jarvis, max_iterations: int = 3, continuation_planner=None):
-    """Install bounded model-driven continuation on JARVIS.ask()."""
+def install_execution_loop(
+    jarvis,
+    max_iterations: int = 3,
+    continuation_planner=None,
+    execution_planner=None,
+):
+    """Install bounded execution continuation on JARVIS.ask()."""
     return JARVISExecutionAdapter(
         jarvis,
         max_iterations=max_iterations,
         continuation_planner=continuation_planner,
+        execution_planner=execution_planner,
     ).install()
