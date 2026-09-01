@@ -1,12 +1,7 @@
 import unittest
 
 from src.core.execution_assessment import ExecutionAssessment, ExecutionAssessmentService
-from src.core.execution_executor_models import (
-    PlanExecutionResult,
-    PlanExecutionStatus,
-    StepExecutionResult,
-    StepExecutionStatus,
-)
+from src.core.execution_executor_models import PlanExecutionStatus
 from src.core.execution_state import ExecutionOutput, ExecutionState
 
 
@@ -30,7 +25,7 @@ class ExecutionAssessmentTests(unittest.TestCase):
         self.assertEqual(result.completed, ("step-1",))
         self.assertEqual(result.remaining, ())
         self.assertEqual(result.blockers, ())
-        self.assertEqual(result.recommended_next_action, None)
+        self.assertIsNone(result.recommended_next_action)
         self.assertEqual(result.useful_outputs, state.available_outputs)
 
     def test_failed_state_is_assessed_as_blocked(self):
@@ -52,11 +47,29 @@ class ExecutionAssessmentTests(unittest.TestCase):
         self.assertEqual(result.blockers, state.unresolved_requirements)
         self.assertEqual(result.recommended_next_action, "CORRECT")
 
+    def test_explicitly_blocked_state_is_assessed_as_blocked(self):
+        state = ExecutionState(
+            goal="modify file",
+            plan_id="plan-3",
+            status=PlanExecutionStatus.BLOCKED,
+            completed_steps=("inspect",),
+            unresolved_requirements=("confirmation required",),
+            next_allowed_actions=("STOP",),
+        )
+
+        result = self.service.assess(state)
+
+        self.assertEqual(result.situation, "blocked")
+        self.assertEqual(result.completed, ("inspect",))
+        self.assertEqual(result.remaining, ("confirmation required",))
+        self.assertEqual(result.blockers, ("confirmation required",))
+        self.assertIsNone(result.recommended_next_action)
+
     def test_unresolved_requirements_without_failed_steps_are_partial_progress(self):
         state = ExecutionState(
             goal="inspect then summarize",
-            plan_id="plan-3",
-            status=PlanExecutionStatus.RUNNING,
+            plan_id="plan-4",
+            status=PlanExecutionStatus.BLOCKED,
             completed_steps=("inspect",),
             unresolved_requirements=("produce summary",),
             next_allowed_actions=("CONTINUE", "STOP"),
@@ -72,8 +85,8 @@ class ExecutionAssessmentTests(unittest.TestCase):
     def test_state_without_failure_or_requirements_is_no_progress(self):
         state = ExecutionState(
             goal="inspect project",
-            plan_id="plan-4",
-            status=PlanExecutionStatus.RUNNING,
+            plan_id="plan-5",
+            status=PlanExecutionStatus.BLOCKED,
             next_allowed_actions=("STOP",),
         )
 
@@ -88,7 +101,7 @@ class ExecutionAssessmentTests(unittest.TestCase):
     def test_assessment_is_provider_neutral(self):
         state = ExecutionState(
             goal="inspect project",
-            plan_id="plan-5",
+            plan_id="plan-6",
             status=PlanExecutionStatus.COMPLETED,
         )
 
