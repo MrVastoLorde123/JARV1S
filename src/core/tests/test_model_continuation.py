@@ -11,6 +11,8 @@ from src.core.execution_executor_models import (
 )
 from src.core.execution_loop import ExecutionObservation
 from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
+from src.core.execution_progress import ExecutionProgress
+from src.core.execution_state import ExecutionState
 from src.core.model_continuation import ModelContinuationPlanner
 from src.core.task_models import TaskRequest, TaskType
 
@@ -66,6 +68,50 @@ class ModelContinuationPlannerTests(unittest.TestCase):
         request = self.ai_service.generate.call_args.args[0]
         self.assertEqual(request.metadata["purpose"], "execution_correction")
         self.assertEqual(request.context["execution_state"]["failed_steps"], ("step-1",))
+
+    def test_progress_is_carried_into_model_context(self):
+        first_state = ExecutionState.from_execution(
+            "do it",
+            PlanExecutionResult(
+                plan_id="plan-0",
+                status=PlanExecutionStatus.COMPLETED,
+                steps=(
+                    StepExecutionResult(
+                        step_id="step-0",
+                        action="PROVIDE_INFORMATION",
+                        status=StepExecutionStatus.COMPLETED,
+                        output="already done",
+                    ),
+                ),
+            ),
+        )
+        progress = ExecutionProgress.from_state(first_state).record(self.observation.state)
+        observation = ExecutionObservation(
+            self.plan,
+            self.observation.execution,
+            state=self.observation.state,
+            progress=progress,
+        )
+        self.ai_service.generate.return_value = AIResponse(
+            content='{"task":"fix remaining step","task_type":"ACTION"}',
+            provider="fake",
+            model="fake-model",
+        )
+
+        result = self.planner.propose(TaskRequest("do it", TaskType.ACTION), observation)
+
+        self.assertEqual(result, TaskRequest("fix remaining step", TaskType.ACTION))
+        request = self.ai_service.generate.call_args.args[0]
+        context = request.context["execution_progress"]
+        self.assertEqual(context["attempt_count"], 2)
+        self.assertEqual(context["goal"], "do it")
+        self.assertEqual(
+            context["completed_steps_across_attempts"],
+            ("plan-0:step-0",),
+        )
+        self.assertEqual(len(context["attempts"]), 2)
+        self.assertIn("already done", str(request.task))
+        self.assertIn("Accumulated execution progress", request.task)
 
     def test_no_task_stops_correction(self):
         self.ai_service.generate.return_value = AIResponse(
