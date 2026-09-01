@@ -65,7 +65,6 @@ class ModelContinuationPlannerTests(unittest.TestCase):
         self.assertEqual(result, TaskRequest("retry carefully", TaskType.ACTION))
         request = self.ai_service.generate.call_args.args[0]
         self.assertEqual(request.metadata["purpose"], "execution_correction")
-        self.assertIn("execution_state", self.ai_service.generate.call_args.kwargs.get("provider_name", "") if False else request.context)
         self.assertEqual(request.context["execution_state"]["failed_steps"], ("step-1",))
 
     def test_no_task_stops_correction(self):
