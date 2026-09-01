@@ -72,6 +72,10 @@ from src.core.request_router import (
     RequestRouter,
 )
 
+from src.core.intelligent_request_router import (
+    IntelligentRequestRouter,
+)
+
 from src.core.task_models import (
     TaskRequest,
 )
@@ -118,6 +122,7 @@ class JARVIS:
             conversation_id: str | None = None,
             enable_memory_formation: bool = False,
             request_router: RequestRouter | None = None,
+            intelligent_request_router: IntelligentRequestRouter | None = None,
             command_service: CommandService | None = None,
             execution_planner: ExecutionPlanner | None = None,
             plan_validator: PlanValidator | None = None,
@@ -148,6 +153,10 @@ class JARVIS:
             request_router
             if request_router is not None
             else RequestRouter()
+        )
+
+        self.intelligent_request_router = (
+            intelligent_request_router
         )
 
         if command_service is None:
@@ -265,12 +274,11 @@ class JARVIS:
         """
         Main JARVIS entry point.
 
-        Explicit command syntax is routed to CommandService.
-        Everything else remains a normal conversation in V1.
-
-        Task execution is exposed through `ask_task`, because
-        V1 request routing intentionally does not infer task intent
-        from ordinary natural language.
+        Explicit command syntax remains deterministic and is always
+        handled by CommandService. When an IntelligentRequestRouter
+        is supplied, ordinary natural language is classified into
+        conversation, task, or tool intent and executable routes enter
+        the existing task pipeline unchanged.
         """
 
         if not isinstance(
@@ -289,7 +297,13 @@ class JARVIS:
                 "JARVIS query cannot be empty."
             )
 
-        route = self.request_router.route(
+        router = (
+            self.intelligent_request_router
+            if self.intelligent_request_router is not None
+            else self.request_router
+        )
+
+        route = router.route(
             query
         )
 
@@ -297,6 +311,25 @@ class JARVIS:
             return self._handle_command(
                 route.original_input
             )
+
+        if (
+                route.request_type.value == "TASK"
+                and route.task is not None
+        ):
+            response = self._handle_task(
+                route.task
+            )
+            response.metadata.update(
+                {
+                    "intent_kind": route.metadata.get(
+                        "intent_kind"
+                    ),
+                    "intent_confidence": route.metadata.get(
+                        "intent_confidence"
+                    ),
+                }
+            )
+            return response
 
         return self._handle_conversation(
             query,
