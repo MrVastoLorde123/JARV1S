@@ -16,6 +16,7 @@ from src.core.execution_loop import (
 from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
 from src.core.execution_policy import ExecutionPolicy
 from src.core.execution_policy_models import PolicyDecision
+from src.core.multi_step_planner import MultiStepExecutionPlanner
 from src.core.plan_executor import PlanExecutor
 from src.core.plan_validator import PlanValidator
 from src.core.task_models import TaskRequest, TaskType
@@ -68,6 +69,27 @@ class GuardedExecutionLoopTests(unittest.TestCase):
         self.assertEqual(result.status, "COMPLETED")
         self.assertEqual(len(result.observations), 1)
         self.assertTrue(result.observations[0].success)
+
+    def test_multi_step_plan_executes_in_order(self):
+        planner = MultiStepExecutionPlanner()
+        seen = []
+        executor = PlanExecutor({"PROVIDE_INFORMATION": lambda step: seen.append(step.description) or step.description})
+        loop = GuardedExecutionLoop(
+            planner,
+            self.validator,
+            self.policy,
+            executor,
+            self.confirmation,
+        )
+        result = loop.run(
+            TaskRequest(
+                "inspect the project then summarize the result",
+                TaskType.INFORMATION,
+            )
+        )
+        self.assertEqual(result.status, "COMPLETED")
+        self.assertEqual(seen, ["inspect the project", "summarize the result"])
+        self.assertEqual(result.observations[0].execution.step_count, 2)
 
     def test_failed_plan_stops_without_implicit_replanning(self):
         planner = FakePlanner([plan()])
