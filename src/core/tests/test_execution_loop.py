@@ -69,6 +69,8 @@ class GuardedExecutionLoopTests(unittest.TestCase):
         self.assertEqual(result.status, "COMPLETED")
         self.assertEqual(len(result.observations), 1)
         self.assertTrue(result.observations[0].success)
+        self.assertEqual(result.observations[0].state.completed_steps, ("step-1",))
+        self.assertEqual(result.observations[0].state.next_allowed_actions, ("COMPLETE",))
 
     def test_multi_step_plan_executes_in_order(self):
         planner = MultiStepExecutionPlanner()
@@ -150,6 +152,8 @@ class GuardedExecutionLoopTests(unittest.TestCase):
         self.assertEqual([item[0] for item in calls], ["p1", "p2"])
         self.assertTrue(all(decision == PolicyDecision.ALLOW for _, decision in calls))
         self.assertEqual(len(result.observations), 2)
+        self.assertEqual(result.observations[0].state.failed_steps, ("step-1",))
+        self.assertEqual(result.observations[1].state.completed_steps, ("step-1",))
 
     def test_confirmation_stops_before_executor(self):
         planner = FakePlanner([plan(action="PERFORM_ACTION")])
@@ -194,6 +198,7 @@ class GuardedExecutionLoopTests(unittest.TestCase):
         decision = ExecutionContinuationService().decide(observation)
         self.assertEqual(decision.action, "COMPLETE")
         self.assertFalse(decision.should_continue)
+        self.assertEqual(observation.state.status, PlanExecutionStatus.COMPLETED)
 
 
 if __name__ == "__main__":
