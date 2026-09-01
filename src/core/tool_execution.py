@@ -9,12 +9,13 @@ the same contract), so policy and confirmation remain outside the executor.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolRequest, ToolResult
 
 
+@runtime_checkable
 class ToolInvoker(Protocol):
     """Minimal capability contract needed by the execution layer."""
 
