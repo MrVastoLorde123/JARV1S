@@ -58,9 +58,6 @@ class JARVIS:
         capability_invocation_service: CapabilityInvocationService | None = None,
         capability_realization_service: CapabilityRealizationService | None = None,
     ):
-        if not isinstance(ai_service, AIService):
-            raise TypeError("ai_service must be an AIService")
-
         self.ai_service = ai_service
         self.context_options = context_options if context_options is not None else ContextOptions()
         self.conversation_store = conversation_store
@@ -288,6 +285,7 @@ class JARVIS:
                 context=None,
                 metadata={"route": "COMMAND", "success": False},
             )
+
         return JARVISResponse(
             content=result.message,
             ai_response=None,
@@ -368,13 +366,12 @@ class JARVIS:
             options=self.context_options,
             state_snapshot=user_snapshot if self.context_options.include_state else None,
         )
-        ai_response = self.ai_service.generate(
-            AIRequest(task=query, context=context),
-            provider_name=provider_name,
-        )
+        request = AIRequest(task=query, context=context)
+        ai_response = self.ai_service.generate(request, provider_name=provider_name)
         response_content = str(ai_response.content)
         self.conversation.add_turn("assistant", response_content)
-        assistant_created_at = self.conversation.snapshot().turns[-1].timestamp
+        assistant_snapshot = self.conversation.snapshot()
+        assistant_created_at = assistant_snapshot.turns[-1].timestamp if assistant_snapshot.turns else None
 
         if self.conversation_store is not None:
             self.conversation_store.append_message(
@@ -391,7 +388,7 @@ class JARVIS:
             formation_result = process_turn(
                 user_query=query,
                 assistant_response=response_content,
-                conversation_id=(self.conversation.conversation_id if self.conversation_store is not None else None),
+                conversation_id=self.conversation.conversation_id if self.conversation_store is not None else None,
                 message_id=user_message_id,
                 source_created_at=source_created_at,
             )
@@ -412,6 +409,7 @@ class JARVIS:
                 "evidence_added": formation_result.evidence_added,
                 "errors": formation_result.errors,
             }
+
         return JARVISResponse(
             content=response_content,
             ai_response=ai_response,
@@ -420,27 +418,10 @@ class JARVIS:
         )
 
     @staticmethod
-    def _capability_realization_unavailable_response(task: TaskRequest) -> JARVISResponse:
-        return JARVISResponse(
-            content=(
-                "I understood that as a tool request, but no capability realization boundary "
-                "is configured for this JARVIS instance."
-            ),
-            ai_response=None,
-            context=None,
-            metadata={
-                "route": "TASK",
-                "stage": "CAPABILITY_REALIZATION",
-                "success": False,
-                "task": task.content,
-            },
-        )
-
-    @staticmethod
     def _validation_response(validation) -> JARVISResponse:
         reasons = "\n".join(f"- {issue.message}" for issue in validation.issues)
         return JARVISResponse(
-            content="I could not produce a valid execution plan.\n\n" + reasons,
+            content=("I could not produce a valid execution plan.\n\n" f"{reasons}"),
             ai_response=None,
             context=None,
             metadata={
@@ -454,14 +435,14 @@ class JARVIS:
 
     @staticmethod
     def _policy_response(policy: ExecutionPolicyResult) -> JARVISResponse:
-        prefix = (
-            "I cannot execute that task."
-            if policy.decision == PolicyDecision.DENY
-            else "The task is ready, but confirmation is required before execution."
-        )
+        if policy.decision == PolicyDecision.DENY:
+            prefix = "I cannot execute that task."
+        else:
+            prefix = "The task is ready, but confirmation is required before execution."
         reason_text = "\n".join(f"- {issue.message}" for issue in policy.issues)
+        content = prefix if not reason_text else f"{prefix}\n\n{reason_text}"
         return JARVISResponse(
-            content=prefix + (f"\n\n{reason_text}" if reason_text else ""),
+            content=content,
             ai_response=None,
             context=None,
             metadata={
@@ -485,15 +466,15 @@ class JARVIS:
             if step.status.value == "COMPLETED" and step.output is not None
         )
         if execution.status == PlanExecutionStatus.COMPLETED:
-            content = f"Task completed successfully.\n\nCompleted {execution.step_count} step(s)."
+            content = "Task completed successfully.\n\n" f"Completed {execution.step_count} step(s)."
             if outputs:
-                content += (
-                    "\n\nResult:\n" + str(outputs[0])
-                    if len(outputs) == 1
-                    else "\n\nResults:\n" + "\n\n".join(str(output) for output in outputs)
-                )
+                if len(outputs) == 1:
+                    content += "\n\nResult:\n" + str(outputs[0])
+                else:
+                    content += "\n\nResults:\n" + "\n\n".join(str(output) for output in outputs)
         else:
             content = "The task could not be completed.\n\n" + (execution.error or "Execution failed.")
+
         return JARVISResponse(
             content=content,
             ai_response=None,
@@ -514,7 +495,9 @@ class JARVIS:
         if self.conversation_store is None:
             return None
         rows = self.conversation_store.get_messages(self.conversation.conversation_id)
-        return rows[-1][0] if rows else None
+        if not rows:
+            return None
+        return rows[-1][0]
 
     def _cancel_execution(self, arguments: tuple[str, ...]) -> JARVISResponse:
         if len(arguments) > 1:
@@ -554,7 +537,6 @@ class JARVIS:
                 context=None,
                 metadata={"route": "COMMAND", "command": "CONFIRM", "success": False},
             )
-
         operation_id = arguments[0] if arguments else None
         operation = (
             self.execution_confirmation_service.get_pending()
@@ -588,11 +570,9 @@ class JARVIS:
         validation = self.plan_validator.validate(operation.plan)
         if not validation.valid:
             return self._validation_response(validation)
-
         policy = self.execution_policy.authorize_confirmed(operation.plan)
         if policy.decision != PolicyDecision.ALLOW:
             return self._policy_response(policy)
-
         confirmed = self.execution_confirmation_service.confirm(operation.operation_id)
         if confirmed is None:
             return JARVISResponse(
@@ -601,11 +581,20 @@ class JARVIS:
                 context=None,
                 metadata={"route": "COMMAND", "command": "CONFIRM", "success": False},
             )
-
         execution = self.plan_executor.execute(confirmed.plan, policy)
         response = self._execution_response(execution, confirmed.plan, policy)
-        response.metadata.update({
-            "confirmation": True,
-            "operation_id": confirmed.operation_id,
-        })
+        response.metadata.update({"confirmation": True, "operation_id": confirmed.operation_id})
         return response
+
+    def _capability_realization_unavailable_response(self, task: TaskRequest) -> JARVISResponse:
+        return JARVISResponse(
+            content="No capability realization service is configured for natural-language tool requests.",
+            ai_response=None,
+            context=None,
+            metadata={
+                "route": "TASK",
+                "stage": "CAPABILITY_REALIZATION",
+                "success": False,
+                "task_type": task.task_type.value,
+            },
+        )
