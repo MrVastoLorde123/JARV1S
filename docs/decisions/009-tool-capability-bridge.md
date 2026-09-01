@@ -21,30 +21,35 @@ A `USE_TOOL` plan step carries explicit, inert invocation data in plan metadata:
 
 `ToolPlanStepHandler` adapts that metadata into a `ToolRequest` and delegates to an injected `ToolInvoker`.
 
-The core executor remains unaware of concrete tools. The injected invoker should normally be the tool-layer `PolicyGate`, preserving the boundary:
+`JARVIS` accepts that `ToolInvoker` as a single optional dependency and installs the `USE_TOOL` adapter into its existing `PlanExecutor`. JARVIS core therefore depends on one capability contract rather than concrete tool classes, workspaces, registries, or filesystem handlers.
+
+The injected invoker should normally be the tool-layer `PolicyGate`, preserving the boundary:
 
 ```text
+JARVIS
+  |
+  v
 ExecutionPlan
-    |
-    v
+  |
+  v
 PlanExecutor
-    |
-    v
+  |
+  v
 ToolPlanStepHandler
-    |
-    v
+  |
+  v
 ToolRequest
-    |
-    v
+  |
+  v
 Tool PolicyGate
-    |
-    +--> policy
-    +--> confirmation
-    |
-    v
+  |
+  +--> policy
+  +--> confirmation
+  |
+  v
 ToolService
-    |
-    v
+  |
+  v
 ToolHandler
 ```
 
@@ -59,6 +64,8 @@ The planner does not inspect tool definitions or filesystem behavior. It only va
 The adapter does not select tools, make policy decisions, or bypass confirmation.
 
 The executor remains generic: it registers an action handler and does not know what implementation sits behind `USE_TOOL`.
+
+`JARVIS` does not construct a default filesystem stack and does not import concrete workspace handlers. A caller supplies the capability boundary it wants JARVIS to use.
 
 Tool-specific result semantics remain behind the tool boundary. A failed `ToolResult` is surfaced as an execution failure with its tool error code and message.
 
