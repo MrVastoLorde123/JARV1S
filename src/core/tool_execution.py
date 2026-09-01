@@ -1,37 +1,33 @@
-"""Bridge explicit tool plan steps to the tool-layer policy boundary.
-
-The core execution layer intentionally knows only that a tool invoker can
-accept a ``ToolRequest`` and return a ``ToolResult``. The concrete invoker is
-expected to be the tool-layer ``PolicyGate`` (or another object implementing
-the same contract), so policy and confirmation remain outside the executor.
-"""
+"""Bridge explicit tool plans to the tool-layer capability boundary."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
-from src.tools.models import ToolRequest, ToolResult
+from src.tools.models import ToolDefinition, ToolRequest, ToolResult
 
 
 @runtime_checkable
 class ToolInvoker(Protocol):
-    """Minimal capability contract needed by the execution layer."""
+    """Minimal contract required to invoke a tool safely."""
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        """Invoke one tool request through the caller's safety boundary."""
+        ...
+
+
+@runtime_checkable
+class ToolCapabilityGateway(ToolInvoker, Protocol):
+    """Capability boundary used by JARVIS to discover and invoke tools."""
+
+    def list_definitions(self) -> Sequence[ToolDefinition]:
+        """Return the currently available tool capability definitions."""
         ...
 
 
 class ToolPlanStepHandler:
-    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker.
-
-    The planner supplies tool identity and arguments as inert plan metadata.
-    This adapter turns that data into a ``ToolRequest`` and delegates to the
-    injected invoker. The adapter never chooses policy, confirmation, or a
-    concrete tool implementation.
-    """
+    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker."""
 
     ACTION = "USE_TOOL"
 
