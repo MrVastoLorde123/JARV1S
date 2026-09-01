@@ -6,6 +6,7 @@ from src.core.execution_executor_models import PlanExecutionResult
 from src.core.execution_plan_models import ExecutionPlan
 from src.core.execution_policy import ExecutionPolicy
 from src.core.execution_policy_models import ExecutionPolicyResult, PolicyDecision
+from src.core.execution_progress import ExecutionProgress
 from src.core.execution_state import ExecutionState
 from src.core.plan_executor import PlanExecutor
 from src.core.plan_validator import PlanValidator
@@ -19,6 +20,7 @@ class ExecutionObservation:
     plan: ExecutionPlan
     execution: PlanExecutionResult
     state: ExecutionState | None = None
+    progress: ExecutionProgress | None = None
     metadata: dict = field(default_factory=dict)
 
     def __post_init__(self):
@@ -37,6 +39,8 @@ class ExecutionObservation:
             )
         elif not isinstance(self.state, ExecutionState):
             raise TypeError("state must be an ExecutionState or None.")
+        if self.progress is not None and not isinstance(self.progress, ExecutionProgress):
+            raise TypeError("progress must be an ExecutionProgress or None.")
 
     @property
     def success(self) -> bool:
@@ -65,6 +69,7 @@ class ExecutionLoopResult:
     pending_operation_id: str | None = None
     last_policy: ExecutionPolicyResult | None = None
     next_task: TaskRequest | None = None
+    progress: ExecutionProgress | None = None
 
 
 ContinuationPlanner = Callable[[TaskRequest, ExecutionObservation], TaskRequest | None]
@@ -160,6 +165,7 @@ class GuardedExecutionLoop:
 
         observations: list[ExecutionObservation] = []
         current_task = task
+        progress: ExecutionProgress | None = None
 
         for iteration in range(1, self.max_iterations + 1):
             plan = self.planner.plan(current_task)
@@ -171,6 +177,7 @@ class GuardedExecutionLoop:
                     observations=tuple(observations),
                     last_policy=None,
                     next_task=current_task,
+                    progress=progress,
                 )
 
             policy = self.policy.evaluate(plan)
@@ -181,6 +188,7 @@ class GuardedExecutionLoop:
                     observations=tuple(observations),
                     last_policy=policy,
                     next_task=current_task,
+                    progress=progress,
                 )
 
             if policy.decision == PolicyDecision.REQUIRE_CONFIRMATION:
@@ -192,24 +200,33 @@ class GuardedExecutionLoop:
                     pending_operation_id=pending.operation_id,
                     last_policy=policy,
                     next_task=current_task,
+                    progress=progress,
                 )
 
             execution = self.executor.execute(plan, policy)
+            state = ExecutionState.from_execution(task.content, execution)
+            progress = (
+                ExecutionProgress.from_state(state)
+                if progress is None
+                else progress.record(state)
+            )
             observation = ExecutionObservation(
                 plan=plan,
                 execution=execution,
-                state=ExecutionState.from_execution(task.content, execution),
+                state=state,
+                progress=progress,
                 metadata={"iteration": iteration},
             )
             observations.append(observation)
 
-            decision = self.continuation.decide(observation.state)
+            decision = self.continuation.decide(state)
             if not decision.should_continue:
                 return ExecutionLoopResult(
                     status="COMPLETED" if decision.action == "COMPLETE" else "CORRECTION_REQUIRED",
                     iterations=iteration,
                     observations=tuple(observations),
                     last_policy=policy,
+                    progress=progress,
                 )
 
             if corrective_planner is None:
@@ -218,6 +235,7 @@ class GuardedExecutionLoop:
                     iterations=iteration,
                     observations=tuple(observations),
                     last_policy=policy,
+                    progress=progress,
                 )
 
             if iteration == self.max_iterations:
@@ -226,6 +244,7 @@ class GuardedExecutionLoop:
                     iterations=iteration,
                     observations=tuple(observations),
                     last_policy=policy,
+                    progress=progress,
                 )
 
             current_task = corrective_planner(current_task, observation)
@@ -235,6 +254,7 @@ class GuardedExecutionLoop:
                     iterations=iteration,
                     observations=tuple(observations),
                     last_policy=policy,
+                    progress=progress,
                 )
             if not isinstance(current_task, TaskRequest):
                 raise TypeError("corrective_planner must return TaskRequest or None.")
@@ -243,4 +263,5 @@ class GuardedExecutionLoop:
             status="MAX_ITERATIONS_REACHED",
             iterations=self.max_iterations,
             observations=tuple(observations),
+            progress=progress,
         )
