@@ -30,6 +30,10 @@ class ModelContinuationPlanner:
         if not isinstance(observation, ExecutionObservation):
             raise TypeError("observation must be an ExecutionObservation.")
 
+        state = observation.state
+        if state is None:
+            raise ValueError("execution observation must contain execution state.")
+
         prompt = (
             "Propose the next corrective task for this failed objective. "
             "Return ONLY JSON with keys 'task' and 'task_type'. "
@@ -37,9 +41,7 @@ class ModelContinuationPlanner:
             "Do not claim that the task was executed.\n\n"
             f"Original task: {task.content}\n"
             f"Original task type: {task.task_type.value}\n"
-            f"Plan ID: {observation.plan.plan_id}\n"
-            f"Execution status: {observation.execution.status.value}\n"
-            f"Execution error: {observation.execution.error or ''}\n"
+            f"Execution state: {json.dumps(state.to_context(), default=str)}\n"
         )
 
         response = self.ai_service.generate(
@@ -49,7 +51,8 @@ class ModelContinuationPlanner:
                     "type": "execution_observation",
                     "plan_id": observation.plan.plan_id,
                     "execution_status": observation.execution.status.value,
-                    "failed_steps": tuple(step.step_id for step in observation.execution.failed_steps),
+                    "failed_steps": state.failed_steps,
+                    "execution_state": state.to_context(),
                 },
                 metadata={"purpose": "execution_correction"},
             ),
