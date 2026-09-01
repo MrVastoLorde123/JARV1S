@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from src.core.execution_executor_models import PlanExecutionStatus
 from src.core.execution_state import ExecutionOutput, ExecutionState
 
 
@@ -68,7 +69,7 @@ class ExecutionAssessmentService:
         if not isinstance(state, ExecutionState):
             raise TypeError("state must be an ExecutionState.")
 
-        if state.status.value == "COMPLETED":
+        if state.status == PlanExecutionStatus.COMPLETED:
             return ExecutionAssessment(
                 goal=state.goal,
                 situation="objective_completed",
@@ -77,7 +78,7 @@ class ExecutionAssessmentService:
                 recommended_next_action=None,
             )
 
-        if state.failed_steps:
+        if state.status in (PlanExecutionStatus.FAILED, PlanExecutionStatus.BLOCKED):
             return ExecutionAssessment(
                 goal=state.goal,
                 situation="blocked",
@@ -90,24 +91,12 @@ class ExecutionAssessmentService:
                 ),
             )
 
-        if state.unresolved_requirements:
-            return ExecutionAssessment(
-                goal=state.goal,
-                situation="partial_progress",
-                completed=state.completed_steps,
-                remaining=state.unresolved_requirements,
-                useful_outputs=state.available_outputs,
-                recommended_next_action=(
-                    state.next_allowed_actions[0]
-                    if state.next_allowed_actions
-                    else None
-                ),
-            )
-
         return ExecutionAssessment(
             goal=state.goal,
             situation="no_progress",
             completed=state.completed_steps,
+            remaining=state.unresolved_requirements,
+            blockers=state.unresolved_requirements,
             useful_outputs=state.available_outputs,
             recommended_next_action=(
                 state.next_allowed_actions[0] if state.next_allowed_actions else None
