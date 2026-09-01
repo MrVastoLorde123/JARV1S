@@ -27,8 +27,8 @@ class FakePlanner:
         self.plans = list(plans)
         self.calls = []
 
-    def plan(self, task):
-        self.calls.append(task)
+    def plan(self, task, progress=None):
+        self.calls.append((task, progress))
         return self.plans.pop(0)
 
 
@@ -154,6 +154,53 @@ class GuardedExecutionLoopTests(unittest.TestCase):
         self.assertEqual(len(result.observations), 2)
         self.assertEqual(result.observations[0].state.failed_steps, ("step-1",))
         self.assertEqual(result.observations[1].state.completed_steps, ("step-1",))
+
+    def test_progress_is_passed_to_next_planning_attempt(self):
+        first = plan("p1")
+        second = plan("p2")
+        planner = FakePlanner([first, second])
+        executor = PlanExecutor({"PROVIDE_INFORMATION": lambda step: "done"})
+        loop = GuardedExecutionLoop(
+            planner,
+            self.validator,
+            self.policy,
+            executor,
+            self.confirmation,
+            max_iterations=2,
+        )
+
+        calls = []
+        original_execute = executor.execute
+
+        def execute(plan_arg, policy_arg):
+            calls.append(plan_arg.plan_id)
+            if len(calls) == 1:
+                return PlanExecutionResult(
+                    plan_id=plan_arg.plan_id,
+                    status=PlanExecutionStatus.FAILED,
+                    steps=(
+                        StepExecutionResult(
+                            step_id="step-1",
+                            action="PROVIDE_INFORMATION",
+                            status=StepExecutionStatus.FAILED,
+                            error="boom",
+                        ),
+                    ),
+                    error="boom",
+                )
+            return original_execute(plan_arg, policy_arg)
+
+        executor.execute = execute
+        result = loop.run(
+            TaskRequest("do it", TaskType.INFORMATION),
+            corrective_planner=lambda task, observation: task,
+        )
+
+        self.assertEqual(result.status, "COMPLETED")
+        self.assertIsNone(planner.calls[0][1])
+        self.assertIsNotNone(planner.calls[1][1])
+        self.assertEqual(planner.calls[1][1].attempt_count, 1)
+        self.assertEqual(planner.calls[1][1].current.failed_steps, ("step-1",))
 
     def test_confirmation_stops_before_executor(self):
         planner = FakePlanner([plan(action="PERFORM_ACTION")])

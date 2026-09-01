@@ -3,6 +3,7 @@ from collections.abc import Callable, Sequence
 
 from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
 from src.core.execution_planner import ExecutionPlanner
+from src.core.execution_progress import ExecutionProgress
 from src.core.task_models import TaskRequest
 
 
@@ -30,9 +31,17 @@ class MultiStepExecutionPlanner:
         if not callable(self.decomposer):
             raise TypeError("decomposer must be callable.")
 
-    def plan(self, task: TaskRequest) -> ExecutionPlan:
+    def plan(
+        self,
+        task: TaskRequest,
+        progress: ExecutionProgress | None = None,
+    ) -> ExecutionPlan:
         if not isinstance(task, TaskRequest):
             raise TypeError("task must be a TaskRequest.")
+        if progress is not None and not isinstance(progress, ExecutionProgress):
+            raise TypeError("progress must be an ExecutionProgress or None.")
+        if progress is not None and progress.goal != task.content:
+            raise ValueError("execution progress goal must match the task objective.")
 
         subtasks = tuple(self.decomposer(task))
         if not subtasks:
@@ -44,7 +53,7 @@ class MultiStepExecutionPlanner:
         previous_step_id: str | None = None
 
         for index, subtask in enumerate(subtasks, start=1):
-            subplan = self.step_planner.plan(subtask)
+            subplan = self.step_planner.plan(subtask, progress=progress)
             for source_step in subplan.steps:
                 step_id = f"step-{len(combined_steps) + 1}"
                 depends_on = (previous_step_id,) if previous_step_id is not None else ()

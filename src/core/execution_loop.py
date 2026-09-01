@@ -168,7 +168,7 @@ class GuardedExecutionLoop:
         progress: ExecutionProgress | None = None
 
         for iteration in range(1, self.max_iterations + 1):
-            plan = self.planner.plan(current_task)
+            plan = self.planner.plan(current_task, progress=progress)
             validation = self.validator.validate(plan)
             if not validation.valid:
                 return ExecutionLoopResult(

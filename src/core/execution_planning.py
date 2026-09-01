@@ -1,6 +1,7 @@
 from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import ExecutionPlan
+from src.core.execution_progress import ExecutionProgress
 from src.core.task_models import TaskRequest
 
 
@@ -14,8 +15,12 @@ class ExecutionPlannerProtocol(Protocol):
     execute the resulting plan.
     """
 
-    def plan(self, task: TaskRequest) -> ExecutionPlan:
+    def plan(
+        self,
+        task: TaskRequest,
+        progress: ExecutionProgress | None = None,
+    ) -> ExecutionPlan:
         """
-        Produce an execution plan for the supplied task.
+        Produce an execution plan for the supplied task and optional objective progress.
         """
         ...

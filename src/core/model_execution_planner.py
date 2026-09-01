@@ -4,6 +4,7 @@ from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.core.capability_realization import CapabilityRealizationService
 from src.core.execution_plan_models import ExecutionPlan
+from src.core.execution_progress import ExecutionProgress
 from src.core.multi_step_planner import MultiStepExecutionPlanner
 from src.core.task_models import TaskRequest, TaskType
 
@@ -41,9 +42,23 @@ class ModelExecutionPlanner:
         self.capability_realization_service = capability_realization_service
         self.max_steps = max_steps
 
-    def plan(self, task: TaskRequest) -> ExecutionPlan:
+    def plan(
+        self,
+        task: TaskRequest,
+        progress: ExecutionProgress | None = None,
+    ) -> ExecutionPlan:
         if not isinstance(task, TaskRequest):
             raise TypeError("task must be a TaskRequest.")
+        if progress is not None and not isinstance(progress, ExecutionProgress):
+            raise TypeError("progress must be an ExecutionProgress or None.")
+        if progress is not None and progress.goal != task.content:
+            raise ValueError("execution progress goal must match the task objective.")
+
+        progress_context = (
+            "No prior execution progress is available."
+            if progress is None
+            else json.dumps(progress.to_context(), sort_keys=True, default=str)
+        )
 
         prompt = (
             "Decompose the user's objective into the smallest useful ordered "
@@ -52,8 +67,14 @@ class ModelExecutionPlanner:
             "task_type must be one of INFORMATION, ACTION, TOOL. "
             "Do not execute anything, do not invent results, and do not return "
             "an ExecutionPlan or tool arguments.\n\n"
+            "Plan only the work that remains necessary for the objective. "
+            "Treat completed steps and available outputs in prior progress as "
+            "already accomplished; do not redundantly plan them unless the "
+            "objective still requires them. Unresolved requirements should be "
+            "addressed.\n\n"
             f"Objective: {task.content}\n"
             f"Requested task type: {task.task_type.value}\n"
+            f"Execution progress: {progress_context}\n"
         )
 
         response = self.ai_service.generate(
@@ -73,7 +94,7 @@ class ModelExecutionPlanner:
         composer = MultiStepExecutionPlanner(
             decomposer=lambda _: realized_subtasks,
         )
-        return composer.plan(task)
+        return composer.plan(task, progress=progress)
 
     def _realize_subtask(self, task: TaskRequest) -> TaskRequest:
         if task.task_type != TaskType.TOOL:

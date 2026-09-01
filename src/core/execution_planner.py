@@ -7,6 +7,7 @@ from src.core.execution_plan_models import (
     StepStatus,
 )
 
+from src.core.execution_progress import ExecutionProgress
 from src.core.task_models import (
     TaskRequest,
     TaskType,
@@ -29,6 +30,7 @@ class ExecutionPlanner:
     def plan(
         self,
         task: TaskRequest,
+        progress: ExecutionProgress | None = None,
     ) -> ExecutionPlan:
 
         if not isinstance(
@@ -37,6 +39,15 @@ class ExecutionPlanner:
         ):
             raise TypeError(
                 "task must be a TaskRequest."
+            )
+
+        if progress is not None and not isinstance(progress, ExecutionProgress):
+            raise TypeError(
+                "progress must be an ExecutionProgress or None."
+            )
+        if progress is not None and progress.goal != task.content:
+            raise ValueError(
+                "execution progress goal must match the task objective."
             )
 
         content = task.content.strip()
