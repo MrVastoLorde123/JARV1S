@@ -65,24 +65,24 @@ class ExecutionAssessmentTests(unittest.TestCase):
         self.assertEqual(result.blockers, ("confirmation required",))
         self.assertIsNone(result.recommended_next_action)
 
-    def test_unresolved_requirements_without_failed_steps_are_partial_progress(self):
+    def test_terminal_state_with_completed_work_and_no_blocker_is_partial_progress(self):
         state = ExecutionState(
             goal="inspect then summarize",
             plan_id="plan-4",
-            status=PlanExecutionStatus.BLOCKED,
+            status=PlanExecutionStatus.FAILED,
             completed_steps=("inspect",),
-            unresolved_requirements=("produce summary",),
-            next_allowed_actions=("CONTINUE", "STOP"),
+            next_allowed_actions=("CORRECT", "STOP"),
         )
 
         result = self.service.assess(state)
 
         self.assertEqual(result.situation, "partial_progress")
         self.assertEqual(result.completed, ("inspect",))
-        self.assertEqual(result.remaining, ("produce summary",))
-        self.assertEqual(result.recommended_next_action, "CONTINUE")
+        self.assertEqual(result.remaining, ())
+        self.assertEqual(result.blockers, ())
+        self.assertEqual(result.recommended_next_action, "CORRECT")
 
-    def test_state_without_failure_or_requirements_is_no_progress(self):
+    def test_terminal_state_without_completed_work_or_blocker_is_no_progress(self):
         state = ExecutionState(
             goal="inspect project",
             plan_id="plan-5",
