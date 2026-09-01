@@ -1,6 +1,12 @@
 import unittest
 
-from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
+from src.core.execution_plan_models import (
+    ExecutionPlan,
+    PlanExecutionStatus,
+    PlanStatus,
+    PlanStep,
+    StepStatus,
+)
 from src.core.execution_progress import ExecutionProgress
 from src.core.execution_state import ExecutionState
 from src.core.multi_step_planner import MultiStepExecutionPlanner
@@ -73,9 +79,7 @@ class MultiStepExecutionPlannerTests(unittest.TestCase):
             ExecutionState(
                 goal="inspect project then summarize",
                 plan_id="attempt-1",
-                status=ExecutionState.__annotations__["status"].__args__[0].FAILED
-                if False
-                else __import__("src.core.execution_plan_models", fromlist=["PlanExecutionStatus"]).PlanExecutionStatus.FAILED,
+                status=PlanExecutionStatus.FAILED,
                 completed_steps=("inspect project",),
                 unresolved_requirements=("summarize",),
             )
