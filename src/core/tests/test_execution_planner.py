@@ -64,6 +64,10 @@ class ExecutionPlannerTests(
         task = TaskRequest(
             content="Inspect the repository.",
             task_type=TaskType.TOOL,
+            metadata={
+                "tool_name": "list_directory",
+                "arguments": {"path": "."},
+            },
         )
 
         plan = self.planner.plan(
@@ -96,7 +100,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="Inspect repository.",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         plan = self.planner.plan(
@@ -113,7 +117,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="Inspect repository.",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         plan = self.planner.plan(
@@ -130,7 +134,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="  Inspect repository.  ",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         plan = self.planner.plan(
@@ -152,7 +156,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="Inspect repository.",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         plan = self.planner.plan(
@@ -169,7 +173,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="Inspect repository.",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         plan = self.planner.plan(
@@ -186,7 +190,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="Inspect repository.",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         first = self.planner.plan(
@@ -217,7 +221,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content=" ",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         with self.assertRaises(
@@ -232,7 +236,7 @@ class ExecutionPlannerTests(
     ):
         task = TaskRequest(
             content="Inspect repository.",
-            task_type=TaskType.TOOL,
+            task_type=TaskType.ACTION,
         )
 
         plan = self.planner.plan(
@@ -246,7 +250,7 @@ class ExecutionPlannerTests(
 
         self.assertEqual(
             plan.metadata["task_type"],
-            "TOOL",
+            "ACTION",
         )
 
         self.assertEqual(
