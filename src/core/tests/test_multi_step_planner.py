@@ -1,12 +1,7 @@
 import unittest
 
-from src.core.execution_plan_models import (
-    ExecutionPlan,
-    PlanExecutionStatus,
-    PlanStatus,
-    PlanStep,
-    StepStatus,
-)
+from src.core.execution_executor_models import PlanExecutionStatus
+from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
 from src.core.execution_progress import ExecutionProgress
 from src.core.execution_state import ExecutionState
 from src.core.multi_step_planner import MultiStepExecutionPlanner
@@ -26,7 +21,7 @@ class RecordingStepPlanner:
                 PlanStep(
                     step_id="source-step",
                     description=task.content,
-                    action=None,
+                    action=task.content,
                     order=0,
                     status=StepStatus.READY,
                     depends_on=(),
