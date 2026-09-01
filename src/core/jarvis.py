@@ -475,10 +475,6 @@ class JARVIS:
         original_input: str | None = None,
     ) -> JARVISResponse:
 
-        # ---------------------------------------------------------
-        # 1. Record the user turn in active state.
-        # ---------------------------------------------------------
-
         self.conversation.add_turn(
             "user",
             query,
@@ -532,10 +528,6 @@ class JARVIS:
 
         self._persist_state()
 
-        # ---------------------------------------------------------
-        # 2. Build provider-neutral context.
-        # ---------------------------------------------------------
-
         context = build_context(
             query,
             options=self.context_options,
@@ -546,18 +538,10 @@ class JARVIS:
             ),
         )
 
-        # ---------------------------------------------------------
-        # 3. Create AI request.
-        # ---------------------------------------------------------
-
         request = AIRequest(
             task=query,
             context=context,
         )
-
-        # ---------------------------------------------------------
-        # 4. Ask the AI provider.
-        # ---------------------------------------------------------
 
         ai_response = self.ai_service.generate(
             request,
@@ -567,10 +551,6 @@ class JARVIS:
         response_content = str(
             ai_response.content
         )
-
-        # ---------------------------------------------------------
-        # 5. Record assistant response.
-        # ---------------------------------------------------------
 
         self.conversation.add_turn(
             "assistant",
@@ -607,10 +587,6 @@ class JARVIS:
 
         self._persist_state()
 
-        # ---------------------------------------------------------
-        # 6. Optional memory formation.
-        # ---------------------------------------------------------
-
         formation_result = None
 
         if self._enable_memory_formation:
@@ -630,10 +606,6 @@ class JARVIS:
                     source_created_at
                 ),
             )
-
-        # ---------------------------------------------------------
-        # 7. Response metadata.
-        # ---------------------------------------------------------
 
         metadata = {
             "route": "CONVERSATION",
@@ -764,11 +736,26 @@ class JARVIS:
         policy: ExecutionPolicyResult,
     ) -> JARVISResponse:
 
+        outputs = tuple(
+            step.output
+            for step in execution.steps
+            if step.status.value == "COMPLETED"
+            and step.output is not None
+        )
+
         if execution.status == PlanExecutionStatus.COMPLETED:
             content = (
                 "Task completed successfully.\n\n"
                 f"Completed {execution.step_count} step(s)."
             )
+            if outputs:
+                if len(outputs) == 1:
+                    content += "\n\nResult:\n" + str(outputs[0])
+                else:
+                    content += "\n\nResults:\n" + "\n\n".join(
+                        str(output)
+                        for output in outputs
+                    )
         else:
             content = (
                 "The task could not be completed.\n\n"
@@ -793,6 +780,7 @@ class JARVIS:
                     step.step_id
                     for step in execution.failed_steps
                 ),
+                "execution_outputs": outputs,
             },
         )
 
