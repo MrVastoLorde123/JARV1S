@@ -1,8 +1,7 @@
 import tempfile
 import unittest
-from pathlib import Path
-from unittest.mock import Mock
 
+from src.ai.service import AIService
 from src.core.jarvis import JARVIS
 from src.core.task_models import TaskRequest, TaskType
 from src.tools.bootstrap import build_workspace_tool_stack
@@ -16,7 +15,7 @@ class JARVISWorkspaceIntegrationTests(unittest.TestCase):
 
             stack = build_workspace_tool_stack(root)
             jarvis = JARVIS(
-                ai_service=Mock(),
+                ai_service=AIService(),
                 tool_invoker=stack.gate,
             )
 
@@ -51,7 +50,7 @@ class JARVISWorkspaceIntegrationTests(unittest.TestCase):
             root = Path(temp_dir)
             stack = build_workspace_tool_stack(root)
             jarvis = JARVIS(
-                ai_service=Mock(),
+                ai_service=AIService(),
                 tool_invoker=stack.gate,
             )
 
