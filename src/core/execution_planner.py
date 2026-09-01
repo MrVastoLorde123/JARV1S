@@ -46,6 +46,41 @@ class ExecutionPlanner:
                 "Task content cannot be empty."
             )
 
+        step_metadata = {
+            "planner": "deterministic",
+            "task_type": task.task_type.value,
+        }
+
+        if task.task_type == TaskType.TOOL:
+            tool_name = task.metadata.get("tool_name")
+            arguments = task.metadata.get("arguments", {})
+            invocation_id = task.metadata.get("invocation_id")
+
+            if not isinstance(tool_name, str) or not tool_name.strip():
+                raise ValueError(
+                    "TOOL tasks require a non-empty 'tool_name' in metadata."
+                )
+
+            if not isinstance(arguments, dict):
+                raise ValueError(
+                    "TOOL task 'arguments' metadata must be a dictionary."
+                )
+
+            if invocation_id is not None and not isinstance(invocation_id, str):
+                raise ValueError(
+                    "TOOL task 'invocation_id' metadata must be a string or None."
+                )
+
+            step_metadata.update(
+                {
+                    "tool_name": tool_name,
+                    "arguments": dict(arguments),
+                }
+            )
+
+            if invocation_id is not None:
+                step_metadata["invocation_id"] = invocation_id
+
         step = PlanStep(
             step_id="step-1",
             description=content,
@@ -54,10 +89,7 @@ class ExecutionPlanner:
             ),
             order=0,
             status=StepStatus.READY,
-            metadata={
-                "planner": "deterministic",
-                "task_type": task.task_type.value,
-            },
+            metadata=step_metadata,
         )
 
         return ExecutionPlan(
