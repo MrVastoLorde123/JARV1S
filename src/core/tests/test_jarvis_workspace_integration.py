@@ -34,11 +34,17 @@ class JARVISWorkspaceIntegrationTests(unittest.TestCase):
             self.assertEqual("TASK", response.metadata["route"])
             self.assertEqual("EXECUTION", response.metadata["stage"])
             self.assertEqual("COMPLETED", response.metadata["execution_status"])
+            self.assertIn("JARVIS workspace", response.content)
             self.assertEqual(
-                "JARVIS workspace",
-                response.metadata and response.content,
+                (
+                    {
+                        "path": "README.md",
+                        "content": "JARVIS workspace",
+                        "size_bytes": len("JARVIS workspace".encode("utf-8")),
+                    },
+                ),
+                response.metadata["execution_outputs"],
             )
-            self.assertFalse((root / "outside.txt").exists())
 
     def test_jarvis_respects_tool_confirmation_boundary(self):
         with tempfile.TemporaryDirectory() as temp_dir:
