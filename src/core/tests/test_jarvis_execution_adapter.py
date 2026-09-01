@@ -118,25 +118,7 @@ class JARVISExecutionAdapterTests(unittest.TestCase):
         self.assertEqual(provider.calls, 1)
 
     def test_confirmation_still_blocks_execution(self):
-        ai_service = Mock(spec=AIService)
         planner = Mock(spec=ExecutionPlanner)
-        planner.plan.return_value = make_plan("p1")
-        executor = Mock(spec=PlanExecutor)
-
-        jarvis = JARVIS(
-            ai_service=ai_service,
-            request_router=RequestRouter(),
-            execution_planner=planner,
-            plan_validator=PlanValidator(),
-            execution_policy=Mock(),
-            plan_executor=executor,
-            execution_confirmation_service=ExecutionConfirmationService(),
-        )
-        policy = jarvis.execution_policy
-        policy.evaluate.return_value = type(
-            "PolicyResult", (), {}
-        )()
-        # Use the actual policy decision by swapping in an action requiring confirmation.
         planner.plan.return_value = ExecutionPlan(
             plan_id="p1",
             task_description="act",
@@ -151,22 +133,33 @@ class JARVISExecutionAdapterTests(unittest.TestCase):
                 ),
             ),
         )
-        jarvis.execution_policy = ExecutionPolicy()
-        install_execution_loop(jarvis)
+        executor = Mock(spec=PlanExecutor)
+        continuation = Mock()
+
+        jarvis = JARVIS(
+            ai_service=Mock(),
+            request_router=RequestRouter(),
+            execution_planner=planner,
+            plan_validator=PlanValidator(),
+            execution_policy=ExecutionPolicy(),
+            plan_executor=executor,
+            execution_confirmation_service=ExecutionConfirmationService(),
+        )
+        install_execution_loop(jarvis, continuation_planner=continuation)
 
         response = jarvis.ask_task(TaskRequest("act", TaskType.ACTION))
 
         self.assertEqual(response.metadata["status"], "AWAITING_CONFIRMATION")
         executor.execute.assert_not_called()
+        continuation.propose.assert_not_called()
 
     def test_adapter_is_reversible(self):
-        jarvis = JARVIS(ai_service=Mock(spec=AIService))
+        jarvis = JARVIS(ai_service=Mock())
         original = jarvis._handle_task
-        adapter = install_execution_loop(jarvis)
+        install_execution_loop(jarvis)
         self.assertIs(jarvis.execution_adapter.jarvis, jarvis)
         jarvis.execution_adapter.uninstall()
         self.assertIs(jarvis._handle_task, original)
-        self.assertIsNotNone(adapter)
 
 
 if __name__ == "__main__":
