@@ -24,7 +24,7 @@ class ExecutionPolicy:
             -> ALLOW
 
         USE_TOOL
-            -> REQUIRE_CONFIRMATION
+            -> ALLOW
 
         PERFORM_ACTION
             -> REQUIRE_CONFIRMATION
@@ -32,8 +32,10 @@ class ExecutionPolicy:
         UNCLASSIFIED_TASK
             -> DENY
 
-    Any explicitly confirmation-required step causes the
-    plan to require confirmation.
+    Tool-specific confirmation is owned by the tool-layer
+    PolicyGate, which evaluates the concrete ToolDefinition.
+    Any explicitly confirmation-required step still causes
+    the plan to require confirmation at this layer.
 
     Empty plans are denied because there is nothing meaningful
     to execute.
@@ -44,7 +46,7 @@ class ExecutionPolicy:
             PolicyDecision.ALLOW,
 
         "USE_TOOL":
-            PolicyDecision.REQUIRE_CONFIRMATION,
+            PolicyDecision.ALLOW,
 
         "PERFORM_ACTION":
             PolicyDecision.REQUIRE_CONFIRMATION,
