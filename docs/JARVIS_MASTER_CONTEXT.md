@@ -89,7 +89,9 @@ The branch is configured to track:
 
 Full regression suite:
 
-`601 tests in 4.950s — OK`
+`616 tests in 4.950s — OK`
+
+The 616-test checkpoint includes the completed capability catalog, capability selection, capability invocation, and model-proposed invocation groundwork.
 
 Important prior checkpoints:
 
@@ -131,6 +133,8 @@ The following architectural pieces already exist and have passing tests:
 - filesystem safety boundary
 - capability catalog
 - capability selection
+- capability invocation validation
+- model-assisted argument proposal
 - core-to-tool execution bridge
 - JARVIS-to-tool capability injection
 
@@ -185,64 +189,90 @@ Execution flow:
 
 Successful tool output is surfaced back through the JARVIS execution response.
 
-## 8. Capability Catalog + Selection — CURRENT MILESTONE
+## 8. Capability Selection + Invocation — COMPLETED
 
-Current structural pieces:
+Structural pieces:
 
 - `CapabilityCatalog`: read-only deterministic snapshot of available tool definitions
 - `CapabilitySelector`: ranks candidate capabilities
 - `CapabilitySelectionService`: composes catalog + selector
+- `CapabilityInvocationBuilder`: validates proposed arguments and creates `ToolRequest`
+- `CapabilityArgumentPlanner`: provider-neutral argument proposal contract
+- `AIRequestArgumentPlanner`: AI-to-JSON proposal adapter
+- `CapabilityInvocationService`: composes proposal + deterministic validation
 
-Selection is intentionally **advisory** and does not invoke tools.
+The model is allowed to propose capability arguments, but the proposal cannot cross into execution without deterministic validation.
 
-Current conceptual flow:
+Current safety flow:
 
-`natural-language intent → capability candidates → selected/proposed capability → structured invocation → validation → policy → confirmation → execution`
+`natural-language intent → capability candidates → proposed arguments → invocation validation → ToolRequest → execution plan → policy → confirmation → execution`
 
-The selector should remain replaceable. A future LLM-backed selector should be able to replace the deterministic selector without changing execution or safety boundaries.
+The selector and argument planner remain replaceable. Future model-backed implementations must continue to target the same provider-neutral contracts.
 
-## 9. Current Next Step
+## 9. Natural-Language Routing — IN PROGRESS
 
-Finish M1 by turning intent into a structured, validated invocation.
+M2 groundwork now exists:
 
-Target:
+- `RequestIntent`
+- `RequestIntentClassifier` protocol
+- `AIRequestIntentClassifier`
+- `IntelligentRequestRouter`
 
-`Natural language → intent/task interpretation → capability selection → structured arguments → invocation validation → TaskRequest/ExecutionPlan → policy → confirmation → execution`
+The current design preserves explicit command precedence and keeps classification advisory.
 
-A representative first self-work style scenario is:
+Ordinary-language classifications are:
 
-> “Find the file that defines JARVIS's execution planner.”
+- `conversation`
+- `question`
+- `task`
+- `tool`
 
-Desired behavior:
+`task` becomes `TaskRequest(ACTION)`.
 
-1. Understand the user's intent.
-2. Discover/select `search_files`.
-3. Construct safe arguments.
-4. Validate the invocation against the capability definition.
-5. Execute through the existing policy gate.
-6. Observe the result.
-7. Optionally inspect/read the relevant file.
-8. Return a useful answer.
+`tool` becomes `TaskRequest(TOOL)`.
 
-Do not solve this with hard-coded phrase matching such as `if "execution planner" in text`.
+`conversation` and `question` remain on the conversational path, with intent metadata attached for later orchestration.
+
+The classifier does not execute tools and does not grant authorization.
+
+### Immediate next integration
+
+Inject `IntelligentRequestRouter` into `JARVIS.ask()` through a small stable dependency boundary, then add end-to-end tests proving:
+
+`natural language → route → task/tool task → existing planner → validator → policy → executor → capability`
+
+without moving tool-specific knowledge into `jarvis.py`.
 
 ## 10. Roadmap
 
 ### GOAL 1 — DRIVEABLE JARVIS / THIRD HAND
 
-#### M1 — Capability Selection
+#### M1 — Capability Selection + Invocation
 
-Status: **IN PROGRESS**
+Status: **COMPLETED**
 
 Catalog ✅
 Selector ✅
 Selection service ✅
 Tool bridge ✅
-Natural-language → structured invocation ⏳
+Argument proposal ✅
+Deterministic invocation validation ✅
+
+Representative target established:
+
+> “Find the file that defines JARVIS's execution planner.”
+
+The remaining work is to connect this capability path to ordinary natural-language task routing.
 
 #### M2 — Natural-Language Task Routing
 
+Status: **IN PROGRESS**
+
 Normal `JARVIS.ask()` should distinguish conversation, question, command, task, and tool-oriented work without weakening deterministic safety.
+
+Current target:
+
+`ask() → intelligent router → TaskRequest → planner → validator → policy → executor`
 
 #### M3 — Multi-Step Agent Execution
 
@@ -288,7 +318,7 @@ using the same capability system rather than special bypasses.
 
 #### M8 — Safe Self-Modification + Verification
 
-Driveable threshold.
+**Driveable threshold.**
 
 JARVIS can:
 
@@ -428,11 +458,11 @@ A future chat should be able to begin with:
 
 **Current half:** Third Hand
 
-**Current milestone:** M1 Capability Selection
+**Current milestone:** M2 Natural-Language Task Routing
 
 **Current branch:** `feature/capability-selection`
 
-**Latest verified test suite:** `601 tests — OK`
+**Latest verified test suite:** `616 tests — OK`
 
 **Workspace:** frozen
 
@@ -440,10 +470,12 @@ A future chat should be able to begin with:
 
 **Capability catalog:** complete
 
-**Capability selection:** structurally complete
+**Capability selection + invocation:** complete
 
-**Immediate next milestone:** natural-language intent → validated capability invocation
+**M2 routing groundwork:** complete; JARVIS integration pending
 
-**Long-term defining threshold:** M8 — JARVIS can safely work on itself
+**Immediate next step:** inject intelligent routing into `JARVIS.ask()` and prove natural-language task execution end-to-end
+
+**Driveable threshold:** M8 — JARVIS can safely work on itself
 
 **Ultimate target:** M16 — “THIS IS JARVIS”
