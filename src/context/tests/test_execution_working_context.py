@@ -7,10 +7,11 @@ from src.context.jarvis_working_context import JARVISWorkingContextRuntime
 from src.context.models import ContextItem, ContextPackage, OBSERVATION, ContextOptions
 from src.context.working_context import WorkingContext
 from src.context.working_context_composer import WorkingContextComposer
+from src.core.conversation_models import StateSnapshot
 from src.core.execution_confirmation import ExecutionConfirmationService
 from src.core.execution_executor_models import PlanExecutionResult, PlanExecutionStatus
 from src.core.execution_loop import ExecutionObservation, GuardedExecutionLoop
-from src.core.execution_plan_models import ExecutionPlan
+from src.core.execution_plan_models import ExecutionPlan, PlanStep
 from src.core.execution_planner import ExecutionPlanner
 from src.core.execution_policy import ExecutionPolicy
 from src.core.execution_progress import ExecutionProgress
@@ -37,7 +38,7 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
                 include_state=False,
             ),
             conversation=SimpleNamespace(
-                snapshot=lambda: SimpleNamespace(
+                snapshot=lambda: StateSnapshot(
                     conversation_id="conversation-1",
                     created_at="2026-09-01T00:00:00Z",
                     updated_at="2026-09-01T00:01:00Z",
@@ -64,7 +65,14 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
         plan = ExecutionPlan(
             plan_id="plan-1",
             task_description="inspect config",
-            steps=(),
+            steps=(
+                PlanStep(
+                    step_id="inspect",
+                    description="Inspect configuration",
+                    action="PROVIDE_INFORMATION",
+                    order=0,
+                ),
+            ),
         )
         execution = PlanExecutionResult(
             plan_id="plan-1",
@@ -126,7 +134,14 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
         planner.plan.return_value = ExecutionPlan(
             plan_id="plan-1",
             task_description="inspect config",
-            steps=(),
+            steps=(
+                PlanStep(
+                    step_id="inspect",
+                    description="Provide inspection result",
+                    action="PROVIDE_INFORMATION",
+                    order=0,
+                ),
+            ),
         )
         loop = GuardedExecutionLoop(
             planner=planner,
