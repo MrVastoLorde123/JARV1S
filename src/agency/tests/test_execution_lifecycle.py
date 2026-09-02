@@ -43,10 +43,11 @@ class ExecutionLifecycleTests(unittest.TestCase):
 
     def test_success_observation_completes_lifecycle(self):
         lifecycle = ExecutionLifecycle.start("execution:1").start_running()
-        completed = lifecycle.apply_observation(self.observation())
+        observed = self.observation()
+        completed = lifecycle.apply_observation(observed)
         self.assertEqual(completed.status, ExecutionLifecycleStatus.SUCCEEDED)
         self.assertTrue(completed.terminal)
-        self.assertIs(completed.observation, self.observation("execution:1"))
+        self.assertIs(completed.observation, observed)
 
     def test_failed_observation_completes_as_failed(self):
         lifecycle = ExecutionLifecycle.start("execution:1").start_running()
