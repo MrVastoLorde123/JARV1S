@@ -42,13 +42,14 @@ class WorkingContextTests(unittest.TestCase):
     def test_composer_preserves_existing_context_package_and_adds_working_sources(self):
         builder = Mock(return_value=self._package())
         composer = WorkingContextComposer(builder)
+        state = self._state()
         task = TaskRequest("find the config", TaskType.INFORMATION)
         execution = self._execution_state()
         progress = ExecutionProgress.from_state(execution)
 
         working = composer.compose(
             "find the config",
-            conversation_state=self._state(),
+            conversation_state=state,
             task=task,
             execution_state=execution,
             execution_progress=progress,
@@ -57,7 +58,7 @@ class WorkingContextTests(unittest.TestCase):
 
         self.assertIsInstance(working, WorkingContext)
         self.assertIs(working.context_package, builder.return_value)
-        self.assertIs(working.conversation_state, self._state())
+        self.assertIs(working.conversation_state, state)
         self.assertIs(working.task, task)
         self.assertIs(working.execution_state, execution)
         self.assertIs(working.execution_progress, progress)
