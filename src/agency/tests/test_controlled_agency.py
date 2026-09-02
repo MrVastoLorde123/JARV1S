@@ -93,9 +93,11 @@ class ControlledAgencyTests(unittest.TestCase):
             ("exec-1", "exec-2"),
         )
         self.assertEqual(len(result.working_context.observations), 2)
-        self.assertEqual(len(provider.calls), 1)
+        self.assertEqual(len(provider.calls), 2)
         self.assertEqual(provider.calls[0][1].execution_id, "exec-1")
+        self.assertEqual(provider.calls[1][1].execution_id, "exec-2")
         self.assertEqual(provider.calls[0][0].observations[-1].provenance["source_id"], "exec-1")
+        self.assertEqual(provider.calls[1][0].observations[-1].provenance["source_id"], "exec-2")
 
     def test_step_limit_prevents_unbounded_agency(self):
         first = self.preparation("exec-1")
