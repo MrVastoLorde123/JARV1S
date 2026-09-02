@@ -6,6 +6,7 @@ from src.core.capability_realization import CapabilityRealizationService
 from src.core.execution_plan_models import ExecutionPlan
 from src.core.execution_progress import ExecutionProgress
 from src.core.multi_step_planner import MultiStepExecutionPlanner
+from src.core.remaining_work import RemainingWork
 from src.core.task_models import TaskRequest, TaskType
 
 
@@ -46,18 +47,28 @@ class ModelExecutionPlanner:
         self,
         task: TaskRequest,
         progress: ExecutionProgress | None = None,
+        remaining_work: RemainingWork | None = None,
     ) -> ExecutionPlan:
         if not isinstance(task, TaskRequest):
             raise TypeError("task must be a TaskRequest.")
         if progress is not None and not isinstance(progress, ExecutionProgress):
             raise TypeError("progress must be an ExecutionProgress or None.")
+        if remaining_work is not None and not isinstance(remaining_work, RemainingWork):
+            raise TypeError("remaining_work must be a RemainingWork or None.")
         if progress is not None and progress.goal != task.content:
             raise ValueError("execution progress goal must match the task objective.")
+        if remaining_work is not None and remaining_work.goal != task.content:
+            raise ValueError("remaining work goal must match the task objective.")
 
         progress_context = (
             "No prior execution progress is available."
             if progress is None
             else json.dumps(progress.to_context(), sort_keys=True, default=str)
+        )
+        remaining_context = (
+            "No grounded remaining-work assessment is available."
+            if remaining_work is None
+            else json.dumps(remaining_work.to_context(), sort_keys=True, default=str)
         )
 
         prompt = (
@@ -70,17 +81,24 @@ class ModelExecutionPlanner:
             "Plan only the work that remains necessary for the objective. "
             "Treat completed steps and available outputs in prior progress as "
             "already accomplished; do not redundantly plan them unless the "
-            "objective still requires them. Unresolved requirements should be "
-            "addressed.\n\n"
+            "objective still requires them. Ground the plan in the supplied "
+            "remaining-work assessment and address its items/blockers rather "
+            "than inventing unrelated work.\n\n"
             f"Objective: {task.content}\n"
             f"Requested task type: {task.task_type.value}\n"
             f"Execution progress: {progress_context}\n"
+            f"Grounded remaining work: {remaining_context}\n"
         )
 
         response = self.ai_service.generate(
             AIRequest(
                 task=prompt,
-                context={"type": "execution_planning"},
+                context={
+                    "type": "execution_planning",
+                    "remaining_work": None
+                    if remaining_work is None
+                    else remaining_work.to_context(),
+                },
                 metadata={"purpose": "multi_step_planning"},
             ),
             provider_name=self.provider_name,
@@ -94,7 +112,7 @@ class ModelExecutionPlanner:
         composer = MultiStepExecutionPlanner(
             decomposer=lambda _: realized_subtasks,
         )
-        return composer.plan(task, progress=progress)
+        return composer.plan(task, progress=progress, remaining_work=remaining_work)
 
     def _realize_subtask(self, task: TaskRequest) -> TaskRequest:
         if task.task_type != TaskType.TOOL:
