@@ -57,6 +57,7 @@ class ConsequenceValidation:
 
     request: str
     proposal_id: str
+    validation_id: str
     status: ConsequenceValidationStatus
     violations: tuple[ConsequenceViolation, ...] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -66,6 +67,8 @@ class ConsequenceValidation:
             raise ValueError("request must be a non-empty string.")
         if not isinstance(self.proposal_id, str) or not self.proposal_id.strip():
             raise ValueError("proposal_id must be a non-empty string.")
+        if not isinstance(self.validation_id, str) or not self.validation_id.strip():
+            raise ValueError("validation_id must be a non-empty string.")
         if not isinstance(self.status, ConsequenceValidationStatus):
             raise TypeError("status must be a ConsequenceValidationStatus value.")
         if not isinstance(self.violations, tuple):
@@ -93,6 +96,7 @@ class ConsequenceValidation:
         return {
             "request": self.request,
             "proposal_id": self.proposal_id,
+            "validation_id": self.validation_id,
             "status": self.status.value,
             "violations": tuple(item.to_context() for item in self.violations),
             "metadata": dict(self.metadata),
@@ -148,6 +152,7 @@ class ConsequenceValidationEngine:
         proposal: ProposedConsequence,
         proposal_id: str,
         interpretation: Interpretation | None = None,
+        validation_id: str | None = None,
     ) -> ConsequenceValidation:
         violations: list[ConsequenceViolation] = []
 
@@ -159,8 +164,16 @@ class ConsequenceValidationEngine:
             raise TypeError("proposal must be a ProposedConsequence.")
         if not isinstance(proposal_id, str) or not proposal_id.strip():
             raise ValueError("proposal_id must be a non-empty string.")
+        if validation_id is not None and (
+            not isinstance(validation_id, str) or not validation_id.strip()
+        ):
+            raise ValueError("validation_id must be a non-empty string when provided.")
         if interpretation is not None and not isinstance(interpretation, Interpretation):
             raise TypeError("interpretation must be an Interpretation or None.")
+
+        resolved_validation_id = (
+            validation_id if validation_id is not None else f"validation:{proposal_id}"
+        )
 
         if proposal.priority_target_id is not None:
             target_ids = {target.target_id for target in prioritization.targets}
@@ -216,6 +229,7 @@ class ConsequenceValidationEngine:
         return ConsequenceValidation(
             request=reasoning_context.request,
             proposal_id=proposal_id,
+            validation_id=resolved_validation_id,
             status=status,
             violations=tuple(violations),
             metadata={"validation_semantics": "m7.5"},
@@ -248,6 +262,7 @@ class ConsequenceValidationEngine:
                 proposal,
                 proposal_id=f"proposal:{index}",
                 interpretation=interpretation,
+                validation_id=f"validation:{index}",
             )
             for index, proposal in enumerate(proposals.proposals)
         )
