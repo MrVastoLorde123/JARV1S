@@ -170,6 +170,7 @@ class ProposedConsequenceProjector:
                             for index, _ in enumerate(interpretation.missing_information)
                         ),
                     )
+                )
 
         return ProposedConsequences(
             request=reasoning_context.request,
