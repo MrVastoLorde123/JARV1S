@@ -11,7 +11,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
-from src.agency.execution_runtime import ExecutionOutcome
 from src.context.execution_semantics import ExecutionRequest
 from src.core.capability_invocation import CapabilityInvocationBuilder, CapabilityInvocationError
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
@@ -143,20 +142,17 @@ class CapabilityPluginRegistry:
         if not isinstance(request, ExecutionRequest):
             raise TypeError("request must be an ExecutionRequest")
         binding = self.resolve(request.operation)
-        try:
-            tool_request = self._invocation_builder.build(
-                binding.capability,
-                request.arguments,
-                invocation_id=request.execution_id,
-                metadata={
-                    **dict(request.metadata),
-                    "execution_id": request.execution_id,
-                    "plugin_id": binding.plugin_id,
-                    "operation": request.operation,
-                },
-            )
-        except CapabilityInvocationError:
-            raise
+        tool_request = self._invocation_builder.build(
+            binding.capability,
+            request.arguments,
+            invocation_id=request.execution_id,
+            metadata={
+                **dict(request.metadata),
+                "execution_id": request.execution_id,
+                "plugin_id": binding.plugin_id,
+                "operation": request.operation,
+            },
+        )
 
         result = binding.plugin.execute(tool_request)
         if not isinstance(result, ToolResult):
@@ -191,8 +187,10 @@ class CapabilityExecutionAdapter:
             raise TypeError("registry must be a CapabilityPluginRegistry")
         self._registry = registry
 
-    def execute(self, request: ExecutionRequest) -> ExecutionOutcome:
+    def execute(self, request: ExecutionRequest):
         """Execute through M8.2 and translate the result into M8.1 semantics."""
+        from src.agency.execution_runtime import ExecutionOutcome
+
         result = self._registry.execute(request)
         if result.success:
             return ExecutionOutcome(
