@@ -60,6 +60,7 @@ class ConsequenceValidationSemanticsTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, ConsequenceValidationStatus.INVALID)
+        self.assertEqual(result.validation_id, "validation:proposal:0")
         self.assertEqual(result.violations[0].code, "support_reference_unresolved")
         self.assertFalse(result.authorized)
 
@@ -75,6 +76,7 @@ class ConsequenceValidationSemanticsTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, ConsequenceValidationStatus.VALID)
+        self.assertNotEqual(result.validation_id, result.proposal_id)
         self.assertFalse(result.authorized)
         self.assertNotIn("execute", result.to_context())
 
@@ -97,6 +99,7 @@ class ConsequenceValidationSemanticsTests(unittest.TestCase):
             ConsequenceValidation(
                 "inspect config",
                 "proposal:0",
+                "validation:0",
                 ConsequenceValidationStatus.INVALID,
                 (ConsequenceViolation("note", "warning only", ViolationSeverity.WARNING),),
             )
@@ -106,6 +109,7 @@ class ConsequenceValidationSemanticsTests(unittest.TestCase):
             ConsequenceValidation(
                 "inspect config",
                 "proposal:0",
+                "validation:0",
                 ConsequenceValidationStatus.VALID,
                 (ConsequenceViolation("bad", "not valid"),),
             )
@@ -120,8 +124,35 @@ class ConsequenceValidationSemanticsTests(unittest.TestCase):
         self.assertIsInstance(results, ConsequenceValidations)
         self.assertEqual(results.request, "inspect config")
         self.assertEqual(results.validations[0].proposal_id, "proposal:0")
+        self.assertEqual(results.validations[0].validation_id, "validation:0")
+        self.assertNotEqual(results.validations[0].validation_id, results.validations[0].proposal_id)
         self.assertTrue(results.all_valid)
         self.assertEqual(results.to_context()["validations"][0]["status"], "valid")
+
+    def test_collection_assigns_distinct_validation_identity(self):
+        proposals = ProposedConsequences(
+            "inspect config",
+            (
+                ProposedConsequence("Inspect the configuration.", ConsequenceKind.PLAN),
+                ProposedConsequence("Prepare a safe review plan.", ConsequenceKind.PREPARE),
+            ),
+        )
+        results = ConsequenceValidationEngine().validate_all(
+            self._context(), self._prioritization(), proposals
+        )
+
+        self.assertEqual(
+            tuple(result.validation_id for result in results.validations),
+            ("validation:0", "validation:1"),
+        )
+        self.assertEqual(
+            tuple(result.proposal_id for result in results.validations),
+            ("proposal:0", "proposal:1"),
+        )
+        self.assertNotEqual(
+            results.validations[0].validation_id,
+            results.validations[1].validation_id,
+        )
 
     def test_request_boundaries_are_enforced(self):
         proposals = ProposedConsequences("different request")
