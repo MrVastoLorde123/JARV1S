@@ -4,8 +4,9 @@ from unittest.mock import Mock
 
 from src.context.execution_working_context import ExecutionWorkingContextBridge
 from src.context.jarvis_working_context import JARVISWorkingContextRuntime
-from src.context.models import ContextItem, ContextPackage, OBSERVATION
+from src.context.models import ContextItem, ContextPackage, OBSERVATION, ContextOptions
 from src.context.working_context import WorkingContext
+from src.context.working_context_composer import WorkingContextComposer
 from src.core.execution_executor_models import PlanExecutionResult, PlanExecutionStatus
 from src.core.execution_loop import ExecutionObservation
 from src.core.execution_progress import ExecutionProgress
@@ -23,6 +24,29 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
             metadata={},
         )
 
+    def _runtime(self, composer=None):
+        jarvis = SimpleNamespace(
+            context_options=ContextOptions(
+                include_memories=False,
+                include_evidence=False,
+                include_state=False,
+            ),
+            conversation=SimpleNamespace(
+                snapshot=lambda: SimpleNamespace(
+                    conversation_id="conversation-1",
+                    created_at="2026-09-01T00:00:00Z",
+                    updated_at="2026-09-01T00:01:00Z",
+                    turns=(),
+                    active_topic=None,
+                    active_task=None,
+                    metadata={},
+                )
+            ),
+        )
+        if composer is None:
+            composer = WorkingContextComposer(Mock(return_value=self._package()))
+        return JARVISWorkingContextRuntime(jarvis, composer=composer)
+
     def _observation(self):
         state = ExecutionState(
             goal="inspect config",
@@ -32,11 +56,14 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
             next_allowed_actions=("COMPLETE",),
         )
         progress = ExecutionProgress.from_state(state)
-        plan = SimpleNamespace(plan_id="plan-1", task_description="inspect config")
+        plan = ExecutionPlan(
+            plan_id="plan-1",
+            task_description="inspect config",
+            steps=(),
+        )
         execution = PlanExecutionResult(
             plan_id="plan-1",
             status=PlanExecutionStatus.COMPLETED,
-            success=True,
             steps=(),
             metadata={},
         )
@@ -49,24 +76,20 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
         )
 
     def test_bridge_composes_from_verified_observation(self):
-        composer = Mock(spec=WorkingContext)
-        runtime = Mock(spec=JARVISWorkingContextRuntime)
-        working = WorkingContext(request="inspect config", context_package=self._package())
-        runtime.compose.return_value = working
+        runtime = self._runtime()
         bridge = ExecutionWorkingContextBridge(runtime)
 
         task = TaskRequest("inspect config", TaskType.INFORMATION)
         result = bridge.observe(task, self._observation(), observations=("file observed",))
 
-        self.assertIs(result, working)
-        self.assertIs(bridge.latest, working)
-        kwargs = runtime.compose.call_args.kwargs
-        self.assertEqual(kwargs["execution_state"].status, PlanExecutionStatus.COMPLETED)
-        self.assertEqual(kwargs["execution_progress"].attempt_count, 1)
-        self.assertEqual(kwargs["observations"], ("file observed",))
+        self.assertIsInstance(result, WorkingContext)
+        self.assertIs(bridge.latest, result)
+        self.assertEqual(result.execution_state.status, PlanExecutionStatus.COMPLETED)
+        self.assertEqual(result.execution_progress.attempt_count, 1)
+        self.assertEqual(result.observations[0].content, "file observed")
 
     def test_bridge_requires_verified_state_and_progress(self):
-        runtime = Mock(spec=JARVISWorkingContextRuntime)
+        runtime = self._runtime()
         bridge = ExecutionWorkingContextBridge(runtime)
         task = TaskRequest("inspect config", TaskType.INFORMATION)
         observation = self._observation()
@@ -82,8 +105,7 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
             bridge.observe(task, observation_without_progress)
 
     def test_bridge_does_not_execute_or_change_observation(self):
-        runtime = Mock(spec=JARVISWorkingContextRuntime)
-        runtime.compose.return_value = WorkingContext(request="inspect config", context_package=self._package())
+        runtime = self._runtime()
         bridge = ExecutionWorkingContextBridge(runtime)
         task = TaskRequest("inspect config", TaskType.INFORMATION)
         observation = self._observation()
@@ -91,7 +113,6 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
         bridge.observe(task, observation)
 
         self.assertEqual(observation.state.next_allowed_actions, ("COMPLETE",))
-        runtime.compose.assert_called_once()
 
 
 if __name__ == "__main__":
