@@ -8,61 +8,54 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M7 — Deterministic Authority Pipeline: CLOSED**
+**M8 — Agency / Execution: VERIFIED / COMPLETE**
 
-The repository's M7 implementation is verified at **884 / 884 tests passing**.
+The M8 implementation is verified at **942 / 942 tests passing** from the user's real checkout.
 
 ```text
-Working Context
+M7 Authority
       ↓
-Reasoning
+ExecutionRequest
       ↓
-Interpretation
+M8.1 Runtime
       ↓
-Prioritization
+M8.2 Capability / Plugin Boundary
       ↓
-Proposal
+M8.3 Observation Integration
       ↓
-Validation
+M8.4 Lifecycle / Continuation
       ↓
-Policy
+M8.5 Controlled Multi-Step Agency
       ↓
-Confirmation
-      ↓
-Confirmation Integrity
-      ↓
-Authorization
-      ↓
-Authorization Integrity
-      ↓
-Execution Preparation / Handoff
+M8.6 Reliability / Recovery
 ```
 
-The final M7 output is an execution-ready, provider-neutral handoff. **READY does not mean EXECUTED.**
+### M8 invariants
 
-## Architectural Principles
+```text
+READY ≠ EXECUTED
+Execution ≠ Authorization
+Observation ≠ Permission
+Sequencing ≠ Authority
+Continuation ≠ Authorization
+Recovery ≠ Authorization
+Retry Eligibility ≠ Permission
+```
 
-- **JARVIS is the system; AI is a capability.**
-- Intelligence can propose; deterministic system boundaries decide authority.
-- Provenance and identity must survive the pipeline.
-- Confirmation and authorization remain explicit boundaries.
-- Execution and side effects belong outside M7.
-- Everything that can be added as a capability should fit the plugin model.
-- Failures remain observable and cannot be reinterpreted into success.
-- Provider and interface choices must not redefine core JARVIS semantics.
+M8.6 completes the agency runtime without introducing a second authority system. Recovery remains bounded, explicit, and non-executing; any new executable action still requires a fresh M7 authority path.
 
 ## Road Ahead
 
 ```text
 M6  Working Context            ✅
 M7  Deterministic Authority    ✅ CLOSED
-M8  Agency / Execution         → next
-M9  Workforce / Delegation
+M8  Agency / Execution         ✅ CLOSED
+M9  Workforce / Delegation     → next
 M10 Intelligence / Learning
 M11 Interface / Experience
 ```
 
-The future milestone labels are directional. The architectural boundary is the contract.
+The milestone labels are directional. The architectural boundary is the contract.
 
 ## Documentation
 
@@ -71,8 +64,5 @@ The future milestone labels are directional. The architectural boundary is the c
 - [Agency Architecture](docs/architecture/agency.md)
 - [Milestone Architecture](docs/architecture/milestones.md)
 - [M7 Complete](docs/milestones/M7_COMPLETE.md)
+- [M8.6 Reliability / Recovery](docs/milestones/M8_6_AGENCY_RELIABILITY_RECOVERY.md)
 - [Architecture Decisions](docs/decisions/)
-
-## Development
-
-M7 is a completed semantic foundation. M8 should focus on the execution runtime that consumes the M7 handoff, produces real observations/results, and preserves the same authority boundaries.
