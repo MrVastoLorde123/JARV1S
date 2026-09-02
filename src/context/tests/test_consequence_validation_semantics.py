@@ -20,12 +20,20 @@ from src.context.proposed_consequence_semantics import (
     ProposedConsequence,
     ProposedConsequences,
 )
-from src.context.reasoning_semantics import ReasoningContext
+from src.context.reasoning_semantics import ReasoningContext, ReasoningInput
 
 
 class ConsequenceValidationSemanticsTests(unittest.TestCase):
     def _context(self):
-        return ReasoningContext(request="inspect config")
+        return ReasoningContext(
+            request="inspect config",
+            inputs=(
+                ReasoningInput(
+                    content="Inspect the configuration file.",
+                    source_type="REQUEST",
+                ),
+            ),
+        )
 
     def _prioritization(self):
         return Prioritization(
