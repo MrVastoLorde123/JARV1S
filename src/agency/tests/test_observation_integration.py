@@ -6,7 +6,7 @@ from src.agency.observation_integration import (
     ExecutionObservationStore,
     ObservationConflictError,
 )
-from src.context.models import OBSERVATION
+from src.context.models import OBSERVATION, ContextPackage
 from src.context.working_context import WorkingContext
 
 
@@ -32,7 +32,6 @@ class ObservationIntegrationTests(unittest.TestCase):
         )
 
     def context(self):
-        from src.context.models import ContextPackage
         return WorkingContext(
             request="inspect file",
             context_package=ContextPackage(
@@ -64,6 +63,14 @@ class ObservationIntegrationTests(unittest.TestCase):
         self.assertEqual(item.provenance["source_id"], "execution:1")
         self.assertEqual(item.provenance["status"], "succeeded")
         self.assertNotIn("authorized", item.provenance)
+
+    def test_context_projection_is_deterministic(self):
+        observation = self.observation()
+
+        first = ExecutionObservationContextIntegrator.to_context_item(observation)
+        second = ExecutionObservationContextIntegrator.to_context_item(observation)
+
+        self.assertEqual(first.content, second.content)
 
     def test_integrate_returns_new_working_context_with_observation(self):
         original = self.context()
