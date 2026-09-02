@@ -116,9 +116,12 @@ class ReasoningSemanticsTests(unittest.TestCase):
         working = self._working_context(selection=selection)
         reasoning = ReasoningContextProjector().project(working)
 
-        self.assertEqual(reasoning.inputs[0].freshness, Freshness.STALE)
-        self.assertFalse(reasoning.inputs[0].authority_allowed)
-        self.assertTrue(selection.selected[1].authority_allowed)
+        memory_input = next(item for item in reasoning.inputs if item.source_type == MEMORY)
+        evidence_input = next(item for item in reasoning.inputs if item.source_type == EVIDENCE)
+
+        self.assertEqual(memory_input.freshness, Freshness.STALE)
+        self.assertFalse(memory_input.authority_allowed)
+        self.assertTrue(evidence_input.authority_allowed)
         self.assertIn("memory-store", selection.refresh_required)
 
     def test_current_state_contains_conversation_task_and_execution_context(self):
