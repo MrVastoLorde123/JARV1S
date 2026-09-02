@@ -10,6 +10,9 @@ from dataclasses import dataclass, field
 from typing import Iterable, Mapping, Any
 
 
+DEFAULT_MINIMUM_RELEVANCE = 0.20
+
+
 @dataclass(frozen=True)
 class ContextSource:
     """A persistent context source available to the selector."""
@@ -73,7 +76,7 @@ class ContextSourceSelector:
     def __init__(
         self,
         *,
-        minimum_relevance: float = 0.01,
+        minimum_relevance: float = DEFAULT_MINIMUM_RELEVANCE,
         max_sources: int | None = None,
     ):
         if minimum_relevance < 0.0 or minimum_relevance > 1.0:
