@@ -148,6 +148,19 @@ class AuthorizationEvaluator:
                     confirmation_result.confirmation_id,
                     "confirmation integrity is invalid.",
                 )
+            if (
+                confirmation_integrity.request != policy_decision.request
+                or confirmation_integrity.proposal_id != policy_decision.proposal_id
+                or confirmation_integrity.validation_id != policy_decision.validation_id
+                or confirmation_integrity.policy_decision_id != policy_decision.policy_decision_id
+            ):
+                return self._decision(
+                    policy_decision,
+                    authorization_id,
+                    AuthorizationStatus.DENIED,
+                    confirmation_result.confirmation_id,
+                    "confirmation integrity does not match the current policy decision.",
+                )
             if confirmation_result.status is not ConfirmationStatus.CONFIRMED:
                 return self._decision(
                     policy_decision,
@@ -155,6 +168,19 @@ class AuthorizationEvaluator:
                     AuthorizationStatus.DENIED,
                     confirmation_result.confirmation_id,
                     "confirmation is not explicitly confirmed.",
+                )
+            if (
+                confirmation_result.request != policy_decision.request
+                or confirmation_result.proposal_id != policy_decision.proposal_id
+                or confirmation_result.validation_id != policy_decision.validation_id
+                or confirmation_result.policy_decision_id != policy_decision.policy_decision_id
+            ):
+                return self._decision(
+                    policy_decision,
+                    authorization_id,
+                    AuthorizationStatus.DENIED,
+                    confirmation_result.confirmation_id,
+                    "confirmation result does not match the current policy decision.",
                 )
             return self._decision(
                 policy_decision,
