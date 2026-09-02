@@ -1,10 +1,7 @@
 import unittest
 
 from src.context.execution_semantics import ExecutionRequest
-from src.core.plugin_boundary import (
-    CapabilityPluginRegistry,
-    PluginDefinition,
-)
+from src.core.plugin_boundary import CapabilityPluginRegistry, PluginDefinition
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
 
 
@@ -36,7 +33,7 @@ class ExamplePlugin:
 def execution_request(operation="read_workspace_file"):
     return ExecutionRequest(
         execution_id="exec-1",
-        request={"path": "README.md"},
+        request="read README.md",
         proposal_id="proposal-1",
         validation_id="validation-1",
         policy_decision_id="policy-1",
