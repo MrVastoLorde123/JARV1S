@@ -7,11 +7,16 @@ from src.context.jarvis_working_context import JARVISWorkingContextRuntime
 from src.context.models import ContextItem, ContextPackage, OBSERVATION, ContextOptions
 from src.context.working_context import WorkingContext
 from src.context.working_context_composer import WorkingContextComposer
+from src.core.execution_confirmation import ExecutionConfirmationService
 from src.core.execution_executor_models import PlanExecutionResult, PlanExecutionStatus
-from src.core.execution_loop import ExecutionObservation
+from src.core.execution_loop import ExecutionObservation, GuardedExecutionLoop
+from src.core.execution_plan_models import ExecutionPlan
+from src.core.execution_planner import ExecutionPlanner
+from src.core.execution_policy import ExecutionPolicy
 from src.core.execution_progress import ExecutionProgress
 from src.core.execution_state import ExecutionState
-from src.core.execution_plan_models import ExecutionPlan
+from src.core.plan_executor import PlanExecutor
+from src.core.plan_validator import PlanValidator
 from src.core.task_models import TaskRequest, TaskType
 
 
@@ -113,6 +118,32 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
         bridge.observe(task, observation)
 
         self.assertEqual(observation.state.next_allowed_actions, ("COMPLETE",))
+
+    def test_guarded_loop_publishes_verified_observation_to_bridge(self):
+        runtime = self._runtime()
+        bridge = ExecutionWorkingContextBridge(runtime)
+        planner = Mock(spec=ExecutionPlanner)
+        planner.plan.return_value = ExecutionPlan(
+            plan_id="plan-1",
+            task_description="inspect config",
+            steps=(),
+        )
+        loop = GuardedExecutionLoop(
+            planner=planner,
+            validator=PlanValidator(),
+            policy=ExecutionPolicy(),
+            executor=PlanExecutor(),
+            confirmation=ExecutionConfirmationService(),
+            observation_observer=bridge,
+        )
+
+        task = TaskRequest("inspect config", TaskType.INFORMATION)
+        result = loop.run(task)
+
+        self.assertEqual(result.status, "COMPLETED")
+        self.assertIsNotNone(bridge.latest)
+        self.assertIs(bridge.latest.execution_state, result.observations[0].state)
+        self.assertIs(bridge.latest.execution_progress, result.observations[0].progress)
 
 
 if __name__ == "__main__":
