@@ -1,6 +1,6 @@
 # M8.2 — Capability / Plugin Execution Boundary
 
-**Status:** IMPLEMENTATION IN PROGRESS
+**Status:** IMPLEMENTATION IN PROGRESS — VERIFICATION PENDING
 
 ## Purpose
 
@@ -21,6 +21,8 @@ M7 authorized ExecutionRequest
          Plugin
            ↓
         ToolResult
+           ↓
+   M8.1 ExecutionOutcome
 ```
 
 ## Responsibilities
@@ -31,9 +33,11 @@ M7 authorized ExecutionRequest
 - prevent multiple plugins from owning the same capability name;
 - bind provider-neutral M8 operations explicitly to declared capabilities;
 - resolve an operation deterministically without executing anything;
+- validate capability arguments before plugin execution;
 - execute a resolved capability through its owning plugin;
 - preserve `execution_id` as the invocation identity;
-- reject plugin results that claim to belong to a different capability.
+- reject plugin results that claim to belong to a different capability;
+- translate concrete plugin results into the provider-neutral M8.1 `ExecutionOutcome` contract.
 
 ## Authority boundary
 
@@ -48,7 +52,7 @@ The capability/plugin layer does **not** own:
 - continuation or retry policy;
 - worker orchestration.
 
-A plugin receives an `ExecutionRequest` only through the explicit M8 execution boundary. The plugin can perform the capability it declares; it cannot grant itself authority to do so.
+A plugin receives a `ToolRequest` derived from an already-authorized `ExecutionRequest` through the explicit M8 execution boundary. The plugin can perform the capability it declares; it cannot grant itself authority to do so.
 
 ```text
 Authority
@@ -63,13 +67,16 @@ M8 Capability Boundary
    │
    ▼
 Concrete execution
+   │
+   ▼
+M8.1 ExecutionOutcome
 ```
 
 ## Existing-stack relationship
 
 M8.2 does not replace `ToolDefinition`, `ToolRequest`, or `ToolResult`. It formalizes the higher-level mapping that was previously implicit in the tool layer.
 
-`src/core/capability_catalog.py` remains the read-only discovery surface. `src/core/capability_invocation.py` remains the structural request builder. The new plugin boundary owns operation-to-capability-to-plugin resolution.
+`src/core/capability_catalog.py` remains the read-only discovery surface. `src/core/capability_invocation.py` remains the structural request builder. The new plugin boundary owns operation-to-capability-to-plugin resolution and adapts concrete results to the M8.1 runtime contract.
 
 ## Explicit non-goals
 
@@ -92,6 +99,14 @@ capability ownership is unique
 plugin identity is unique
 resolution is deterministic
 resolution does not execute
+arguments are validated before plugin execution
 plugin execution does not authorize
 plugin result identity must match the selected capability
+M8.2 adapts results; M8.1 owns execution lifecycle semantics
 ```
+
+## Verification
+
+Focused tests are under `src/core/tests/test_plugin_boundary.py`.
+
+Verification remains pending until the focused M8.2 tests and the full repository `unittest` suite are run successfully from the user's real checkout.
