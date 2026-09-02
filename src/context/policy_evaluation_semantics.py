@@ -30,6 +30,7 @@ class PolicyDecision:
     rationale: str
     confirmation_required: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    policy_decision_id: str = ""
 
     def __post_init__(self):
         if not isinstance(self.request, str) or not self.request.strip():
@@ -48,6 +49,8 @@ class PolicyDecision:
             raise TypeError("confirmation_required must be a bool.")
         if not isinstance(self.metadata, Mapping):
             raise TypeError("metadata must be a mapping.")
+        if not isinstance(self.policy_decision_id, str):
+            raise TypeError("policy_decision_id must be a string.")
 
         expected_confirmation = self.outcome is PolicyOutcome.REQUIRE_CONFIRMATION
         if self.confirmation_required != expected_confirmation:
@@ -67,9 +70,16 @@ class PolicyDecision:
             raise ValueError(
                 "policy decision metadata cannot contain execution or authority controls."
             )
+        if not self.policy_decision_id.strip():
+            object.__setattr__(
+                self,
+                "policy_decision_id",
+                f"policy:{self.proposal_id}:{self.validation_id}:{self.rule_id}",
+            )
 
     def to_context(self) -> dict[str, Any]:
         return {
+            "policy_decision_id": self.policy_decision_id,
             "request": self.request,
             "proposal_id": self.proposal_id,
             "validation_id": self.validation_id,
