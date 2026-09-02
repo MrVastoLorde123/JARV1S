@@ -174,13 +174,13 @@ class PolicyInputProjector:
         return PolicyInput(
             request=reasoning_context.request,
             proposal_id=proposal_id,
-            validation_id=validation.proposal_id,
+            validation_id=validation.validation_id,
             proposal_kind=proposal_kind,
             validation_status=validation.status,
             action=action or ActionCharacteristics(),
             provenance=PolicyInputProvenance(
                 proposal_id=proposal_id,
-                validation_id=validation.proposal_id,
+                validation_id=validation.validation_id,
             ),
             metadata={} if metadata is None else dict(metadata),
         )
