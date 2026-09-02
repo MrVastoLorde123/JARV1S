@@ -42,10 +42,20 @@ The operation is the semantic request. The capability is the declared execution 
 2. Capability ownership must be unique within the registry.
 3. Operation bindings must reference registered capabilities.
 4. Resolution is deterministic and side-effect free.
-5. Plugin results must identify the capability that was actually requested.
-6. Plugins may execute only; they cannot create or modify authority.
-7. Dynamic code loading and arbitrary plugin installation are outside M8.2.
+5. Capability arguments must be validated before plugin execution.
+6. Plugin results must identify the capability that was actually requested.
+7. Plugins may execute only; they cannot create or modify authority.
+8. Dynamic code loading and arbitrary plugin installation are outside M8.2.
 
 ## Consequence
 
-M8.2 makes the project's "everything is a plugin" direction concrete without turning plugins into a second authority system. Later milestones can use the boundary for execution-result observation, lifecycle, continuation, and controlled multi-step agency.
+M8.2 makes the project's "everything is a plugin" direction concrete without turning plugins into a second authority system. The M8.2 adapter translates concrete plugin results into the M8.1 `ExecutionOutcome` contract; M8.1 retains execution lifecycle semantics.
+
+## Closure evidence
+
+M8.2 was verified from the user's real checkout:
+
+- focused suite: 12/12 tests passed;
+- full repository `unittest` suite: 904/904 tests passed.
+
+GitHub Actions runs are not treated as verification for this milestone.
