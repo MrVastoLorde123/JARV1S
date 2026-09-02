@@ -1,6 +1,7 @@
 from typing import Callable, Iterable, Mapping, Any
 
 from src.context.context_builder import build_context
+from src.context.context_source_selection import ContextSourceSelection
 from src.context.models import ContextItem, ContextOptions, ContextPackage, OBSERVATION
 from src.context.working_context import WorkingContext
 from src.core.conversation_models import StateSnapshot
@@ -31,6 +32,7 @@ class WorkingContextComposer:
         execution_state: ExecutionState | None = None,
         execution_progress: ExecutionProgress | None = None,
         observations: Iterable[ContextItem | Mapping[str, Any] | str] | None = None,
+        source_selection: ContextSourceSelection | None = None,
         metadata: Mapping[str, Any] | None = None,
     ) -> WorkingContext:
         if not isinstance(request, str):
@@ -38,6 +40,13 @@ class WorkingContextComposer:
         request = request.strip()
         if not request:
             raise ValueError("request cannot be empty.")
+        if source_selection is not None and not isinstance(
+            source_selection,
+            ContextSourceSelection,
+        ):
+            raise TypeError(
+                "source_selection must be a ContextSourceSelection or None."
+            )
 
         context_package = self.context_builder(
             request,
@@ -52,12 +61,13 @@ class WorkingContextComposer:
         )
 
         context_metadata = {
-            "composer_version": "1.0",
+            "composer_version": "1.1",
             "has_conversation_state": conversation_state is not None,
             "has_task": task is not None,
             "has_execution_state": execution_state is not None,
             "has_execution_progress": execution_progress is not None,
             "observation_count": len(normalized_observations),
+            "has_source_selection": source_selection is not None,
         }
         if metadata:
             context_metadata.update(dict(metadata))
@@ -70,6 +80,7 @@ class WorkingContextComposer:
             execution_state=execution_state,
             execution_progress=execution_progress,
             observations=normalized_observations,
+            source_selection=source_selection,
             metadata=context_metadata,
         )
 
