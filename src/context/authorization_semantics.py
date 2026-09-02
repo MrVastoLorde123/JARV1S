@@ -107,45 +107,30 @@ class AuthorizationEvaluator:
 
         if policy_decision.outcome is PolicyOutcome.DENY:
             return self._decision(
-                policy_decision,
-                authorization_id,
-                AuthorizationStatus.DENIED,
-                confirmation_id,
+                policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_id,
                 "policy decision denies authorization.",
             )
 
         if policy_decision.outcome is PolicyOutcome.ALLOW:
             if confirmation_result is not None or confirmation_integrity is not None:
                 return self._decision(
-                    policy_decision,
-                    authorization_id,
-                    AuthorizationStatus.DENIED,
-                    confirmation_id,
+                    policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_id,
                     "ALLOW policy does not require a confirmation artifact.",
                 )
             return self._decision(
-                policy_decision,
-                authorization_id,
-                AuthorizationStatus.AUTHORIZED,
-                None,
+                policy_decision, authorization_id, AuthorizationStatus.AUTHORIZED, None,
                 "policy allows the consequence without a confirmation requirement.",
             )
 
         if policy_decision.outcome is PolicyOutcome.REQUIRE_CONFIRMATION:
             if confirmation_result is None or confirmation_integrity is None:
                 return self._decision(
-                    policy_decision,
-                    authorization_id,
-                    AuthorizationStatus.DENIED,
-                    confirmation_id,
+                    policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_id,
                     "confirmation and integrity are required before authorization.",
                 )
             if confirmation_integrity.status is not ConfirmationIntegrityStatus.VALID:
                 return self._decision(
-                    policy_decision,
-                    authorization_id,
-                    AuthorizationStatus.DENIED,
-                    confirmation_result.confirmation_id,
+                    policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_result.confirmation_id,
                     "confirmation integrity is invalid.",
                 )
             if (
@@ -155,18 +140,12 @@ class AuthorizationEvaluator:
                 or confirmation_integrity.policy_decision_id != policy_decision.policy_decision_id
             ):
                 return self._decision(
-                    policy_decision,
-                    authorization_id,
-                    AuthorizationStatus.DENIED,
-                    confirmation_result.confirmation_id,
+                    policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_result.confirmation_id,
                     "confirmation integrity does not match the current policy decision.",
                 )
             if confirmation_result.status is not ConfirmationStatus.CONFIRMED:
                 return self._decision(
-                    policy_decision,
-                    authorization_id,
-                    AuthorizationStatus.DENIED,
-                    confirmation_result.confirmation_id,
+                    policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_result.confirmation_id,
                     "confirmation is not explicitly confirmed.",
                 )
             if (
@@ -176,16 +155,11 @@ class AuthorizationEvaluator:
                 or confirmation_result.policy_decision_id != policy_decision.policy_decision_id
             ):
                 return self._decision(
-                    policy_decision,
-                    authorization_id,
-                    AuthorizationStatus.DENIED,
-                    confirmation_result.confirmation_id,
+                    policy_decision, authorization_id, AuthorizationStatus.DENIED, confirmation_result.confirmation_id,
                     "confirmation result does not match the current policy decision.",
                 )
             return self._decision(
-                policy_decision,
-                authorization_id,
-                AuthorizationStatus.AUTHORIZED,
+                policy_decision, authorization_id, AuthorizationStatus.AUTHORIZED,
                 confirmation_result.confirmation_id,
                 "policy requires confirmation and the exact confirmation chain is intact and confirmed.",
             )
