@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -78,7 +79,7 @@ class ExecutionObservationContextIntegrator:
         context = observation.to_context()
         return ContextItem(
             source_type=cls.SOURCE_TYPE,
-            content=str(context),
+            content=json.dumps(context, sort_keys=True, default=str),
             relevance_score=1.0,
             confidence=1.0,
             importance=1.0,
@@ -103,8 +104,7 @@ class ExecutionObservationContextIntegrator:
 
         projected = list(working_context.observations)
         for observation in observations:
-            self.record(observation)
-            projected.append(self.to_context_item(observation))
+            projected.append(self.record(observation))
 
         return WorkingContext(
             request=working_context.request,
