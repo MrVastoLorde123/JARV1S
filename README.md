@@ -55,8 +55,6 @@ M10 Intelligence / Learning
 M11 Interface / Experience
 ```
 
-The milestone labels are directional. The architectural boundary is the contract.
-
 ## Documentation
 
 - [Architecture Overview](docs/architecture/overview.md)
@@ -64,5 +62,6 @@ The milestone labels are directional. The architectural boundary is the contract
 - [Agency Architecture](docs/architecture/agency.md)
 - [Milestone Architecture](docs/architecture/milestones.md)
 - [M7 Complete](docs/milestones/M7_COMPLETE.md)
+- [M8 Complete](docs/milestones/M8_COMPLETE.md)
 - [M8.6 Reliability / Recovery](docs/milestones/M8_6_AGENCY_RELIABILITY_RECOVERY.md)
 - [Architecture Decisions](docs/decisions/)
