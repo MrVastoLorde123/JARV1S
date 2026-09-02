@@ -110,6 +110,8 @@ class WorkingContextRuntimeTests(unittest.TestCase):
     def test_runtime_accepts_conversation_and_execution_context_without_owning_them(self):
         conversation = StateSnapshot(
             conversation_id="conversation-1",
+            created_at="2026-01-01T00:00:00Z",
+            updated_at="2026-01-01T00:00:00Z",
             active_topic="JARVIS",
             active_task=None,
             turns=(),
