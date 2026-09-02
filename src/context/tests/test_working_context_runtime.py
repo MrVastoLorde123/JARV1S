@@ -75,6 +75,7 @@ class WorkingContextRuntimeTests(unittest.TestCase):
             context_package=ContextPackage(
                 request="Project context",
                 items=(),
+                instructions=(),
             ),
         )
         integration.compose.return_value = expected
