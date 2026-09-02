@@ -1,6 +1,6 @@
 # M8.1 — Execution Runtime
 
-**Status:** IMPLEMENTED — VERIFICATION PENDING
+**Status:** VERIFIED — CLOSED
 
 ## Purpose
 
@@ -48,6 +48,12 @@ M8.1 does not own capability discovery or selection, policy, confirmation, autho
 
 ## Verification
 
-Focused tests have been added under `src/agency/tests/test_execution_runtime.py`.
+Focused execution-runtime tests: **8 / 8 passed**.
 
-The milestone remains open until the focused tests and the full repository suite are run successfully from a real checkout. The repository currently has no GitHub Actions workflow runs available, so source writes alone are not treated as verification.
+Full repository suite: **892 / 892 passed** in **6.832s**.
+
+Verification was performed from the real repository checkout using the repository's `unittest` test suite.
+
+## Closure
+
+M8.1 is complete. No changes are made to M7 authority semantics. M8.2 owns the formal capability/plugin boundary and may now begin.
