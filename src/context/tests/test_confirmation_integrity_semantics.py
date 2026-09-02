@@ -91,7 +91,16 @@ class ConfirmationIntegritySemanticsTests(unittest.TestCase):
         self.assertEqual(integrity.status, ConfirmationIntegrityStatus.INVALID)
         self.assertIn("result_request_mismatch", {v.code for v in integrity.violations})
 
-    def test_non_confirmation_policy_is_invalid(self):
+    def test_request_policy_outcome_mismatch_is_invalid(self):
+        decision, request, result = self._artifacts()
+        object.__setattr__(request, "policy_outcome", PolicyOutcome.ALLOW)
+
+        integrity = ConfirmationIntegrityValidator().validate(decision, request, result)
+
+        self.assertEqual(integrity.status, ConfirmationIntegrityStatus.INVALID)
+        self.assertIn("request_policy_outcome_mismatch", {v.code for v in integrity.violations})
+
+    def test_non_confirmation_policy_cannot_form_valid_integrity_chain(self):
         policy_input = PolicyInput(
             request="inspect config",
             proposal_id="proposal:0",
@@ -102,8 +111,29 @@ class ConfirmationIntegritySemanticsTests(unittest.TestCase):
             provenance=PolicyInputProvenance("proposal:0", "validation:0"),
         )
         decision = PolicyEvaluator().evaluate(policy_input)
-        with self.assertRaises(ValueError):
-            ConfirmationManager().request(decision, "confirmation:0", "Proceed?")
+        self.assertEqual(decision.outcome, PolicyOutcome.ALLOW)
+        request = object.__new__(type(self._artifacts()[1]))
+        object.__setattr__(request, "confirmation_id", "confirmation:0")
+        object.__setattr__(request, "request", decision.request)
+        object.__setattr__(request, "proposal_id", decision.proposal_id)
+        object.__setattr__(request, "validation_id", decision.validation_id)
+        object.__setattr__(request, "policy_decision_id", decision.policy_decision_id)
+        object.__setattr__(request, "policy_outcome", PolicyOutcome.REQUIRE_CONFIRMATION)
+        object.__setattr__(request, "prompt", "Proceed?")
+        object.__setattr__(request, "metadata", {})
+        result = object.__new__(type(self._artifacts()[2]))
+        object.__setattr__(result, "confirmation_id", "confirmation:0")
+        object.__setattr__(result, "request", decision.request)
+        object.__setattr__(result, "proposal_id", decision.proposal_id)
+        object.__setattr__(result, "validation_id", decision.validation_id)
+        object.__setattr__(result, "policy_decision_id", decision.policy_decision_id)
+        object.__setattr__(result, "status", ConfirmationStatus.CONFIRMED)
+        object.__setattr__(result, "metadata", {})
+
+        integrity = ConfirmationIntegrityValidator().validate(decision, request, result)
+
+        self.assertEqual(integrity.status, ConfirmationIntegrityStatus.INVALID)
+        self.assertIn("policy_confirmation_not_required", {v.code for v in integrity.violations})
 
     def test_pending_resolution_is_invalid_integrity(self):
         decision, request, result = self._artifacts()
