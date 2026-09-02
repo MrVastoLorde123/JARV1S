@@ -1,10 +1,11 @@
-from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.commands.parser import CommandParser
 from src.commands.registry import CommandRegistry
 from src.commands.service import CommandService
-from src.context.context_builder import build_context
+from src.context.memory_context_source_provider import MemoryContextSourceProvider
 from src.context.models import ContextOptions
+from src.context.working_context_consumption import WorkingContextConsumptionBoundary
+from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.capability_argument_planner import (
     AIRequestArgumentPlanner,
     CapabilityInvocationError,
@@ -57,6 +58,8 @@ class JARVIS:
         capability_selection_service: CapabilitySelectionService | None = None,
         capability_invocation_service: CapabilityInvocationService | None = None,
         capability_realization_service: CapabilityRealizationService | None = None,
+        working_context_runtime: WorkingContextRuntime | None = None,
+        working_context_consumption_boundary: WorkingContextConsumptionBoundary | None = None,
     ):
         self.ai_service = ai_service
         self.context_options = context_options if context_options is not None else ContextOptions()
@@ -64,6 +67,31 @@ class JARVIS:
         self._enable_memory_formation = enable_memory_formation
         self.request_router = request_router if request_router is not None else RequestRouter()
         self.intelligent_request_router = intelligent_request_router
+
+        if working_context_runtime is not None and not isinstance(working_context_runtime, WorkingContextRuntime):
+            raise TypeError("working_context_runtime must be a WorkingContextRuntime.")
+        if working_context_consumption_boundary is not None and not isinstance(
+            working_context_consumption_boundary,
+            WorkingContextConsumptionBoundary,
+        ):
+            raise TypeError(
+                "working_context_consumption_boundary must be a WorkingContextConsumptionBoundary."
+            )
+
+        if working_context_runtime is None:
+            source_provider = MemoryContextSourceProvider(
+                include_memories=self.context_options.include_memories,
+                include_evidence=self.context_options.include_evidence,
+                max_memories=self.context_options.max_memories,
+                max_evidence=self.context_options.max_evidence,
+            )
+            working_context_runtime = WorkingContextRuntime(source_provider)
+        self.working_context_runtime = working_context_runtime
+        self.working_context_consumption_boundary = (
+            working_context_consumption_boundary
+            if working_context_consumption_boundary is not None
+            else WorkingContextConsumptionBoundary()
+        )
 
         if command_service is None:
             command_service = CommandService(
@@ -361,12 +389,12 @@ class JARVIS:
             user_message_id = stored_user_message["message_id"]
 
         self._persist_state()
-        context = build_context(
+        working_context = self.working_context_runtime.compose(
             query,
             options=self.context_options,
-            state_snapshot=user_snapshot if self.context_options.include_state else None,
+            conversation_state=user_snapshot if self.context_options.include_state else None,
         )
-        request = AIRequest(task=query, context=context)
+        request = self.working_context_consumption_boundary.consume(working_context)
         ai_response = self.ai_service.generate(request, provider_name=provider_name)
         response_content = str(ai_response.content)
         self.conversation.add_turn("assistant", response_content)
@@ -395,7 +423,14 @@ class JARVIS:
 
         metadata = {
             "route": "CONVERSATION",
-            "context_items": len(context.items),
+            "context_items": len(working_context.context_package.items),
+            "working_context_items": len(working_context.context_package.items),
+            "working_context_runtime": "v1",
+            "source_selection": (
+                None
+                if working_context.source_selection is None
+                else working_context.source_selection.selected_source_ids
+            ),
             "provider": ai_response.provider,
             "model": ai_response.model,
             "conversation_id": self.conversation.conversation_id,
@@ -413,7 +448,7 @@ class JARVIS:
         return JARVISResponse(
             content=response_content,
             ai_response=ai_response,
-            context=context,
+            context=working_context.context_package,
             metadata=metadata,
         )
 
