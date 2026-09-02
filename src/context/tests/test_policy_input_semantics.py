@@ -27,6 +27,7 @@ class PolicyInputSemanticsTests(unittest.TestCase):
         return ConsequenceValidation(
             request="inspect config",
             proposal_id="proposal:0",
+            validation_id="validation:0",
             status=ConsequenceValidationStatus.VALID,
         )
 
@@ -41,12 +42,15 @@ class PolicyInputSemanticsTests(unittest.TestCase):
         self.assertIsInstance(result, PolicyInput)
         self.assertEqual(result.validation_status, ConsequenceValidationStatus.VALID)
         self.assertEqual(result.provenance.proposal_id, "proposal:0")
+        self.assertEqual(result.validation_id, "validation:0")
+        self.assertEqual(result.provenance.validation_id, "validation:0")
         self.assertFalse(result.authorized)
 
     def test_invalid_validation_cannot_enter_policy(self):
         validation = ConsequenceValidation(
             request="inspect config",
             proposal_id="proposal:0",
+            validation_id="validation:0",
             status=ConsequenceValidationStatus.INVALID,
             violations=(ConsequenceViolation("bad", "Invalid proposal."),),
         )
@@ -64,11 +68,25 @@ class PolicyInputSemanticsTests(unittest.TestCase):
         mismatched = ConsequenceValidation(
             request="different request",
             proposal_id="proposal:0",
+            validation_id="validation:0",
             status=ConsequenceValidationStatus.VALID,
         )
         with self.assertRaises(ValueError):
             PolicyInputProjector().project(
                 self._context(), mismatched, ConsequenceKind.PLAN, "proposal:0"
+            )
+
+    def test_validation_identity_must_be_preserved(self):
+        validation = self._valid_validation()
+        with self.assertRaises(ValueError):
+            PolicyInput(
+                request="inspect config",
+                proposal_id="proposal:0",
+                validation_id="validation:1",
+                proposal_kind=ConsequenceKind.PLAN,
+                validation_status=ConsequenceValidationStatus.VALID,
+                action=ActionCharacteristics(),
+                provenance=PolicyInputProvenance("proposal:0", "validation:0"),
             )
 
     def test_action_characteristics_are_descriptive(self):
@@ -91,11 +109,11 @@ class PolicyInputSemanticsTests(unittest.TestCase):
             PolicyInput(
                 request="inspect config",
                 proposal_id="proposal:0",
-                validation_id="proposal:0",
+                validation_id="validation:0",
                 proposal_kind=ConsequenceKind.PLAN,
                 validation_status=ConsequenceValidationStatus.VALID,
                 action=ActionCharacteristics(),
-                provenance=PolicyInputProvenance("proposal:0", "proposal:0"),
+                provenance=PolicyInputProvenance("proposal:0", "validation:0"),
                 metadata={"execute": True},
             )
 
@@ -107,6 +125,7 @@ class PolicyInputSemanticsTests(unittest.TestCase):
         self.assertEqual(context["request"], "inspect config")
         self.assertEqual(context["proposal_kind"], "ask")
         self.assertEqual(context["validation_status"], "valid")
+        self.assertEqual(context["validation_id"], "validation:0")
         self.assertIn("provenance", context)
         self.assertNotIn("execute", context)
 
