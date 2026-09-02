@@ -1,93 +1,45 @@
-# JARVIS
+# JARVIS Documentation
 
-JARVIS is a personal, local-first AI partner designed to grow with its user, retain structured knowledge, use tools, and operate independently of any single AI provider.
-
-The long-term goal is not simply to build a chatbot.
-
-JARVIS is intended to become a persistent technical companion that can evolve alongside its user, technology, and engineering environment.
-
----
+This directory contains the architectural documentation, milestone records, and Architecture Decision Records (ADRs) for JARVIS.
 
 ## Current Status
 
-JARVIS is currently in active foundational development.
+**M7 — Deterministic Authority Pipeline: CLOSED**
 
-Implemented:
+M7 ends at a provider-neutral execution handoff. The system can establish that an action is authorized and integrity-valid without allowing the semantic layer itself to execute it.
 
-- OpenAI conversation data ingestion
-- Conversation database
-- Full-text message search
-- Structured memory
-- Memory validation and deduplication
-- Evidence and provenance
-- Memory retrieval
-- Context building
-- Conversation state tracking & bounded context V1
-- Automated memory formation pipeline
-- Provider-neutral AI interface
-- AI service / provider orchestration
-- Local AI provider
-- llama.cpp integration
-- Qwen3-4B local inference
-- JARVIS Core
-- End-to-end local inference
+Verified state at M7.10: **884 / 884 tests passing**.
 
-Current local model baseline:
+## Architecture Guides
 
-- Model: Qwen3-4B Q4_K_M
-- Runtime: llama.cpp
-- Backend: CUDA
-- Context: 8192 tokens
-- GPU: NVIDIA GTX 1650 Ti Max-Q
-- RAM: 32 GB
+- [Architecture Overview](architecture/overview.md) — core subsystem boundaries and principles
+- [Authority Architecture](architecture/authority.md) — deterministic authority and provenance pipeline
+- [Agency Architecture](architecture/agency.md) — the M8 execution/agency boundary
+- [Milestone Architecture](architecture/milestones.md) — current and planned architectural progression
+- [AI Architecture](architecture/ai.md) — provider-neutral intelligence layer
+- [Context Architecture](architecture/context.md) — context acquisition and composition
+- [Memory Architecture](architecture/memory.md) — memory formation, retrieval, and evidence
 
----
+## Milestones
 
-## Documentation Index
+- [M7 Complete](milestones/M7_COMPLETE.md) — final M7 scope and closure boundary
 
-### 📐 Architecture Guides
-- [Architecture Overview](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/overview.md) — Subsystem hierarchy & core principles
-- [AI Architecture](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/ai.md) — Provider-neutral intelligence layer & capabilities
-- [Context Architecture](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/context.md) — Context builder boundary, options & packages
-- [Memory Architecture](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/achitecture/memory.md) — Formation pipeline, retrieval & evidence linking
+Earlier milestones remain represented by their implementation and ADR history.
 
-### 📜 Architecture Decision Records (ADRs)
-- [ADR-001: Separate JARVIS from AI Providers](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/001-jarvis-ai-seperation.md)
-- [ADR-002: Separate Memory from Evidence](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/002-memory-evidence.md)
-- [ADR-003: Introduce a Dedicated Context Layer](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/003-context-layer.md)
-- [ADR-004: Local-First AI Development](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/004-local-first-ai.md)
-- [ADR-005: Automated Memory Formation Pipeline](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/decisions/005-memory-formation.md)
+## Architecture Decision Records
 
-### 🛠️ Developer Setup & Guides
-- [Local AI Setup Guide](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/development/local-ai.md) — Server execution, llama.cpp & CUDA configuration
-- [Testing & QA Guide](file:///c:/Users/jeoop/PycharmProjects/JARV1S/docs/development/testing.md) — Running test suites, isolation rules & patterns
+The `decisions/` directory contains the durable ADR record. ADRs are historical contracts and should be read together with the current architecture guides.
 
----
+## Development Guides
 
-## High-Level Architecture
+Development and testing guides should describe the actual repository workflow and may evolve as the runtime architecture evolves.
 
-```text
-                         JARVIS
-                            |
-          +-----------------+-----------------+
-          |                 |                 |
-       KNOWLEDGE          CONTEXT             AI
-          |                 |                 |
-     +----+----+            |          +------+------+
-     |         |             |          |             |
-  Memory    Evidence         |      AI Service     Providers
-     |         |             |          |             |
-  Formation  Retrieval       |      +---+---+         |
-     |         |             |      |       |         |
-     +----+----+             |    Local   OpenAI     ...
-          |                  |
-          +--------+---------+
-                   |
-             ContextPackage
-                   |
-                AIRequest
-                   |
-              AI Provider
-                   |
-              AIResponse
-```
+## Documentation Rules
+
+Documentation should:
+
+1. describe the architecture that actually exists;
+2. distinguish implemented behavior from future intent;
+3. identify hard boundaries and invariants explicitly;
+4. never imply that model output is equivalent to authority or truth;
+5. preserve milestone closure instead of inventing work to extend a milestone.
