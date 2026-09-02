@@ -30,30 +30,16 @@ class WorkingContext:
             raise ValueError("request must be a non-empty string.")
         if not isinstance(self.context_package, ContextPackage):
             raise TypeError("context_package must be a ContextPackage.")
-        if self.conversation_state is not None and not isinstance(
-            self.conversation_state,
-            StateSnapshot,
-        ):
+        if self.conversation_state is not None and not isinstance(self.conversation_state, StateSnapshot):
             raise TypeError("conversation_state must be a StateSnapshot or None.")
         if self.task is not None and not isinstance(self.task, TaskRequest):
             raise TypeError("task must be a TaskRequest or None.")
-        if self.execution_state is not None and not isinstance(
-            self.execution_state,
-            ExecutionState,
-        ):
+        if self.execution_state is not None and not isinstance(self.execution_state, ExecutionState):
             raise TypeError("execution_state must be an ExecutionState or None.")
-        if self.execution_progress is not None and not isinstance(
-            self.execution_progress,
-            ExecutionProgress,
-        ):
+        if self.execution_progress is not None and not isinstance(self.execution_progress, ExecutionProgress):
             raise TypeError("execution_progress must be an ExecutionProgress or None.")
-        if self.source_selection is not None and not isinstance(
-            self.source_selection,
-            ContextSourceSelection,
-        ):
-            raise TypeError(
-                "source_selection must be a ContextSourceSelection or None."
-            )
+        if self.source_selection is not None and not isinstance(self.source_selection, ContextSourceSelection):
+            raise TypeError("source_selection must be a ContextSourceSelection or None.")
         if not isinstance(self.observations, tuple):
             raise TypeError("observations must be a tuple.")
         for item in self.observations:
@@ -62,25 +48,19 @@ class WorkingContext:
 
         if self.execution_state is not None and self.execution_progress is not None:
             if self.execution_state.goal != self.execution_progress.goal:
-                raise ValueError(
-                    "execution_state and execution_progress must belong to the same goal."
-                )
+                raise ValueError("execution_state and execution_progress must belong to the same goal.")
 
         if self.source_selection is not None:
             selected_ids = set(self.source_selection.selected_source_ids)
-            context_items = self.context_package.items
-            persistent_items = [
-                item
-                for item in context_items
-                if item.source_type in {"MEMORY", "EVIDENCE", "HISTORY"}
-            ]
-            for item in persistent_items:
+            persistent_types = {"MEMORY", "EVIDENCE", "HISTORY"}
+            for item in self.context_package.items:
+                if item.source_type not in persistent_types:
+                    continue
                 source_id = item.provenance.get("source_id")
-                if source_id is not None and str(source_id) not in selected_ids:
-                    raise ValueError(
-                        "context package contains a persistent source excluded by "
-                        "source_selection."
-                    )
+                if source_id is None:
+                    raise ValueError("persistent context items require provenance.source_id when source_selection is present.")
+                if str(source_id) not in selected_ids:
+                    raise ValueError("context package contains a persistent source excluded by source_selection.")
 
     def to_context(self) -> dict[str, Any]:
         """Return a provider-neutral representation for downstream reasoning."""
@@ -122,16 +102,8 @@ class WorkingContext:
                     "metadata": dict(self.task.metadata),
                 }
             ),
-            "execution_state": (
-                None
-                if self.execution_state is None
-                else self.execution_state.to_context()
-            ),
-            "execution_progress": (
-                None
-                if self.execution_progress is None
-                else self.execution_progress.to_context()
-            ),
+            "execution_state": None if self.execution_state is None else self.execution_state.to_context(),
+            "execution_progress": None if self.execution_progress is None else self.execution_progress.to_context(),
             "observations": tuple(
                 {
                     "source_type": item.source_type,
