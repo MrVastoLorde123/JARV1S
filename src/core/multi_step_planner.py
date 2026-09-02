@@ -4,6 +4,7 @@ from collections.abc import Callable, Sequence
 from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
 from src.core.execution_planner import ExecutionPlanner
 from src.core.execution_progress import ExecutionProgress
+from src.core.remaining_work import RemainingWork
 from src.core.task_models import TaskRequest
 
 
@@ -35,13 +36,18 @@ class MultiStepExecutionPlanner:
         self,
         task: TaskRequest,
         progress: ExecutionProgress | None = None,
+        remaining_work: RemainingWork | None = None,
     ) -> ExecutionPlan:
         if not isinstance(task, TaskRequest):
             raise TypeError("task must be a TaskRequest.")
         if progress is not None and not isinstance(progress, ExecutionProgress):
             raise TypeError("progress must be an ExecutionProgress or None.")
+        if remaining_work is not None and not isinstance(remaining_work, RemainingWork):
+            raise TypeError("remaining_work must be a RemainingWork or None.")
         if progress is not None and progress.goal != task.content:
             raise ValueError("execution progress goal must match the task objective.")
+        if remaining_work is not None and remaining_work.goal != task.content:
+            raise ValueError("remaining work goal must match the task objective.")
 
         subtasks = tuple(self.decomposer(task))
         if not subtasks:
@@ -61,6 +67,12 @@ class MultiStepExecutionPlanner:
             for source_step in subplan.steps:
                 step_id = f"step-{len(combined_steps) + 1}"
                 depends_on = (previous_step_id,) if previous_step_id is not None else ()
+                metadata = {
+                    **source_step.metadata,
+                    "subtask_index": index,
+                }
+                if remaining_work is not None:
+                    metadata["assessment_remaining_work"] = remaining_work.to_context()
                 combined_steps.append(
                     PlanStep(
                         step_id=step_id,
@@ -70,10 +82,7 @@ class MultiStepExecutionPlanner:
                         status=StepStatus.READY,
                         depends_on=depends_on,
                         requires_confirmation=source_step.requires_confirmation,
-                        metadata={
-                            **source_step.metadata,
-                            "subtask_index": index,
-                        },
+                        metadata=metadata,
                     )
                 )
                 previous_step_id = step_id
