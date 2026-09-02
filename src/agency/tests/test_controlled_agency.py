@@ -3,7 +3,12 @@ import unittest
 from src.agency.controlled_agency import AgencyStopReason, ControlledAgency
 from src.agency.execution_runtime import ExecutionOutcome, ExecutionRuntime
 from src.agency.observation_integration import ExecutionObservationContextIntegrator
-from src.context.execution_semantics import ExecutionPreparation, ExecutionPreparationStatus, ExecutionRequest
+from src.context.execution_semantics import (
+    ExecutionPreparation,
+    ExecutionPreparationStatus,
+    ExecutionPreparationViolation,
+    ExecutionRequest,
+)
 from src.context.models import ContextPackage
 from src.context.working_context import WorkingContext
 
@@ -116,15 +121,6 @@ class ControlledAgencyTests(unittest.TestCase):
 
     def test_blocked_next_preparation_is_never_executed(self):
         first = self.preparation("exec-1")
-        blocked = ExecutionPreparation(
-            request="run a bounded sequence",
-            execution_id="exec-2",
-            status=ExecutionPreparationStatus.BLOCKED,
-            violations=(),
-        )
-        # Constructing a blocked preparation requires a violation; import the type locally
-        # to keep the test helper focused on the authority contract.
-        from src.context.execution_semantics import ExecutionPreparationViolation
         blocked = ExecutionPreparation(
             request="run a bounded sequence",
             execution_id="exec-2",
