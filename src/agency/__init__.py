@@ -3,15 +3,15 @@
 from .execution_runtime import (
     ExecutionAdapter,
     ExecutionObservation,
+    ExecutionOutcome,
     ExecutionRuntime,
     ExecutionStatus,
-    ToolServiceExecutionAdapter,
 )
 
 __all__ = [
     "ExecutionAdapter",
     "ExecutionObservation",
+    "ExecutionOutcome",
     "ExecutionRuntime",
     "ExecutionStatus",
-    "ToolServiceExecutionAdapter",
 ]
