@@ -1,7 +1,11 @@
 import unittest
 
-from src.agency.execution_runtime import ExecutionRuntime
-from src.context.execution_semantics import ExecutionRequest
+from src.agency.execution_runtime import ExecutionRuntime, ExecutionStatus
+from src.context.execution_semantics import (
+    ExecutionPreparation,
+    ExecutionPreparationStatus,
+    ExecutionRequest,
+)
 from src.core.plugin_boundary import (
     CapabilityExecutionAdapter,
     CapabilityPluginRegistry,
@@ -25,7 +29,7 @@ class ExamplePlugin:
                     "required": ["path"],
                     "properties": {"path": {"type": "string"}},
                 },
-                output_schema={"type": "string"},
+                output_schema={"type": "object"},
                 risk_level=RiskLevel.LOW,
             ),
         )
@@ -51,6 +55,16 @@ def execution_request(operation="read_workspace_file", arguments=None):
         operation=operation,
         arguments={"path": "README.md"} if arguments is None else arguments,
         metadata={"source": "test"},
+    )
+
+
+def ready_preparation(request: ExecutionRequest | None = None) -> ExecutionPreparation:
+    request = request or execution_request()
+    return ExecutionPreparation(
+        request=request.request,
+        execution_id=request.execution_id,
+        status=ExecutionPreparationStatus.READY,
+        execution_request=request,
     )
 
 
@@ -171,13 +185,34 @@ class CapabilityPluginBoundaryTests(unittest.TestCase):
         registry.register(ExamplePlugin())
         registry.bind("read_workspace_file", "read_file")
 
-        preparation = type("Preparation", (), {})
-        del preparation
-        # The adapter contract is exercised directly here; M8.1 owns the
-        # preparation lifecycle and is covered by its existing focused suite.
-        adapter = CapabilityExecutionAdapter(registry)
-        outcome = adapter.execute(execution_request())
-        self.assertTrue(outcome.success)
+        observation = ExecutionRuntime(CapabilityExecutionAdapter(registry)).execute(
+            ready_preparation()
+        )
+
+        self.assertIs(observation.status, ExecutionStatus.SUCCEEDED)
+        self.assertEqual(observation.execution_id, "exec-1")
+        self.assertEqual(observation.operation, "read_workspace_file")
+        self.assertEqual(observation.outcome.content, {"path": "README.md"})
+
+    def test_execution_adapter_translates_plugin_failure(self):
+        class FailingPlugin(ExamplePlugin):
+            def execute(self, request):
+                return ToolResult(
+                    success=False,
+                    tool_name=request.tool_name,
+                    error={"code": "file_unavailable", "message": "README.md is missing"},
+                    invocation_id=request.invocation_id,
+                )
+
+        registry = CapabilityPluginRegistry()
+        registry.register(FailingPlugin())
+        registry.bind("read_workspace_file", "read_file")
+
+        outcome = CapabilityExecutionAdapter(registry).execute(execution_request())
+
+        self.assertFalse(outcome.success)
+        self.assertEqual(outcome.error["code"], "file_unavailable")
+        self.assertEqual(outcome.error["message"], "README.md is missing")
 
 
 if __name__ == "__main__":
