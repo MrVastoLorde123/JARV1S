@@ -46,7 +46,7 @@ A failed execution must remain a failed observation. A successful execution must
 
 ## Existing-stack relationship
 
-M8.1 owns execution lifecycle semantics and produces `ExecutionObservation`. M8.2 resolves operations through capabilities/plugins and adapts concrete plugin results to the M8.1 outcome contract. M8.3 owns the return path from those observations into the existing `WorkingContext` and its `observations` collection. filecite-placeholder
+M8.1 owns execution lifecycle semantics and produces `ExecutionObservation`. M8.2 resolves operations through capabilities/plugins and adapts concrete plugin results to the M8.1 outcome contract. M8.3 owns the return path from those observations into the existing `WorkingContext` and its `observations` collection.
 
 M8.3 must reuse the existing context model rather than introduce a second competing memory/state architecture.
 
