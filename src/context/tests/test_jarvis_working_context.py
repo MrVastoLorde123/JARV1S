@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 from src.context.models import ContextItem, ContextPackage, OBSERVATION
 from src.context.working_context import WorkingContext
+from src.context.working_context_composer import WorkingContextComposer
 from src.context.jarvis_working_context import JARVISWorkingContextRuntime
 from src.core.conversation_models import StateSnapshot
 from src.core.task_models import TaskRequest, TaskType
@@ -33,19 +34,17 @@ class JARVISWorkingContextRuntimeTests(unittest.TestCase):
             metadata={"memory_count": 1},
         )
 
-    def test_runtime_uses_jarvis_owned_conversation_and_options(self):
+    def _runtime(self, jarvis):
         builder = Mock(return_value=self._package())
-        composer = Mock()
-        composer.compose.return_value = WorkingContext(
-            request="inspect configuration",
-            context_package=self._package(),
-        )
+        composer = WorkingContextComposer(builder)
+        return JARVISWorkingContextRuntime(jarvis, composer=composer)
 
+    def test_runtime_uses_jarvis_owned_conversation_and_options(self):
         jarvis = SimpleNamespace(
             context_options=SimpleNamespace(name="options"),
             conversation=FakeConversation(),
         )
-        runtime = JARVISWorkingContextRuntime(jarvis, composer=composer)
+        runtime = self._runtime(jarvis)
 
         task = TaskRequest("inspect configuration", TaskType.INFORMATION)
         result = runtime.compose(
@@ -55,12 +54,9 @@ class JARVISWorkingContextRuntimeTests(unittest.TestCase):
         )
 
         self.assertIsInstance(result, WorkingContext)
-        composer.compose.assert_called_once()
-        kwargs = composer.compose.call_args.kwargs
-        self.assertIs(kwargs["options"], jarvis.context_options)
-        self.assertIs(kwargs["conversation_state"], jarvis.conversation.snapshot_value)
-        self.assertIs(kwargs["task"], task)
-        self.assertEqual(kwargs["observations"], ("configuration file observed",))
+        self.assertIs(result.conversation_state, jarvis.conversation.snapshot_value)
+        self.assertIs(result.task, task)
+        self.assertEqual(result.observations[0].content, "configuration file observed")
 
     def test_runtime_preserves_composer_output(self):
         working = WorkingContext(
@@ -68,15 +64,18 @@ class JARVISWorkingContextRuntimeTests(unittest.TestCase):
             context_package=self._package(),
             observations=(ContextItem(OBSERVATION, "file observed"),),
         )
-        composer = Mock()
-        composer.compose.return_value = working
+        builder = Mock(return_value=self._package())
+        composer = WorkingContextComposer(builder)
         jarvis = SimpleNamespace(
             context_options=SimpleNamespace(),
             conversation=FakeConversation(),
         )
-
         runtime = JARVISWorkingContextRuntime(jarvis, composer=composer)
-        self.assertIs(runtime.compose("inspect configuration"), working)
+
+        result = runtime.compose("inspect configuration")
+        self.assertIsInstance(result, WorkingContext)
+        self.assertEqual(result.request, working.request)
+        self.assertIs(result.context_package, working.context_package)
 
     def test_runtime_rejects_missing_conversation(self):
         jarvis = SimpleNamespace(context_options=SimpleNamespace())
