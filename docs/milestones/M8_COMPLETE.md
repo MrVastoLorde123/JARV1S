@@ -18,7 +18,6 @@ M8 turns the authorized M7 handoff into controlled execution while preserving th
 From the user's real checkout:
 
 ```text
-M8.1 focused/full verified before M8.2
 M8.2 focused/full: 12 / 12 and 904 / 904
 M8.3 focused/full: 10 / 10 and 914 / 914
 M8.4 focused/full: 11 / 11 and 925 / 925
