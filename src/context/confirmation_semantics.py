@@ -150,7 +150,7 @@ class ConfirmationManager:
             request=policy_decision.request,
             proposal_id=policy_decision.proposal_id,
             validation_id=policy_decision.validation_id,
-            policy_decision_id=f"policy:{policy_decision.proposal_id}:{policy_decision.validation_id}:{policy_decision.rule_id}",
+            policy_decision_id=policy_decision.policy_decision_id,
             policy_outcome=policy_decision.outcome,
             prompt=prompt,
             metadata={} if metadata is None else dict(metadata),
