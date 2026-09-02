@@ -157,6 +157,14 @@ class ConfirmationIntegrityValidator:
                     )
                 )
 
+        if confirmation_request.policy_outcome is not policy_decision.outcome:
+            violations.append(
+                ConfirmationIntegrityViolation(
+                    "request_policy_outcome_mismatch",
+                    "confirmation request policy outcome does not match the policy decision.",
+                )
+            )
+
         if confirmation_result.confirmation_id != confirmation_request.confirmation_id:
             violations.append(
                 ConfirmationIntegrityViolation(
