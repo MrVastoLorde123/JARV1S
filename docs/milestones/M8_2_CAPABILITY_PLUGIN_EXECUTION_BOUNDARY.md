@@ -1,6 +1,6 @@
 # M8.2 — Capability / Plugin Execution Boundary
 
-**Status:** IMPLEMENTATION IN PROGRESS — VERIFICATION PENDING
+**Status:** VERIFIED
 
 ## Purpose
 
@@ -76,7 +76,7 @@ M8.1 ExecutionOutcome
 
 M8.2 does not replace `ToolDefinition`, `ToolRequest`, or `ToolResult`. It formalizes the higher-level mapping that was previously implicit in the tool layer.
 
-`src/core/capability_catalog.py` remains the read-only discovery surface. `src/core/capability_invocation.py` remains the structural request builder. The new plugin boundary owns operation-to-capability-to-plugin resolution and adapts concrete results to the M8.1 runtime contract.
+`src/core/capability_catalog.py` remains the read-only discovery surface. `src/core/capability_invocation.py` remains the structural request builder. The plugin boundary owns operation-to-capability-to-plugin resolution and adapts concrete results to the M8.1 runtime contract.
 
 ## Explicit non-goals
 
@@ -107,6 +107,16 @@ M8.2 adapts results; M8.1 owns execution lifecycle semantics
 
 ## Verification
 
-Focused tests are under `src/core/tests/test_plugin_boundary.py`.
+Focused command:
 
-Verification remains pending until the focused M8.2 tests and the full repository `unittest` suite are run successfully from the user's real checkout.
+```bash
+python -m unittest src.core.tests.test_plugin_boundary -v
+```
+
+Result: **12/12 tests passed.**
+
+Full repository verification was run from the user's real checkout using the repository `unittest` suite.
+
+Result: **904/904 tests passed.**
+
+No GitHub Actions run is being treated as verification; the authoritative evidence for this milestone is the successful local test execution above.
