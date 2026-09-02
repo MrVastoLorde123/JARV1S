@@ -143,11 +143,16 @@ class ExecutionWorkingContextBridgeTests(unittest.TestCase):
                 ),
             ),
         )
+        executor = PlanExecutor(
+            handlers={
+                "PROVIDE_INFORMATION": lambda step: "inspection result",
+            }
+        )
         loop = GuardedExecutionLoop(
             planner=planner,
             validator=PlanValidator(),
             policy=ExecutionPolicy(),
-            executor=PlanExecutor(),
+            executor=executor,
             confirmation=ExecutionConfirmationService(),
             observation_observer=bridge,
         )
