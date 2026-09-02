@@ -13,43 +13,6 @@ M8 turns the authorized M7 handoff into controlled execution while preserving th
 - M8.5 — Controlled Multi-Step Agency
 - M8.6 — Agency Reliability / Recovery
 
-## Final agency flow
-
-```text
-M7 Authority
-      ↓
-ExecutionRequest
-      ↓
-M8.1 Execution Runtime
-      ↓
-M8.2 Capability / Plugin Boundary
-      ↓
-M8.3 Observation Integration
-      ↓
-M8.4 Lifecycle / Continuation
-      ↓
-M8.5 Controlled Multi-Step Agency
-      ↓
-M8.6 Reliability / Recovery
-      ↺
-Context / Future Reasoning
-```
-
-## Authority boundary
-
-M8 does not create a second authority system.
-
-```text
-Execution ≠ Authorization
-Observation ≠ Permission
-Sequencing ≠ Authority
-Continuation ≠ Authorization
-Recovery ≠ Authorization
-Retry Eligibility ≠ Permission
-```
-
-Every distinct executable action must still arrive through the established M7 authority chain.
-
 ## Verification receipt
 
 From the user's real checkout:
@@ -63,10 +26,8 @@ M8.5 focused/full: 6 / 6 and 931 / 931
 M8.6 focused/full: 11 / 11 and 942 / 942
 ```
 
-The final M8 verification receipt is **942 / 942 tests passing**.
+Final M8 verification receipt: **942 / 942 tests passing**.
 
-## M9 handoff
+## M8 → M9 boundary
 
-M8 establishes controlled agency. M9 may now introduce bounded workforce/delegation semantics as an extension of the agency runtime, not as an independent authority system.
-
-Workers remain bounded by capabilities, inputs, outputs, policy, and execution identity. They do not acquire authority merely by being assigned work.
+M8 establishes controlled agency. M9 extends the agency runtime into bounded workforce/delegation semantics. Workers are not an independent authority system; any executable action continues to require the established M7 authority chain.
