@@ -1,13 +1,12 @@
 """Controlled M8.1 execution runtime.
 
 M7 establishes authority and produces a READY provider-neutral execution
-handoff. This module performs the first real agency step: it consumes that
-handoff, delegates execution to an injected adapter, and returns an explicit
-execution observation.
+handoff. M8.1 consumes that handoff, delegates one execution attempt to an
+adapter, and returns an explicit provider-neutral observation.
 
-The runtime deliberately does not select capabilities, grant authority,
-perform confirmation, retry, schedule, or integrate observations into the
-working-context store. Those responsibilities belong to later M8 milestones.
+Capability resolution remains outside this runtime. An adapter is the
+integration boundary that knows how to map the provider-neutral operation to
+a concrete implementation; that mapping will be formalized in M8.2.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from src.tools.models import ToolRequest, ToolResult
 
 
 class ExecutionStatus(str, Enum):
-    """Concrete outcome state for one runtime attempt."""
+    """Concrete outcome state for one execution attempt."""
 
     NOT_ATTEMPTED = "not_attempted"
     ATTEMPTED = "attempted"
@@ -42,8 +41,30 @@ class ExecutionStatus(str, Enum):
 
 
 @dataclass(frozen=True)
+class ExecutionOutcome:
+    """Provider-neutral adapter outcome consumed by the runtime."""
+
+    success: bool
+    content: Any = None
+    error: Mapping[str, Any] | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.success, bool):
+            raise TypeError("success must be a bool.")
+        if self.success and self.error is not None:
+            raise ValueError("successful outcomes cannot contain an error.")
+        if not self.success and self.error is None:
+            raise ValueError("failed outcomes must contain an error.")
+        if self.error is not None and not isinstance(self.error, Mapping):
+            raise TypeError("error must be a mapping or None.")
+        if not isinstance(self.metadata, Mapping):
+            raise TypeError("metadata must be a mapping.")
+
+
+@dataclass(frozen=True)
 class ExecutionObservation:
-    """Provider-neutral observation of what the runtime actually attempted."""
+    """Provider-neutral observation of what M8.1 actually did."""
 
     execution_id: str
     request: str
@@ -57,7 +78,7 @@ class ExecutionObservation:
     attempted: bool
     completed: bool
     succeeded: bool
-    result: ToolResult | None = None
+    outcome: ExecutionOutcome | None = None
     error: Mapping[str, Any] | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -68,23 +89,20 @@ class ExecutionObservation:
             raise ValueError("request must be a non-empty string.")
         if not isinstance(self.status, ExecutionStatus):
             raise TypeError("status must be an ExecutionStatus value.")
-        if not isinstance(self.attempted, bool) or not isinstance(self.completed, bool) or not isinstance(self.succeeded, bool):
-            raise TypeError("attempted, completed, and succeeded must be bool values.")
-        if self.attempted != self.status.attempted:
-            raise ValueError("attempted must match status semantics.")
-        if self.completed != self.status.completed:
-            raise ValueError("completed must match status semantics.")
-        if self.succeeded != self.status.succeeded:
-            raise ValueError("succeeded must match status semantics.")
-        if self.result is not None and not isinstance(self.result, ToolResult):
-            raise TypeError("result must be a ToolResult or None.")
+        if (self.attempted, self.completed, self.succeeded) != (
+            self.status.attempted,
+            self.status.completed,
+            self.status.succeeded,
+        ):
+            raise ValueError("attempted/completed/succeeded must match status semantics.")
+        if self.outcome is not None and not isinstance(self.outcome, ExecutionOutcome):
+            raise TypeError("outcome must be an ExecutionOutcome or None.")
         if self.error is not None and not isinstance(self.error, Mapping):
             raise TypeError("error must be a mapping or None.")
         if not isinstance(self.metadata, Mapping):
             raise TypeError("metadata must be a mapping.")
 
     def to_context(self) -> dict[str, Any]:
-        """Serialize the observation without introducing authority controls."""
         return {
             "execution_id": self.execution_id,
             "request": self.request,
@@ -98,63 +116,38 @@ class ExecutionObservation:
             "attempted": self.attempted,
             "completed": self.completed,
             "succeeded": self.succeeded,
-            "result": self.result,
+            "outcome": None
+            if self.outcome is None
+            else {
+                "success": self.outcome.success,
+                "content": self.outcome.content,
+                "error": None if self.outcome.error is None else dict(self.outcome.error),
+                "metadata": dict(self.outcome.metadata),
+            },
             "error": None if self.error is None else dict(self.error),
             "metadata": dict(self.metadata),
         }
 
 
 class ExecutionAdapter(Protocol):
-    """Provider-neutral adapter for one concrete execution attempt."""
+    """Adapter that performs one concrete execution for a handoff."""
 
-    def execute(self, request: ToolRequest) -> ToolResult:
-        """Execute one concrete tool request and return its result."""
+    def execute(self, request: Any) -> ExecutionOutcome:
+        """Execute the provider-neutral request and return an outcome."""
         ...
 
 
 class ToolServiceExecutionAdapter:
-    """Adapter over the existing ToolService invocation boundary."""
+    """Compatibility adapter over the existing ToolService."""
 
     def __init__(self, service: Any) -> None:
         if not hasattr(service, "invoke") or not callable(service.invoke):
             raise TypeError("service must expose a callable invoke(request) method.")
         self._service = service
 
-    def execute(self, request: ToolRequest) -> ToolResult:
-        return self._service.invoke(request)
-
-
-class ExecutionRuntime:
-    """Execute exactly one M7 READY handoff through an injected adapter."""
-
-    def __init__(self, adapter: ExecutionAdapter) -> None:
-        if not hasattr(adapter, "execute") or not callable(adapter.execute):
-            raise TypeError("adapter must expose a callable execute(request) method.")
-        self._adapter = adapter
-
-    def execute(self, preparation: ExecutionPreparation) -> ExecutionObservation:
-        """Consume one preparation and return an explicit execution observation.
-
-        BLOCKED preparations never reach the adapter. For READY preparations,
-        this runtime creates a concrete ToolRequest only from the provider-
-        neutral operation already supplied by the execution adapter boundary.
-        M8.1 does not resolve capability identity; the adapter owns that mapping.
-        """
-        if not isinstance(preparation, ExecutionPreparation):
-            raise TypeError("preparation must be an ExecutionPreparation.")
-
-        if preparation.status is not ExecutionPreparationStatus.READY:
-            return self._not_attempted(preparation)
-
-        request = preparation.execution_request
-        if request is None:  # Defensive; the semantic model rejects this state.
-            return self._failure(
-                preparation,
-                None,
-                {"code": "missing_execution_request", "message": "READY preparation has no execution request."},
-            )
-
-        concrete_request = ToolRequest(
+    def execute(self, request: Any) -> ExecutionOutcome:
+        """Map an ExecutionRequest to the current ToolService contract."""
+        tool_request = ToolRequest(
             tool_name=request.operation,
             arguments=dict(request.arguments),
             metadata={
@@ -168,10 +161,51 @@ class ExecutionRuntime:
             },
             invocation_id=request.execution_id,
         )
+        result = self._service.invoke(tool_request)
+        if not isinstance(result, ToolResult):
+            raise TypeError(f"ToolService returned {type(result).__name__}; expected ToolResult.")
+        if result.success:
+            return ExecutionOutcome(
+                success=True,
+                content=result.content,
+                metadata=dict(result.metadata),
+            )
+        return ExecutionOutcome(
+            success=False,
+            error={
+                "code": result.error.code,
+                "message": result.error.message,
+                "details": dict(result.error.details),
+            },
+            metadata=dict(result.metadata),
+        )
+
+
+class ExecutionRuntime:
+    """Execute exactly one M7 READY handoff through an injected adapter."""
+
+    def __init__(self, adapter: ExecutionAdapter) -> None:
+        if not hasattr(adapter, "execute") or not callable(adapter.execute):
+            raise TypeError("adapter must expose a callable execute(request) method.")
+        self._adapter = adapter
+
+    def execute(self, preparation: ExecutionPreparation) -> ExecutionObservation:
+        if not isinstance(preparation, ExecutionPreparation):
+            raise TypeError("preparation must be an ExecutionPreparation.")
+        if preparation.status is not ExecutionPreparationStatus.READY:
+            return self._not_attempted(preparation)
+
+        request = preparation.execution_request
+        if request is None:  # Defensive; M7 semantic validation rejects this state.
+            return self._failure(
+                preparation,
+                None,
+                {"code": "missing_execution_request", "message": "READY preparation has no execution request."},
+            )
 
         try:
-            result = self._adapter.execute(concrete_request)
-        except Exception as exc:  # noqa: BLE001 - execution failures are observations
+            outcome = self._adapter.execute(request)
+        except Exception as exc:  # noqa: BLE001 - adapter failure is an execution observation
             return self._failure(
                 preparation,
                 request,
@@ -182,27 +216,50 @@ class ExecutionRuntime:
                 },
             )
 
-        if not isinstance(result, ToolResult):
+        if not isinstance(outcome, ExecutionOutcome):
             return self._failure(
                 preparation,
                 request,
                 {
-                    "code": "invalid_execution_result",
-                    "message": f"adapter returned {type(result).__name__}; expected ToolResult.",
+                    "code": "invalid_execution_outcome",
+                    "message": f"adapter returned {type(outcome).__name__}; expected ExecutionOutcome.",
                 },
             )
 
-        if result.success:
-            return self._success(preparation, request, result)
+        if outcome.success:
+            return ExecutionObservation(
+                execution_id=request.execution_id,
+                request=preparation.request,
+                proposal_id=request.proposal_id,
+                validation_id=request.validation_id,
+                policy_decision_id=request.policy_decision_id,
+                confirmation_id=request.confirmation_id,
+                authorization_id=request.authorization_id,
+                operation=request.operation,
+                status=ExecutionStatus.SUCCEEDED,
+                attempted=True,
+                completed=True,
+                succeeded=True,
+                outcome=outcome,
+                metadata={"execution_runtime": "m8.1"},
+            )
 
-        return self._failure(
-            preparation,
-            request,
-            {
-                "code": result.error.code,
-                "message": result.error.message,
-            },
-            result=result,
+        return ExecutionObservation(
+            execution_id=request.execution_id,
+            request=preparation.request,
+            proposal_id=request.proposal_id,
+            validation_id=request.validation_id,
+            policy_decision_id=request.policy_decision_id,
+            confirmation_id=request.confirmation_id,
+            authorization_id=request.authorization_id,
+            operation=request.operation,
+            status=ExecutionStatus.FAILED,
+            attempted=True,
+            completed=True,
+            succeeded=False,
+            outcome=outcome,
+            error=dict(outcome.error) if outcome.error is not None else None,
+            metadata={"execution_runtime": "m8.1"},
         )
 
     @staticmethod
@@ -228,34 +285,10 @@ class ExecutionRuntime:
         )
 
     @staticmethod
-    def _success(
-        preparation: ExecutionPreparation,
-        request: Any,
-        result: ToolResult,
-    ) -> ExecutionObservation:
-        return ExecutionObservation(
-            execution_id=request.execution_id,
-            request=preparation.request,
-            proposal_id=request.proposal_id,
-            validation_id=request.validation_id,
-            policy_decision_id=request.policy_decision_id,
-            confirmation_id=request.confirmation_id,
-            authorization_id=request.authorization_id,
-            operation=request.operation,
-            status=ExecutionStatus.SUCCEEDED,
-            attempted=True,
-            completed=True,
-            succeeded=True,
-            result=result,
-            metadata={"execution_runtime": "m8.1"},
-        )
-
-    @staticmethod
     def _failure(
         preparation: ExecutionPreparation,
         request: Any,
         error: Mapping[str, Any],
-        result: ToolResult | None = None,
     ) -> ExecutionObservation:
         return ExecutionObservation(
             execution_id=preparation.execution_id,
@@ -270,7 +303,6 @@ class ExecutionRuntime:
             attempted=True,
             completed=True,
             succeeded=False,
-            result=result,
             error=dict(error),
             metadata={"execution_runtime": "m8.1"},
         )
