@@ -16,6 +16,7 @@ class ExecutionLifecycleStatus(str, Enum):
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+    BLOCKED = "blocked"
     CANCELLED = "cancelled"
     CONTINUATION_REQUIRED = "continuation_required"
 
@@ -24,6 +25,7 @@ class ExecutionLifecycleStatus(str, Enum):
         return self in {
             ExecutionLifecycleStatus.SUCCEEDED,
             ExecutionLifecycleStatus.FAILED,
+            ExecutionLifecycleStatus.BLOCKED,
             ExecutionLifecycleStatus.CANCELLED,
         }
 
@@ -33,8 +35,8 @@ class ContinuationRequest:
     """Explicit data describing why an execution may need continuation.
 
     A continuation request is not an authorization grant and does not contain
-    an executable provider/tool handle. A later action must still traverse the
-    normal authority chain.
+    an executable provider/tool handle. A later action must still traverse
+    the normal authority chain.
     """
 
     execution_id: str
@@ -108,7 +110,7 @@ class ExecutionLifecycle:
         elif observation.status is ExecutionStatus.FAILED:
             status = ExecutionLifecycleStatus.FAILED
         elif observation.status is ExecutionStatus.NOT_ATTEMPTED:
-            status = ExecutionLifecycleStatus.CANCELLED
+            status = ExecutionLifecycleStatus.BLOCKED
         else:
             status = ExecutionLifecycleStatus.RUNNING
 
