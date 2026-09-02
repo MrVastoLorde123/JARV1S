@@ -2,6 +2,7 @@ from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import ExecutionPlan
 from src.core.execution_progress import ExecutionProgress
+from src.core.remaining_work import RemainingWork
 from src.core.task_models import TaskRequest
 
 
@@ -19,8 +20,10 @@ class ExecutionPlannerProtocol(Protocol):
         self,
         task: TaskRequest,
         progress: ExecutionProgress | None = None,
+        remaining_work: RemainingWork | None = None,
     ) -> ExecutionPlan:
         """
-        Produce an execution plan for the supplied task and optional objective progress.
+        Produce an execution plan for the supplied task and optional
+        objective progress / grounded remaining work.
         """
         ...
