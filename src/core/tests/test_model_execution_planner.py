@@ -9,6 +9,7 @@ from src.core.execution_plan_models import ExecutionPlan
 from src.core.execution_progress import ExecutionProgress
 from src.core.execution_state import ExecutionState
 from src.core.model_execution_planner import ModelExecutionPlanner
+from src.core.remaining_work import RemainingWork
 from src.core.task_models import TaskRequest, TaskType
 from src.core.execution_executor_models import PlanExecutionStatus
 
@@ -139,6 +140,42 @@ class ModelExecutionPlannerTests(unittest.TestCase):
         self.assertEqual(len(provider.requests), 1)
         self.assertIn("completed_steps_across_attempts", provider.requests[0].task)
         self.assertIn("attempt-1:inspect", provider.requests[0].task)
+
+    def test_remaining_work_is_explicitly_forwarded_to_model(self):
+        planner, provider = self._service(
+            '{"steps":[{"task":"resolve modify permission","task_type":"ACTION"}]}'
+        )
+        remaining = RemainingWork(
+            goal="modify authentication config",
+            items=("Resolve failed step 'modify': permission denied",),
+            blockers=("permission denied",),
+            source_requirements=("Resolve failed step 'modify': permission denied",),
+        )
+
+        plan = planner.plan(
+            TaskRequest("modify authentication config", TaskType.ACTION),
+            remaining_work=remaining,
+        )
+
+        self.assertIsInstance(plan, ExecutionPlan)
+        self.assertIn("Grounded remaining work", provider.requests[0].task)
+        self.assertIn("permission denied", provider.requests[0].task)
+        self.assertEqual(
+            provider.requests[0].context["remaining_work"]["items"],
+            remaining.items,
+        )
+
+    def test_remaining_work_goal_must_match_task_objective(self):
+        planner, _ = self._service(
+            '{"steps":[{"task":"do remaining work","task_type":"ACTION"}]}'
+        )
+        remaining = RemainingWork(goal="different objective", items=("do it",))
+
+        with self.assertRaises(ValueError):
+            planner.plan(
+                TaskRequest("original objective", TaskType.ACTION),
+                remaining_work=remaining,
+            )
 
     def test_progress_goal_must_match_task_objective(self):
         planner, _ = self._service(
