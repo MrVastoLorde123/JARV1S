@@ -71,20 +71,29 @@ class ContextSourceSelectorTests(unittest.TestCase):
             "refresh_required_before_authoritative_reuse",
         )
 
-    def test_refresh_requires_explicit_clock_when_refresh_interval_exists(self):
+    def test_never_refreshed_source_requires_refresh_without_a_clock(self):
         selector = self._selector()
-        with self.assertRaises(ValueError):
-            selector.select(
-                "find config",
-                (
-                    ContextSource(
-                        "memory-1",
-                        "MEMORY",
-                        relevance_score=0.9,
-                        refresh_interval_seconds=50.0,
-                    ),
+        result = selector.select(
+            "find config",
+            (
+                ContextSource(
+                    "memory-1",
+                    "MEMORY",
+                    relevance_score=0.9,
+                    refresh_interval_seconds=50.0,
                 ),
-            )
+            ),
+        )
+
+        decision = result.selected[0]
+        self.assertTrue(decision.selected)
+        self.assertTrue(decision.refresh_required)
+        self.assertFalse(decision.authority_allowed)
+        self.assertEqual(result.refresh_required, ("memory-1",))
+        self.assertEqual(
+            decision.reason,
+            "refresh_required_before_authoritative_reuse",
+        )
 
     def test_explicit_task_and_execution_context_are_outside_source_selection(self):
         selector = self._selector()
