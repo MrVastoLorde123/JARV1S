@@ -53,7 +53,7 @@ class AuthorizationSemanticsTests(unittest.TestCase):
         self.assertIsNone(result.confirmation_id)
 
     def test_deny_cannot_be_authorized(self):
-        decision = self._decision(ActionCharacteristics(effect=ActionEffect.STATE_CHANGE))
+        decision = self._decision(ActionCharacteristics())
         object.__setattr__(decision, "outcome", PolicyOutcome.DENY)
         result = AuthorizationEvaluator().evaluate(decision, authorization_id="authorization:0")
 
@@ -109,14 +109,56 @@ class AuthorizationSemanticsTests(unittest.TestCase):
         self.assertEqual(result.status, AuthorizationStatus.DENIED)
 
     def test_allow_with_confirmation_artifacts_is_denied(self):
-        decision = self._decision(ActionCharacteristics())
+        decision = self._decision(ActionCharacteristics(effect=ActionEffect.STATE_CHANGE))
+        confirmation_request = ConfirmationManager().request(
+            decision, "confirmation:0", "Apply the change?"
+        )
+        confirmation = ConfirmationManager().resolve(
+            confirmation_request, ConfirmationStatus.CONFIRMED
+        )
+        integrity = ConfirmationIntegrityValidator().validate(
+            decision, confirmation_request, confirmation
+        )
         object.__setattr__(decision, "outcome", PolicyOutcome.ALLOW)
+
         result = AuthorizationEvaluator().evaluate(
             decision,
-            confirmation_result=None,
-            confirmation_integrity=object.__new__(type("IntegrityStub", (), {})),
+            confirmation_result=confirmation,
+            confirmation_integrity=integrity,
             authorization_id="authorization:0",
         )
+        self.assertEqual(result.status, AuthorizationStatus.DENIED)
+
+    def test_integrity_for_different_policy_decision_is_denied(self):
+        decision, confirmation, integrity = self._confirmed_chain()
+        other_decision = self._decision(ActionCharacteristics(effect=ActionEffect.IRREVERSIBLE))
+
+        result = AuthorizationEvaluator().evaluate(
+            other_decision,
+            confirmation_result=confirmation,
+            confirmation_integrity=integrity,
+            authorization_id="authorization:0",
+        )
+
+        self.assertEqual(result.status, AuthorizationStatus.DENIED)
+
+    def test_confirmation_result_for_different_policy_decision_is_denied(self):
+        decision, confirmation, integrity = self._confirmed_chain()
+        other_decision = self._decision(ActionCharacteristics(effect=ActionEffect.IRREVERSIBLE))
+        other_request = ConfirmationManager().request(
+            other_decision, "confirmation:1", "Perform the action?"
+        )
+        other_confirmation = ConfirmationManager().resolve(
+            other_request, ConfirmationStatus.CONFIRMED
+        )
+
+        result = AuthorizationEvaluator().evaluate(
+            decision,
+            confirmation_result=other_confirmation,
+            confirmation_integrity=integrity,
+            authorization_id="authorization:0",
+        )
+
         self.assertEqual(result.status, AuthorizationStatus.DENIED)
 
     def test_authorization_preserves_identity_chain(self):
