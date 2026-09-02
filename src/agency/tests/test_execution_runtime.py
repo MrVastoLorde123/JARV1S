@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import pytest
+import unittest
 
 from src.agency.execution_runtime import (
-    ExecutionAdapter,
-    ExecutionObservation,
     ExecutionOutcome,
     ExecutionRuntime,
     ExecutionStatus,
@@ -73,106 +71,106 @@ class RaisingAdapter:
         raise RuntimeError("device offline")
 
 
-def test_ready_execution_returns_success_observation_and_preserves_identity() -> None:
-    adapter = RecordingAdapter()
-    observation = ExecutionRuntime(adapter).execute(ready_preparation())
+class ExecutionRuntimeTests(unittest.TestCase):
+    def test_ready_execution_returns_success_observation_and_preserves_identity(self) -> None:
+        adapter = RecordingAdapter()
+        observation = ExecutionRuntime(adapter).execute(ready_preparation())
 
-    assert observation.status is ExecutionStatus.SUCCEEDED
-    assert observation.attempted is True
-    assert observation.completed is True
-    assert observation.succeeded is True
-    assert observation.execution_id == "execution:1"
-    assert observation.proposal_id == "proposal:1"
-    assert observation.validation_id == "validation:1"
-    assert observation.policy_decision_id == "policy:1"
-    assert observation.authorization_id == "authorization:1"
-    assert observation.operation == "inspect_file"
-    assert observation.outcome is not None
-    assert observation.outcome.success is True
-    assert adapter.calls == 1
-    assert adapter.requests[0].operation == "inspect_file"
+        self.assertIs(observation.status, ExecutionStatus.SUCCEEDED)
+        self.assertTrue(observation.attempted)
+        self.assertTrue(observation.completed)
+        self.assertTrue(observation.succeeded)
+        self.assertEqual(observation.execution_id, "execution:1")
+        self.assertEqual(observation.proposal_id, "proposal:1")
+        self.assertEqual(observation.validation_id, "validation:1")
+        self.assertEqual(observation.policy_decision_id, "policy:1")
+        self.assertEqual(observation.authorization_id, "authorization:1")
+        self.assertEqual(observation.operation, "inspect_file")
+        self.assertIsNotNone(observation.outcome)
+        self.assertTrue(observation.outcome.success)
+        self.assertEqual(adapter.calls, 1)
+        self.assertEqual(adapter.requests[0].operation, "inspect_file")
 
-
-def test_failed_adapter_outcome_remains_failed() -> None:
-    adapter = RecordingAdapter(
-        ExecutionOutcome(
-            success=False,
-            error={"code": "permission_denied", "message": "access denied"},
+    def test_failed_adapter_outcome_remains_failed(self) -> None:
+        adapter = RecordingAdapter(
+            ExecutionOutcome(
+                success=False,
+                error={"code": "permission_denied", "message": "access denied"},
+            )
         )
-    )
 
-    observation = ExecutionRuntime(adapter).execute(ready_preparation())
+        observation = ExecutionRuntime(adapter).execute(ready_preparation())
 
-    assert observation.status is ExecutionStatus.FAILED
-    assert observation.attempted is True
-    assert observation.completed is True
-    assert observation.succeeded is False
-    assert observation.error == {"code": "permission_denied", "message": "access denied"}
+        self.assertIs(observation.status, ExecutionStatus.FAILED)
+        self.assertTrue(observation.attempted)
+        self.assertTrue(observation.completed)
+        self.assertFalse(observation.succeeded)
+        self.assertEqual(
+            observation.error,
+            {"code": "permission_denied", "message": "access denied"},
+        )
+
+    def test_adapter_exception_becomes_failed_observation(self) -> None:
+        adapter = RaisingAdapter()
+
+        observation = ExecutionRuntime(adapter).execute(ready_preparation())
+
+        self.assertIs(observation.status, ExecutionStatus.FAILED)
+        self.assertTrue(observation.attempted)
+        self.assertTrue(observation.completed)
+        self.assertFalse(observation.succeeded)
+        self.assertIsNotNone(observation.error)
+        self.assertEqual(observation.error["code"], "execution_adapter_error")
+        self.assertEqual(observation.error["exception_type"], "RuntimeError")
+        self.assertEqual(adapter.calls, 1)
+
+    def test_blocked_preparation_never_reaches_adapter(self) -> None:
+        adapter = RecordingAdapter()
+
+        observation = ExecutionRuntime(adapter).execute(blocked_preparation())
+
+        self.assertIs(observation.status, ExecutionStatus.NOT_ATTEMPTED)
+        self.assertFalse(observation.attempted)
+        self.assertFalse(observation.completed)
+        self.assertFalse(observation.succeeded)
+        self.assertIsNotNone(observation.error)
+        self.assertEqual(observation.error["code"], "execution_not_attempted")
+        self.assertEqual(adapter.calls, 0)
+
+    def test_invalid_adapter_result_is_failed_observation(self) -> None:
+        class InvalidAdapter:
+            def execute(self, request: ExecutionRequest):
+                return object()
+
+        observation = ExecutionRuntime(InvalidAdapter()).execute(ready_preparation())
+
+        self.assertIs(observation.status, ExecutionStatus.FAILED)
+        self.assertFalse(observation.succeeded)
+        self.assertIsNotNone(observation.error)
+        self.assertEqual(observation.error["code"], "invalid_execution_outcome")
+
+    def test_observation_serialization_does_not_add_authority_controls(self) -> None:
+        observation = ExecutionRuntime(RecordingAdapter()).execute(ready_preparation())
+
+        context = observation.to_context()
+
+        self.assertEqual(context["execution_id"], "execution:1")
+        self.assertEqual(context["status"], "succeeded")
+        self.assertNotIn("authorization", context)
+        self.assertNotIn("authorized", context)
+        self.assertNotIn("tool_handle", context)
+        self.assertNotIn("credential", context)
+
+    def test_runtime_requires_an_execution_adapter(self) -> None:
+        with self.assertRaises(TypeError):
+            ExecutionRuntime(object())
+
+    def test_runtime_requires_an_execution_preparation(self) -> None:
+        adapter = RecordingAdapter()
+
+        with self.assertRaises(TypeError):
+            ExecutionRuntime(adapter).execute(object())
 
 
-def test_adapter_exception_becomes_failed_observation() -> None:
-    adapter = RaisingAdapter()
-
-    observation = ExecutionRuntime(adapter).execute(ready_preparation())
-
-    assert observation.status is ExecutionStatus.FAILED
-    assert observation.attempted is True
-    assert observation.completed is True
-    assert observation.succeeded is False
-    assert observation.error is not None
-    assert observation.error["code"] == "execution_adapter_error"
-    assert observation.error["exception_type"] == "RuntimeError"
-    assert adapter.calls == 1
-
-
-def test_blocked_preparation_never_reaches_adapter() -> None:
-    adapter = RecordingAdapter()
-
-    observation = ExecutionRuntime(adapter).execute(blocked_preparation())
-
-    assert observation.status is ExecutionStatus.NOT_ATTEMPTED
-    assert observation.attempted is False
-    assert observation.completed is False
-    assert observation.succeeded is False
-    assert observation.error is not None
-    assert observation.error["code"] == "execution_not_attempted"
-    assert adapter.calls == 0
-
-
-def test_invalid_adapter_result_is_failed_observation() -> None:
-    class InvalidAdapter:
-        def execute(self, request: ExecutionRequest):
-            return object()
-
-    observation = ExecutionRuntime(InvalidAdapter()).execute(ready_preparation())
-
-    assert observation.status is ExecutionStatus.FAILED
-    assert observation.succeeded is False
-    assert observation.error is not None
-    assert observation.error["code"] == "invalid_execution_outcome"
-
-
-def test_observation_serialization_does_not_add_authority_controls() -> None:
-    adapter = RecordingAdapter()
-    observation = ExecutionRuntime(adapter).execute(ready_preparation())
-
-    context = observation.to_context()
-
-    assert context["execution_id"] == "execution:1"
-    assert context["status"] == "succeeded"
-    assert "authorization" not in context
-    assert "authorized" not in context
-    assert "tool_handle" not in context
-    assert "credential" not in context
-
-
-def test_runtime_requires_an_execution_adapter() -> None:
-    with pytest.raises(TypeError):
-        ExecutionRuntime(object())  # type: ignore[arg-type]
-
-
-def test_runtime_requires_an_execution_preparation() -> None:
-    adapter = RecordingAdapter()
-
-    with pytest.raises(TypeError):
-        ExecutionRuntime(adapter).execute(object())  # type: ignore[arg-type]
+if __name__ == "__main__":
+    unittest.main()
