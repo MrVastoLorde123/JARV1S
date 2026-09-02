@@ -76,6 +76,7 @@ class PolicyEvaluationSemanticsTests(unittest.TestCase):
         self.assertEqual(result.request, "inspect config")
         self.assertEqual(result.proposal_id, "proposal:0")
         self.assertEqual(result.validation_id, "validation:0")
+        self.assertTrue(result.policy_decision_id.startswith("policy:"))
         self.assertEqual(result.metadata["policy_semantics"], "m7.7")
 
     def test_invalid_validation_is_denied(self):
