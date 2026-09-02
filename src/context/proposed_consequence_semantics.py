@@ -70,6 +70,22 @@ class ProposedConsequence:
         if any(key in forbidden for key in self.metadata):
             raise ValueError("proposals cannot carry authorization or execution controls.")
 
+    def to_context(self) -> dict[str, Any]:
+        """Serialize one proposal without granting authority to execute it."""
+        return {
+            "consequence": self.consequence,
+            "kind": self.kind.value,
+            "support": tuple(
+                {"source_kind": ref.source_kind, "source_id": ref.source_id}
+                for ref in self.support
+            ),
+            "priority_target_id": self.priority_target_id,
+            "confidence": self.confidence,
+            "metadata": dict(self.metadata),
+            "epistemic_role": "proposed",
+            "authorization": False,
+        }
+
 
 @dataclass(frozen=True)
 class ProposedConsequences:
@@ -93,19 +109,7 @@ class ProposedConsequences:
         return {
             "request": self.request,
             "proposals": tuple(
-                {
-                    "consequence": proposal.consequence,
-                    "kind": proposal.kind.value,
-                    "support": tuple(
-                        {"source_kind": ref.source_kind, "source_id": ref.source_id}
-                        for ref in proposal.support
-                    ),
-                    "priority_target_id": proposal.priority_target_id,
-                    "confidence": proposal.confidence,
-                    "metadata": dict(proposal.metadata),
-                    "epistemic_role": "proposed",
-                    "authorization": False,
-                }
+                proposal.to_context()
                 for proposal in self.proposals
             ),
             "metadata": dict(self.metadata),
