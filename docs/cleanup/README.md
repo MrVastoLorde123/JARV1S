@@ -26,7 +26,7 @@ feature/m7-10-execution-semantics
 
 ## Disposable Branches
 
-M7 experimentation produced additional suffixed branch variants. They are not architectural milestones. Once remote deletion is available, they should be removed after verifying that no unique work remains outside the canonical branches.
+M7 experimentation produced additional suffixed branch variants. They are not architectural milestones. They should be removed after verifying that no unique work remains outside the canonical branches.
 
 ## Rule
 
