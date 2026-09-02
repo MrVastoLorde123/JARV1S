@@ -51,6 +51,7 @@ class ReasoningInput:
     confidence: float | None = None
     importance: float | None = None
     freshness: Freshness = Freshness.UNKNOWN
+    authority_allowed: bool = False
     epistemic_role: EpistemicRole = EpistemicRole.PERSISTED_CLAIM
 
     def __post_init__(self):
@@ -66,14 +67,17 @@ class ReasoningInput:
             raise ValueError("importance must be between 0.0 and 1.0.")
         if not isinstance(self.freshness, Freshness):
             raise TypeError("freshness must be a Freshness value.")
+        if not isinstance(self.authority_allowed, bool):
+            raise TypeError("authority_allowed must be a bool.")
         if not isinstance(self.epistemic_role, EpistemicRole):
             raise TypeError("epistemic_role must be an EpistemicRole value.")
-
         if self.epistemic_role in {EpistemicRole.DERIVED, EpistemicRole.PROPOSED}:
             raise ValueError(
                 "DERIVED and PROPOSED are reasoning-output roles and cannot be "
                 "used as reasoning inputs."
             )
+        if self.freshness is Freshness.STALE and self.authority_allowed:
+            raise ValueError("stale reasoning inputs cannot be authoritative.")
 
 
 @dataclass(frozen=True)
@@ -154,26 +158,30 @@ class ReasoningContextProjector:
         for item in working_context.context_package.items:
             if item.source_type == OBSERVATION:
                 continue
-            inputs.append(
-                self._from_item(
-                    item,
-                    source_decisions=source_decisions,
-                )
-            )
+            inputs.append(self._from_item(item, source_decisions=source_decisions))
 
-        observations = tuple(
-            self._from_observation(item)
-            for item in working_context.observations
-        )
+        observations = tuple(self._from_observation(item) for item in working_context.observations)
 
-        current_state = None
+        current_state = {}
         if working_context.conversation_state is not None:
-            current_state = {
+            current_state["conversation"] = {
                 "conversation_id": working_context.conversation_state.conversation_id,
                 "active_topic": working_context.conversation_state.active_topic,
                 "active_task": working_context.conversation_state.active_task,
                 "turn_count": len(working_context.conversation_state.turns),
             }
+        if working_context.task is not None:
+            current_state["task"] = {
+                "content": working_context.task.content,
+                "task_type": working_context.task.task_type.value,
+                "metadata": dict(working_context.task.metadata),
+            }
+        if working_context.execution_state is not None:
+            current_state["execution_state"] = working_context.execution_state.to_context()
+        if working_context.execution_progress is not None:
+            current_state["execution_progress"] = working_context.execution_progress.to_context()
+        if not current_state:
+            current_state = None
 
         constraints = tuple(working_context.context_package.instructions)
         metadata = {
@@ -191,17 +199,14 @@ class ReasoningContextProjector:
             metadata=metadata,
         )
 
-    def _from_item(
-        self,
-        item: ContextItem,
-        *,
-        source_decisions: Mapping[str, Any],
-    ) -> ReasoningInput:
-        role = self._ROLE_BY_SOURCE_TYPE.get(
-            item.source_type,
-            EpistemicRole.PERSISTED_CLAIM,
-        )
+    def _from_item(self, item: ContextItem, *, source_decisions: Mapping[str, Any]) -> ReasoningInput:
+        role = self._ROLE_BY_SOURCE_TYPE.get(item.source_type, EpistemicRole.PERSISTED_CLAIM)
         freshness = self._freshness_for_item(item, source_decisions=source_decisions)
+        authority_allowed = self._authority_for_item(
+            item,
+            role=role,
+            source_decisions=source_decisions,
+        )
         return ReasoningInput(
             content=item.content,
             source_type=item.source_type,
@@ -210,6 +215,7 @@ class ReasoningContextProjector:
             confidence=item.confidence,
             importance=item.importance,
             freshness=freshness,
+            authority_allowed=authority_allowed,
             epistemic_role=role,
         )
 
@@ -223,15 +229,12 @@ class ReasoningContextProjector:
             confidence=item.confidence,
             importance=item.importance,
             freshness=Freshness.FRESH,
+            authority_allowed=True,
             epistemic_role=EpistemicRole.OBSERVED,
         )
 
     @staticmethod
-    def _freshness_for_item(
-        item: ContextItem,
-        *,
-        source_decisions: Mapping[str, Any],
-    ) -> Freshness:
+    def _freshness_for_item(item: ContextItem, *, source_decisions: Mapping[str, Any]) -> Freshness:
         source_id = item.provenance.get("source_id")
         if source_id is not None:
             decision = source_decisions.get(str(source_id))
@@ -243,6 +246,21 @@ class ReasoningContextProjector:
             return Freshness(raw_freshness)
         return Freshness.UNKNOWN
 
+    @staticmethod
+    def _authority_for_item(
+        item: ContextItem,
+        *,
+        role: EpistemicRole,
+        source_decisions: Mapping[str, Any],
+    ) -> bool:
+        if role is EpistemicRole.OBSERVED:
+            return True
+        source_id = item.provenance.get("source_id")
+        if source_id is None:
+            return False
+        decision = source_decisions.get(str(source_id))
+        return bool(decision is not None and decision.authority_allowed)
+
 
 def _input_to_context(item: ReasoningInput) -> dict[str, Any]:
     return {
@@ -253,5 +271,6 @@ def _input_to_context(item: ReasoningInput) -> dict[str, Any]:
         "confidence": item.confidence,
         "importance": item.importance,
         "freshness": item.freshness.value,
+        "authority_allowed": item.authority_allowed,
         "epistemic_role": item.epistemic_role.value,
     }
