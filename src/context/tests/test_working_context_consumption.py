@@ -1,6 +1,10 @@
 import unittest
 
 from src.ai.models import AIRequest
+from src.context.context_source_selection import (
+    ContextSourceDecision,
+    ContextSourceSelection,
+)
 from src.context.models import ContextItem, ContextPackage
 from src.context.working_context import WorkingContext
 from src.context.working_context_consumption import WorkingContextConsumptionBoundary
@@ -9,6 +13,30 @@ from src.context.working_context_consumption import WorkingContextConsumptionBou
 class WorkingContextConsumptionBoundaryTests(unittest.TestCase):
     def setUp(self):
         self.boundary = WorkingContextConsumptionBoundary()
+        self.selection = ContextSourceSelection(
+            request="What do we know about the project?",
+            selected=(
+                ContextSourceDecision(
+                    source_id="memory-1",
+                    source_type="MEMORY",
+                    selected=True,
+                    refresh_required=False,
+                    authority_allowed=True,
+                    reason="eligible",
+                ),
+            ),
+            excluded=(
+                ContextSourceDecision(
+                    source_id="memory-2",
+                    source_type="MEMORY",
+                    selected=False,
+                    refresh_required=False,
+                    authority_allowed=False,
+                    reason="source_not_relevant",
+                ),
+            ),
+            refresh_required=(),
+        )
         self.working_context = WorkingContext(
             request="What do we know about the project?",
             context_package=ContextPackage(
@@ -30,7 +58,7 @@ class WorkingContextConsumptionBoundaryTests(unittest.TestCase):
                 instructions=("Treat stored memories as claims, not automatic truth.",),
                 metadata={"resolved_persistent_item_count": 1},
             ),
-            source_selection=None,
+            source_selection=self.selection,
             metadata={"context_stage": "M6.5"},
         )
 
@@ -55,9 +83,13 @@ class WorkingContextConsumptionBoundaryTests(unittest.TestCase):
         self.assertEqual(request.metadata["request_id"], "abc-123")
         self.assertTrue(request.metadata["working_context_consumed"])
 
-    def test_selected_source_state_is_carried_forward(self):
+    def test_selected_and_excluded_source_state_is_carried_forward(self):
         request = self.boundary.consume(self.working_context)
-        self.assertEqual(request.context["source_selection"], None)
+        source_selection = request.context["source_selection"]
+
+        self.assertEqual(source_selection["selected_source_ids"], ("memory-1",))
+        self.assertEqual(source_selection["excluded_source_ids"], ("memory-2",))
+        self.assertEqual(source_selection["refresh_required"], ())
 
     def test_rejects_non_working_context(self):
         with self.assertRaises(TypeError):
