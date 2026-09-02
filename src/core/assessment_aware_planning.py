@@ -58,7 +58,11 @@ class AssessmentAwarePlanningService:
         validated = self.assessment_validator.validate(state, assessment)
         remaining = self.remaining_work_resolver.resolve(state, validated)
 
-        return self._plan_with_remaining_work(task, state, remaining)
+        return self.planner.plan(
+            task,
+            progress=None,
+            remaining_work=remaining,
+        )
 
     def resolve_remaining_work(
         self,
@@ -67,30 +71,3 @@ class AssessmentAwarePlanningService:
     ) -> RemainingWork:
         validated = self.assessment_validator.validate(state, assessment)
         return self.remaining_work_resolver.resolve(state, validated)
-
-    def _plan_with_remaining_work(
-        self,
-        task: TaskRequest,
-        state: ExecutionState,
-        remaining: RemainingWork,
-    ) -> ExecutionPlan:
-        try:
-            return self.planner.plan(
-                task,
-                progress=None,
-                remaining_work=remaining,
-            )
-        except TypeError as exc:
-            if "remaining_work" not in str(exc):
-                raise
-            # Backward-compatible fallback for planners that predate M5.5.
-            planning_task = TaskRequest(
-                content=task.content,
-                task_type=task.task_type,
-                metadata={
-                    **task.metadata,
-                    "assessment_remaining_work": remaining.to_context(),
-                    "assessment_state": state.to_context(),
-                },
-            )
-            return self.planner.plan(planning_task, progress=None)
