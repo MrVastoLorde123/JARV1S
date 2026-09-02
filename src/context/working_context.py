@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.context.context_source_selection import ContextSourceSelection
 from src.context.models import ContextItem, ContextPackage
 from src.core.conversation_models import StateSnapshot
 from src.core.execution_progress import ExecutionProgress
@@ -20,6 +21,7 @@ class WorkingContext:
     execution_state: ExecutionState | None = None
     execution_progress: ExecutionProgress | None = None
     observations: tuple[ContextItem, ...] = ()
+    source_selection: ContextSourceSelection | None = None
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -45,6 +47,13 @@ class WorkingContext:
             ExecutionProgress,
         ):
             raise TypeError("execution_progress must be an ExecutionProgress or None.")
+        if self.source_selection is not None and not isinstance(
+            self.source_selection,
+            ContextSourceSelection,
+        ):
+            raise TypeError(
+                "source_selection must be a ContextSourceSelection or None."
+            )
         if not isinstance(self.observations, tuple):
             raise TypeError("observations must be a tuple.")
         for item in self.observations:
@@ -56,6 +65,22 @@ class WorkingContext:
                 raise ValueError(
                     "execution_state and execution_progress must belong to the same goal."
                 )
+
+        if self.source_selection is not None:
+            selected_ids = set(self.source_selection.selected_source_ids)
+            context_items = self.context_package.items
+            persistent_items = [
+                item
+                for item in context_items
+                if item.source_type in {"MEMORY", "EVIDENCE", "HISTORY"}
+            ]
+            for item in persistent_items:
+                source_id = item.provenance.get("source_id")
+                if source_id is not None and str(source_id) not in selected_ids:
+                    raise ValueError(
+                        "context package contains a persistent source excluded by "
+                        "source_selection."
+                    )
 
     def to_context(self) -> dict[str, Any]:
         """Return a provider-neutral representation for downstream reasoning."""
@@ -118,6 +143,15 @@ class WorkingContext:
                     "provenance": dict(item.provenance),
                 }
                 for item in self.observations
+            ),
+            "source_selection": (
+                None
+                if self.source_selection is None
+                else {
+                    "selected_source_ids": self.source_selection.selected_source_ids,
+                    "excluded_source_ids": self.source_selection.excluded_source_ids,
+                    "refresh_required": self.source_selection.refresh_required,
+                }
             ),
             "metadata": dict(self.metadata),
         }
