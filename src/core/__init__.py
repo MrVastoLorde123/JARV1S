@@ -1,17 +1,6 @@
-"""Core execution and capability-boundary interfaces."""
+"""Core package namespace.
 
-from .plugin_boundary import (
-    CapabilityBinding,
-    CapabilityExecutionAdapter,
-    CapabilityPlugin,
-    CapabilityPluginRegistry,
-    PluginDefinition,
-)
-
-__all__ = [
-    "CapabilityBinding",
-    "CapabilityExecutionAdapter",
-    "CapabilityPlugin",
-    "CapabilityPluginRegistry",
-    "PluginDefinition",
-]
+Keep package initialization side-effect free so importing one core module does
+not eagerly import higher-level execution boundaries or create dependency
+cycles across context, agency, and plugin layers.
+"""
