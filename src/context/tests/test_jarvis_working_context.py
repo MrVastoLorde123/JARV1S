@@ -59,12 +59,13 @@ class JARVISWorkingContextRuntimeTests(unittest.TestCase):
         self.assertEqual(result.observations[0].content, "configuration file observed")
 
     def test_runtime_preserves_composer_output(self):
+        package = self._package()
         working = WorkingContext(
             request="inspect configuration",
-            context_package=self._package(),
+            context_package=package,
             observations=(ContextItem(OBSERVATION, "file observed"),),
         )
-        builder = Mock(return_value=self._package())
+        builder = Mock(return_value=package)
         composer = WorkingContextComposer(builder)
         jarvis = SimpleNamespace(
             context_options=SimpleNamespace(),
@@ -75,7 +76,7 @@ class JARVISWorkingContextRuntimeTests(unittest.TestCase):
         result = runtime.compose("inspect configuration")
         self.assertIsInstance(result, WorkingContext)
         self.assertEqual(result.request, working.request)
-        self.assertIs(result.context_package, working.context_package)
+        self.assertIs(result.context_package, package)
 
     def test_runtime_rejects_missing_conversation(self):
         jarvis = SimpleNamespace(context_options=SimpleNamespace())
