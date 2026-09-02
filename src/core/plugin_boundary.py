@@ -11,7 +11,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
+from src.agency.execution_runtime import ExecutionOutcome
 from src.context.execution_semantics import ExecutionRequest
+from src.core.capability_invocation import CapabilityInvocationBuilder, CapabilityInvocationError
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
 
 
@@ -70,6 +72,7 @@ class CapabilityPluginRegistry:
         self._plugins: dict[str, CapabilityPlugin] = {}
         self._capabilities: dict[str, tuple[str, ToolDefinition]] = {}
         self._operations: dict[str, str] = {}
+        self._invocation_builder = CapabilityInvocationBuilder()
 
     def register(self, plugin: CapabilityPlugin) -> PluginDefinition:
         if not isinstance(plugin, CapabilityPlugin):
@@ -140,17 +143,21 @@ class CapabilityPluginRegistry:
         if not isinstance(request, ExecutionRequest):
             raise TypeError("request must be an ExecutionRequest")
         binding = self.resolve(request.operation)
-        tool_request = ToolRequest(
-            tool_name=binding.capability.name,
-            arguments=dict(request.arguments),
-            metadata={
-                **dict(request.metadata),
-                "execution_id": request.execution_id,
-                "plugin_id": binding.plugin_id,
-                "operation": request.operation,
-            },
-            invocation_id=request.execution_id,
-        )
+        try:
+            tool_request = self._invocation_builder.build(
+                binding.capability,
+                request.arguments,
+                invocation_id=request.execution_id,
+                metadata={
+                    **dict(request.metadata),
+                    "execution_id": request.execution_id,
+                    "plugin_id": binding.plugin_id,
+                    "operation": request.operation,
+                },
+            )
+        except CapabilityInvocationError:
+            raise
+
         result = binding.plugin.execute(tool_request)
         if not isinstance(result, ToolResult):
             raise TypeError("plugin.execute() must return ToolResult")
@@ -173,4 +180,40 @@ class CapabilityPluginRegistry:
         return tuple(
             self._capabilities[key][1]
             for key in sorted(self._capabilities)
+        )
+
+
+class CapabilityExecutionAdapter:
+    """Adapt the M8.2 capability/plugin boundary to the M8.1 runtime contract."""
+
+    def __init__(self, registry: CapabilityPluginRegistry) -> None:
+        if not isinstance(registry, CapabilityPluginRegistry):
+            raise TypeError("registry must be a CapabilityPluginRegistry")
+        self._registry = registry
+
+    def execute(self, request: ExecutionRequest) -> ExecutionOutcome:
+        """Execute through M8.2 and translate the result into M8.1 semantics."""
+        result = self._registry.execute(request)
+        if result.success:
+            return ExecutionOutcome(
+                success=True,
+                content=result.content,
+                metadata={
+                    **dict(result.metadata),
+                    "capability_plugin_boundary": "m8.2",
+                },
+            )
+
+        assert result.error is not None
+        return ExecutionOutcome(
+            success=False,
+            error={
+                "code": result.error.code,
+                "message": result.error.message,
+                "details": dict(result.error.details),
+            },
+            metadata={
+                **dict(result.metadata),
+                "capability_plugin_boundary": "m8.2",
+            },
         )
