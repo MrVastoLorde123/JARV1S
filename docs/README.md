@@ -12,7 +12,8 @@ Verified state at M7.10: **884 / 884 tests passing**.
 
 ## Architecture Guides
 
-- [Architecture Overview](architecture/overview.md) — core subsystem boundaries and principles
+- [System Map](architecture/system-map.md) — current subsystem and boundary map
+- [Architecture Overview](architecture/overview.md) — core architecture and principles
 - [Authority Architecture](architecture/authority.md) — deterministic authority and provenance pipeline
 - [Agency Architecture](architecture/agency.md) — the M8 execution/agency boundary
 - [Milestone Architecture](architecture/milestones.md) — current and planned architectural progression
@@ -36,10 +37,8 @@ Development and testing guides should describe the actual repository workflow an
 
 ## Documentation Rules
 
-Documentation should:
-
-1. describe the architecture that actually exists;
-2. distinguish implemented behavior from future intent;
-3. identify hard boundaries and invariants explicitly;
-4. never imply that model output is equivalent to authority or truth;
-5. preserve milestone closure instead of inventing work to extend a milestone.
+1. Describe the architecture that actually exists.
+2. Distinguish implemented behavior from future intent.
+3. Identify hard boundaries and invariants explicitly.
+4. Never imply that model output is equivalent to authority or truth.
+5. Preserve milestone closure instead of inventing work to extend a milestone.
