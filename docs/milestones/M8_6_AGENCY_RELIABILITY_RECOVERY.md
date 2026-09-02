@@ -1,6 +1,6 @@
 # M8.6 — Agency Reliability / Recovery
 
-**Status:** IMPLEMENTATION IN PROGRESS
+**Status:** VERIFIED / COMPLETE
 
 M8.6 defines explicit, bounded reliability semantics for agency runs and execution attempts that encounter failure, interruption, partial completion, retry eligibility, or reconciliation needs.
 
@@ -48,4 +48,17 @@ M8.6 does not implement unrestricted autonomous recovery, hidden retries, policy
 
 ## Verification
 
-Implementation is present. Focused and full-suite verification from the user's real checkout is pending.
+From the user's real checkout:
+
+```text
+python -m unittest src.agency.tests.test_reliability -v
+Ran 11 tests in 0.002s
+OK
+
+python -m unittest
+Ran 942 tests in 5.692s
+OK
+```
+
+Checkpoint: `milestone/m8-6-complete`
+Decision: `docs/decisions/051-m8-6-agency-reliability-recovery.md`
