@@ -11,7 +11,7 @@ from src.core.plugin_boundary import (
     CapabilityPluginRegistry,
     PluginDefinition,
 )
-from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
+from src.tools.models import RiskLevel, ToolDefinition, ToolError, ToolRequest, ToolResult
 
 
 class ExamplePlugin:
@@ -200,7 +200,10 @@ class CapabilityPluginBoundaryTests(unittest.TestCase):
                 return ToolResult(
                     success=False,
                     tool_name=request.tool_name,
-                    error={"code": "file_unavailable", "message": "README.md is missing"},
+                    error=ToolError(
+                        code="file_unavailable",
+                        message="README.md is missing",
+                    ),
                     invocation_id=request.invocation_id,
                 )
 
