@@ -62,3 +62,4 @@ OK
 
 Checkpoint: `milestone/m8-6-complete`
 Decision: `docs/decisions/051-m8-6-agency-reliability-recovery.md`
+Decision: `docs/decisions/052-m8-complete.md`
