@@ -29,14 +29,7 @@ class ExecutionObservation:
         if not isinstance(self.execution, PlanExecutionResult):
             raise TypeError("execution must be a PlanExecutionResult.")
         if self.state is None:
-            object.__setattr__(
-                self,
-                "state",
-                ExecutionState.from_execution(
-                    self.plan.task_description,
-                    self.execution,
-                ),
-            )
+            object.__setattr__(self, "state", ExecutionState.from_execution(self.plan.task_description, self.execution))
         elif not isinstance(self.state, ExecutionState):
             raise TypeError("state must be an ExecutionState or None.")
         if self.progress is not None and not isinstance(self.progress, ExecutionProgress):
@@ -73,6 +66,7 @@ class ExecutionLoopResult:
 
 
 ContinuationPlanner = Callable[[TaskRequest, ExecutionObservation], TaskRequest | None]
+ExecutionObservationObserver = Callable[[TaskRequest, ExecutionObservation], None]
 
 
 class ExecutionContinuationService:
@@ -83,10 +77,7 @@ class ExecutionContinuationService:
     This service never invents an action outside that declaration.
     """
 
-    def decide(
-        self,
-        state: ExecutionState | ExecutionObservation,
-    ) -> ContinuationDecision:
+    def decide(self, state: ExecutionState | ExecutionObservation) -> ContinuationDecision:
         if isinstance(state, ExecutionObservation):
             state = state.state
         if not isinstance(state, ExecutionState):
@@ -94,21 +85,10 @@ class ExecutionContinuationService:
 
         allowed = state.next_allowed_actions
         if "COMPLETE" in allowed:
-            return ContinuationDecision(
-                "COMPLETE",
-                "Execution state marks the objective complete.",
-            )
-
+            return ContinuationDecision("COMPLETE", "Execution state marks the objective complete.")
         if "CORRECT" in allowed:
-            return ContinuationDecision(
-                "CONTINUE",
-                "Execution state permits a corrective continuation.",
-            )
-
-        return ContinuationDecision(
-            "STOP",
-            "Execution state does not permit continuation.",
-        )
+            return ContinuationDecision("CONTINUE", "Execution state permits a corrective continuation.")
+        return ContinuationDecision("STOP", "Execution state does not permit continuation.")
 
 
 class GuardedExecutionLoop:
@@ -118,6 +98,10 @@ class GuardedExecutionLoop:
     Every plan, including a corrective plan, returns through the exact same
     validator -> policy -> confirmation -> executor pipeline. This class never
     invokes AI and never executes a plan outside PlanExecutor.
+
+    Optional observation observers receive verified ExecutionObservation values
+    after state and cumulative progress have been derived. Observers cannot alter
+    the guarded execution path.
     """
 
     def __init__(
@@ -129,6 +113,7 @@ class GuardedExecutionLoop:
         confirmation: ExecutionConfirmationService,
         continuation: ExecutionContinuationService | None = None,
         max_iterations: int = 3,
+        observation_observer: ExecutionObservationObserver | None = None,
     ):
         if not hasattr(planner, "plan") or not callable(planner.plan):
             raise TypeError("planner must expose plan(task).")
@@ -144,6 +129,8 @@ class GuardedExecutionLoop:
             raise TypeError("continuation must be an ExecutionContinuationService.")
         if not isinstance(max_iterations, int) or max_iterations < 1:
             raise ValueError("max_iterations must be a positive integer.")
+        if observation_observer is not None and not callable(observation_observer):
+            raise TypeError("observation_observer must be callable or None.")
 
         self.planner = planner
         self.validator = validator
@@ -152,12 +139,9 @@ class GuardedExecutionLoop:
         self.confirmation = confirmation
         self.continuation = continuation or ExecutionContinuationService()
         self.max_iterations = max_iterations
+        self.observation_observer = observation_observer
 
-    def run(
-        self,
-        task: TaskRequest,
-        corrective_planner: ContinuationPlanner | None = None,
-    ) -> ExecutionLoopResult:
+    def run(self, task: TaskRequest, corrective_planner: ContinuationPlanner | None = None) -> ExecutionLoopResult:
         if not isinstance(task, TaskRequest):
             raise TypeError("task must be a TaskRequest.")
         if corrective_planner is not None and not callable(corrective_planner):
@@ -171,97 +155,39 @@ class GuardedExecutionLoop:
             plan = self.planner.plan(current_task, progress=progress)
             validation = self.validator.validate(plan)
             if not validation.valid:
-                return ExecutionLoopResult(
-                    status="VALIDATION_FAILED",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    last_policy=None,
-                    next_task=current_task,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("VALIDATION_FAILED", iteration, tuple(observations), last_policy=None, next_task=current_task, progress=progress)
 
             policy = self.policy.evaluate(plan)
             if policy.decision == PolicyDecision.DENY:
-                return ExecutionLoopResult(
-                    status="POLICY_DENIED",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    last_policy=policy,
-                    next_task=current_task,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("POLICY_DENIED", iteration, tuple(observations), last_policy=policy, next_task=current_task, progress=progress)
 
             if policy.decision == PolicyDecision.REQUIRE_CONFIRMATION:
                 pending = self.confirmation.stage(plan)
-                return ExecutionLoopResult(
-                    status="AWAITING_CONFIRMATION",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    pending_operation_id=pending.operation_id,
-                    last_policy=policy,
-                    next_task=current_task,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("AWAITING_CONFIRMATION", iteration, tuple(observations), pending_operation_id=pending.operation_id, last_policy=policy, next_task=current_task, progress=progress)
 
             execution = self.executor.execute(plan, policy)
             state = ExecutionState.from_execution(task.content, execution)
-            progress = (
-                ExecutionProgress.from_state(state)
-                if progress is None
-                else progress.record(state)
-            )
-            observation = ExecutionObservation(
-                plan=plan,
-                execution=execution,
-                state=state,
-                progress=progress,
-                metadata={"iteration": iteration},
-            )
+            progress = ExecutionProgress.from_state(state) if progress is None else progress.record(state)
+            observation = ExecutionObservation(plan=plan, execution=execution, state=state, progress=progress, metadata={"iteration": iteration})
             observations.append(observation)
+
+            if self.observation_observer is not None:
+                self.observation_observer(task, observation)
 
             decision = self.continuation.decide(state)
             if not decision.should_continue:
-                return ExecutionLoopResult(
-                    status="COMPLETED" if decision.action == "COMPLETE" else "CORRECTION_REQUIRED",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    last_policy=policy,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("COMPLETED" if decision.action == "COMPLETE" else "CORRECTION_REQUIRED", iteration, tuple(observations), last_policy=policy, progress=progress)
 
             if corrective_planner is None:
-                return ExecutionLoopResult(
-                    status="CORRECTION_REQUIRED",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    last_policy=policy,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("CORRECTION_REQUIRED", iteration, tuple(observations), last_policy=policy, progress=progress)
 
             if iteration == self.max_iterations:
-                return ExecutionLoopResult(
-                    status="MAX_ITERATIONS_REACHED",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    last_policy=policy,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("MAX_ITERATIONS_REACHED", iteration, tuple(observations), last_policy=policy, progress=progress)
 
             current_task = corrective_planner(current_task, observation)
             if current_task is None:
-                return ExecutionLoopResult(
-                    status="CORRECTION_UNAVAILABLE",
-                    iterations=iteration,
-                    observations=tuple(observations),
-                    last_policy=policy,
-                    progress=progress,
-                )
+                return ExecutionLoopResult("CORRECTION_UNAVAILABLE", iteration, tuple(observations), last_policy=policy, progress=progress)
             if not isinstance(current_task, TaskRequest):
                 raise TypeError("corrective_planner must return TaskRequest or None.")
 
-        return ExecutionLoopResult(
-            status="MAX_ITERATIONS_REACHED",
-            iterations=self.max_iterations,
-            observations=tuple(observations),
-            progress=progress,
-        )
+        return ExecutionLoopResult("MAX_ITERATIONS_REACHED", self.max_iterations, tuple(observations), progress=progress)
