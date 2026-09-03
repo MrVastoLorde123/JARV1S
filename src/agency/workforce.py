@@ -48,8 +48,6 @@ def _normalise_names(values: object, field_name: str) -> tuple[str, ...]:
     result = tuple(_require_text(value, field_name) for value in values)
     if len(set(result)) != len(result):
         raise ValueError(f"{field_name} must not contain duplicates.")
-    if any(name.lower() in _FORBIDDEN_KEYS for name in result):
-        raise ValueError(f"{field_name} cannot contain authority, execution, provider, or credential controls.")
     return result
 
 
