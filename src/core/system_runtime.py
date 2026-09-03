@@ -1,4 +1,4 @@
-"""M12.3 application-facing system runtime facade.
+"""M12.4 application-facing system runtime facade.
 
 The facade composes the already-bounded interface, request, session, and core
 runtimes into one entrypoint. It owns composition only; semantic interpretation,
@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import Mapping
 
 from src.core.jarvis import JARVIS
+from src.core.durable_session_runtime import DurableSessionRuntime
 from src.core.session_runtime import SessionRuntime, SessionRuntimeResult
+from src.core.conversation_store import ConversationStore
 from src.interface.boundary import InterfaceBoundary, InterfaceChannel, InterfaceRequest
 from src.interface.request import InterfaceRequestBridge
 
@@ -25,17 +27,32 @@ class SystemRuntime:
         *,
         interface_boundary: InterfaceBoundary | None = None,
         request_bridge: InterfaceRequestBridge | None = None,
-        session_runtime: SessionRuntime | None = None,
+        session_runtime: SessionRuntime | DurableSessionRuntime | None = None,
+        conversation_store: ConversationStore | None = None,
+        durable_processor_factory=None,
     ) -> None:
         if not callable(getattr(processor, "ask", None)):
             raise TypeError("processor must provide an ask(query) method")
         self._processor = processor
         self._interface_boundary = interface_boundary or InterfaceBoundary()
         self._request_bridge = request_bridge or InterfaceRequestBridge()
-        self._session_runtime = session_runtime or SessionRuntime(processor)
+
+        if session_runtime is not None and conversation_store is not None:
+            raise ValueError("provide either session_runtime or conversation_store, not both")
+
+        if session_runtime is not None:
+            self._session_runtime = session_runtime
+        elif conversation_store is not None:
+            self._session_runtime = DurableSessionRuntime(
+                default_processor=processor,
+                conversation_store=conversation_store,
+                processor_factory=durable_processor_factory,
+            )
+        else:
+            self._session_runtime = SessionRuntime(processor)
 
     @property
-    def session_runtime(self) -> SessionRuntime:
+    def session_runtime(self):
         return self._session_runtime
 
     def receive(
