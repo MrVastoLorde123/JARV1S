@@ -1,6 +1,8 @@
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
 from src.core.jarvis import JARVIS
+from src.core.jarvis_runtime import JARVISRuntime
+from src.interface.boundary import InterfaceChannel
 
 
 def main():
@@ -23,9 +25,17 @@ def main():
         ai_service=ai_service
     )
 
-    response = jarvis.ask(
-        "What do you know about my PCVUE skills?"
+    runtime = JARVISRuntime.from_processor(
+        jarvis
     )
+
+    result = runtime.receive(
+        request_id="local-cli-1",
+        channel=InterfaceChannel.TEXT,
+        content="What do you know about my PCVUE skills?",
+    )
+
+    response = runtime.respond(result)
 
     print("=" * 60)
     print("JARVIS")
@@ -34,12 +44,11 @@ def main():
     print(response.content)
 
     print()
-    print("Provider:", response.ai_response.provider)
-    print("Model:", response.ai_response.model)
     print(
-        "Context items:",
-        len(response.context.items)
+        "Request ID:",
+        response.request_id
     )
+
 
 if __name__ == "__main__":
     main()
