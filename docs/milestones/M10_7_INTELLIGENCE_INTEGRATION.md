@@ -10,7 +10,8 @@ Integrate bounded M10 learning outputs into a single immutable reasoning-context
 
 - `IntelligenceContext` is immutable and provider-neutral.
 - Retrieval results enter only as relevance evidence.
-- `REVERSED` and `SUPERSEDED` learning is excluded from active reasoning context.
+- `SUSPENDED`, `REVERSED`, and `SUPERSEDED` learning is excluded from active reasoning context.
+- `WATCH` and `CONFLICTED` reliability remain explicit evidence rather than being promoted to truth.
 - Only explicitly `ACCEPTED` adaptations influence active behavioral context.
 - Evaluations, quality feedback, and reliability remain typed and attributable.
 - Serialization explicitly denies truth, authority, authorization, execution, and policy mutation.
