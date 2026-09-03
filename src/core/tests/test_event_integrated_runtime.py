@@ -4,7 +4,7 @@ from src.core.event_integrated_runtime import EventIntegratedResult, EventIntegr
 from src.core.models import JARVISResponse
 from src.core.system_runtime import SystemRuntime
 from src.interface.boundary import InterfaceChannel, InterfaceRequest
-from src.interface.events import InterfaceEventKind
+from src.interface.events import InterfaceEventKind, InterfaceEventRuntime
 
 
 class FakeProcessor:
@@ -22,6 +22,20 @@ class FakeProcessor:
             context=None,
             metadata={"handled": True},
         )
+
+
+class CapturingEventRuntime(InterfaceEventRuntime):
+    def __init__(self):
+        self.failed_stream = None
+
+    def fail(self, stream, *, event_id, content, metadata=None):
+        self.failed_stream = super().fail(
+            stream,
+            event_id=event_id,
+            content=content,
+            metadata=metadata,
+        )
+        return self.failed_stream
 
 
 class EventIntegratedRuntimeTests(unittest.TestCase):
@@ -96,8 +110,10 @@ class EventIntegratedRuntimeTests(unittest.TestCase):
 
     def test_core_failure_emits_failure_event_and_is_not_swallowed(self):
         failing = FakeProcessor(should_fail=True)
+        event_runtime = CapturingEventRuntime()
         runtime = EventIntegratedRuntime(
             SystemRuntime(failing),
+            event_runtime=event_runtime,
             event_id_factory=iter(["event-start", "event-fail"]).__next__,
         )
 
@@ -108,17 +124,16 @@ class EventIntegratedRuntimeTests(unittest.TestCase):
                 content="explode",
             )
 
-        # The exception is intentionally propagated rather than converted into
-        # authorization or success. The failure event is observable in the
-        # runtime object only when the caller owns the process path directly;
-        # this verifies the event mechanism itself on a captured event runtime.
+        self.assertIsNotNone(event_runtime.failed_stream)
+        self.assertEqual(
+            event_runtime.failed_stream.events[-1].kind,
+            InterfaceEventKind.RESPONSE_FAILED,
+        )
+        self.assertIn("core failed", event_runtime.failed_stream.events[-1].content)
         self.assertEqual(failing.calls, ["explode"])
 
     def test_custom_event_runtime_can_be_injected(self):
-        class ProbeEventRuntime(type(self.runtime.event_runtime)):
-            pass
-
-        injected = ProbeEventRuntime()
+        injected = InterfaceEventRuntime()
         runtime = EventIntegratedRuntime(
             self.system_runtime,
             event_runtime=injected,
