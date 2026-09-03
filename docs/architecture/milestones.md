@@ -98,7 +98,9 @@ Reliability Assessment
     ↓
 RETAINED / WATCH / CONFLICTED / SUSPENDED / REVERSED / SUPERSEDED
     ↓
-Deterministic Retrieval / Reasoning Context
+Intelligence Context
+    ↓
+Future Reasoning
     ↓
 M7 Authority
 ```
@@ -167,20 +169,47 @@ Immutable Lineage
 Future Retrieval / Reasoning Context
 ```
 
+The reliability layer changes learning eligibility and historical status only. It does not grant authority, authorization, execution rights, capabilities, or policy mutation.
+
+### M10.7 — Intelligence Integration
+
+Integrates bounded outputs from M10.2–M10.6 into an immutable `IntelligenceContext` for future reasoning.
+
 ```text
-Learning ≠ Truth
-Reversal ≠ Deletion
-Reliability ≠ Certainty
-Conflict ≠ Permission
-Supersession ≠ Authority
-Retraction ≠ Execution
-New Evidence ≠ Automatic Policy Change
-Learning Reliability ≠ Authorization
-History ≠ Current Truth
-Memory Status ≠ User Intent
+Evaluation
+   +
+Accepted Adaptation
+   +
+Retrieval Evidence
+   +
+Reasoning Feedback
+   +
+Reliability Status
+        ↓
+Intelligence Integration
+        ↓
+IntelligenceContext
+        ↓
+Future Reasoning
+        ↓
+M7 Authority
 ```
 
-The reliability layer changes learning eligibility and historical status only. It does not grant authority, authorization, execution rights, capabilities, or policy mutation.
+`REVERSED` and `SUPERSEDED` learning is excluded from active reasoning context. Only explicitly accepted adaptations are active behavioral guidance. The context remains evidence, not authority or truth.
+
+```text
+Intelligence Context ≠ Truth
+Intelligence Context ≠ Authority
+Learning ≠ Permission
+Relevance ≠ Certainty
+Adaptation ≠ Authorization
+Evaluation ≠ Intent
+Reliability ≠ Truth
+Integration ≠ Execution
+Intelligence ≠ Unbounded Agency
+```
+
+**Status: IN PROGRESS.**
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
@@ -209,7 +238,7 @@ M8  Agency / Execution           ← CLOSED
  ↓
 M9  Workforce / Delegation       ← CLOSED
  ↓
-M10 Intelligence / Learning      ← M10.6
+M10 Intelligence / Learning      ← M10.7
  ↓
 M11 Interface / Experience
 ```
