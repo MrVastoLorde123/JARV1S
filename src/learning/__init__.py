@@ -9,6 +9,16 @@ from .adaptation import (
     AdaptationState,
     AdaptationStore,
 )
+from .consolidation import (
+    ConsolidatedMemory,
+    ConsolidationConflictError,
+    ConsolidationState,
+    MemoryCandidate,
+    MemoryConsolidator,
+    MemoryRetriever,
+    MemoryStore,
+    RetrievalResult,
+)
 from .evaluation import (
     Evidence,
     Evaluation,
@@ -28,6 +38,9 @@ __all__ = [
     "AdaptationRecord",
     "AdaptationState",
     "AdaptationStore",
+    "ConsolidatedMemory",
+    "ConsolidationConflictError",
+    "ConsolidationState",
     "Evidence",
     "Evaluation",
     "EvaluationConflictError",
@@ -36,6 +49,11 @@ __all__ = [
     "Experience",
     "ExperienceConflictError",
     "ExperienceStore",
+    "MemoryCandidate",
+    "MemoryConsolidator",
+    "MemoryRetriever",
+    "MemoryStore",
     "OutcomeAssessment",
     "OutcomeEvaluator",
+    "RetrievalResult",
 ]
