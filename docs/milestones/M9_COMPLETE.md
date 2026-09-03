@@ -2,20 +2,20 @@
 
 ## Status
 
-**M9.6 VERIFIED / COMPLETE — M9.7 NEXT**
+**VERIFIED / COMPLETE**
 
-M9 extends M8 controlled agency into a bounded workforce and delegation layer.
+M9 establishes bounded workforce capabilities above M8 agency while preserving the M7 authority chain.
 
-## Roadmap
+## Verified milestones
 
 ```text
 M9.1  Worker Identity / Assignment Boundary       ✅
 M9.2  Bounded Worker Runtime                      ✅
-M9.3  Worker Context / Knowledge Boundary          ✅
-M9.4  Worker Reporting / Result Integration        ✅
+M9.3  Worker Context / Knowledge Boundary         ✅
+M9.4  Worker Reporting / Result Integration       ✅
 M9.5  Delegation / Coordination                   ✅
 M9.6  Workforce Reliability / Recovery            ✅
-M9.7  Driveability / Objective Continuation       → next
+M9.7  Driveability / Objective Continuation      ✅
 ```
 
 ## Central invariant
@@ -24,32 +24,66 @@ M9.7  Driveability / Objective Continuation       → next
 JARVIS may distribute work without distributing authority.
 ```
 
-## Authority boundaries
+## M9 authority boundaries
 
 ```text
 Worker ≠ Authority
 Assignment ≠ Authorization
 Capability ≠ Permission
 Delegation ≠ Authority Escalation
+Worker Reasoning ≠ Policy
 Worker Output ≠ Truth
-Recovery ≠ Authorization
 Objective Continuation ≠ Authorization
+Driveability ≠ Permission
+Recovery ≠ Authorization
 ```
 
-## M9.6 verification
+## Workforce flow
+
+```text
+User Intent
+    ↓
+Reasoning
+    ↓
+Authority
+    ↓
+Agency
+    ↓
+Workforce
+    ↓
+Worker(s)
+    ↓
+Execution
+    ↓
+Observation
+    ↓
+Report
+    ↺
+Context / Objective Continuation
+```
+
+## Driveability
+
+M9.7 adds bounded objective continuation. JARVIS can preserve an explicit objective across bounded cycles, inspect validated observations, and produce a deterministic next-step proposal without requiring the user to restate the objective after every step.
+
+Driveability remains a proposal/planning boundary. Any executable next step must re-enter the established authority, capability, execution, and recovery boundaries.
+
+## Verification receipt
 
 From the user's real checkout:
 
 ```text
-python -m unittest src.agency.tests.test_workforce_recovery -v
-Ran 8 tests in 0.001s
+python -m unittest src.agency.tests.test_driveability -v
+Ran 11 tests in 0.002s
 OK
 
 python -m unittest
-Ran 986 tests in 5.131s
+Ran 997 tests in 6.254s
 OK
 ```
 
-## M9.7 direction
+## Architectural result
 
-M9.7 introduces bounded objective continuation so JARVIS can maintain an explicit objective across multiple bounded work cycles, inspect validated observations, and determine the next bounded action or delegation step without treating persistence or planning as authorization.
+M9 establishes a workforce capable of bounded delegation, scoped knowledge, deterministic coordination, explicit recovery, and persistent objective continuation without creating a second authority system.
+
+M10 may now focus on intelligence and learning over this foundation while preserving the same semantic walls.
