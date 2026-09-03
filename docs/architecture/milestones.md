@@ -195,7 +195,7 @@ Future Reasoning
 M7 Authority
 ```
 
-`REVERSED` and `SUPERSEDED` learning is excluded from active reasoning context. Only explicitly accepted adaptations are active behavioral guidance. The context remains evidence, not authority or truth.
+`REVERSED`, `SUSPENDED`, and `SUPERSEDED` learning is excluded from active reasoning context. Only explicitly accepted adaptations are active behavioral guidance. The context remains evidence, not authority or truth.
 
 ```text
 Intelligence Context ≠ Truth
@@ -209,23 +209,44 @@ Integration ≠ Execution
 Intelligence ≠ Unbounded Agency
 ```
 
-**Status: IN PROGRESS.**
+**Status: VERIFIED / COMPLETE.**
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
 ## M11 — Interface / Experience
 
-The interface should sit on top of JARVIS rather than define JARVIS.
+M11 exposes JARVIS through replaceable interaction surfaces without making an interface the system itself.
+
+### M11.1 — Interface Boundary
+
+Establishes the provider-neutral boundary between external interaction surfaces and JARVIS.
 
 ```text
-Voice / Text / UI / API
-          ↓
-       JARVIS
-          ↓
-   Intelligence + Agency
+Voice / Text / UI / API / Other Surface
+                ↓
+        InterfaceRequest
+                ↓
+             JARVIS
+                ↓
+        InterfaceResponse
 ```
 
-That allows the same underlying system to be driven through different interfaces without coupling authority, memory, execution, or workforce semantics to a presentation layer.
+M11.1 packages interface traffic but does not interpret intent, create authority, authorize execution, mutate policy, or choose an intelligence provider.
+
+```text
+Interface ≠ JARVIS Identity
+Interface ≠ Intent Interpretation
+Channel ≠ Authority
+Input ≠ Authorization
+Response ≠ Execution
+Transport ≠ Policy
+Presentation ≠ Truth
+Interface Provider ≠ Intelligence Provider
+```
+
+**M11.1 Status: IN PROGRESS.**
+
+The interface layer must converge on the same JARVIS semantic pipeline regardless of whether the caller is voice, text, UI, or API.
 
 ## Architectural Direction
 
@@ -238,9 +259,9 @@ M8  Agency / Execution           ← CLOSED
  ↓
 M9  Workforce / Delegation       ← CLOSED
  ↓
-M10 Intelligence / Learning      ← M10.7
+M10 Intelligence / Learning      ← CLOSED
  ↓
-M11 Interface / Experience
+M11 Interface / Experience       ← M11.1
 ```
 
 The sequence is deliberate: first establish what JARVIS knows, then what it is permitted to do, then how it acts, then how it scales work, then how intelligence improves, and finally how the human experiences the system.
