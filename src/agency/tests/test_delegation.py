@@ -101,6 +101,18 @@ class DelegationTests(unittest.TestCase):
         result = DelegationCoordinator(self.registry).coordinate(plan)
         self.assertEqual(result.assignment_ids, ("a1",))
 
+    def test_explicit_max_assignments_remains_a_hard_bound(self):
+        assignments = (
+            self.assignment("a1", "researcher", "search", "findings"),
+            self.assignment("a2", "writer", "compose", "draft"),
+        )
+        with self.assertRaises(ValueError):
+            DelegationPlan(
+                plan_id="plan-8",
+                assignments=assignments,
+                max_assignments=1,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
