@@ -40,6 +40,15 @@ from .reasoning_quality import (
     ReasoningQualityEvaluator,
     ReasoningQualityStore,
 )
+from .reliability import (
+    LearningReliabilityController,
+    ReliabilityAssessment,
+    ReliabilityConflictError,
+    ReliabilityEvidence,
+    ReliabilityRecord,
+    ReliabilityState,
+    ReliabilityStore,
+)
 
 __all__ = [
     "AdaptationConflictError",
@@ -61,6 +70,7 @@ __all__ = [
     "ExperienceConflictError",
     "ExperienceStore",
     "FeedbackSignal",
+    "LearningReliabilityController",
     "MemoryCandidate",
     "MemoryConsolidator",
     "MemoryRetriever",
@@ -75,5 +85,11 @@ __all__ = [
     "ReasoningQualityAssessment",
     "ReasoningQualityEvaluator",
     "ReasoningQualityStore",
+    "ReliabilityAssessment",
+    "ReliabilityConflictError",
+    "ReliabilityEvidence",
+    "ReliabilityRecord",
+    "ReliabilityState",
+    "ReliabilityStore",
     "RetrievalResult",
 ]
