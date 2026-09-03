@@ -69,40 +69,49 @@ Workers are capability-bounded execution participants, not independent authoriti
 
 M10 develops intelligence against the real operational history produced by JARVIS while preserving the authority architecture.
 
-The first boundary is explicit:
+The learning progression is now explicit:
 
 ```text
-Memory / Observation / Outcome
-              ↓
-          Experience
-              ↓
-           Learning
-              ↓
-      Better Reasoning / Behavior
-              ↓
-          M7 Authority
+Experience
+    ↓
+Evidence + Outcome
+    ↓
+Evaluation
+    ↓
+Adaptation Proposal
+    ↓
+Explicit Acceptance
+    ↓
+Bounded Preference / Behavior
+    ↓
+Better Reasoning / Behavior
+    ↓
+M7 Authority
 ```
 
-M10.1 defines the Experience boundary before later stages decide how experiences are evaluated, consolidated, adapted, or learned from.
+### M10.1 — Learning / Experience Boundary
+
+Defines immutable Experience records and provenance-bearing evidence for later evaluation.
+
+### M10.2 — Evidence + Outcome Evaluation
+
+Defines deterministic SUCCESS, FAILURE, MIXED, INCOMPLETE, and INCONCLUSIVE assessments from explicit evidence and outcomes.
+
+### M10.3 — Preference / Behavior Adaptation
+
+Defines bounded, reversible adaptation proposals. An adaptation can change non-authoritative behavior after explicit acceptance, but it cannot mutate policy, authorization, capability, objective state, or execution semantics.
 
 ```text
-Experience ≠ Truth
-Experience ≠ Policy
-Experience ≠ Authorization
-Experience ≠ User Intent
-Learning ≠ Authority
-Confidence ≠ Certainty
-Experience ≠ Execution
+Adaptation ≠ Authorization
+Preference ≠ Policy
+Behavior ≠ Authority
+Feedback ≠ Truth
+Evaluation ≠ User Intent
+Learning Candidate ≠ Learned Policy
+Adaptation ≠ Execution
 ```
 
-Future M10 responsibilities include:
-
-- evidence and outcome evaluation;
-- preference and behavior adaptation;
-- memory consolidation and retrieval improvement;
-- reasoning quality feedback loops;
-- learning reliability, reversal, and integration;
-- deciding when learned behavior is safe and useful to apply.
+Future M10 responsibilities include memory consolidation, retrieval improvement, reasoning feedback loops, learning reliability, reversal, and full intelligence integration.
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
@@ -127,11 +136,11 @@ M6  Context
  ↓
 M7  Authority                    ← CLOSED
  ↓
-M8  Agency / Execution
+M8  Agency / Execution           ← CLOSED
  ↓
-M9  Workforce / Delegation      ← CLOSED
+M9  Workforce / Delegation       ← CLOSED
  ↓
-M10 Intelligence / Learning     ← M10.1
+M10 Intelligence / Learning      ← M10.3
  ↓
 M11 Interface / Experience
 ```
