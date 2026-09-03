@@ -102,6 +102,7 @@ class AdaptationRecord:
     proposal: AdaptationProposal
     state: AdaptationState
     acceptance_reference: str | None = None
+    rejection_reference: str | None = None
     reversal_reference: str | None = None
 
     def __post_init__(self) -> None:
@@ -117,6 +118,9 @@ class AdaptationRecord:
         if self.state == AdaptationState.ACCEPTED:
             if not isinstance(self.acceptance_reference, str) or not self.acceptance_reference.strip():
                 raise ValueError("accepted adaptations require an acceptance reference")
+        if self.state == AdaptationState.REJECTED:
+            if not isinstance(self.rejection_reference, str) or not self.rejection_reference.strip():
+                raise ValueError("rejected adaptations require a rejection reference")
         if self.state == AdaptationState.REVERSED:
             if not isinstance(self.reversal_reference, str) or not self.reversal_reference.strip():
                 raise ValueError("reversed adaptations require a reversal reference")
@@ -127,6 +131,7 @@ class AdaptationRecord:
             "proposal": self.proposal.to_dict(),
             "state": self.state.value,
             "acceptance_reference": self.acceptance_reference,
+            "rejection_reference": self.rejection_reference,
             "reversal_reference": self.reversal_reference,
             "authority_granted": False,
             "authorization_granted": False,
@@ -136,7 +141,7 @@ class AdaptationRecord:
 
 
 class AdaptationController:
-    """Create and explicitly accept/reverse bounded adaptations."""
+    """Create and explicitly accept/reject/reverse bounded adaptations."""
 
     def propose(
         self,
@@ -190,7 +195,7 @@ class AdaptationController:
             record_id=f"{proposal.proposal_id}:record",
             proposal=proposal,
             state=AdaptationState.REJECTED,
-            acceptance_reference=rejection_reference.strip(),
+            rejection_reference=rejection_reference.strip(),
         )
 
     def reverse(self, record: AdaptationRecord, reversal_reference: str) -> AdaptationRecord:
