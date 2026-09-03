@@ -74,7 +74,7 @@ function Test-HttpHealth {
                 -TimeoutSec 3 `
                 -UseBasicParsing
 
-            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+            if ($response.StatusCode -eq 200) {
                 return $true
             }
         }
@@ -224,7 +224,7 @@ try {
     if ($alreadyListening) {
         Write-Host "A service is already listening on $baseUrl" -ForegroundColor Green
         if (-not (Test-HttpHealth -BaseUrl $baseUrl)) {
-            Fail "Port $Port is occupied, but the endpoint did not respond like a llama-server API."
+            Fail "Port $Port is occupied, but the endpoint did not return a healthy llama-server response."
         }
         Write-Host "Existing local model server is healthy." -ForegroundColor Green
     }
@@ -240,8 +240,9 @@ try {
         $stdoutLog = Join-Path $repoRoot "logs\local\llama-server-$timestamp.out.log"
         $stderrLog = Join-Path $repoRoot "logs\local\llama-server-$timestamp.err.log"
 
+        $quotedModelPath = '"' + $modelPath.Replace('"', '\"') + '"'
         $arguments = @(
-            "--model", $modelPath,
+            "--model", $quotedModelPath,
             "--host", $BindHost,
             "--port", $Port,
             "--ctx-size", $ContextSize
