@@ -29,6 +29,7 @@ from .evaluation import (
     OutcomeEvaluator,
 )
 from .experience import Experience, ExperienceConflictError, ExperienceStore
+from .intelligence_integration import IntelligenceContext, IntelligenceIntegrator
 from .reasoning_quality import (
     FeedbackSignal,
     QualityDimension,
@@ -70,6 +71,8 @@ __all__ = [
     "ExperienceConflictError",
     "ExperienceStore",
     "FeedbackSignal",
+    "IntelligenceContext",
+    "IntelligenceIntegrator",
     "LearningReliabilityController",
     "MemoryCandidate",
     "MemoryConsolidator",
