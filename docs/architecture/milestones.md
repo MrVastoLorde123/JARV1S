@@ -23,7 +23,7 @@ Reason → Interpret → Prioritize → Propose → Validate → Policy
 
 ## M8 — Agency / Execution
 
-M8 should implement the downstream execution system that consumes `ExecutionRequest`.
+M8 implements the downstream execution system that consumes `ExecutionRequest`.
 
 The architectural focus is:
 
@@ -43,7 +43,7 @@ Verification / Failure State
 Context Update
 ```
 
-M8 should prove that JARVIS can drive a real authorized operation while preserving M7's authority boundary.
+M8 proves that JARVIS can drive authorized operations while preserving M7's authority boundary.
 
 ## M9 — Workforce / Delegation
 
@@ -63,19 +63,46 @@ Worker Runtime
    └── other capabilities
 ```
 
-Workers should be capability-bounded execution participants, not independent authorities. Their work remains constrained by JARVIS's execution and authorization architecture.
+Workers are capability-bounded execution participants, not independent authorities. Their work remains constrained by JARVIS's execution and authorization architecture.
 
-## M10 — Intelligence Layer
+## M10 — Intelligence / Learning
 
-Once execution and delegation are real, the intelligence layer can be developed against real operational feedback rather than a simulated architecture.
+M10 develops intelligence against the real operational history produced by JARVIS while preserving the authority architecture.
 
-Likely responsibilities include:
+The first boundary is explicit:
 
-- intent understanding;
-- longer-horizon reasoning and planning;
-- memory-aware inference;
-- learning from observations and outcomes;
-- deciding when to ask, act, investigate, delegate, or defer.
+```text
+Memory / Observation / Outcome
+              ↓
+          Experience
+              ↓
+           Learning
+              ↓
+      Better Reasoning / Behavior
+              ↓
+          M7 Authority
+```
+
+M10.1 defines the Experience boundary before later stages decide how experiences are evaluated, consolidated, adapted, or learned from.
+
+```text
+Experience ≠ Truth
+Experience ≠ Policy
+Experience ≠ Authorization
+Experience ≠ User Intent
+Learning ≠ Authority
+Confidence ≠ Certainty
+Experience ≠ Execution
+```
+
+Future M10 responsibilities include:
+
+- evidence and outcome evaluation;
+- preference and behavior adaptation;
+- memory consolidation and retrieval improvement;
+- reasoning quality feedback loops;
+- learning reliability, reversal, and integration;
+- deciding when learned behavior is safe and useful to apply.
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
@@ -102,9 +129,9 @@ M7  Authority                    ← CLOSED
  ↓
 M8  Agency / Execution
  ↓
-M9  Workforce / Delegation
+M9  Workforce / Delegation      ← CLOSED
  ↓
-M10 Intelligence / Learning
+M10 Intelligence / Learning     ← M10.1
  ↓
 M11 Interface / Experience
 ```
