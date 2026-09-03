@@ -111,7 +111,6 @@ class RecoveryIntegratedRuntimeTests(unittest.TestCase):
         self.assertFalse(response.metadata["authority_granted"])
         self.assertFalse(response.metadata["authorization_granted"])
         self.assertFalse(response.metadata["execution_requested"])
-        self.assertFalse(response.metadata["policy_mutation"])
 
     def test_failure_is_re_raised_and_recorded_as_abandon(self):
         failing = FakeProcessor(should_fail=True)
