@@ -1,5 +1,7 @@
 import json
+from typing import Mapping
 from urllib import error, request
+
 from src.context.models import ContextPackage
 
 from src.ai.errors import (
@@ -42,7 +44,6 @@ class LocalProvider(AIProvider):
         return "local"
 
     def capabilities(self):
-
         return AICapabilities(
             text_generation=True,
             streaming=False,
@@ -53,52 +54,86 @@ class LocalProvider(AIProvider):
         )
 
     def _build_context_text(self, context):
-
         if context is None:
             return ""
 
-        if not isinstance(context, ContextPackage):
+        if isinstance(context, ContextPackage):
+            instructions = context.instructions
+            items = context.items
+        elif isinstance(context, Mapping):
+            context_payload = context.get("context")
+            if not isinstance(context_payload, Mapping):
+                raise InvalidRequestError(
+                    "LocalProvider requires a provider-neutral working "
+                    "context mapping containing a 'context' mapping."
+                )
+
+            instructions = context_payload.get("instructions", ())
+            items = context_payload.get("items", ())
+
+            if not isinstance(instructions, (tuple, list)):
+                raise InvalidRequestError(
+                    "LocalProvider context instructions must be a sequence."
+                )
+            if not isinstance(items, (tuple, list)):
+                raise InvalidRequestError(
+                    "LocalProvider context items must be a sequence."
+                )
+        else:
             raise InvalidRequestError(
-                "LocalProvider requires a ContextPackage "
-                "when context is provided."
+                "LocalProvider requires a ContextPackage or provider-neutral "
+                "working context mapping when context is provided."
             )
 
         sections = []
 
-        if getattr(context, "instructions", None):
-
-            instructions = "\n".join(
+        if instructions:
+            instructions_text = "\n".join(
                 f"- {instruction}"
-                for instruction in context.instructions
+                for instruction in instructions
             )
-
             sections.append(
                 "JARVIS INSTRUCTIONS:\n"
-                f"{instructions}"
+                f"{instructions_text}"
             )
 
-        items = getattr(context, "items", ())
-
         if items:
-
             context_lines = []
 
             for item in items:
+                if isinstance(item, Mapping):
+                    source_type = item.get("source_type", "UNKNOWN")
+                    content = item.get("content", "")
+                    confidence = item.get("confidence", 0.0)
+                    relevance_score = item.get("relevance_score", 0.0)
+                    importance = item.get("importance", 0.0)
+                    provenance_data = item.get("provenance", {})
+                else:
+                    source_type = getattr(item, "source_type", "UNKNOWN")
+                    content = getattr(item, "content", "")
+                    confidence = getattr(item, "confidence", 0.0)
+                    relevance_score = getattr(item, "relevance_score", 0.0)
+                    importance = getattr(item, "importance", 0.0)
+                    provenance_data = getattr(item, "provenance", {})
+
+                if not isinstance(provenance_data, Mapping):
+                    raise InvalidRequestError(
+                        "LocalProvider context item provenance must be a mapping."
+                    )
 
                 provenance = ""
-
-                if item.provenance:
+                if provenance_data:
                     provenance = (
                         f"\nProvenance: "
-                        f"{item.provenance}"
+                        f"{dict(provenance_data)}"
                     )
 
                 context_lines.append(
-                    f"[{item.source_type}] "
-                    f"{item.content}\n"
-                    f"Confidence: {item.confidence}\n"
-                    f"Relevance: {item.relevance_score}\n"
-                    f"Importance: {item.importance}"
+                    f"[{source_type}] "
+                    f"{content}\n"
+                    f"Confidence: {confidence}\n"
+                    f"Relevance: {relevance_score}\n"
+                    f"Importance: {importance}"
                     f"{provenance}"
                 )
 
@@ -110,7 +145,6 @@ class LocalProvider(AIProvider):
         return "\n\n".join(sections)
 
     def _build_messages(self, request):
-
         context_text = self._build_context_text(
             request.context
         )
@@ -139,7 +173,6 @@ class LocalProvider(AIProvider):
         return messages
 
     def _build_payload(self, request):
-
         payload = {
             "model": (
                 request.model
@@ -165,7 +198,6 @@ class LocalProvider(AIProvider):
             payload["max_tokens"] = (
                 options["max_output_tokens"]
             )
-
         elif "max_tokens" in options:
             payload["max_tokens"] = (
                 options["max_tokens"]
@@ -182,7 +214,6 @@ class LocalProvider(AIProvider):
         return payload
 
     def generate(self, request_object):
-
         if not isinstance(
             request_object,
             AIRequest
@@ -222,19 +253,16 @@ class LocalProvider(AIProvider):
         )
 
         try:
-
             with request.urlopen(
                 http_request,
                 timeout=self.timeout,
             ) as response:
-
                 response_body = (
                     response.read()
                     .decode("utf-8")
                 )
 
         except error.HTTPError as exc:
-
             if exc.code in (401, 403):
                 raise AuthenticationError(
                     "Local AI server rejected "
@@ -256,34 +284,28 @@ class LocalProvider(AIProvider):
             ) from exc
 
         except error.URLError as exc:
-
             raise ProviderUnavailableError(
                 "Unable to connect to "
                 "llama-server."
             ) from exc
 
         except TimeoutError as exc:
-
             raise TimeoutError(
                 "Local AI request timed out."
             ) from exc
 
         except OSError as exc:
-
             raise ProviderUnavailableError(
                 "Local AI server connection failed."
             ) from exc
 
         try:
-
             data = json.loads(
                 response_body
             )
 
             choice = data["choices"][0]
-
             message = choice["message"]
-
             content = message.get(
                 "content",
                 ""
@@ -296,7 +318,6 @@ class LocalProvider(AIProvider):
             usage = None
 
             if usage_data:
-
                 from src.ai.models import AIUsage
 
                 usage = AIUsage(
@@ -335,7 +356,6 @@ class LocalProvider(AIProvider):
             TypeError,
             json.JSONDecodeError,
         ) as exc:
-
             raise GenerationError(
                 "Local AI server returned "
                 "an unexpected response."
