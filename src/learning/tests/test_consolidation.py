@@ -137,12 +137,14 @@ class ConsolidationTests(unittest.TestCase):
     def test_retrieval_uses_only_accepted_memories(self):
         consolidator = MemoryConsolidator()
         accepted = consolidator.accept(self.candidate(), "approval-1")
-        rejected = consolidator.reject(
-            self.candidate(
-                content="Never use the deprecated deployment path.",
-            ),
-            "rejection-1",
+        rejected_experience = self.experience(experience_id="exp-2")
+        rejected_evaluation = self.evaluation(experience=rejected_experience)
+        rejected_candidate = consolidator.propose(
+            rejected_experience,
+            rejected_evaluation,
+            content="Never use the deprecated deployment path.",
         )
+        rejected = consolidator.reject(rejected_candidate, "rejection-1")
         store = MemoryStore((accepted, rejected))
         results = MemoryRetriever().retrieve(store, "deployment checklist")
         self.assertEqual(len(results), 1)
