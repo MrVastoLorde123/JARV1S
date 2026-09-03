@@ -55,7 +55,7 @@ class ReasoningQualityTests(unittest.TestCase):
 
     def test_assessment_score_is_deterministic_average(self):
         assessment = self.assessment()
-        self.assertEqual(assessment.overall_score, 0.85)
+        self.assertAlmostEqual(assessment.overall_score, 0.85, places=12)
         self.assertEqual(assessment.assessment_id, "reason-1:quality")
 
     def test_assessment_preserves_evaluation_provenance(self):
