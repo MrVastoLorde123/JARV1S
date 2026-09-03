@@ -53,7 +53,7 @@ class AdaptationTests(unittest.TestCase):
         self.assertFalse(payload["execution_requested"])
         self.assertFalse(payload["policy_mutation"])
 
-    def test_explicit_user_preference_is_not_silently_mutated(self):
+    def test_explicit_user_preference_requires_explicit_acceptance(self):
         proposal = self.proposal(explicit_user_preference=True)
         self.assertTrue(proposal.explicit_user_preference)
         record = AdaptationController().accept(proposal, "user-approval-1")
@@ -67,7 +67,8 @@ class AdaptationTests(unittest.TestCase):
     def test_rejection_is_non_mutating_and_explicit(self):
         record = AdaptationController().reject(self.proposal(), "user-rejection-1")
         self.assertEqual(record.state, AdaptationState.REJECTED)
-        self.assertEqual(record.acceptance_reference, "user-rejection-1")
+        self.assertEqual(record.rejection_reference, "user-rejection-1")
+        self.assertIsNone(record.acceptance_reference)
 
     def test_accepted_adaptation_is_reversible(self):
         controller = AdaptationController()
@@ -76,6 +77,7 @@ class AdaptationTests(unittest.TestCase):
         self.assertEqual(reversed_record.state, AdaptationState.REVERSED)
         self.assertEqual(reversed_record.reversal_reference, "user-reversal-1")
         self.assertEqual(reversed_record.proposal.current_value, "verbose")
+        self.assertEqual(reversed_record.acceptance_reference, "user-approval-1")
 
     def test_only_accepted_adaptations_can_be_reversed(self):
         record = AdaptationController().reject(self.proposal(), "user-rejection-1")
