@@ -110,9 +110,9 @@ class SessionRuntimeTests(unittest.TestCase):
         result = self.runtime.process(self.request("hello", "session-1"))
         response = result.to_interface_response()
 
-        self.assertFalse(response.metadata["authority_granted"])
-        self.assertFalse(response.metadata["authorization_granted"])
-        self.assertFalse(response.metadata["execution_requested"])
+        self.assertFalse(response.to_dict()["authority_granted"])
+        self.assertFalse(response.to_dict()["authorization_granted"])
+        self.assertFalse(response.to_dict()["execution_requested"])
 
     def test_clearing_binding_does_not_mutate_processor_history(self):
         self.runtime.process(self.request("first", "session-a"))
@@ -151,7 +151,7 @@ class SessionRuntimeTests(unittest.TestCase):
 
         response = result.to_interface_response()
         self.assertEqual(response.request_id, interface_request.request_id)
-        self.assertEqual(response.session_id, interface_request.session_id)
+        self.assertEqual(response.metadata["session_id"], interface_request.session_id)
         self.assertEqual(response.content, "session-1: hello from interface")
 
 
