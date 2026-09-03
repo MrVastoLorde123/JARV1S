@@ -48,9 +48,7 @@ class IntelligenceContext:
     @property
     def active_reliability(self) -> tuple[ReliabilityRecord, ...]:
         return tuple(
-            item
-            for item in self.reliability
-            if item.state not in {ReliabilityState.REVERSED, ReliabilityState.SUPERSEDED}
+            item for item in self.reliability if item.state not in IntelligenceIntegrator._BLOCKED_RELIABILITY
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -76,7 +74,11 @@ class IntelligenceContext:
 class IntelligenceIntegrator:
     """Assemble bounded learning signals into future reasoning context."""
 
-    _BLOCKED_RELIABILITY = {ReliabilityState.REVERSED, ReliabilityState.SUPERSEDED}
+    _BLOCKED_RELIABILITY = {
+        ReliabilityState.SUSPENDED,
+        ReliabilityState.REVERSED,
+        ReliabilityState.SUPERSEDED,
+    }
 
     def build_context(
         self,
@@ -102,9 +104,7 @@ class IntelligenceIntegrator:
                 raise TypeError(f"{name} must be a tuple")
 
         blocked_memory_ids = {
-            item.artifact_id
-            for item in reliability
-            if item.state in self._BLOCKED_RELIABILITY
+            item.artifact_id for item in reliability if item.state in self._BLOCKED_RELIABILITY
         }
         filtered_reliability = tuple(
             item for item in reliability if item.state not in self._BLOCKED_RELIABILITY
