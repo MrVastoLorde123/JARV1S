@@ -45,6 +45,9 @@ class UnifiedRequestResult:
                 **metadata,
                 "session_id": self.session_id,
                 "integration": "M12.1",
+                "authority_granted": False,
+                "authorization_granted": False,
+                "execution_requested": False,
             },
         )
 
