@@ -8,9 +8,9 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M9 — Workforce / Delegation: M9.6 VERIFIED / COMPLETE**
+**M10.1 — Learning / Experience Boundary: IMPLEMENTED — awaiting user verification**
 
-The latest verified user checkout passes **986 / 986 tests**.
+M9 is complete. M10 begins the intelligence/learning layer without creating a second authority system.
 
 ### M9 roadmap
 
@@ -21,27 +21,41 @@ M9.3  Worker Context / Knowledge Boundary          ✅
 M9.4  Worker Reporting / Result Integration        ✅
 M9.5  Delegation / Coordination                   ✅
 M9.6  Workforce Reliability / Recovery            ✅
-M9.7  Driveability / Objective Continuation       → next
+M9.7  Driveability / Objective Continuation       ✅
 ```
 
-### Workforce invariant
+### M10 roadmap
 
 ```text
-JARVIS may distribute work without distributing authority.
+M10.1  Learning / Experience Boundary              ✅ implemented
+M10.2  Evidence + Outcome Evaluation               → next
+M10.3  Preference / Behavior Adaptation
+M10.4  Memory Consolidation / Retrieval Improvement
+M10.5  Reasoning Quality Feedback Loop
+M10.6  Learning Reliability / Reversal
+M10.7  Intelligence Integration
 ```
 
-### M9.6 reliability invariants
+### Learning invariant
 
 ```text
-Recovery ≠ Authorization
-Retry Eligibility ≠ Permission
-Failure Handling ≠ Authority Escalation
-Worker Recovery State ≠ Global Authority
-Resumption ≠ Re-Authorization
-Recovery Sequencing ≠ Dependency Bypass
+JARVIS should be capable of changing how it behaves
+without being allowed to change what it is authorized to do.
 ```
 
-M9.6 preserves worker identity, assignment scope, delegation dependencies, and recovery provenance. Recovery remains non-executing; any retry or follow-up execution must re-enter the established M7/M8 authority path.
+### M10.1 experience walls
+
+```text
+Experience ≠ Truth
+Experience ≠ Policy
+Experience ≠ Authorization
+Experience ≠ User Intent
+Learning ≠ Authority
+Confidence ≠ Certainty
+Experience ≠ Execution
+```
+
+M10.1 defines immutable `Experience` records and an immutable conflict-aware store. Experiences preserve references, observations, outcomes, feedback, evaluation, confidence, and provenance for later learning; they do not themselves change policy, authorization, execution, or user intent.
 
 ## Road Ahead
 
@@ -49,8 +63,8 @@ M9.6 preserves worker identity, assignment scope, delegation dependencies, and r
 M6  Working Context            ✅
 M7  Deterministic Authority    ✅ CLOSED
 M8  Agency / Execution         ✅ CLOSED
-M9  Workforce / Delegation     → M9.7
-M10 Intelligence / Learning
+M9  Workforce / Delegation     ✅ CLOSED
+M10 Intelligence / Learning    → M10.1
 M11 Interface / Experience
 ```
 
@@ -63,4 +77,5 @@ M11 Interface / Experience
 - [M7 Complete](docs/milestones/M7_COMPLETE.md)
 - [M8 Complete](docs/milestones/M8_COMPLETE.md)
 - [M8.6 Reliability / Recovery](docs/milestones/M8_6_AGENCY_RELIABILITY_RECOVERY.md)
+- [M10.1 Learning / Experience Boundary](docs/milestones/M10_1_LEARNING_EXPERIENCE_BOUNDARY.md)
 - [Architecture Decisions](docs/decisions/)
