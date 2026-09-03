@@ -78,6 +78,10 @@ Evidence + Outcome
     ↓
 Evaluation
     ↓
+Reasoning Quality Assessment
+    ↓
+Feedback Signal
+    ↓
 Adaptation Proposal
     ↓
 Explicit Acceptance
@@ -121,7 +125,35 @@ Consolidation ≠ Authorization
 Relevance ≠ Certainty
 ```
 
-Future M10 responsibilities include reasoning feedback loops, learning reliability, reversal, and full intelligence integration.
+### M10.5 — Reasoning Quality Feedback Loop
+
+Defines a bounded feedback layer that evaluates explicit quality signals about reasoning without declaring truth. Quality is represented by immutable dimension signals, a deterministic aggregate assessment, and a derived non-authoritative feedback signal.
+
+```text
+Reasoning / Decision
+      ↓
+Observed Outcome
+      ↓
+Evidence + Evaluation
+      ↓
+Reasoning Quality Assessment
+      ↓
+Feedback Signal
+      ↓
+Explicit Learning / Adaptation Boundary
+      ↓
+Future Reasoning Context
+```
+
+```text
+Reasoning Evaluation ≠ Truth
+Feedback ≠ Authority
+Quality Signal ≠ Permission
+Self-Evaluation ≠ Self-Authority
+Reasoning Improvement ≠ Authority Expansion
+```
+
+Future M10 responsibilities include learning reliability, reversal, and full intelligence integration.
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
@@ -150,7 +182,7 @@ M8  Agency / Execution           ← CLOSED
  ↓
 M9  Workforce / Delegation       ← CLOSED
  ↓
-M10 Intelligence / Learning      ← M10.4
+M10 Intelligence / Learning      ← M10.5
  ↓
 M11 Interface / Experience
 ```
