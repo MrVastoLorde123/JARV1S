@@ -37,7 +37,7 @@ class WorkerContractTests(unittest.TestCase):
     def test_worker_rejects_capability_escalation(self):
         assignment = self.assignment(allowed_capabilities=("search", "summarize", "execute"))
         with self.assertRaises(ValueError):
-            WorkerAssignment(**assignment.__dict__)
+            self.worker().accepts(assignment)
 
     def test_worker_rejects_step_bound_escalation(self):
         assignment = self.assignment(max_steps=6)
