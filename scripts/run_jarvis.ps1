@@ -2,11 +2,15 @@
 param(
     [string]$LlamaServerPath = "",
     [string]$ModelPath = "",
-    [string]$Host = "127.0.0.1",
+    [string]$BindHost = "127.0.0.1",
+    [ValidateRange(1, 65535)]
     [int]$Port = 8080,
     [string]$ModelAlias = "qwen3-4b-local",
+    [ValidateRange(256, 131072)]
     [int]$ContextSize = 8192,
+    [ValidateRange(5, 600)]
     [int]$StartupTimeoutSeconds = 60,
+    [string[]]$AdditionalLlamaArgs = @(),
     [switch]$KeepServer,
     [switch]$SkipGitCheck,
     [switch]$SkipTests,
@@ -17,12 +21,12 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 function Write-Stage {
-    param([string]$Message)
+    param([Parameter(Mandatory)][string]$Message)
     Write-Host "`n=== $Message ===" -ForegroundColor Cyan
 }
 
 function Fail {
-    param([string]$Message)
+    param([Parameter(Mandatory)][string]$Message)
     Write-Host "`nERROR: $Message" -ForegroundColor Red
     if (-not $NoPauseOnError) {
         Write-Host ""
@@ -33,39 +37,49 @@ function Fail {
 
 function Test-TcpPort {
     param(
-        [string]$TargetHost,
-        [int]$TargetPort
+        [Parameter(Mandatory)][string]$TargetHost,
+        [Parameter(Mandatory)][int]$TargetPort
     )
 
+    $client = $null
+    $async = $null
     try {
         $client = [System.Net.Sockets.TcpClient]::new()
         $async = $client.BeginConnect($TargetHost, $TargetPort, $null, $null)
         $connected = $async.AsyncWaitHandle.WaitOne(500)
         if ($connected -and $client.Connected) {
             $client.EndConnect($async)
-            $client.Dispose()
             return $true
         }
-        $client.Dispose()
         return $false
     }
     catch {
         return $false
     }
+    finally {
+        if ($null -ne $client) {
+            $client.Dispose()
+        }
+    }
 }
 
 function Test-HttpHealth {
-    param([string]$BaseUrl)
+    param([Parameter(Mandatory)][string]$BaseUrl)
 
     foreach ($path in @("/health", "/v1/models")) {
         try {
-            $response = Invoke-WebRequest -Uri ($BaseUrl + $path) -Method Get -TimeoutSec 3 -UseBasicParsing
+            $response = Invoke-WebRequest `
+                -Uri ($BaseUrl + $path) `
+                -Method Get `
+                -TimeoutSec 3 `
+                -UseBasicParsing
+
             if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
                 return $true
             }
         }
         catch {
-            # Keep trying until the timeout expires.
+            # Keep trying while the server starts.
         }
     }
 
@@ -77,7 +91,7 @@ function Resolve-Executable {
 
     if ($ExplicitPath) {
         if (-not (Test-Path -LiteralPath $ExplicitPath -PathType Leaf)) {
-            Fail "Llama server executable was not found: $ExplicitPath"
+            Fail "llama-server executable was not found: $ExplicitPath"
         }
         return (Resolve-Path -LiteralPath $ExplicitPath).Path
     }
@@ -109,7 +123,7 @@ function Resolve-Executable {
 function Resolve-Model {
     param(
         [string]$ExplicitPath,
-        [string]$RepoRoot
+        [Parameter(Mandatory)][string]$RepoRoot
     )
 
     if ($ExplicitPath) {
@@ -127,7 +141,11 @@ function Resolve-Model {
     $models = @()
     foreach ($root in $candidateRoots) {
         if (Test-Path -LiteralPath $root -PathType Container) {
-            $models += Get-ChildItem -LiteralPath $root -Filter *.gguf -File -ErrorAction SilentlyContinue
+            $models += Get-ChildItem `
+                -LiteralPath $root `
+                -Filter *.gguf `
+                -File `
+                -ErrorAction SilentlyContinue
         }
     }
 
@@ -171,13 +189,14 @@ Set-Location $repoRoot
 
 $serverProcess = $null
 $startedByScript = $false
-$baseUrl = "http://$Host`:$Port"
+$serverOwnership = "existing"
+$baseUrl = "http://$BindHost`:$Port"
 
 try {
     Write-Stage "JARVIS LOCAL LAUNCH"
     Write-Host "Repository : $repoRoot"
-    Write-Host "LLM        : $ModelAlias"
     Write-Host "Endpoint   : $baseUrl"
+    Write-Host "LLM alias  : $ModelAlias"
 
     Write-Stage "Repository checks"
     if (-not $SkipGitCheck) {
@@ -188,7 +207,7 @@ try {
 
         Write-Host "Branch     : $branch"
         if ($branch -notmatch '^feature/m13-1-entity-boundary$') {
-            Write-Host "Warning: this launcher is intended to run from feature/m13-1-entity-boundary." -ForegroundColor Yellow
+            Write-Host "Warning: this launcher is intended for feature/m13-1-entity-boundary." -ForegroundColor Yellow
         }
     }
 
@@ -199,48 +218,52 @@ try {
     New-Item -ItemType Directory -Force (Join-Path $repoRoot "data\processed") | Out-Null
     New-Item -ItemType Directory -Force (Join-Path $repoRoot "logs\local") | Out-Null
 
-    $serverPath = Resolve-Executable -ExplicitPath $LlamaServerPath
-    $modelPath = Resolve-Model -ExplicitPath $ModelPath -RepoRoot $repoRoot
-
-    Write-Host "llama-server: $serverPath"
-    Write-Host "Model       : $modelPath"
-
     Write-Stage "Local model server"
 
-    $alreadyListening = Test-TcpPort -TargetHost $Host -TargetPort $Port
+    $alreadyListening = Test-TcpPort -TargetHost $BindHost -TargetPort $Port
     if ($alreadyListening) {
         Write-Host "A service is already listening on $baseUrl" -ForegroundColor Green
         if (-not (Test-HttpHealth -BaseUrl $baseUrl)) {
-            Fail "Port $Port is occupied, but it does not look like a healthy llama-server endpoint."
+            Fail "Port $Port is occupied, but the endpoint did not respond like a llama-server API."
         }
-        Write-Host "Existing local model server accepted HTTP requests." -ForegroundColor Green
+        Write-Host "Existing local model server is healthy." -ForegroundColor Green
     }
     else {
+        $serverPath = Resolve-Executable -ExplicitPath $LlamaServerPath
+        $modelPath = Resolve-Model -ExplicitPath $ModelPath -RepoRoot $repoRoot
+        $serverDirectory = Split-Path -Parent $serverPath
+
+        Write-Host "llama-server: $serverPath"
+        Write-Host "Model       : $modelPath"
+
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
         $stdoutLog = Join-Path $repoRoot "logs\local\llama-server-$timestamp.out.log"
         $stderrLog = Join-Path $repoRoot "logs\local\llama-server-$timestamp.err.log"
 
         $arguments = @(
             "--model", $modelPath,
-            "--alias", $ModelAlias,
-            "--host", $Host,
+            "--host", $BindHost,
             "--port", $Port,
-            "--ctx-size", $ContextSize,
-            "--jinja"
+            "--ctx-size", $ContextSize
         )
+
+        if ($AdditionalLlamaArgs.Count -gt 0) {
+            $arguments += $AdditionalLlamaArgs
+        }
 
         Write-Host "Starting llama-server..." -ForegroundColor Green
         Write-Host "Logs       : $stdoutLog"
 
-        $serverProcess = Start-Process \
-            -FilePath $serverPath \
-            -ArgumentList $arguments \
-            -WorkingDirectory (Split-Path -Parent $serverPath) \
-            -RedirectStandardOutput $stdoutLog \
-            -RedirectStandardError $stderrLog \
+        $serverProcess = Start-Process `
+            -FilePath $serverPath `
+            -ArgumentList $arguments `
+            -WorkingDirectory $serverDirectory `
+            -RedirectStandardOutput $stdoutLog `
+            -RedirectStandardError $stderrLog `
             -PassThru
 
         $startedByScript = $true
+        $serverOwnership = "started-by-script"
         Write-Host "llama-server PID: $($serverProcess.Id)"
 
         $ready = $false
@@ -252,12 +275,12 @@ try {
                 $exitCode = $serverProcess.ExitCode
                 $tail = ""
                 if (Test-Path -LiteralPath $stderrLog) {
-                    $tail = (Get-Content -LiteralPath $stderrLog -Tail 20 -ErrorAction SilentlyContinue) -join "`n"
+                    $tail = (Get-Content -LiteralPath $stderrLog -Tail 30 -ErrorAction SilentlyContinue) -join "`n"
                 }
                 Fail "llama-server exited during startup with code $exitCode.`n`n$tail"
             }
 
-            if (Test-TcpPort -TargetHost $Host -TargetPort $Port -and (Test-HttpHealth -BaseUrl $baseUrl)) {
+            if (Test-TcpPort -TargetHost $BindHost -TargetPort $Port -and (Test-HttpHealth -BaseUrl $baseUrl)) {
                 $ready = $true
                 break
             }
@@ -266,7 +289,7 @@ try {
         if (-not $ready) {
             $tail = ""
             if (Test-Path -LiteralPath $stderrLog) {
-                $tail = (Get-Content -LiteralPath $stderrLog -Tail 30 -ErrorAction SilentlyContinue) -join "`n"
+                $tail = (Get-Content -LiteralPath $stderrLog -Tail 50 -ErrorAction SilentlyContinue) -join "`n"
             }
             Fail "llama-server did not become ready within $StartupTimeoutSeconds seconds.`n`n$tail"
         }
@@ -274,24 +297,28 @@ try {
         Write-Host "llama-server is ready." -ForegroundColor Green
     }
 
-    Write-Stage "Optional regression checks"
+    Write-Stage "Regression checks"
     if ($SkipTests) {
         Write-Host "Tests skipped by -SkipTests."
     }
     else {
+        Write-Host "Running AI provider regression tests..."
         python -m unittest src.ai.tests.test_local_provider src.ai.tests.test_local_provider_working_context
         if ($LASTEXITCODE -ne 0) {
             Fail "AI provider regression tests failed. JARVIS will not be launched."
         }
 
+        Write-Host "Running core suite..."
         python -m unittest discover -s src\core -p "test*.py"
         if ($LASTEXITCODE -ne 0) {
             Fail "Core tests failed. JARVIS will not be launched."
         }
+
+        Write-Host "Regression checks passed." -ForegroundColor Green
     }
 
     Write-Stage "Launching JARVIS"
-    Write-Host "Starting: python -m src.run_local_jarvis" -ForegroundColor Green
+    Write-Host "Command: python -m src.run_local_jarvis" -ForegroundColor Green
     Write-Host "Press Ctrl+C to stop JARVIS."
     Write-Host ""
 
@@ -305,12 +332,14 @@ try {
 finally {
     if ($startedByScript -and -not $KeepServer) {
         Stop-StartedServer -Process $serverProcess -StartedByScript $startedByScript
+        $serverOwnership = "stopped-after-session"
     }
     elseif ($startedByScript -and $KeepServer) {
+        $serverOwnership = "left-running-by-request"
         Write-Host "Keeping llama-server running because -KeepServer was specified." -ForegroundColor Green
     }
 }
 
 Write-Stage "JARVIS SESSION ENDED"
-Write-Host "The local model server was $([string]::Join('', @($(if ($startedByScript) { if ($KeepServer) { 'left running' } else { 'stopped' } } else { 'already running before launch' })))) ."
+Write-Host "Server state: $serverOwnership"
 Write-Host ""
