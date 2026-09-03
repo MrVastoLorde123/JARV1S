@@ -6,9 +6,9 @@ Accepted — implementation starts from the M9.6 verified boundary.
 
 ## Initial implementation shape
 
-M9.7 should introduce an immutable objective/continuation contract and a deterministic controller before connecting any model-driven next-step selection.
+M9.7 introduces an immutable objective/continuation contract and a deterministic controller before any model-driven next-step selection.
 
-The first implementation must establish:
+The implementation establishes:
 
 - explicit objective identity and lifecycle state
 - bounded continuation cycles
@@ -22,4 +22,4 @@ The controller must not execute actions, create authorization, mutate policy, ex
 
 ## Design principle
 
-Build the driveability boundary first. Intelligence may improve proposal quality later, but the safety and authority contract must remain independent of model capability.
+Build the driveability boundary first. Intelligence may improve proposal quality later, but safety and authority remain independent of model capability.
