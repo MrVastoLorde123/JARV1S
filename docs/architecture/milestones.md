@@ -84,6 +84,14 @@ Explicit Acceptance
     ↓
 Bounded Preference / Behavior
     ↓
+Memory Candidate
+    ↓
+Explicit Consolidation
+    ↓
+Durable Knowledge
+    ↓
+Deterministic Retrieval
+    ↓
 Better Reasoning / Behavior
     ↓
 M7 Authority
@@ -101,17 +109,19 @@ Defines deterministic SUCCESS, FAILURE, MIXED, INCOMPLETE, and INCONCLUSIVE asse
 
 Defines bounded, reversible adaptation proposals. An adaptation can change non-authoritative behavior after explicit acceptance, but it cannot mutate policy, authorization, capability, objective state, or execution semantics.
 
+### M10.4 — Memory Consolidation / Retrieval Improvement
+
+Defines provider-neutral memory candidates derived from evaluated experience, explicit consolidation into an inspectable durable-memory view, reversal, and deterministic retrieval over accepted memories.
+
 ```text
-Adaptation ≠ Authorization
-Preference ≠ Policy
-Behavior ≠ Authority
-Feedback ≠ Truth
-Evaluation ≠ User Intent
-Learning Candidate ≠ Learned Policy
-Adaptation ≠ Execution
+Memory ≠ Truth
+Memory ≠ Authority
+Retrieval ≠ Permission
+Consolidation ≠ Authorization
+Relevance ≠ Certainty
 ```
 
-Future M10 responsibilities include memory consolidation, retrieval improvement, reasoning feedback loops, learning reliability, reversal, and full intelligence integration.
+Future M10 responsibilities include reasoning feedback loops, learning reliability, reversal, and full intelligence integration.
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
@@ -140,7 +150,7 @@ M8  Agency / Execution           ← CLOSED
  ↓
 M9  Workforce / Delegation       ← CLOSED
  ↓
-M10 Intelligence / Learning      ← M10.3
+M10 Intelligence / Learning      ← M10.4
  ↓
 M11 Interface / Experience
 ```
