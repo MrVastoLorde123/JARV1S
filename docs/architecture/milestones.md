@@ -94,9 +94,11 @@ Explicit Consolidation
     ↓
 Durable Knowledge
     ↓
-Deterministic Retrieval
+Reliability Assessment
     ↓
-Better Reasoning / Behavior
+RETAINED / WATCH / CONFLICTED / SUSPENDED / REVERSED / SUPERSEDED
+    ↓
+Deterministic Retrieval / Reasoning Context
     ↓
 M7 Authority
 ```
@@ -145,15 +147,40 @@ Explicit Learning / Adaptation Boundary
 Future Reasoning Context
 ```
 
+### M10.6 — Learning Reliability / Reversal
+
+Defines the reliability lifecycle for learned artifacts. Later evidence can move an artifact to `WATCH`, `CONFLICTED`, or `SUSPENDED`, and explicit lifecycle operations can `REVERSED` or `SUPERSEDED` it without deleting historical records.
+
 ```text
-Reasoning Evaluation ≠ Truth
-Feedback ≠ Authority
-Quality Signal ≠ Permission
-Self-Evaluation ≠ Self-Authority
-Reasoning Improvement ≠ Authority Expansion
+Learned Artifact
+      ↓
+New Evidence / Observation
+      ↓
+Reliability Assessment
+      ↓
+RETAINED / WATCH / CONFLICTED / SUSPENDED
+      ↓
+Explicit Transition
+      ↓
+Immutable Lineage
+      ↓
+Future Retrieval / Reasoning Context
 ```
 
-Future M10 responsibilities include learning reliability, reversal, and full intelligence integration.
+```text
+Learning ≠ Truth
+Reversal ≠ Deletion
+Reliability ≠ Certainty
+Conflict ≠ Permission
+Supersession ≠ Authority
+Retraction ≠ Execution
+New Evidence ≠ Automatic Policy Change
+Learning Reliability ≠ Authorization
+History ≠ Current Truth
+Memory Status ≠ User Intent
+```
+
+The reliability layer changes learning eligibility and historical status only. It does not grant authority, authorization, execution rights, capabilities, or policy mutation.
 
 The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
@@ -182,7 +209,7 @@ M8  Agency / Execution           ← CLOSED
  ↓
 M9  Workforce / Delegation       ← CLOSED
  ↓
-M10 Intelligence / Learning      ← M10.5
+M10 Intelligence / Learning      ← M10.6
  ↓
 M11 Interface / Experience
 ```
