@@ -87,6 +87,7 @@ class ConsolidatedMemory:
     candidate: MemoryCandidate
     state: ConsolidationState
     acceptance_reference: str | None = None
+    rejection_reference: str | None = None
     reversal_reference: str | None = None
 
     def __post_init__(self) -> None:
@@ -102,6 +103,9 @@ class ConsolidatedMemory:
         if self.state == ConsolidationState.ACCEPTED:
             if not isinstance(self.acceptance_reference, str) or not self.acceptance_reference.strip():
                 raise ValueError("accepted memories require an acceptance reference")
+        if self.state == ConsolidationState.REJECTED:
+            if not isinstance(self.rejection_reference, str) or not self.rejection_reference.strip():
+                raise ValueError("rejected memories require a rejection reference")
         if self.state == ConsolidationState.REVERSED:
             if not isinstance(self.reversal_reference, str) or not self.reversal_reference.strip():
                 raise ValueError("reversed memories require a reversal reference")
@@ -112,6 +116,7 @@ class ConsolidatedMemory:
             "candidate": self.candidate.to_dict(),
             "state": self.state.value,
             "acceptance_reference": self.acceptance_reference,
+            "rejection_reference": self.rejection_reference,
             "reversal_reference": self.reversal_reference,
             "truth_guaranteed": False,
             "authority_granted": False,
@@ -206,7 +211,7 @@ class MemoryConsolidator:
             memory_id=candidate.candidate_id,
             candidate=candidate,
             state=ConsolidationState.REJECTED,
-            acceptance_reference=None,
+            rejection_reference=rejection_reference.strip(),
         )
 
     def reverse(self, memory: ConsolidatedMemory, reversal_reference: str) -> ConsolidatedMemory:
