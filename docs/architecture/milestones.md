@@ -69,8 +69,6 @@ Workers are capability-bounded execution participants, not independent authoriti
 
 M10 develops intelligence against the real operational history produced by JARVIS while preserving the authority architecture.
 
-The learning progression is now explicit:
-
 ```text
 Experience
     ↓
@@ -105,196 +103,144 @@ Future Reasoning
 M7 Authority
 ```
 
-### M10.1 — Learning / Experience Boundary
-
-Defines immutable Experience records and provenance-bearing evidence for later evaluation.
-
-### M10.2 — Evidence + Outcome Evaluation
-
-Defines deterministic SUCCESS, FAILURE, MIXED, INCOMPLETE, and INCONCLUSIVE assessments from explicit evidence and outcomes.
-
-### M10.3 — Preference / Behavior Adaptation
-
-Defines bounded, reversible adaptation proposals. An adaptation can change non-authoritative behavior after explicit acceptance, but it cannot mutate policy, authorization, capability, objective state, or execution semantics.
-
-### M10.4 — Memory Consolidation / Retrieval Improvement
-
-Defines provider-neutral memory candidates derived from evaluated experience, explicit consolidation into an inspectable durable-memory view, reversal, and deterministic retrieval over accepted memories.
-
-```text
-Memory ≠ Truth
-Memory ≠ Authority
-Retrieval ≠ Permission
-Consolidation ≠ Authorization
-Relevance ≠ Certainty
-```
-
-### M10.5 — Reasoning Quality Feedback Loop
-
-Defines a bounded feedback layer that evaluates explicit quality signals about reasoning without declaring truth. Quality is represented by immutable dimension signals, a deterministic aggregate assessment, and a derived non-authoritative feedback signal.
-
-```text
-Reasoning / Decision
-      ↓
-Observed Outcome
-      ↓
-Evidence + Evaluation
-      ↓
-Reasoning Quality Assessment
-      ↓
-Feedback Signal
-      ↓
-Explicit Learning / Adaptation Boundary
-      ↓
-Future Reasoning Context
-```
-
-### M10.6 — Learning Reliability / Reversal
-
-Defines the reliability lifecycle for learned artifacts. Later evidence can move an artifact to `WATCH`, `CONFLICTED`, or `SUSPENDED`, and explicit lifecycle operations can `REVERSED` or `SUPERSEDED` it without deleting historical records.
-
-```text
-Learned Artifact
-      ↓
-New Evidence / Observation
-      ↓
-Reliability Assessment
-      ↓
-RETAINED / WATCH / CONFLICTED / SUSPENDED
-      ↓
-Explicit Transition
-      ↓
-Immutable Lineage
-      ↓
-Future Retrieval / Reasoning Context
-```
-
-The reliability layer changes learning eligibility and historical status only. It does not grant authority, authorization, execution rights, capabilities, or policy mutation.
-
-### M10.7 — Intelligence Integration
-
-Integrates bounded outputs from M10.2–M10.6 into an immutable `IntelligenceContext` for future reasoning.
-
-```text
-Evaluation
-   +
-Accepted Adaptation
-   +
-Retrieval Evidence
-   +
-Reasoning Feedback
-   +
-Reliability Status
-        ↓
-Intelligence Integration
-        ↓
-IntelligenceContext
-        ↓
-Future Reasoning
-        ↓
-M7 Authority
-```
-
-`REVERSED`, `SUSPENDED`, and `SUPERSEDED` learning is excluded from active reasoning context. Only explicitly accepted adaptations are active behavioral guidance. The context remains evidence, not authority or truth.
-
-```text
-Intelligence Context ≠ Truth
-Intelligence Context ≠ Authority
-Learning ≠ Permission
-Relevance ≠ Certainty
-Adaptation ≠ Authorization
-Evaluation ≠ Intent
-Reliability ≠ Truth
-Integration ≠ Execution
-Intelligence ≠ Unbounded Agency
-```
-
 **Status: VERIFIED / COMPLETE.**
-
-The exact model/provider strategy remains implementation detail. JARVIS remains the system; AI remains a capability.
 
 ## M11 — Interface / Experience
 
 M11 exposes JARVIS through replaceable interaction surfaces without making an interface the system itself.
 
-### M11.1 — Interface Boundary
-
-Establishes the provider-neutral boundary between external interaction surfaces and JARVIS.
-
 ```text
-Voice / Text / UI / API / Other Surface
-                ↓
-        InterfaceRequest
-                ↓
-             JARVIS
-                ↓
-        InterfaceResponse
+Interface Surface
+      ↓
+Interface Boundary
+      ↓
+Session / Conversation
+      ↓
+Request Bridge
+      ↓
+Streaming / Multi-Modal / HITL Experience
+      ↓
+Reliability / Recovery
+      ↓
+JARVIS
 ```
 
-M11.1 packages interface traffic but does not interpret intent, create authority, authorize execution, mutate policy, or choose an intelligence provider.
+M11 preserves the distinction between interface transport and system authority.
 
 ```text
-Interface ≠ JARVIS Identity
-Interface ≠ Intent Interpretation
+Interface ≠ JARVIS
 Channel ≠ Authority
 Input ≠ Authorization
 Response ≠ Execution
-Transport ≠ Policy
-Presentation ≠ Truth
-Interface Provider ≠ Intelligence Provider
+Human Input ≠ Authorization
+Recovery ≠ Authorization
+Provider ≠ JARVIS
 ```
 
-**M11.1 Status: FOCUSED GREEN / FULL DISCOVERY PENDING.**
+**Status: VERIFIED / COMPLETE.**
 
-The interface layer must converge on the same JARVIS semantic pipeline regardless of whether the caller is voice, text, UI, or API.
+## M12 — System Integration / Orchestration
 
-### M11.2 — Session / Conversation Runtime
-
-Adds bounded conversational continuity above the M11.1 transport boundary without making prior interaction implicit authorization or consent.
+M12 integrates the bounded M11 transport layer with the existing JARVIS semantic, durable-session, event, and recovery systems into one application-facing runtime.
 
 ```text
-InterfaceRequest
-      ↓
-SessionRuntime
-      ↓
-ConversationSession
-      ↓
-ConversationTurn
-      ↓
-InterfaceResponse
-      ↓
-JARVIS Processing
+M11 Transport
+     ↓
+Unified Request
+     ↓
+Session / Durable Session
+     ↓
+System Runtime
+     ↓
+Event Integration
+     ↓
+Recovery Integration
+     ↓
+Canonical JARVIS Runtime
+     ↓
+Existing JARVIS Semantics
+     ↓
+M7 Authority → M8 Agency
 ```
 
-M11.2 preserves session identity, ordered turn history, pending-request state, response correlation, and explicit history bounds through immutable provider-neutral records.
+### M12.1 — Unified Request Runtime
+
+Routes a provider-neutral `JARVISRequest` into the existing JARVIS processor without interpreting metadata as intent or authority.
+
+### M12.2 — Session Runtime Binding
+
+Binds session identity to an isolated processor while keeping session identity outside semantic query content.
+
+### M12.3 — System Runtime Facade
+
+Composes interface, request, and session routing into one system boundary.
+
+### M12.4 — Durable Session Lifecycle
+
+Persists stable session/conversation identity and permits continuity across runtime restarts.
+
+### M12.5 — Event Integrated Runtime
+
+Adds ordered interface response lifecycle events without changing semantic behavior.
+
+### M12.6 — Recovery Integrated Runtime
+
+Adds bounded transport recovery state. Retry/resume/replay remain mechanical actions, not permission or authorization.
+
+### M12.7 — Canonical JARVIS Runtime Facade
+
+Defines the application-facing `receive/process/respond` composition root over the verified integration stack.
+
+### M12.8 — Application Runtime Entrypoint
+
+Routes the local application entrypoint through the canonical runtime rather than bypassing it.
+
+### M12.9 — End-to-End Runtime Integration
+
+Verifies a real JARVIS processor across the complete runtime stack, including durable-session continuity, runtime restart, event ordering, recovery state, and session-identity isolation.
+
+**M12 Status: VERIFIED / COMPLETE.**
+
+Verified receipts:
 
 ```text
-Session ≠ Intent
-Conversation ≠ Truth
-Continuity ≠ Authority
-History ≠ Authorization
-Correlation ≠ Execution
-Session State ≠ Policy
-Interface ≠ JARVIS
-Prior Interaction ≠ Future Consent
+M12.7 focused      11/11
+Core regression    478/478
+M12.8 focused       2/2
+Core regression    480/480
+M12.9 focused       4/4
+Core regression    484/484
 ```
 
-**M11.2 Status: IN PROGRESS.**
+M12 architectural invariants:
+
+```text
+Integration ≠ New Authority
+Session Identity ≠ Semantic Intent
+Events ≠ Execution
+Recovery ≠ Permission
+Runtime Facade ≠ Semantic Engine
+AI Provider ≠ JARVIS Authority
+```
 
 ## Architectural Direction
 
 ```text
-M6  Context
+M6  Context                       ✅ CLOSED
  ↓
-M7  Authority                    ← CLOSED
+M7  Deterministic Authority      ✅ CLOSED
  ↓
-M8  Agency / Execution           ← CLOSED
+M8  Agency / Execution           ✅ CLOSED
  ↓
-M9  Workforce / Delegation       ← CLOSED
+M9  Workforce / Delegation       ✅ CLOSED
  ↓
-M10 Intelligence / Learning      ← CLOSED
+M10 Intelligence / Learning     ✅ CLOSED
  ↓
-M11 Interface / Experience       ← M11.2
+M11 Interface / Experience      ✅ CLOSED
+ ↓
+M12 System Integration          ✅ CLOSED
 ```
 
-The sequence is deliberate: first establish what JARVIS knows, then what it is permitted to do, then how it acts, then how it scales work, then how intelligence improves, and finally how the human experiences the system.
+The sequence is deliberate: first establish what JARVIS knows, then what it is permitted to do, then how it acts, how it scales work, how intelligence improves, how the human experiences it, and finally how those bounded systems compose into one application-facing runtime.
+
+Final hardening is intentionally separate from architectural integration. Database isolation/leak prevention, persistence security, filesystem boundaries, credential handling, concurrency, and broader security review will be handled as a dedicated hardening phase rather than mixed into completed milestone semantics.
