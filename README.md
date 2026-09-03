@@ -8,7 +8,7 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M12.2 — Session Runtime Binding: IMPLEMENTED — awaiting user verification**
+**M12 — System Integration / Orchestration: VERIFIED / COMPLETE**
 
 M11 Interface / Experience is VERIFIED / COMPLETE.
 
@@ -27,13 +27,13 @@ M9.7  Driveability / Objective Continuation       ✅
 ### M10 roadmap
 
 ```text
-M10.1  Learning / Experience Boundary              ✅ verified
-M10.2  Evidence + Outcome Evaluation               ✅ verified
-M10.3  Preference / Behavior Adaptation            ✅ verified
+M10.1  Learning / Experience Boundary               ✅ verified
+M10.2  Evidence + Outcome Evaluation                ✅ verified
+M10.3  Preference / Behavior Adaptation             ✅ verified
 M10.4  Memory Consolidation / Retrieval Improvement ✅ verified
-M10.5  Reasoning Quality Feedback Loop             ✅ verified
-M10.6  Learning Reliability / Reversal             ✅ verified
-M10.7  Intelligence Integration                   ✅ verified
+M10.5  Reasoning Quality Feedback Loop              ✅ verified
+M10.6  Learning Reliability / Reversal              ✅ verified
+M10.7  Intelligence Integration                    ✅ verified
 ```
 
 ### M11 roadmap
@@ -51,8 +51,15 @@ M11.7  Interface Reliability / Recovery             ✅ verified
 ### M12 roadmap
 
 ```text
-M12.1  Unified Request Runtime                      ✅ implemented
-M12.2  Session Runtime Binding                      → current
+M12.1  Unified Request Runtime                      ✅ verified
+M12.2  Session Runtime Binding                      ✅ verified
+M12.3  System Runtime Facade                       ✅ verified
+M12.4  Durable Session Lifecycle                   ✅ verified
+M12.5  Event Integrated Runtime                    ✅ verified
+M12.6  Recovery Integrated Runtime                 ✅ verified
+M12.7  Canonical JARVIS Runtime Facade             ✅ verified
+M12.8  Application Runtime Entrypoint              ✅ verified
+M12.9  End-to-End Runtime Integration              ✅ verified
 ```
 
 ### Learning invariant
@@ -69,12 +76,12 @@ M6  Working Context            ✅
 M7  Deterministic Authority    ✅ CLOSED
 M8  Agency / Execution         ✅ CLOSED
 M9  Workforce / Delegation     ✅ CLOSED
-M10 Intelligence / Learning    ✅ CLOSED
-M11 Interface / Experience     ✅ CLOSED
-M12 System Integration        → M12.2
+M10 Intelligence / Learning   ✅ CLOSED
+M11 Interface / Experience    ✅ CLOSED
+M12 System Integration        ✅ CLOSED
 ```
 
-M12 integrates the already-bounded subsystems into one system runtime. Integration must compose existing contracts rather than create a parallel authority path.
+M12 integrates the already-bounded subsystems into one application-facing runtime. It composes existing contracts rather than creating a parallel authority path.
 
 ## Documentation
 
@@ -89,4 +96,5 @@ M12 integrates the already-bounded subsystems into one system runtime. Integrati
 - [M10.2 Evidence / Outcome Evaluation](docs/milestones/M10_2_EVIDENCE_OUTCOME_EVALUATION.md)
 - [M10.3 Preference / Behavior Adaptation](docs/milestones/M10.3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
 - [M11 Complete](docs/milestones/M11_COMPLETE.md)
+- [M12 Complete](docs/milestones/M12_COMPLETE.md)
 - [Architecture Decisions](docs/decisions/)
