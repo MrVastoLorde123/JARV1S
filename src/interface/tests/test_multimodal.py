@@ -1,10 +1,10 @@
 import json
 import unittest
 
+from src.interface.boundary import InterfaceChannel
 from src.interface.multimodal import (
     InterfaceModality,
     ModalityDescriptor,
-    MultiModalRequest,
     MultiModalRuntime,
 )
 from src.interface.request import JARVISRequest
@@ -27,6 +27,7 @@ class MultiModalTests(unittest.TestCase):
         self.request = self.runtime.create(
             request_id="req-1",
             content="Please inspect these.",
+            channel=InterfaceChannel.UI,
             modalities=(self.text, self.image),
             session_id="session-1",
             metadata={"surface": "chat"},
@@ -54,6 +55,7 @@ class MultiModalTests(unittest.TestCase):
             self.runtime.create(
                 request_id="req-x",
                 content="x",
+                channel=InterfaceChannel.UI,
                 modalities=(self.text,),
                 max_modalities=0,
             )
@@ -63,15 +65,21 @@ class MultiModalTests(unittest.TestCase):
             self.runtime.create(
                 request_id="req-x",
                 content="x",
+                channel=InterfaceChannel.UI,
                 modalities=(self.text, self.image),
                 max_modalities=1,
             )
 
     def test_add_modality_preserves_order_and_identity(self) -> None:
-        request = self.runtime.create(request_id="req-2", content="inspect")
+        request = self.runtime.create(
+            request_id="req-2",
+            content="inspect",
+            channel=InterfaceChannel.TEXT,
+        )
         request = self.runtime.add_modality(request, self.text)
         request = self.runtime.add_modality(request, self.image)
         self.assertEqual(request.request_id, "req-2")
+        self.assertEqual(request.channel, InterfaceChannel.TEXT)
         self.assertEqual(
             [item.payload_ref for item in request.modalities],
             ["payload:text-1", "blob:image-1"],
@@ -81,6 +89,7 @@ class MultiModalTests(unittest.TestCase):
         request = self.runtime.create(
             request_id="req-3",
             content="inspect",
+            channel=InterfaceChannel.TEXT,
             max_modalities=1,
         )
         request = self.runtime.add_modality(request, self.text)
@@ -99,7 +108,7 @@ class MultiModalTests(unittest.TestCase):
         self.assertEqual(result.request_id, "req-1")
         self.assertEqual(result.source_request_id, "req-1")
         self.assertEqual(result.content, "Please inspect these.")
-        self.assertEqual(result.channel.value, "API")
+        self.assertEqual(result.channel, InterfaceChannel.UI)
         self.assertEqual(len(result.metadata["modalities"]), 2)
 
     def test_projection_does_not_interpret_intent_or_grant_authority(self) -> None:
@@ -129,6 +138,7 @@ class MultiModalTests(unittest.TestCase):
     def test_serialization_is_deterministic(self) -> None:
         self.assertEqual(self.request.to_json(), self.request.to_json())
         payload = json.loads(self.request.to_json())
+        self.assertEqual(payload["channel"], "UI")
         self.assertEqual(payload["modalities"][0]["media_type"], "text/plain")
         self.assertEqual(payload["modalities"][1]["modality"], "IMAGE")
 
@@ -141,6 +151,14 @@ class MultiModalTests(unittest.TestCase):
     def test_invalid_modality_is_rejected(self) -> None:
         with self.assertRaises((TypeError, ValueError)):
             ModalityDescriptor("UNKNOWN", "text/plain", "ref")
+
+    def test_invalid_channel_is_rejected(self) -> None:
+        with self.assertRaises((TypeError, ValueError)):
+            self.runtime.create(
+                request_id="req-invalid",
+                content="x",
+                channel="UNKNOWN",
+            )
 
 
 if __name__ == "__main__":
