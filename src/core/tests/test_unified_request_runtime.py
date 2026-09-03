@@ -1,8 +1,8 @@
 import unittest
 
 from src.core.unified_request_runtime import UnifiedRequestResult, UnifiedRequestRuntime
-from src.interface.boundary import InterfaceChannel, InterfaceResponse
-from src.interface.request import JARVISRequest
+from src.interface.boundary import InterfaceBoundary, InterfaceChannel, InterfaceResponse
+from src.interface.request import InterfaceRequestBridge, JARVISRequest
 
 
 class FakeResponse:
@@ -48,7 +48,7 @@ class UnifiedRequestRuntimeTests(unittest.TestCase):
 
     def test_request_metadata_cannot_select_provider(self) -> None:
         self.runtime.process(self.request)
-        self.assertNotIn("untrusted-request-metadata", self.processor.calls)
+        self.assertEqual(self.processor.calls, ["hello JARVIS"])
 
     def test_result_converts_to_interface_response(self) -> None:
         result = self.runtime.process(self.request)
@@ -88,6 +88,27 @@ class UnifiedRequestRuntimeTests(unittest.TestCase):
         runtime = UnifiedRequestRuntime(FailingProcessor())
         with self.assertRaises(RuntimeError):
             runtime.process(self.request)
+
+    def test_interface_bridge_converges_into_unified_runtime(self) -> None:
+        interface = InterfaceBoundary()
+        bridge = InterfaceRequestBridge()
+        source = interface.request(
+            request_id="req-2",
+            channel=InterfaceChannel.UI,
+            content="show my task",
+            session_id="session-2",
+        )
+        normalized = bridge.to_jarvis_request(source)
+        result = self.runtime.process(normalized)
+        response = result.to_interface_response()
+        self.assertEqual(self.processor.calls, ["show my task"])
+        self.assertEqual(response.request_id, "req-2")
+        self.assertEqual(response.metadata["session_id"], "session-2")
+
+    def test_runtime_does_not_create_a_second_semantic_path(self) -> None:
+        self.runtime.process(self.request)
+        self.assertEqual(len(self.processor.calls), 1)
+        self.assertEqual(self.processor.calls[0], self.request.content)
 
 
 if __name__ == "__main__":
