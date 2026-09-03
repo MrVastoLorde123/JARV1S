@@ -42,7 +42,6 @@ function Test-TcpPort {
     )
 
     $client = $null
-    $async = $null
     try {
         $client = [System.Net.Sockets.TcpClient]::new()
         $async = $client.BeginConnect($TargetHost, $TargetPort, $null, $null)
@@ -63,27 +62,81 @@ function Test-TcpPort {
     }
 }
 
-function Test-HttpHealth {
+function Get-ServerModelIds {
     param([Parameter(Mandatory)][string]$BaseUrl)
 
-    foreach ($path in @("/health", "/v1/models")) {
-        try {
-            $response = Invoke-WebRequest `
-                -Uri ($BaseUrl + $path) `
-                -Method Get `
-                -TimeoutSec 3 `
-                -UseBasicParsing
+    try {
+        $result = Invoke-RestMethod `
+            -Uri ($BaseUrl + "/v1/models") `
+            -Method Get `
+            -TimeoutSec 5
 
-            if ($response.StatusCode -eq 200) {
-                return $true
-            }
+        if ($null -eq $result.data) {
+            return @()
         }
-        catch {
-            # Keep trying while the server starts.
-        }
+
+        return @(
+            $result.data |
+                ForEach-Object {
+                    if ($null -ne $_.id) {
+                        [string]$_.id
+                    }
+                }
+        )
+    }
+    catch {
+        return @()
+    }
+}
+
+function Resolve-ServerModel {
+    param(
+        [Parameter(Mandatory)][string]$BaseUrl,
+        [Parameter(Mandatory)][string]$RequestedModel
+    )
+
+    $modelIds = @(Get-ServerModelIds -BaseUrl $BaseUrl)
+
+    if ($modelIds.Count -eq 0) {
+        Fail "The local server is reachable, but /v1/models returned no usable model IDs. Check the llama-server logs or configuration."
     }
 
-    return $false
+    Write-Host "Models exposed by server:"
+    foreach ($id in $modelIds) {
+        Write-Host "  $id"
+    }
+
+    if ($modelIds -contains $RequestedModel) {
+        return $RequestedModel
+    }
+
+    if ($modelIds.Count -eq 1) {
+        $selected = $modelIds[0]
+        Write-Host "Requested model '$RequestedModel' is not the server's model ID." -ForegroundColor Yellow
+        Write-Host "Using the only model exposed by llama-server: $selected" -ForegroundColor Green
+        return $selected
+    }
+
+    $choices = $modelIds -join ", "
+    Fail "Requested model '$RequestedModel' was not found. The server exposes multiple models: $choices. Re-run with -ModelAlias <model-id>."
+    return $null
+}
+
+function Test-HttpReady {
+    param([Parameter(Mandatory)][string]$BaseUrl)
+
+    try {
+        $response = Invoke-WebRequest `
+            -Uri ($BaseUrl + "/v1/models") `
+            -Method Get `
+            -TimeoutSec 3 `
+            -UseBasicParsing
+
+        return ($response.StatusCode -eq 200)
+    }
+    catch {
+        return $false
+    }
 }
 
 function Resolve-Executable {
@@ -189,14 +242,15 @@ Set-Location $repoRoot
 
 $serverProcess = $null
 $startedByScript = $false
-$serverOwnership = "existing"
+$serverOwnership = "none"
 $baseUrl = "http://$BindHost`:$Port"
+$effectiveModel = $ModelAlias
 
 try {
     Write-Stage "JARVIS LOCAL LAUNCH"
     Write-Host "Repository : $repoRoot"
     Write-Host "Endpoint   : $baseUrl"
-    Write-Host "LLM alias  : $ModelAlias"
+    Write-Host "Requested  : $ModelAlias"
 
     Write-Stage "Repository checks"
     if (-not $SkipGitCheck) {
@@ -223,10 +277,14 @@ try {
     $alreadyListening = Test-TcpPort -TargetHost $BindHost -TargetPort $Port
     if ($alreadyListening) {
         Write-Host "A service is already listening on $baseUrl" -ForegroundColor Green
-        if (-not (Test-HttpHealth -BaseUrl $baseUrl)) {
-            Fail "Port $Port is occupied, but the endpoint did not return a healthy llama-server response."
+
+        if (-not (Test-HttpReady -BaseUrl $baseUrl)) {
+            Fail "Port $Port is occupied, but the local OpenAI-compatible /v1/models endpoint is not healthy."
         }
-        Write-Host "Existing local model server is healthy." -ForegroundColor Green
+
+        Write-Host "Existing local model server is HTTP-ready." -ForegroundColor Green
+        $effectiveModel = Resolve-ServerModel -BaseUrl $baseUrl -RequestedModel $ModelAlias
+        $serverOwnership = "existing"
     }
     else {
         $serverPath = Resolve-Executable -ExplicitPath $LlamaServerPath
@@ -240,9 +298,9 @@ try {
         $stdoutLog = Join-Path $repoRoot "logs\local\llama-server-$timestamp.out.log"
         $stderrLog = Join-Path $repoRoot "logs\local\llama-server-$timestamp.err.log"
 
-        $quotedModelPath = '"' + $modelPath.Replace('"', '\"') + '"'
         $arguments = @(
-            "--model", $quotedModelPath,
+            "--model", $modelPath,
+            "--alias", $ModelAlias,
             "--host", $BindHost,
             "--port", $Port,
             "--ctx-size", $ContextSize
@@ -276,12 +334,12 @@ try {
                 $exitCode = $serverProcess.ExitCode
                 $tail = ""
                 if (Test-Path -LiteralPath $stderrLog) {
-                    $tail = (Get-Content -LiteralPath $stderrLog -Tail 30 -ErrorAction SilentlyContinue) -join "`n"
+                    $tail = (Get-Content -LiteralPath $stderrLog -Tail 50 -ErrorAction SilentlyContinue) -join "`n"
                 }
                 Fail "llama-server exited during startup with code $exitCode.`n`n$tail"
             }
 
-            if (Test-TcpPort -TargetHost $BindHost -TargetPort $Port -and (Test-HttpHealth -BaseUrl $baseUrl)) {
+            if (Test-TcpPort -TargetHost $BindHost -TargetPort $Port -and (Test-HttpReady -BaseUrl $baseUrl)) {
                 $ready = $true
                 break
             }
@@ -296,7 +354,13 @@ try {
         }
 
         Write-Host "llama-server is ready." -ForegroundColor Green
+        $effectiveModel = Resolve-ServerModel -BaseUrl $baseUrl -RequestedModel $ModelAlias
     }
+
+    Write-Host "Effective model: $effectiveModel" -ForegroundColor Green
+
+    $env:JARVIS_LOCAL_BASE_URL = $baseUrl
+    $env:JARVIS_LOCAL_MODEL = $effectiveModel
 
     Write-Stage "Regression checks"
     if ($SkipTests) {
@@ -319,8 +383,9 @@ try {
     }
 
     Write-Stage "Launching JARVIS"
-    Write-Host "Command: python -m src.run_local_jarvis" -ForegroundColor Green
-    Write-Host "Press Ctrl+C to stop JARVIS."
+    Write-Host "Endpoint: $env:JARVIS_LOCAL_BASE_URL"
+    Write-Host "Model   : $env:JARVIS_LOCAL_MODEL"
+    Write-Host "Command : python -m src.run_local_jarvis" -ForegroundColor Green
     Write-Host ""
 
     python -m src.run_local_jarvis
@@ -331,6 +396,9 @@ try {
     }
 }
 finally {
+    Remove-Item Env:JARVIS_LOCAL_BASE_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:JARVIS_LOCAL_MODEL -ErrorAction SilentlyContinue
+
     if ($startedByScript -and -not $KeepServer) {
         Stop-StartedServer -Process $serverProcess -StartedByScript $startedByScript
         $serverOwnership = "stopped-after-session"
