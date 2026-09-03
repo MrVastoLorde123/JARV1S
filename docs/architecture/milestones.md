@@ -244,9 +244,42 @@ Presentation ≠ Truth
 Interface Provider ≠ Intelligence Provider
 ```
 
-**M11.1 Status: IN PROGRESS.**
+**M11.1 Status: FOCUSED GREEN / FULL DISCOVERY PENDING.**
 
 The interface layer must converge on the same JARVIS semantic pipeline regardless of whether the caller is voice, text, UI, or API.
+
+### M11.2 — Session / Conversation Runtime
+
+Adds bounded conversational continuity above the M11.1 transport boundary without making prior interaction implicit authorization or consent.
+
+```text
+InterfaceRequest
+      ↓
+SessionRuntime
+      ↓
+ConversationSession
+      ↓
+ConversationTurn
+      ↓
+InterfaceResponse
+      ↓
+JARVIS Processing
+```
+
+M11.2 preserves session identity, ordered turn history, pending-request state, response correlation, and explicit history bounds through immutable provider-neutral records.
+
+```text
+Session ≠ Intent
+Conversation ≠ Truth
+Continuity ≠ Authority
+History ≠ Authorization
+Correlation ≠ Execution
+Session State ≠ Policy
+Interface ≠ JARVIS
+Prior Interaction ≠ Future Consent
+```
+
+**M11.2 Status: IN PROGRESS.**
 
 ## Architectural Direction
 
@@ -261,7 +294,7 @@ M9  Workforce / Delegation       ← CLOSED
  ↓
 M10 Intelligence / Learning      ← CLOSED
  ↓
-M11 Interface / Experience       ← M11.1
+M11 Interface / Experience       ← M11.2
 ```
 
 The sequence is deliberate: first establish what JARVIS knows, then what it is permitted to do, then how it acts, then how it scales work, then how intelligence improves, and finally how the human experiences the system.
