@@ -29,6 +29,17 @@ from .evaluation import (
     OutcomeEvaluator,
 )
 from .experience import Experience, ExperienceConflictError, ExperienceStore
+from .reasoning_quality import (
+    FeedbackSignal,
+    QualityDimension,
+    QualitySignal,
+    ReasoningFeedback,
+    ReasoningFeedbackConflictError,
+    ReasoningFeedbackController,
+    ReasoningQualityAssessment,
+    ReasoningQualityEvaluator,
+    ReasoningQualityStore,
+)
 
 __all__ = [
     "AdaptationConflictError",
@@ -49,11 +60,20 @@ __all__ = [
     "Experience",
     "ExperienceConflictError",
     "ExperienceStore",
+    "FeedbackSignal",
     "MemoryCandidate",
     "MemoryConsolidator",
     "MemoryRetriever",
     "MemoryStore",
     "OutcomeAssessment",
     "OutcomeEvaluator",
+    "QualityDimension",
+    "QualitySignal",
+    "ReasoningFeedback",
+    "ReasoningFeedbackConflictError",
+    "ReasoningFeedbackController",
+    "ReasoningQualityAssessment",
+    "ReasoningQualityEvaluator",
+    "ReasoningQualityStore",
     "RetrievalResult",
 ]
