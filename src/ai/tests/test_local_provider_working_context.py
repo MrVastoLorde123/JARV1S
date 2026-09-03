@@ -1,5 +1,6 @@
 import unittest
 
+from src.ai.errors import InvalidRequestError
 from src.ai.models import AIRequest
 from src.ai.providers.local_provider import LocalProvider
 from src.context.models import ContextItem, ContextPackage
@@ -50,7 +51,7 @@ class LocalProviderWorkingContextTests(unittest.TestCase):
             context={"not_context": {}},
         )
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(InvalidRequestError):
             LocalProvider()._build_messages(request)
 
 
