@@ -222,6 +222,10 @@ class JARVISTests(
         self,
     ):
 
+        self.original_database_path = (
+            database.DATABASE_PATH
+        )
+
         self.temp_directory = (
             tempfile.TemporaryDirectory()
         )
@@ -256,6 +260,10 @@ class JARVISTests(
     def tearDown(
         self,
     ):
+
+        database.set_database_path(
+            self.original_database_path
+        )
 
         self.temp_directory.cleanup()
 

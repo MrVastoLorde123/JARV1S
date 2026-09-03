@@ -62,6 +62,7 @@ class StaticSourceProvider(ContextSourceProvider):
 
 class JARVISWorkingContextIntegrationTests(unittest.TestCase):
     def setUp(self):
+        self.original_database_path = database.DATABASE_PATH
         self.temp_directory = tempfile.TemporaryDirectory()
         self.database_path = Path(self.temp_directory.name) / "test.db"
         database.set_database_path(self.database_path)
@@ -72,6 +73,7 @@ class JARVISWorkingContextIntegrationTests(unittest.TestCase):
         self.ai_service.register_provider(self.provider)
 
     def tearDown(self):
+        database.set_database_path(self.original_database_path)
         self.temp_directory.cleanup()
 
     def _create_schema(self):
