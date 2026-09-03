@@ -2,6 +2,15 @@
 
 from .boundary import InterfaceBoundary, InterfaceChannel, InterfaceRequest, InterfaceResponse
 from .events import InterfaceEvent, InterfaceEventKind, InterfaceEventRuntime, InterfaceEventStream
+from .hitl import (
+    DecisionOption,
+    HumanDecisionRequest,
+    HumanDecisionResponse,
+    HumanDecisionRuntime,
+    HumanDecisionState,
+    HumanDecisionStore,
+    HumanResponseStatus,
+)
 from .multimodal import InterfaceModality, ModalityDescriptor, MultiModalRequest, MultiModalRuntime
 from .request import InterfaceRequestBridge, JARVISRequest
 from .session import ConversationSession, ConversationTurn, SessionConflictError, SessionRuntime, SessionStore
@@ -9,6 +18,13 @@ from .session import ConversationSession, ConversationTurn, SessionConflictError
 __all__ = [
     "ConversationSession",
     "ConversationTurn",
+    "DecisionOption",
+    "HumanDecisionRequest",
+    "HumanDecisionResponse",
+    "HumanDecisionRuntime",
+    "HumanDecisionState",
+    "HumanDecisionStore",
+    "HumanResponseStatus",
     "InterfaceBoundary",
     "InterfaceChannel",
     "InterfaceEvent",
