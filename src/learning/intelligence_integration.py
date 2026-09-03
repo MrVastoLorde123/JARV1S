@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Mapping
 
 from src.learning.adaptation import AdaptationRecord, AdaptationState
-from src.learning.consolidation import ConsolidatedMemory, ConsolidationState, MemoryStore, RetrievalResult
+from src.learning.consolidation import RetrievalResult
 from src.learning.evaluation import Evaluation
-from src.learning.reasoning_quality import FeedbackSignal, ReasoningFeedback
+from src.learning.reasoning_quality import ReasoningFeedback
 from src.learning.reliability import ReliabilityRecord, ReliabilityState
 
 
@@ -41,12 +42,14 @@ class IntelligenceContext:
                 raise TypeError(f"{name} contains an invalid value")
         if not isinstance(self.provenance, Mapping):
             raise TypeError("provenance must be a mapping")
+        object.__setattr__(self, "query", self.query.strip())
         object.__setattr__(self, "provenance", MappingProxyType(dict(self.provenance)))
 
     @property
     def active_reliability(self) -> tuple[ReliabilityRecord, ...]:
         return tuple(
-            item for item in self.reliability
+            item
+            for item in self.reliability
             if item.state not in {ReliabilityState.REVERSED, ReliabilityState.SUPERSEDED}
         )
 
@@ -66,9 +69,14 @@ class IntelligenceContext:
             "policy_mutation": False,
         }
 
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), sort_keys=True, default=str)
+
 
 class IntelligenceIntegrator:
-    """Assemble bounded learning signals into reasoning context."""
+    """Assemble bounded learning signals into future reasoning context."""
+
+    _BLOCKED_RELIABILITY = {ReliabilityState.REVERSED, ReliabilityState.SUPERSEDED}
 
     def build_context(
         self,
@@ -83,15 +91,31 @@ class IntelligenceIntegrator:
     ) -> IntelligenceContext:
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must be a non-empty string")
-        if not isinstance(memory_results, tuple):
-            raise TypeError("memory_results must be a tuple")
-        filtered_memories = tuple(item for item in memory_results if item.score > 0.0)
+        for name, values in (
+            ("memory_results", memory_results),
+            ("feedback", feedback),
+            ("adaptations", adaptations),
+            ("reliability", reliability),
+            ("evaluations", evaluations),
+        ):
+            if not isinstance(values, tuple):
+                raise TypeError(f"{name} must be a tuple")
+
+        blocked_memory_ids = {
+            item.artifact_id
+            for item in reliability
+            if item.state in self._BLOCKED_RELIABILITY
+        }
+        filtered_reliability = tuple(
+            item for item in reliability if item.state not in self._BLOCKED_RELIABILITY
+        )
+        filtered_memories = tuple(
+            item
+            for item in memory_results
+            if item.score > 0.0 and item.memory_id not in blocked_memory_ids
+        )
         filtered_adaptations = tuple(
             item for item in adaptations if item.state == AdaptationState.ACCEPTED
-        )
-        filtered_reliability = tuple(
-            item for item in reliability
-            if item.state not in {ReliabilityState.REVERSED, ReliabilityState.SUPERSEDED}
         )
         merged_provenance = {
             "source": "m10.7",
@@ -104,7 +128,7 @@ class IntelligenceIntegrator:
         if provenance:
             merged_provenance.update(dict(provenance))
         return IntelligenceContext(
-            query=query.strip(),
+            query=query,
             memories=filtered_memories,
             feedback=feedback,
             adaptations=filtered_adaptations,
@@ -113,14 +137,17 @@ class IntelligenceIntegrator:
             provenance=merged_provenance,
         )
 
-    @staticmethod
+    @classmethod
     def exclude_unreliable_memory(
+        cls,
         memories: tuple[RetrievalResult, ...],
         reliability: tuple[ReliabilityRecord, ...],
     ) -> tuple[RetrievalResult, ...]:
+        if not isinstance(memories, tuple) or not isinstance(reliability, tuple):
+            raise TypeError("memories and reliability must be tuples")
         blocked_ids = {
             record.artifact_id
             for record in reliability
-            if record.state in {ReliabilityState.REVERSED, ReliabilityState.SUPERSEDED}
+            if record.state in cls._BLOCKED_RELIABILITY
         }
         return tuple(result for result in memories if result.memory_id not in blocked_ids)
