@@ -32,6 +32,7 @@ AdaptationRecord
 ├── proposal
 ├── state
 ├── acceptance_reference
+├── rejection_reference
 └── reversal_reference
 ```
 
@@ -62,7 +63,7 @@ Adaptation ≠ Self-Modification of Authority
 - Every proposal has explicit identity and supporting evaluation references.
 - Adaptation remains reversible.
 - Explicit user preferences cannot be silently overwritten; accepting such a proposal requires an explicit acceptance reference.
-- Accepted and reversed states preserve provenance through acceptance/reversal references.
+- Accepted, rejected, and reversed states preserve attributable acceptance/rejection/reversal references where applicable.
 - Adaptation serialization explicitly denies authority, authorization, execution, and policy mutation.
 - Duplicate adaptation records are explicit conflicts.
 - Adaptation does not mutate objective state, capability, policy, or M7 authorization.
