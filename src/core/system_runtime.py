@@ -36,7 +36,6 @@ class SystemRuntime:
 
     @property
     def session_runtime(self) -> SessionRuntime:
-        """Expose the composed session runtime without exposing new authority."""
         return self._session_runtime
 
     def receive(
@@ -48,13 +47,14 @@ class SystemRuntime:
         session_id: str | None = None,
         metadata: Mapping[str, object] | None = None,
     ) -> SessionRuntimeResult:
-        """Create an interface envelope and route it through the canonical path."""
+        """Create an interface request and route it through the canonical path."""
+        safe_metadata = {} if metadata is None else metadata
         interface_request = self._interface_boundary.request(
             request_id=request_id,
             channel=channel,
             content=content,
             session_id=session_id,
-            metadata=metadata,
+            metadata=safe_metadata,
         )
         return self.process(interface_request)
 
