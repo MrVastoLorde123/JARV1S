@@ -8,6 +8,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from src.interface.boundary import InterfaceChannel
 from src.interface.request import JARVISRequest
 
 
@@ -64,10 +65,11 @@ class ModalityDescriptor:
 
 @dataclass(frozen=True)
 class MultiModalRequest:
-    """Immutable multi-modal transport envelope that can project to one JARVIS request."""
+    """Immutable multi-modal transport envelope that projects to one JARVIS request."""
 
     request_id: str
     content: str
+    channel: InterfaceChannel
     modalities: tuple[ModalityDescriptor, ...] = ()
     session_id: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -78,6 +80,11 @@ class MultiModalRequest:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
+        if not isinstance(self.channel, InterfaceChannel):
+            try:
+                object.__setattr__(self, "channel", InterfaceChannel(self.channel))
+            except (TypeError, ValueError) as exc:
+                raise TypeError("channel must be an InterfaceChannel") from exc
         if self.session_id is not None and (
             not isinstance(self.session_id, str) or not self.session_id.strip()
         ):
@@ -109,7 +116,7 @@ class MultiModalRequest:
             request_id=self.request_id,
             source_request_id=self.request_id,
             content=self.content,
-            channel="API",
+            channel=self.channel,
             session_id=self.session_id,
             metadata=combined_metadata,
         )
@@ -118,6 +125,7 @@ class MultiModalRequest:
         return {
             "request_id": self.request_id,
             "content": self.content,
+            "channel": self.channel.value,
             "session_id": self.session_id,
             "modalities": [item.to_dict() for item in self.modalities],
             "max_modalities": self.max_modalities,
@@ -142,6 +150,7 @@ class MultiModalRuntime:
         *,
         request_id: str,
         content: str,
+        channel: InterfaceChannel,
         modalities: tuple[ModalityDescriptor, ...] = (),
         session_id: str | None = None,
         metadata: Mapping[str, Any] | None = None,
@@ -150,6 +159,7 @@ class MultiModalRuntime:
         return MultiModalRequest(
             request_id=request_id,
             content=content,
+            channel=channel,
             modalities=modalities,
             session_id=session_id,
             metadata=metadata or {},
@@ -170,6 +180,7 @@ class MultiModalRuntime:
         return MultiModalRequest(
             request_id=request.request_id,
             content=request.content,
+            channel=request.channel,
             modalities=request.modalities + (descriptor,),
             session_id=request.session_id,
             metadata=request.metadata,
