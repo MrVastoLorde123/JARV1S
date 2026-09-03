@@ -12,6 +12,14 @@ from .hitl import (
     HumanResponseStatus,
 )
 from .multimodal import InterfaceModality, ModalityDescriptor, MultiModalRequest, MultiModalRuntime
+from .reliability import (
+    InterfaceRecoveryAction,
+    InterfaceRecoveryState,
+    InterfaceRecoveryStore,
+    InterfaceReliabilityRecord,
+    InterfaceReliabilityRuntime,
+    InterfaceReliabilityState,
+)
 from .request import InterfaceRequestBridge, JARVISRequest
 from .session import ConversationSession, ConversationTurn, SessionConflictError, SessionRuntime, SessionStore
 
@@ -32,6 +40,12 @@ __all__ = [
     "InterfaceEventRuntime",
     "InterfaceEventStream",
     "InterfaceModality",
+    "InterfaceRecoveryAction",
+    "InterfaceRecoveryState",
+    "InterfaceRecoveryStore",
+    "InterfaceReliabilityRecord",
+    "InterfaceReliabilityRuntime",
+    "InterfaceReliabilityState",
     "InterfaceRequest",
     "InterfaceRequestBridge",
     "InterfaceResponse",
