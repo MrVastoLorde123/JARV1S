@@ -26,7 +26,6 @@ class EvaluationConflictError(ValueError):
 @dataclass(frozen=True)
 class Evidence:
     """Explicit evidence signal used by evaluation; it is not truth."""
-
     evidence_id: str
     signal: str
     supports_success: bool | None = None
@@ -57,7 +56,6 @@ class Evidence:
 @dataclass(frozen=True)
 class OutcomeAssessment:
     """Bounded assessment of explicit evidence against an observed outcome."""
-
     outcome: str
     evidence: tuple[Evidence, ...] = ()
     complete: bool = True
@@ -79,7 +77,6 @@ class OutcomeAssessment:
 @dataclass(frozen=True)
 class Evaluation:
     """Immutable, inspectable evaluation result; never a truth claim."""
-
     evaluation_id: str
     experience_id: str
     state: EvaluationState
@@ -134,16 +131,7 @@ class Evaluation:
 
 class OutcomeEvaluator:
     """Deterministic evaluator using only explicit evidence and outcome completeness."""
-
-    def evaluate(
-        self,
-        experience: Experience,
-        assessment: OutcomeAssessment,
-        *,
-        evaluation_id: str | None = None,
-        confidence: float | None = None,
-        provenance: Mapping[str, Any] | None = None,
-    ) -> Evaluation:
+    def evaluate(self, experience: Experience, assessment: OutcomeAssessment, *, evaluation_id: str | None = None, confidence: float | None = None, provenance: Mapping[str, Any] | None = None) -> Evaluation:
         if not isinstance(experience, Experience):
             raise TypeError("experience must be an Experience")
         if not isinstance(assessment, OutcomeAssessment):
@@ -171,7 +159,6 @@ class OutcomeEvaluator:
             else:
                 state = EvaluationState.INCONCLUSIVE
                 rationale = "evaluation cannot establish a directional outcome"
-
         return Evaluation(
             evaluation_id=evaluation_id or f"{experience.experience_id}:evaluation",
             experience_id=experience.experience_id,
