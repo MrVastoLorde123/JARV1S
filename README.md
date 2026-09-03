@@ -8,9 +8,9 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M10.3 — Preference / Behavior Adaptation: IMPLEMENTED — awaiting user verification**
+**M12.1 — Unified Request Runtime: IMPLEMENTED — awaiting user verification**
 
-M9 is complete. M10 builds the intelligence/learning layer without creating a second authority system.
+M11 Interface / Experience is VERIFIED / COMPLETE.
 
 ### M9 roadmap
 
@@ -29,11 +29,29 @@ M9.7  Driveability / Objective Continuation       ✅
 ```text
 M10.1  Learning / Experience Boundary              ✅ verified
 M10.2  Evidence + Outcome Evaluation               ✅ verified
-M10.3  Preference / Behavior Adaptation            → current
-M10.4  Memory Consolidation / Retrieval Improvement
-M10.5  Reasoning Quality Feedback Loop
-M10.6  Learning Reliability / Reversal
-M10.7  Intelligence Integration
+M10.3  Preference / Behavior Adaptation            ✅ verified
+M10.4  Memory Consolidation / Retrieval Improvement ✅ verified
+M10.5  Reasoning Quality Feedback Loop             ✅ verified
+M10.6  Learning Reliability / Reversal             ✅ verified
+M10.7  Intelligence Integration                   ✅ verified
+```
+
+### M11 roadmap
+
+```text
+M11.1  Interface Boundary                           ✅ verified
+M11.2  Session / Conversation Runtime               ✅ verified
+M11.3  Intent → JARVIS Request                      ✅ verified
+M11.4  Streaming / Event Experience                 ✅ verified
+M11.5  Multi-Modal Interface                        ✅ verified
+M11.6  Human-in-the-Loop Experience                 ✅ verified
+M11.7  Interface Reliability / Recovery             ✅ verified
+```
+
+### M12 roadmap
+
+```text
+M12.1  Unified Request Runtime                      → current
 ```
 
 ### Learning invariant
@@ -43,21 +61,6 @@ JARVIS should be capable of changing how it behaves
 without being allowed to change what it is authorized to do.
 ```
 
-### M10.3 adaptation walls
-
-```text
-Adaptation ≠ Authorization
-Preference ≠ Policy
-Behavior ≠ Authority
-Feedback ≠ Truth
-Evaluation ≠ User Intent
-Learning Candidate ≠ Learned Policy
-Adaptation ≠ Execution
-Adaptation ≠ Self-Modification of Authority
-```
-
-M10.3 defines bounded adaptation proposals and immutable adaptation records. Adaptations require explicit acceptance references, preserve the previous value for reversal, and never mutate policy, authorization, objectives, capabilities, or execution semantics.
-
 ## Road Ahead
 
 ```text
@@ -65,9 +68,12 @@ M6  Working Context            ✅
 M7  Deterministic Authority    ✅ CLOSED
 M8  Agency / Execution         ✅ CLOSED
 M9  Workforce / Delegation     ✅ CLOSED
-M10 Intelligence / Learning    → M10.3
-M11 Interface / Experience
+M10 Intelligence / Learning    ✅ CLOSED
+M11 Interface / Experience    ✅ CLOSED
+M12 System Integration        → M12.1
 ```
+
+M12 begins integrating the already-bounded subsystems into one system runtime. Integration must compose existing contracts rather than create a parallel authority path.
 
 ## Documentation
 
@@ -81,4 +87,5 @@ M11 Interface / Experience
 - [M10.1 Learning / Experience Boundary](docs/milestones/M10_1_LEARNING_EXPERIENCE_BOUNDARY.md)
 - [M10.2 Evidence / Outcome Evaluation](docs/milestones/M10_2_EVIDENCE_OUTCOME_EVALUATION.md)
 - [M10.3 Preference / Behavior Adaptation](docs/milestones/M10_3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
+- [M11 Complete](docs/milestones/M11_COMPLETE.md)
 - [Architecture Decisions](docs/decisions/)
