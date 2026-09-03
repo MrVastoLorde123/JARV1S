@@ -1,3 +1,5 @@
+import os
+
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
 from src.core.jarvis import JARVIS
@@ -7,9 +9,18 @@ from src.interface.boundary import InterfaceChannel
 
 def main():
 
+    base_url = os.environ.get(
+        "JARVIS_LOCAL_BASE_URL",
+        "http://127.0.0.1:8080",
+    )
+    model = os.environ.get(
+        "JARVIS_LOCAL_MODEL",
+        "qwen3-4b-local",
+    )
+
     provider = LocalProvider(
-        base_url="http://127.0.0.1:8080",
-        model="qwen3-4b-local",
+        base_url=base_url,
+        model=model,
         timeout=120,
     )
 
@@ -47,6 +58,14 @@ def main():
     print(
         "Request ID:",
         response.request_id
+    )
+    print(
+        "Local endpoint:",
+        base_url
+    )
+    print(
+        "Local model:",
+        model
     )
 
 
