@@ -1,4 +1,5 @@
 import io
+import os
 import unittest
 from contextlib import redirect_stdout
 from unittest.mock import MagicMock, patch
@@ -33,7 +34,14 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         )
 
         output = io.StringIO()
-        with redirect_stdout(output):
+        with patch.dict(
+            os.environ,
+            {
+                "JARVIS_LOCAL_BASE_URL": "http://127.0.0.1:8080",
+                "JARVIS_LOCAL_MODEL": "qwen3-4b-local",
+            },
+            clear=False,
+        ), redirect_stdout(output):
             run_local_jarvis.main()
 
         local_provider_cls.assert_called_once_with(
