@@ -8,7 +8,7 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M12.1 — Unified Request Runtime: IMPLEMENTED — awaiting user verification**
+**M12.2 — Session Runtime Binding: IMPLEMENTED — awaiting user verification**
 
 M11 Interface / Experience is VERIFIED / COMPLETE.
 
@@ -51,7 +51,8 @@ M11.7  Interface Reliability / Recovery             ✅ verified
 ### M12 roadmap
 
 ```text
-M12.1  Unified Request Runtime                      → current
+M12.1  Unified Request Runtime                      ✅ implemented
+M12.2  Session Runtime Binding                      → current
 ```
 
 ### Learning invariant
@@ -69,11 +70,11 @@ M7  Deterministic Authority    ✅ CLOSED
 M8  Agency / Execution         ✅ CLOSED
 M9  Workforce / Delegation     ✅ CLOSED
 M10 Intelligence / Learning    ✅ CLOSED
-M11 Interface / Experience    ✅ CLOSED
-M12 System Integration        → M12.1
+M11 Interface / Experience     ✅ CLOSED
+M12 System Integration        → M12.2
 ```
 
-M12 begins integrating the already-bounded subsystems into one system runtime. Integration must compose existing contracts rather than create a parallel authority path.
+M12 integrates the already-bounded subsystems into one system runtime. Integration must compose existing contracts rather than create a parallel authority path.
 
 ## Documentation
 
@@ -86,6 +87,6 @@ M12 begins integrating the already-bounded subsystems into one system runtime. I
 - [M8.6 Reliability / Recovery](docs/milestones/M8_6_AGENCY_RELIABILITY_RECOVERY.md)
 - [M10.1 Learning / Experience Boundary](docs/milestones/M10_1_LEARNING_EXPERIENCE_BOUNDARY.md)
 - [M10.2 Evidence / Outcome Evaluation](docs/milestones/M10_2_EVIDENCE_OUTCOME_EVALUATION.md)
-- [M10.3 Preference / Behavior Adaptation](docs/milestones/M10_3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
+- [M10.3 Preference / Behavior Adaptation](docs/milestones/M10.3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
 - [M11 Complete](docs/milestones/M11_COMPLETE.md)
 - [Architecture Decisions](docs/decisions/)
