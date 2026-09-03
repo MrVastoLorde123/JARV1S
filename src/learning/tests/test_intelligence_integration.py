@@ -69,6 +69,12 @@ class IntelligenceIntegrationTests(unittest.TestCase):
             state=ReliabilityState.RETAINED,
             assessment_id="reliability-1",
         )
+        self.suspended_reliability = ReliabilityRecord(
+            record_id="memory-4:reliability:1",
+            artifact_id="memory-4",
+            state=ReliabilityState.SUSPENDED,
+            assessment_id="reliability-4",
+        )
         self.reversed_reliability = ReliabilityRecord(
             record_id="memory-2:reliability:2->reversed",
             artifact_id="memory-2",
@@ -117,10 +123,19 @@ class IntelligenceIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(context.memories, ())
 
-    def test_active_reliability_preserves_nonterminal_history(self) -> None:
+    def test_suspended_memory_is_excluded_from_context(self) -> None:
+        suspended = RetrievalResult("memory-4", 0.9, "suspended lesson", {})
         context = self.integrator.build_context(
             "query",
-            reliability=(self.retained_reliability, self.reversed_reliability),
+            memory_results=(self.memory, suspended),
+            reliability=(self.retained_reliability, self.suspended_reliability),
+        )
+        self.assertEqual(tuple(item.memory_id for item in context.memories), ("memory-1",))
+
+    def test_active_reliability_preserves_only_current_usable_states(self) -> None:
+        context = self.integrator.build_context(
+            "query",
+            reliability=(self.retained_reliability, self.suspended_reliability, self.reversed_reliability),
         )
         self.assertEqual(context.reliability, (self.retained_reliability,))
         self.assertEqual(context.active_reliability, (self.retained_reliability,))
