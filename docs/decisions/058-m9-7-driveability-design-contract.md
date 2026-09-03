@@ -52,3 +52,7 @@ Explicit user updates, cancellation, or authority-layer decisions are the only m
 ## Termination
 
 Every continuation run must have explicit termination conditions. No hidden infinite loop, recursive self-delegation, or indefinite retry cycle is permitted.
+
+## Implementation boundary
+
+M9.7 begins with a deterministic contract. Model-driven next-step selection is downstream of this boundary; model output is a proposal, not authority.
