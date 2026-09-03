@@ -19,7 +19,7 @@ from src.interface.reliability import InterfaceRecoveryAction, InterfaceReliabil
 class FakeAIProvider(AIProvider):
     def generate(self, request):
         return AIResponse(
-            content=f"handled: {request.prompt}",
+            content=f"handled: {request.task}",
             provider="fake",
             model="fake-model",
             finish_reason="completed",
