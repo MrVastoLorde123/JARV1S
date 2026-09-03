@@ -25,7 +25,9 @@ class DelegationPlan:
     plan_id: str
     assignments: tuple[WorkerAssignment, ...]
     dependencies: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
-    max_assignments: int = 1
+    # A bounded default keeps plans safe without making multi-worker
+    # delegation impossible when callers omit an explicit plan-level bound.
+    max_assignments: int = 8
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
