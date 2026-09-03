@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — M9.6 implementation in progress.
+**Verified / Complete — 986 / 986 full tests passing.**
 
 ## Decision
 
