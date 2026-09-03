@@ -8,41 +8,40 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M8 — Agency / Execution: VERIFIED / COMPLETE**
+**M9 — Workforce / Delegation: M9.6 VERIFIED / COMPLETE**
 
-The M8 implementation is verified at **942 / 942 tests passing** from the user's real checkout.
+The latest verified user checkout passes **986 / 986 tests**.
+
+### M9 roadmap
 
 ```text
-M7 Authority
-      ↓
-ExecutionRequest
-      ↓
-M8.1 Runtime
-      ↓
-M8.2 Capability / Plugin Boundary
-      ↓
-M8.3 Observation Integration
-      ↓
-M8.4 Lifecycle / Continuation
-      ↓
-M8.5 Controlled Multi-Step Agency
-      ↓
-M8.6 Reliability / Recovery
+M9.1  Worker Identity / Assignment Boundary       ✅
+M9.2  Bounded Worker Runtime                      ✅
+M9.3  Worker Context / Knowledge Boundary          ✅
+M9.4  Worker Reporting / Result Integration        ✅
+M9.5  Delegation / Coordination                   ✅
+M9.6  Workforce Reliability / Recovery            ✅
+M9.7  Driveability / Objective Continuation       → next
 ```
 
-### M8 invariants
+### Workforce invariant
 
 ```text
-READY ≠ EXECUTED
-Execution ≠ Authorization
-Observation ≠ Permission
-Sequencing ≠ Authority
-Continuation ≠ Authorization
+JARVIS may distribute work without distributing authority.
+```
+
+### M9.6 reliability invariants
+
+```text
 Recovery ≠ Authorization
 Retry Eligibility ≠ Permission
+Failure Handling ≠ Authority Escalation
+Worker Recovery State ≠ Global Authority
+Resumption ≠ Re-Authorization
+Recovery Sequencing ≠ Dependency Bypass
 ```
 
-M8.6 completes the agency runtime without introducing a second authority system. Recovery remains bounded, explicit, and non-executing; any new executable action still requires a fresh M7 authority path.
+M9.6 preserves worker identity, assignment scope, delegation dependencies, and recovery provenance. Recovery remains non-executing; any retry or follow-up execution must re-enter the established M7/M8 authority path.
 
 ## Road Ahead
 
@@ -50,7 +49,7 @@ M8.6 completes the agency runtime without introducing a second authority system.
 M6  Working Context            ✅
 M7  Deterministic Authority    ✅ CLOSED
 M8  Agency / Execution         ✅ CLOSED
-M9  Workforce / Delegation     → next
+M9  Workforce / Delegation     → M9.7
 M10 Intelligence / Learning
 M11 Interface / Experience
 ```
