@@ -9,7 +9,7 @@ semantic path.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import Protocol
 
 from src.core.unified_request_runtime import UnifiedRequestResult, UnifiedRequestRuntime
 from src.interface.request import JARVISRequest
