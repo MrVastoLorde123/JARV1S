@@ -25,12 +25,14 @@ These remain semantically distinct inside the context. Integration is aggregatio
 Reliability is a safety filter at the intelligence boundary:
 
 ```text
-REVERSED / SUPERSEDED
-        ↓
+SUSPENDED / REVERSED / SUPERSEDED
+              ↓
 not eligible for active reasoning context
 ```
 
 Their historical existence remains preserved in M10.6. Filtering is not deletion.
+
+`WATCH` and `CONFLICTED` reliability states remain represented as explicit reliability evidence while they are active in context; they are not silently promoted to truth.
 
 ## Adaptation interaction
 
@@ -58,7 +60,7 @@ Intelligence ≠ Unbounded Agency
 - no capability expansion
 - no automatic policy mutation
 - no conversion of learning confidence into certainty
-- no silent resurrection of reversed or superseded learning
+- no silent resurrection of reversed, suspended, or superseded learning
 - no provider-specific intelligence runtime
 
 ## Architecture
