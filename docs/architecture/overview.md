@@ -4,18 +4,57 @@ JARVIS is a persistent personal intelligence and agency system. It is not a chat
 
 ## Core Principle
 
-> **JARVIS is the system. AI is a capability.**
+> **JARVIS is the system. AI models are capabilities inside it.**
 
-The system owns durable state, context, authority, capabilities, execution, and orchestration. AI models provide intelligence inside those boundaries.
+JARVIS owns durable state, identity, context, knowledge, reasoning orchestration, authority, capabilities, execution, and recovery. Models, plugins, workers, tools, and interfaces are replaceable components that operate inside those boundaries.
 
-## Major Layers
+## Cognitive architecture
+
+JARVIS is intentionally designed as a hybrid cognitive system rather than a single learned model.
+
+```text
+Environment / User
+        ↓
+Perception / Input
+        ↓
+Evidence + Provenance
+        ↓
+Memory + Personal Knowledge
+        ↓
+World Model / Current Context
+        ↓
+Reasoning + Prediction
+        ↓
+Learning / Adaptation
+        ↓
+Goals + Planning
+        ↓
+Initiative
+        ↓
+Validation + Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution / Capabilities
+        ↓
+Outcome / Feedback
+        └──────────────→ Learning
+```
+
+Machine learning is an implementation option within this architecture, not the architecture itself.
+
+## Major layers
 
 ```text
 Knowledge
    ↓
-Context
+Context / World Model
    ↓
-Intelligence
+Cognitive Intelligence
+   ↓
+Planning / Initiative
    ↓
 Authority
    ↓
@@ -28,29 +67,33 @@ External World
 
 ### Knowledge
 
-Memory, evidence, provenance, and durable project information.
+Memory, evidence, provenance, durable project information, learned facts, procedures, preferences, experiences, and historical records.
 
-### Context
+### Context / World Model
 
-Working context assembled for a task. Context selection and composition remain provider-neutral.
+Working and persistent representations of entities, relationships, events, state, time, goals, and current circumstances. Context can inform reasoning and initiative but cannot become authority.
 
-### Intelligence
+### Cognitive Intelligence
 
-AI-assisted reasoning, interpretation, prioritization, planning, and other cognitive capabilities.
+Reasoning, interpretation, prediction, uncertainty estimation, learning, adaptation, model use, search, optimization, and other bounded cognitive mechanisms.
+
+### Planning / Initiative
+
+Goal-directed planning and proactive recognition of opportunities or needs. Planning and initiative may recommend what should happen next, but they cannot silently authorize or execute it.
 
 ### Authority
 
-The deterministic semantic pipeline established by M7. It decides whether a proposed action is valid, permitted, confirmed where required, authorized, and ready for execution handoff.
+The deterministic semantic pipeline established by M7. It determines whether a proposed action is valid, permitted, confirmed where required, authorized, and ready for execution handoff.
 
 ### Agency
 
-The post-M7 runtime that turns an authorized handoff into real execution, observes outcomes, and records result/error state. This is the focus of M8.
+The post-M7 runtime that turns an authorized handoff into bounded execution, observes outcomes, and records result/error state. This is the focus of M8 and later agency layers.
 
 ### Capabilities / Plugins
 
-Concrete abilities exposed to JARVIS, such as filesystem operations, browsing, APIs, automation, and future integrations.
+Concrete abilities exposed to JARVIS, such as filesystem operations, browsing, APIs, automation, software tools, and future integrations. A capability does not grant permission to use itself.
 
-## M7 Boundary
+## M7 Authority Boundary
 
 ```text
 Reasoning
@@ -76,17 +119,79 @@ Authorization Integrity
 Execution Preparation / Handoff
 ```
 
-M7 ends here. No M7.11 is defined.
+M7 ends here. No intelligence component may bypass this chain.
 
-## Architectural Invariants
+## Cognitive / epistemic boundaries
 
 ```text
-Interpretation ≠ Truth
-Validation ≠ Authorization
-Confirmation ≠ Authorization
-Authorization ≠ Execution
-Integrity ≠ Authority
-READY ≠ EXECUTED
+Signal ≠ Evidence
+Evidence ≠ Truth
+Observation ≠ Interpretation
+Interpretation ≠ Belief
+Belief ≠ Prediction
+Knowledge ≠ Truth
+Memory ≠ User Intent
+Prediction ≠ Permission
 ```
 
-These boundaries allow JARVIS to become more capable without letting a model, plugin, worker, or interface silently become the source of authority.
+## Learning boundaries
+
+```text
+Learning ≠ Authority
+Adaptation ≠ Authorization
+Experience ≠ Policy
+Reversal ≠ Erasure
+Newer ≠ Automatically Correct
+```
+
+## Agency boundaries
+
+```text
+Capability ≠ Permission
+Worker ≠ Authority
+Assignment ≠ Authorization
+Delegation ≠ Authority Escalation
+Initiative ≠ Authorization
+Planning ≠ Execution
+Recovery ≠ Execution
+```
+
+## Model boundary
+
+```text
+Model ≠ JARVIS
+LLM ≠ JARVIS
+Interface ≠ JARVIS
+```
+
+A model can interpret language, classify evidence, propose hypotheses, summarize memory, forecast outcomes, or assist with planning. JARVIS remains responsible for composing those capabilities into a persistent, evidence-aware, authority-bounded system.
+
+## Mathematical substrate
+
+JARVIS should use formal structures where they fit the problem:
+
+- probability / Bayesian updating for uncertainty and belief revision
+- graph theory for relationships, dependencies, and plans
+- temporal reasoning for validity, order, expiry, and recurrence
+- state machines for lifecycle and safety boundaries
+- optimization for constrained prioritization and resource allocation
+- decision theory for risk-aware choices among permitted alternatives
+- information theory for uncertainty reduction and information gathering
+- control / feedback for closed-loop correction and learning
+
+These mechanisms complement explicit deterministic contracts. They do not replace authority.
+
+## Architectural objective
+
+The system should become increasingly intelligent without becoming increasingly unbounded.
+
+```text
+More knowledge
++ better reasoning
++ better learning
++ better prediction
++ better planning
++ better tools
+        ≠
+more authority
+```
