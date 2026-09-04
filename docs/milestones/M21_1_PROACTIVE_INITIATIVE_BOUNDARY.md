@@ -2,25 +2,42 @@
 
 ## Purpose
 
-M20 established bounded long-horizon continuation for work already represented as a goal, objective, and task graph. M21 introduces the ability for JARVIS to notice that something may deserve attention without turning that notice into autonomous action.
+M20 established bounded long-horizon continuation for work already represented as a goal, objective, and task graph. The updated JARVIS architecture now treats proactive behavior as part of a larger cognitive loop rather than as a direct trigger-to-action mechanism.
 
-M21.1 therefore defines the boundary between a **signal** and a future **initiative candidate**.
-
-## Flow
+M21.1 therefore defines the first proactive boundary while preserving the new cognitive and epistemic structure:
 
 ```text
 Signal / Observation
         ↓
-ProactiveTrigger
+Evidence + Provenance
         ↓
-InitiativeCandidate
+Context / World Model
         ↓
-InitiativeEvaluation
+Reasoning / Uncertainty
         ↓
-[future M21 proposal layer]
+Initiative Candidate
+        ↓
+Evaluation
+        ↓
+[future Proposal]
+        ↓
+[existing Authority Chain]
 ```
 
-The M21.1 implementation stops at evaluation.
+M21.1 implements only the trigger, bounded candidate, and deterministic evaluation layers. The later stages remain separate milestones.
+
+## Cognitive architecture fit
+
+M21.1 does not attempt to "make JARVIS intelligent" by adding an LLM or an opaque scoring model. It establishes a clean input boundary that later cognitive mechanisms can reason over.
+
+The trigger preserves **signal provenance**, not truth. Evidence identities can be carried into later reasoning without being silently promoted to facts.
+
+```text
+Signal ≠ Evidence
+Evidence ≠ Truth
+Trigger ≠ User Intent
+Eligibility ≠ Action
+```
 
 ## Core contracts
 
@@ -40,7 +57,7 @@ A trigger is **not** user intent, truth, authorization, or an execution request.
 
 ### `InitiativeCandidate`
 
-An immutable bounded candidate that says, in effect, **“this may deserve consideration.”**
+An immutable bounded candidate that says, in effect, **"this may deserve consideration."**
 
 It preserves:
 - candidate identity
@@ -62,18 +79,6 @@ An immutable deterministic disposition:
 
 Evaluation controls whether the candidate can proceed to a later proposal-stage decision. It does not perform that decision itself.
 
-## Authority walls
-
-```text
-Trigger ≠ User Intent
-Initiative Candidate ≠ Proposal
-Initiative Candidate ≠ Authorization
-Proactive Evaluation ≠ Permission
-Signal ≠ Truth
-Eligibility ≠ Action
-Proactivity ≠ Autonomous Agency
-```
-
 ## Deterministic rules
 
 1. Candidate and trigger identities must match.
@@ -82,6 +87,39 @@ Proactivity ≠ Autonomous Agency
 4. Review requests produce `NEEDS_REVIEW` and do not bypass the boundary.
 5. Otherwise the candidate is `ELIGIBLE` for a later proposal-stage decision.
 6. No function in M21.1 creates tasks, schedules work, notifies the user, grants authorization, or executes anything.
+
+## Why this boundary comes first
+
+Proactivity becomes dangerous when a system collapses these stages:
+
+```text
+noticed something
+      ↓
+therefore it is true
+      ↓
+therefore the user wants it
+      ↓
+therefore it should happen
+      ↓
+therefore I may do it
+```
+
+M21.1 intentionally prevents that collapse.
+
+The future M21 architecture may use probabilistic reasoning, learned preferences, temporal models, optimization, information-gain measures, or model-assisted reasoning to improve candidate quality. None of those mechanisms will remove the boundary between cognition and authority.
+
+## Authority walls
+
+```text
+Trigger ≠ User Intent
+Initiative Candidate ≠ Proposal
+Initiative Candidate ≠ Authorization
+Proactive Evaluation ≠ Permission
+Signal ≠ Evidence
+Evidence ≠ Truth
+Eligibility ≠ Action
+Proactivity ≠ Autonomous Agency
+```
 
 ## Test receipt
 
