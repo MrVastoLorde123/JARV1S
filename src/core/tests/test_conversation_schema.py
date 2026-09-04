@@ -114,6 +114,50 @@ class ConversationSchemaTests(
             row
         )
 
+    def test_initialization_tolerates_missing_messages_table(self):
+        connection = sqlite3.connect(
+            self.database_path
+        )
+
+        connection.execute(
+            "DROP TABLE messages"
+        )
+        connection.commit()
+        connection.close()
+
+        ConversationStore()
+
+        connection = sqlite3.connect(
+            self.database_path
+        )
+
+        state_row = connection.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = 'conversation_state'
+            """
+        ).fetchone()
+
+        index_row = connection.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'index'
+              AND name = 'idx_messages_conversation_created'
+            """
+        ).fetchone()
+
+        connection.close()
+
+        self.assertIsNotNone(
+            state_row
+        )
+        self.assertIsNone(
+            index_row
+        )
+
 
 if __name__ == "__main__":
     unittest.main(
