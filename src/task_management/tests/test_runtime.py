@@ -71,9 +71,8 @@ class LongHorizonRuntimeTests(unittest.TestCase):
     def test_recovery_rejects_cross_objective_task_state(self) -> None:
         payload = self.runtime.build(plan_id="plan-1", snapshot_id="snapshot-1").snapshot.to_dict()
         payload["tasks"][0]["objective_id"] = "other-objective"
-        recovered = LongHorizonRuntime.recover(payload)
         with self.assertRaises(LongHorizonRuntimeError):
-            self.runtime.rebuild_from_recovery(recovered)
+            LongHorizonRuntime.recover(payload)
 
     def test_recovery_never_executes(self) -> None:
         state = self.runtime.build(plan_id="plan-1", snapshot_id="snapshot-1")
