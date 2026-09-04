@@ -1,6 +1,7 @@
 """M19 bounded personalization contracts."""
 
 from .behavior_context import BehaviorAdaptationResolver
+from .end_to_end import PersonalizedWorkingContextRuntime
 from .integration import PersonalizationContextIntegrator
 from .persistence import (
     PersonalizationPersistenceConflictError,
@@ -26,6 +27,7 @@ __all__ = [
     "PersonalizationContextIntegrator",
     "PreferenceContextResolver",
     "PersonalizationRuntime",
+    "PersonalizedWorkingContextRuntime",
     "PersonalizationPersistenceConflictError",
     "PersonalizationRecord",
     "PersonalizationState",
