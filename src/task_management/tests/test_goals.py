@@ -58,7 +58,7 @@ class GoalObjectiveBoundaryTests(unittest.TestCase):
             store.put_objective(conflicting)
 
     def test_objective_lifecycle_is_explicit_and_bounded(self) -> None:
-        active = self.objective.transition(ObjectiveState.ACTIVE, reference_id="approve-1")
+        active = self.objective.transition(ObjectiveState.ACTIVE, reference_id="activate-1")
         paused = active.transition(ObjectiveState.PAUSED, reference_id="pause-1")
         resumed = paused.transition(ObjectiveState.ACTIVE, reference_id="resume-1")
         completed = resumed.transition(ObjectiveState.COMPLETED, reference_id="complete-1")
@@ -121,7 +121,8 @@ class GoalObjectiveBoundaryTests(unittest.TestCase):
         store.put_goal(self.goal)
         active = self.objective.transition(ObjectiveState.ACTIVE, reference_id="activate-1")
         store.put_objective(active)
-        store.put_objective(active.transition(ObjectiveState.COMPLETED, reference_id="complete-1"))
+        completed = active.transition(ObjectiveState.COMPLETED, reference_id="complete-1")
+        store.replace_objective(completed)
         other = Objective(
             objective_id="objective-2",
             goal_id="goal-1",
