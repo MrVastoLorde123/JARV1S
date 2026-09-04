@@ -6,6 +6,7 @@ from src.ai.service import AIService
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
+from src.database_bootstrap import bootstrap_database
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
 
@@ -21,6 +22,8 @@ def main():
     )
     requested_session_id = os.environ.get("JARVIS_SESSION_ID")
     data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data"))
+
+    bootstrap_database()
 
     provider = LocalProvider(
         base_url=base_url,
