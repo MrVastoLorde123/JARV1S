@@ -47,6 +47,43 @@ Learn
 
 The loop is deliberately split into bounded stages. Learning changes future reasoning and behavior; it does not grant authority.
 
+## Proactive cognitive loop
+
+M21 adds a bounded proactive path to the general cognitive loop:
+
+```text
+Environment / User
+        ↓
+Signal / Observation
+        ↓
+Evidence + Provenance
+        ↓
+Context / World Model
+        ↓
+Reasoning + Uncertainty
+        ↓
+Initiative Candidate
+        ↓
+Initiative Evaluation
+        ↓
+Proactive Proposal
+        ↓
+Prioritization / Value
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Bounded Action
+        ↓
+Outcome / Feedback
+        └──────────────→ Learning
+```
+
+Each arrow is a semantic boundary. A later stage may consume information from an earlier stage, but it cannot retroactively promote that information into a stronger epistemic or authority class.
+
 ## Learning architecture
 
 JARVIS should support multiple forms of learning rather than a single generic "memory" mechanism.
@@ -124,7 +161,7 @@ Use when selecting among competing actions under constraints such as time, cost,
 
 ### Decision theory
 
-Combine expected outcomes, uncertainty, utility, cost, and risk when choosing between permitted alternatives.
+Use expected outcomes, uncertainty, utility, cost, and risk when comparing already-permitted alternatives. Decision scores must never become authorization by themselves.
 
 ### Information theory
 
@@ -178,6 +215,8 @@ Reasoning
    ↓
 Prediction
    ↓
+Initiative
+   ↓
 Proposal
    ↓
 Validation
@@ -222,7 +261,8 @@ The architecture remains open to stronger machine learning later. Adding a model
 - M13–M14 provide durable personal knowledge and world context for cognition.
 - M15–M16 provide bounded initiative and controlled self-development.
 - M20 provides long-horizon goals, tasks, progress, planning, continuation, persistence, and recovery.
-- M21+ should connect these foundations into proactive cognition while preserving the same authority chain.
+- M21.1 establishes a signal-to-initiative boundary; M21.2 establishes initiative-to-proposal formation without task creation or authority.
+- Future M21 modules deepen value estimation, uncertainty reduction, bounded scheduling/notification, and proactive runtime integration.
 - Future M24+ work should deepen learning quality, world modeling, prediction, model selection, and self-improvement without collapsing learning into unrestricted agency.
 
 ## Non-negotiable invariants
@@ -233,9 +273,14 @@ Learning ≠ Authority
 Knowledge ≠ Truth
 Memory ≠ User Intent
 Prediction ≠ Permission
+Confidence ≠ Certainty
+Reliability ≠ Truth
 Adaptation ≠ Authorization
 Initiative ≠ Authorization
+Proposal ≠ Authorization
 Capability ≠ Permission
+Planning ≠ Execution
+Recovery ≠ Execution
 Model ≠ JARVIS
 Interface ≠ JARVIS
 ```
