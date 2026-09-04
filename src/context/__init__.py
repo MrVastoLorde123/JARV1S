@@ -20,6 +20,15 @@ from .goal_project import (
     ProjectContext,
     ProjectStatus,
 )
+from .relevance import (
+    MAX_ITEMS as MAX_RELEVANCE_ITEMS,
+    MAX_REASON_LENGTH,
+    MAX_REASONS,
+    ContextRelevance,
+    ContextRelevanceRanking,
+    ContextRelevanceValidationError,
+    rank_relevance,
+)
 from .situational import (
     MAX_SIGNALS,
     MAX_SIGNAL_ID_LENGTH,
@@ -59,6 +68,13 @@ __all__ = [
     "GoalStatus",
     "ProjectContext",
     "ProjectStatus",
+    "ContextRelevance",
+    "ContextRelevanceRanking",
+    "ContextRelevanceValidationError",
+    "MAX_RELEVANCE_ITEMS",
+    "MAX_REASON_LENGTH",
+    "MAX_REASONS",
+    "rank_relevance",
     "SituationSignal",
     "SituationalContext",
     "SituationalContextValidationError",
