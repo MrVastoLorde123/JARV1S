@@ -1,5 +1,12 @@
 """M20 long-horizon task management primitives."""
 
+from .continuation import (
+    ContinuationError,
+    ContinuationDecision,
+    ContinuationStatus,
+    NextStepEngine,
+    NextStepProposal,
+)
 from .dependencies import DependencyError, TaskDependency, TaskDependencyGraph
 from .goals import (
     Goal,
@@ -22,6 +29,11 @@ from .progress import (
 from .task import Task, TaskState, TaskStore, TaskTransitionError
 
 __all__ = [
+    "ContinuationError",
+    "ContinuationDecision",
+    "ContinuationStatus",
+    "NextStepEngine",
+    "NextStepProposal",
     "DependencyError",
     "TaskDependency",
     "TaskDependencyGraph",
