@@ -61,48 +61,67 @@ class ConversationStore:
     def ensure_schema(self):
         """
         Ensure persistent conversation-state storage exists.
+
+        The base conversations/messages tables may be created by an
+        earlier schema component. ConversationStore must therefore not
+        make construction fail merely because the messages table is not
+        present yet. Auxiliary indexes are created only when their base
+        table exists.
         """
 
         connection = get_connection()
 
-        cursor = connection.cursor()
+        try:
+            cursor = connection.cursor()
 
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS conversation_state (
-                conversation_id TEXT PRIMARY KEY,
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_state (
+                    conversation_id TEXT PRIMARY KEY,
 
-                active_topic TEXT,
-                active_task TEXT,
+                    active_topic TEXT,
+                    active_task TEXT,
 
-                metadata TEXT NOT NULL
-                    DEFAULT '{}',
+                    metadata TEXT NOT NULL
+                        DEFAULT '{}',
 
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
 
-                FOREIGN KEY (
-                    conversation_id
+                    FOREIGN KEY (
+                        conversation_id
+                    )
+                    REFERENCES conversations(id)
+                    ON DELETE CASCADE
                 )
-                REFERENCES conversations(id)
-                ON DELETE CASCADE
+                """
             )
-            """
-        )
 
-        cursor.execute(
-            """
-            CREATE INDEX IF NOT EXISTS
-            idx_messages_conversation_created
-            ON messages(
-                conversation_id,
-                created_at
-            )
-            """
-        )
+            messages_exists = cursor.execute(
+                """
+                SELECT 1
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'messages'
+                LIMIT 1
+                """
+            ).fetchone()
 
-        connection.commit()
-        connection.close()
+            if messages_exists is not None:
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS
+                    idx_messages_conversation_created
+                    ON messages(
+                        conversation_id,
+                        created_at
+                    )
+                    """
+                )
+
+            connection.commit()
+        finally:
+            connection.close()
 
     @staticmethod
     def _timestamp():
