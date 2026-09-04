@@ -9,8 +9,10 @@ from src import run_local_jarvis
 
 class LocalApplicationEntrypointTests(unittest.TestCase):
 
+    @patch("src.run_local_jarvis.PersistentSessionIdentity")
     @patch("src.run_local_jarvis.HumanOperatingLayer")
     @patch("src.run_local_jarvis.JARVISRuntime")
+    @patch("src.run_local_jarvis.ConversationStore")
     @patch("src.run_local_jarvis.JARVIS")
     @patch("src.run_local_jarvis.AIService")
     @patch("src.run_local_jarvis.LocalProvider")
@@ -19,14 +21,19 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         local_provider_cls,
         ai_service_cls,
         jarvis_cls,
+        conversation_store_cls,
         runtime_cls,
         operator_cls,
+        session_identity_cls,
     ):
         provider = local_provider_cls.return_value
         ai_service = ai_service_cls.return_value
         processor = jarvis_cls.return_value
+        store = conversation_store_cls.return_value
         runtime = runtime_cls.from_processor.return_value
         operator = operator_cls.return_value
+        session_identity = session_identity_cls.return_value
+        session_identity.get_or_create.return_value = "test-session"
 
         output = io.StringIO()
         with patch.dict(
@@ -47,16 +54,24 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         )
         ai_service_cls.assert_called_once_with(default_provider="local")
         ai_service.register_provider.assert_called_once_with(provider)
+        conversation_store_cls.assert_called_once_with()
         jarvis_cls.assert_called_once_with(ai_service=ai_service)
-        runtime_cls.from_processor.assert_called_once_with(processor)
+        runtime_cls.from_processor.assert_called_once_with(
+            processor,
+            conversation_store=store,
+            durable_processor_factory=MagicMock(),
+        )
         operator_cls.assert_called_once_with(
             runtime,
             session_id="test-session",
+            session_identity=session_identity,
         )
         operator.run.assert_called_once_with()
 
+    @patch("src.run_local_jarvis.PersistentSessionIdentity")
     @patch("src.run_local_jarvis.HumanOperatingLayer")
     @patch("src.run_local_jarvis.JARVISRuntime")
+    @patch("src.run_local_jarvis.ConversationStore")
     @patch("src.run_local_jarvis.JARVIS")
     @patch("src.run_local_jarvis.AIService")
     @patch("src.run_local_jarvis.LocalProvider")
@@ -65,9 +80,12 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         local_provider_cls,
         ai_service_cls,
         jarvis_cls,
+        conversation_store_cls,
         runtime_cls,
         operator_cls,
+        session_identity_cls,
     ):
+        session_identity_cls.return_value.get_or_create.return_value = "test-session"
         with redirect_stdout(io.StringIO()):
             run_local_jarvis.main()
 

@@ -1,9 +1,12 @@
-"""M17 Human Operating Layer.
+"""M17 Human Operating Layer with M18 personal continuity.
 
 Provides the human-facing control loop around the canonical JARVIS runtime.
 It owns interaction mechanics only: command parsing, session identity,
 request sequencing, and presentation. It does not interpret intent, grant
 authority, authorize execution, mutate policy, or execute capabilities.
+
+M18 adds a persistence seam for the human-facing session identifier. The
+identifier is continuity metadata only; it is never treated as authority.
 """
 
 from __future__ import annotations
@@ -23,6 +26,14 @@ class HumanRuntime(Protocol):
 
     def process(self, request): ...
     def respond(self, result): ...
+
+
+class SessionIdentityRuntime(Protocol):
+    """Persistence contract for the active human-facing session identity."""
+
+    def get_or_create(self, requested_session_id: str | None = None) -> str: ...
+
+    def new_session(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -57,6 +68,7 @@ class HumanOperatingLayer:
         runtime: "JARVISRuntime | HumanRuntime",
         *,
         session_id: str | None = None,
+        session_identity: SessionIdentityRuntime | None = None,
         channel: InterfaceChannel = InterfaceChannel.TEXT,
         request_id_factory: Callable[[], str] | None = None,
     ) -> None:
@@ -64,16 +76,22 @@ class HumanOperatingLayer:
             getattr(runtime, "respond", None)
         ):
             raise TypeError("runtime must provide process(request) and respond(result) methods")
+        if session_identity is not None and not callable(
+            getattr(session_identity, "get_or_create", None)
+        ):
+            raise TypeError("session_identity must provide get_or_create()")
+        if session_identity is not None and not callable(
+            getattr(session_identity, "new_session", None)
+        ):
+            raise TypeError("session_identity must provide new_session()")
         if not isinstance(channel, InterfaceChannel):
             raise TypeError("channel must be an InterfaceChannel")
+
         self.runtime = runtime
         self.boundary = InterfaceBoundary()
         self.channel = channel
-        self._session_id = (
-            self._normalize_session_id(session_id)
-            if session_id
-            else self._new_id("local")
-        )
+        self._session_identity = session_identity
+        self._session_id = self._resolve_initial_session_id(session_id)
         self._request_id_factory = request_id_factory or (lambda: self._new_id("request"))
 
     @property
@@ -110,7 +128,10 @@ class HumanOperatingLayer:
             channel=self.channel,
             content=normalized,
             session_id=self._session_id,
-            metadata={"human_operating_layer": "m17"},
+            metadata={
+                "human_operating_layer": "m17",
+                "personal_continuity": "m18",
+            },
         )
         result = self.runtime.process(request)
         response = self.runtime.respond(result)
@@ -155,11 +176,21 @@ class HumanOperatingLayer:
         if command.name == "session":
             return f"Active session: {self._session_id}"
         if command.name == "new":
-            self._session_id = self._new_id("local")
+            if self._session_identity is None:
+                self._session_id = self._new_id("local")
+            else:
+                self._session_id = self._session_identity.new_session()
             return f"Started new session: {self._session_id}"
         if command.name in {"quit", "exit"}:
             return "__QUIT__"
         return f"Unknown command: :{command.name}. Use :help."
+
+    def _resolve_initial_session_id(self, requested_session_id: str | None) -> str:
+        if self._session_identity is not None:
+            return self._session_identity.get_or_create(requested_session_id)
+        if requested_session_id:
+            return self._normalize_session_id(requested_session_id)
+        return self._new_id("local")
 
     @staticmethod
     def _new_id(prefix: str) -> str:
@@ -172,4 +203,9 @@ class HumanOperatingLayer:
         return session_id.strip()
 
 
-__all__ = ["HumanCommand", "HumanTurn", "HumanOperatingLayer"]
+__all__ = [
+    "HumanCommand",
+    "HumanTurn",
+    "HumanOperatingLayer",
+    "SessionIdentityRuntime",
+]
