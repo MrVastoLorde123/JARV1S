@@ -43,6 +43,7 @@ from .temporal import (
     TemporalContext,
     TemporalContextValidationError,
 )
+from .world_model import WorldModelContext, WorldModelValidationError
 from .world_state import (
     ContextState,
     ContextStateValidationError,
@@ -90,4 +91,6 @@ __all__ = [
     "TemporalContextValidationError",
     "MAX_HISTORY_ITEMS",
     "MAX_QUERY_RESULTS",
+    "WorldModelContext",
+    "WorldModelValidationError",
 ]
