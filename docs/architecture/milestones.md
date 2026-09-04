@@ -223,24 +223,129 @@ Runtime Facade ≠ Semantic Engine
 AI Provider ≠ JARVIS Authority
 ```
 
+## M13 — Personal Knowledge
+
+M13 establishes structured knowledge about what memories refer to, while keeping knowledge distinct from truth, intent, policy, and authority.
+
+```text
+Memory / Evidence
+       ↓
+Entity Model
+       ↓
+People / Projects / Organizations / Systems / Concepts
+       ↓
+Relationships / Associations
+       ↓
+Persistent Personal Knowledge
+       ↓
+Knowledge Retrieval / Integration
+```
+
+### M13.1 — Entity Boundary
+
+Defines immutable bounded entities as structured referents rather than truth claims.
+
+### M13.2 — Entity Identity / Resolution
+
+Provides deterministic resolution judgments without merging or mutating entities.
+
+### M13.3 — Relationship Boundary
+
+Defines bounded associations between entity identities.
+
+### M13.4 — Evidence-Backed Associations
+
+Connects explicit provenance to relationships without converting evidence into truth or authority.
+
+### M13.5 — Entity Persistence
+
+Stores and reconstructs immutable entities through a bounded persistence layer.
+
+### M13.6 — Knowledge Retrieval
+
+Provides deterministic read-only retrieval over persisted entities.
+
+### M13.7 — Knowledge Integration
+
+Composes entities, relationships, associations, persistence, and retrieval behind one knowledge-facing boundary without creating a second semantic engine.
+
+**M13 Status: VERIFIED / COMPLETE.**
+
+Verified receipts:
+
+```text
+M13.4 focused      14/14
+M13.5 focused      13/13
+M13.6 focused      14/14
+M13.7 focused      14/14
+Knowledge         92/92
+AI                32/32
+Core             484/484
+```
+
+M13 architectural invariants:
+
+```text
+Entity ≠ Truth
+Entity ≠ Fact
+Entity ≠ Intent
+Identity ≠ Authority
+Association ≠ Authorization
+Association ≠ Policy
+Evidence ≠ Authority
+Inference ≠ Fact
+Knowledge ≠ Policy
+Knowledge ≠ Authorization
+Knowledge ≠ User Intent
+```
+
+## M14 — Personal Context / World Model
+
+M14 turns structured knowledge into bounded contextual state about the user's world.
+
+```text
+Entities + Relationships + Memories + Events + Current State + Goals + Temporal Context
+                              ↓
+                     Personal World Model
+```
+
+### M14.1 — Context State
+
+Defines an immutable bounded representation of currently relevant context state, with source references and observation time. Context state is derived context, not truth, fact, user intent, policy, authorization, or execution permission.
+
+**Status: IN PROGRESS.**
+
+### Future M14 slices
+
+- M14.2 Temporal / Historical Context
+- M14.3 Goal & Project Context
+- M14.4 Situational Context
+- M14.5 Cross-Domain Context
+- M14.6 Context Relevance / Prioritization
+- M14.7 World-Model Integration
+
 ## Architectural Direction
 
 ```text
-M6  Context                       ✅ CLOSED
+M6  Context / Working Context       ✅ CLOSED
  ↓
-M7  Deterministic Authority      ✅ CLOSED
+M7  Deterministic Authority         ✅ CLOSED
  ↓
-M8  Agency / Execution           ✅ CLOSED
+M8  Agency / Execution              ✅ CLOSED
  ↓
-M9  Workforce / Delegation       ✅ CLOSED
+M9  Workforce / Delegation          ✅ CLOSED
  ↓
-M10 Intelligence / Learning     ✅ CLOSED
+M10 Intelligence / Learning        ✅ CLOSED
  ↓
-M11 Interface / Experience      ✅ CLOSED
+M11 Interface / Experience         ✅ CLOSED
  ↓
-M12 System Integration          ✅ CLOSED
+M12 System Integration             ✅ CLOSED
+ ↓
+M13 Personal Knowledge             ✅ CLOSED
+ ↓
+M14 Personal Context / World Model  → IN PROGRESS
 ```
 
-The sequence is deliberate: first establish what JARVIS knows, then what it is permitted to do, then how it acts, how it scales work, how intelligence improves, how the human experiences it, and finally how those bounded systems compose into one application-facing runtime.
+The sequence is deliberate: first establish what JARVIS knows, then what it is permitted to do, then how it acts, how it scales work, how intelligence improves, how the human experiences it, how those bounded systems compose, and then how structured knowledge becomes contextual understanding of the user's world.
 
 Final hardening is intentionally separate from architectural integration. Database isolation/leak prevention, persistence security, filesystem boundaries, credential handling, concurrency, and broader security review will be handled as a dedicated hardening phase rather than mixed into completed milestone semantics.
