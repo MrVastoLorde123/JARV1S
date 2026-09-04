@@ -1,6 +1,6 @@
 import unittest
 
-from src.interface.boundary import InterfaceChannel, InterfaceResponse
+from src.interface.boundary import InterfaceBoundary, InterfaceChannel, InterfaceResponse
 from src.interface.human_operating_layer import HumanOperatingLayer, HumanTurn
 
 
@@ -21,10 +21,9 @@ class FakeRuntime:
 class HumanOperatingLayerTests(unittest.TestCase):
     def setUp(self):
         self.runtime = FakeRuntime()
-        # Bypass runtime type gate only for the narrow fake test double.
-        object.__setattr__(self, "operator", HumanOperatingLayer.__new__(HumanOperatingLayer))
+        self.operator = HumanOperatingLayer.__new__(HumanOperatingLayer)
         self.operator.runtime = self.runtime
-        self.operator.boundary = __import__("src.interface.boundary", fromlist=["InterfaceBoundary"]).InterfaceBoundary()
+        self.operator.boundary = InterfaceBoundary()
         self.operator.channel = InterfaceChannel.TEXT
         self.operator._session_id = "test-session"
         self.operator._request_id_factory = lambda: "request-1"
