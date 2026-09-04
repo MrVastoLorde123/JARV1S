@@ -125,6 +125,13 @@ class ContinuationDecision:
 class NextStepEngine:
     """Select one bounded next-step proposal from an existing plan."""
 
+    _ACTIONABLE_STATES = {TaskState.READY.value, TaskState.IN_PROGRESS.value}
+    _TERMINAL_OBSERVED_STATES = {
+        TaskState.COMPLETED.value,
+        TaskState.CANCELLED.value,
+        TaskState.SUPERSEDED.value,
+    }
+
     def __init__(
         self,
         plan: LongHorizonPlan,
@@ -152,8 +159,7 @@ class NextStepEngine:
         completed_ids = {
             task_id
             for task_id, evaluation in self._evaluations.items()
-            if evaluation.observed_state is not None
-            and evaluation.observed_state.value == TaskState.COMPLETED.value
+            if evaluation.observed_state.value == TaskState.COMPLETED.value
         }
 
         for step in ordered_steps:
@@ -164,11 +170,10 @@ class NextStepEngine:
                     ContinuationStatus.NEEDS_REVIEW,
                     reason=f"task {step.task_id} has conflicted progress",
                 )
-            if evaluation.observed_state.value in {
-                TaskState.COMPLETED.value,
-                TaskState.CANCELLED.value,
-                TaskState.SUPERSEDED.value,
-            }:
+            observed = evaluation.observed_state.value
+            if observed in self._TERMINAL_OBSERVED_STATES:
+                continue
+            if observed not in self._ACTIONABLE_STATES:
                 continue
             prerequisites = self._graph.prerequisites(step.task_id)
             if any(prerequisite_id not in completed_ids for prerequisite_id in prerequisites):
@@ -178,7 +183,7 @@ class NextStepEngine:
                 plan_id=self._plan.plan_id,
                 task_id=step.task_id,
                 description=f"Continue work on task {step.task_id}",
-                reason="earliest structurally available unfinished task in plan order",
+                reason="earliest structurally available actionable task in plan order",
                 evidence_ids=evaluation.evidence_ids,
             )
             return ContinuationDecision(
@@ -188,8 +193,7 @@ class NextStepEngine:
             )
 
         if ordered_steps and all(
-            self._evaluations[step.task_id].observed_state.value
-            in {TaskState.COMPLETED.value, TaskState.CANCELLED.value, TaskState.SUPERSEDED.value}
+            self._evaluations[step.task_id].observed_state.value in self._TERMINAL_OBSERVED_STATES
             for step in ordered_steps
         ):
             return ContinuationDecision(
@@ -201,7 +205,7 @@ class NextStepEngine:
         return ContinuationDecision(
             self._plan.plan_id,
             ContinuationStatus.NO_CONTINUATION,
-            reason="no unfinished task is structurally available from current progress",
+            reason="no unfinished actionable task is structurally available from current progress",
         )
 
     def select(self) -> NextStepProposal | None:
