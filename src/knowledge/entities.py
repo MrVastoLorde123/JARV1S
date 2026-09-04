@@ -126,7 +126,7 @@ class Entity:
             "entity_type": self.entity_type.value,
             "canonical_name": self.canonical_name,
             "metadata": _thaw_metadata(self.metadata),
-            "evidence_refs": self.evidence_refs,
+            "evidence_refs": list(self.evidence_refs),
             "truth_guaranteed": False,
             "fact_guaranteed": False,
             "intent_guaranteed": False,
