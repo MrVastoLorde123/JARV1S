@@ -29,12 +29,16 @@ class PersonalizationSignal:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        for name in ("signal_id", "key", "value"):
+        for name in ("signal_id", "key", "value", "category"):
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        if self.category not in PROFILE_CATEGORIES:
+
+        normalized_category = self.category.strip().upper()
+        object.__setattr__(self, "category", normalized_category)
+        if normalized_category not in PROFILE_CATEGORIES:
             raise ValueError(f"unsupported personalization category: {self.category}")
+
         if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)):
             raise TypeError("confidence must be numeric")
         if isinstance(self.importance, bool) or not isinstance(self.importance, (int, float)):
@@ -45,6 +49,8 @@ class PersonalizationSignal:
             raise ValueError("importance must be between 0.0 and 1.0")
         if not isinstance(self.source_ids, tuple):
             raise TypeError("source_ids must be a tuple")
+        if not self.source_ids:
+            raise ValueError("source_ids must contain at least one provenance identity")
         if len(set(self.source_ids)) != len(self.source_ids):
             raise ValueError("source_ids must be unique")
         if not all(isinstance(item, str) and item.strip() for item in self.source_ids):
@@ -56,7 +62,6 @@ class PersonalizationSignal:
         object.__setattr__(self, "signal_id", self.signal_id.strip())
         object.__setattr__(self, "key", self.key.strip())
         object.__setattr__(self, "value", self.value.strip())
-        object.__setattr__(self, "category", self.category.strip().upper())
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
     def to_dict(self) -> dict[str, Any]:
