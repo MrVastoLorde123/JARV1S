@@ -25,7 +25,7 @@ Working Context / Response Quality
 - M19.2 Preference Context Resolution — implemented
 - M19.3 Behavior Adaptation Resolution — implemented
 - M19.4 Personalization Integration — implemented as bounded runtime facade
-- M19.5 Persistence + Reversal
+- M19.5 Persistence + Reversal — implemented
 - M19.6 End-to-End Personalization
 
 ## M19.1 Boundary
@@ -65,6 +65,20 @@ M19.4 does not yet make the core runtime implicitly personalize every request;
 that end-to-end orchestration belongs to M19.6 after persistence/reversal
 semantics are complete.
 
+## M19.5 Boundary
+
+`PersonalizationStore` provides durable JSON persistence for bounded
+personalization records. Persistence is idempotent for an identical signal and
+rejects conflicting reuse of the same persisted identity.
+
+Reversal marks a persisted personalization record as `REVERSED` with an
+explicit reversal reference. Reversal only removes that signal from the active
+personalization projection; it does not delete or mutate the source memory,
+evidence, evaluation, or learning adaptation.
+
+Persisted records remain explicitly non-authoritative and carry no policy,
+authorization, or execution semantics.
+
 ## Invariants
 
 - Personalization ≠ Authority
@@ -78,5 +92,7 @@ semantics are complete.
 - Retrieval ≠ Mutation
 - Resolution ≠ Authorization
 - Context ≠ Authority
+- Persistence ≠ Authority
+- Reversal ≠ Deletion of Source Knowledge
 
 M19 does not alter the canonical authority chain.
