@@ -13,7 +13,7 @@ from typing import Any
 
 from .cross_domain import CrossDomainContext
 from .goal_project import GoalProjectContext
-from .relevance import RelevanceResult
+from .relevance import ContextRelevanceRanking
 from .situational import SituationalContext
 from .temporal import TemporalContext
 from .world_state import ContextState
@@ -32,7 +32,7 @@ class WorldModelContext:
     goal_project: GoalProjectContext | None = None
     situational: SituationalContext | None = None
     cross_domain: CrossDomainContext | None = None
-    relevance: RelevanceResult | None = None
+    relevance: ContextRelevanceRanking | None = None
 
     def __post_init__(self) -> None:
         fields = (
@@ -41,7 +41,7 @@ class WorldModelContext:
             ("goal_project", self.goal_project, GoalProjectContext),
             ("situational", self.situational, SituationalContext),
             ("cross_domain", self.cross_domain, CrossDomainContext),
-            ("relevance", self.relevance, RelevanceResult),
+            ("relevance", self.relevance, ContextRelevanceRanking),
         )
         for name, value, expected in fields:
             if value is not None and not isinstance(value, expected):
@@ -51,67 +51,43 @@ class WorldModelContext:
 
     def with_state(self, state: ContextState | None) -> "WorldModelContext":
         return WorldModelContext(
-            state=state,
-            temporal=self.temporal,
-            goal_project=self.goal_project,
-            situational=self.situational,
-            cross_domain=self.cross_domain,
+            state=state, temporal=self.temporal, goal_project=self.goal_project,
+            situational=self.situational, cross_domain=self.cross_domain,
             relevance=self.relevance,
         )
 
     def with_temporal(self, temporal: TemporalContext | None) -> "WorldModelContext":
         return WorldModelContext(
-            state=self.state,
-            temporal=temporal,
-            goal_project=self.goal_project,
-            situational=self.situational,
-            cross_domain=self.cross_domain,
+            state=self.state, temporal=temporal, goal_project=self.goal_project,
+            situational=self.situational, cross_domain=self.cross_domain,
             relevance=self.relevance,
         )
 
-    def with_goal_project(
-        self, goal_project: GoalProjectContext | None
-    ) -> "WorldModelContext":
+    def with_goal_project(self, goal_project: GoalProjectContext | None) -> "WorldModelContext":
         return WorldModelContext(
-            state=self.state,
-            temporal=self.temporal,
-            goal_project=goal_project,
-            situational=self.situational,
-            cross_domain=self.cross_domain,
+            state=self.state, temporal=self.temporal, goal_project=goal_project,
+            situational=self.situational, cross_domain=self.cross_domain,
             relevance=self.relevance,
         )
 
-    def with_situational(
-        self, situational: SituationalContext | None
-    ) -> "WorldModelContext":
+    def with_situational(self, situational: SituationalContext | None) -> "WorldModelContext":
         return WorldModelContext(
-            state=self.state,
-            temporal=self.temporal,
-            goal_project=self.goal_project,
-            situational=situational,
-            cross_domain=self.cross_domain,
+            state=self.state, temporal=self.temporal, goal_project=self.goal_project,
+            situational=situational, cross_domain=self.cross_domain,
             relevance=self.relevance,
         )
 
-    def with_cross_domain(
-        self, cross_domain: CrossDomainContext | None
-    ) -> "WorldModelContext":
+    def with_cross_domain(self, cross_domain: CrossDomainContext | None) -> "WorldModelContext":
         return WorldModelContext(
-            state=self.state,
-            temporal=self.temporal,
-            goal_project=self.goal_project,
-            situational=self.situational,
-            cross_domain=cross_domain,
+            state=self.state, temporal=self.temporal, goal_project=self.goal_project,
+            situational=self.situational, cross_domain=cross_domain,
             relevance=self.relevance,
         )
 
-    def with_relevance(self, relevance: RelevanceResult | None) -> "WorldModelContext":
+    def with_relevance(self, relevance: ContextRelevanceRanking | None) -> "WorldModelContext":
         return WorldModelContext(
-            state=self.state,
-            temporal=self.temporal,
-            goal_project=self.goal_project,
-            situational=self.situational,
-            cross_domain=self.cross_domain,
+            state=self.state, temporal=self.temporal, goal_project=self.goal_project,
+            situational=self.situational, cross_domain=self.cross_domain,
             relevance=relevance,
         )
 
