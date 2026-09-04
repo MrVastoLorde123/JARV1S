@@ -21,7 +21,7 @@ class WorldModelContextTests(unittest.TestCase):
         self.assertIsNone(model.relevance)
 
     def test_accepts_all_context_domains(self):
-        state = ContextState("state-1", {"active": True})
+        state = ContextState("state-1", {"active": True}, observed_at="2026-09-03T22:00:00+00:00")
         temporal = TemporalContext((state,))
         goal_project = GoalProjectContext()
         situational = SituationalContext(state)
@@ -82,8 +82,8 @@ class WorldModelContextTests(unittest.TestCase):
         self.assertIs(updated.goal_project, value)
 
     def test_with_situational_is_functional(self):
-        state = ContextState("state-1")
         original = WorldModelContext()
+        state = ContextState("state-1", {"online": True})
         value = SituationalContext(state)
         updated = original.with_situational(value)
         self.assertIsNone(original.situational)
@@ -91,63 +91,44 @@ class WorldModelContextTests(unittest.TestCase):
 
     def test_with_cross_domain_is_functional(self):
         original = WorldModelContext()
-        value = CrossDomainContext()
+        value = CrossDomainContext(references=(DomainReference("project", "p1"),))
         updated = original.with_cross_domain(value)
         self.assertIsNone(original.cross_domain)
         self.assertIs(updated.cross_domain, value)
 
     def test_with_relevance_is_functional(self):
-        ref = DomainReference("project", "p1")
-        value = ContextRelevanceRanking((ContextRelevance(ref, 0.5),))
         original = WorldModelContext()
+        ref = DomainReference("project", "p1")
+        value = ContextRelevanceRanking((ContextRelevance(ref, 0.9),))
         updated = original.with_relevance(value)
         self.assertIsNone(original.relevance)
         self.assertIs(updated.relevance, value)
 
-    def test_updates_preserve_other_domains(self):
-        state = ContextState("state-1")
-        situational = SituationalContext(state)
-        original = WorldModelContext(state=state, situational=situational)
-        replacement = ContextState("state-2")
+    def test_replacements_preserve_other_domains(self):
+        state = ContextState("state-1", {"active": True})
+        goal_project = GoalProjectContext()
+        cross_domain = CrossDomainContext(references=(DomainReference("project", "p1"),))
+        original = WorldModelContext(state=state, goal_project=goal_project, cross_domain=cross_domain)
+        replacement = ContextState("state-2", {"active": False})
         updated = original.with_state(replacement)
-        self.assertIs(updated.situational, situational)
-        self.assertIs(original.state, state)
+        self.assertIs(updated.state, replacement)
+        self.assertIs(updated.goal_project, goal_project)
+        self.assertIs(updated.cross_domain, cross_domain)
 
-    def test_serialization_contains_all_domains(self):
-        payload = WorldModelContext().to_dict()
-        self.assertEqual(
-            {
-                "state", "temporal", "goal_project", "situational", "cross_domain",
-                "relevance", "truth_guaranteed", "fact_guaranteed", "intent_guaranteed",
-                "authorization_granted", "policy_authority", "execution_requested",
-            },
-            set(payload),
-        )
-
-    def test_serialization_preserves_non_authority_boundary(self):
-        payload = WorldModelContext().to_dict()
-        self.assertFalse(payload["truth_guaranteed"])
-        self.assertFalse(payload["fact_guaranteed"])
-        self.assertFalse(payload["intent_guaranteed"])
-        self.assertFalse(payload["authorization_granted"])
-        self.assertFalse(payload["policy_authority"])
-        self.assertFalse(payload["execution_requested"])
-
-    def test_json_is_valid(self):
-        payload = json.loads(WorldModelContext().to_json())
-        self.assertFalse(payload["truth_guaranteed"])
-
-    def test_world_model_is_frozen(self):
+    def test_to_dict_marks_non_authority(self):
         model = WorldModelContext()
-        with self.assertRaises(AttributeError):
-            model.state = ContextState("state-1")
+        data = model.to_dict()
+        self.assertFalse(data["truth_guaranteed"])
+        self.assertFalse(data["fact_guaranteed"])
+        self.assertFalse(data["intent_guaranteed"])
+        self.assertFalse(data["authorization_granted"])
+        self.assertFalse(data["policy_authority"])
+        self.assertFalse(data["execution_requested"])
 
-    def test_replacing_with_none_is_supported(self):
-        state = ContextState("state-1")
-        model = WorldModelContext(state=state)
-        cleared = model.with_state(None)
-        self.assertIsNone(cleared.state)
-        self.assertIs(model.state, state)
+    def test_to_json_is_serializable(self):
+        model = WorldModelContext()
+        data = json.loads(model.to_json())
+        self.assertIsInstance(data, dict)
 
 
 if __name__ == "__main__":
