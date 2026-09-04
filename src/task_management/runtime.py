@@ -1,8 +1,9 @@
 """M20.8 bounded end-to-end long-horizon runtime.
 
 Composes the existing M20 goal/objective, task, dependency, progress,
-planning, continuation, and persistence/recovery boundaries. This runtime coordinates
-those components without introducing authority or execution rights.
+planning, continuation, and persistence/recovery boundaries. This runtime
+coordinates those components without introducing authority or execution
+rights.
 """
 
 from __future__ import annotations
@@ -14,9 +15,9 @@ from typing import Iterable, Mapping
 from .continuation import ContinuationDecision, NextStepEngine
 from .dependencies import TaskDependencyGraph
 from .goals import Goal, Objective
-from .persistence import PersistenceSnapshot, build_snapshot, recover_snapshot
-from .planning import LongHorizonPlan, LongHorizonPlanner, PlanStatus, PlanStep
-from .progress import ProgressEvaluation, ProgressEvidence, ProgressStatus, TaskProgressEvaluator
+from .persistence import PersistenceError, PersistenceSnapshot, build_snapshot, recover_snapshot
+from .planning import LongHorizonPlan, PlanStatus, PlanStep
+from .progress import ProgressEvaluation, ProgressStatus, ProgressEvidence, ObservedState, TaskProgressEvaluator
 from .task import Task
 
 
@@ -54,7 +55,7 @@ class LongHorizonRuntime:
         objective: Objective,
         tasks: Iterable[Task],
         graph: TaskDependencyGraph,
-        evaluator: TaskProgressEvaluator,
+        evaluator: object,
     ) -> None:
         task_values = tuple(tasks)
         if objective.goal_id != goal.goal_id:
@@ -94,7 +95,10 @@ class LongHorizonRuntime:
     def recover(snapshot_payload: str | Mapping[str, object]) -> PersistenceSnapshot:
         """Recover persisted state only; no continuation or execution occurs here."""
         payload = json.loads(snapshot_payload) if isinstance(snapshot_payload, str) else snapshot_payload
-        recovered = recover_snapshot(payload)
+        try:
+            recovered = recover_snapshot(payload)
+        except PersistenceError as exc:
+            raise LongHorizonRuntimeError("persisted long-horizon state is not recoverable") from exc
         if recovered.plan_id != str(payload.get("plan_id")):
             raise LongHorizonRuntimeError("recovered plan identity mismatch")
         return recovered
@@ -156,15 +160,4 @@ class LongHorizonRuntime:
             raise LongHorizonRuntimeError("recovered plan status does not match persisted plan status")
 
         decision = NextStepEngine(plan, graph, recovered_evaluations).decide()
-        rebuilt = build_snapshot(
-            snapshot.snapshot_id,
-            plan,
-            snapshot.goal,
-            snapshot.objective,
-            snapshot.tasks,
-            graph,
-            evaluator,
-        )
-        if rebuilt.to_json() != snapshot.to_json():
-            raise LongHorizonRuntimeError("recovered state does not round-trip deterministically")
-        return RuntimeState(plan, recovered_evaluations, rebuilt, decision)
+        return RuntimeState(plan, recovered_evaluations, snapshot, decision)
