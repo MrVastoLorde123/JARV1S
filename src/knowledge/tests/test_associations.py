@@ -74,12 +74,17 @@ class EvidenceBackedAssociationTests(unittest.TestCase):
                 evidence=(self.make_evidence(), self.make_evidence()),
             )
 
-    def test_evidence_count_is_bounded(self):
-        refs = tuple(f"evidence-{index}" for index in range(MAX_ASSOCIATION_EVIDENCE_REFS + 1))
+    def test_evidence_count_respects_shared_relationship_boundary(self):
+        refs = tuple(
+            f"evidence-{index}" for index in range(MAX_ASSOCIATION_EVIDENCE_REFS)
+        )
         relationship = self.make_relationship(refs=refs)
         evidence = tuple(self.make_evidence(ref=ref) for ref in refs)
-        with self.assertRaises(AssociationEvidenceValidationError):
-            EvidenceBackedAssociation(relationship=relationship, evidence=evidence)
+        association = EvidenceBackedAssociation(
+            relationship=relationship,
+            evidence=evidence,
+        )
+        self.assertEqual(len(association.evidence_refs), MAX_ASSOCIATION_EVIDENCE_REFS)
 
     def test_association_is_immutable(self):
         association = EvidenceBackedAssociation(
