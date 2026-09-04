@@ -16,7 +16,11 @@ Preference / Behavior Resolution
         ↓
 Personalization Runtime
         ↓
-Working Context / Response Quality
+Persistent Personalization
+        ↓
+End-to-End Working Context
+        ↓
+Response Quality
 ```
 
 ## Slices
@@ -26,7 +30,7 @@ Working Context / Response Quality
 - M19.3 Behavior Adaptation Resolution — implemented
 - M19.4 Personalization Integration — implemented as bounded runtime facade
 - M19.5 Persistence + Reversal — implemented
-- M19.6 End-to-End Personalization
+- M19.6 End-to-End Personalization — implemented
 
 ## M19.1 Boundary
 
@@ -61,10 +65,6 @@ resolvers with `PersonalizationContextIntegrator`. The integrator projects the
 resulting profile into the existing provider-neutral `WorkingContext` as
 `PERSONALIZATION` context items.
 
-M19.4 does not yet make the core runtime implicitly personalize every request;
-that end-to-end orchestration belongs to M19.6 after persistence/reversal
-semantics are complete.
-
 ## M19.5 Boundary
 
 `PersonalizationStore` provides durable JSON persistence for bounded
@@ -78,6 +78,21 @@ evidence, evaluation, or learning adaptation.
 
 Persisted records remain explicitly non-authoritative and carry no policy,
 authorization, or execution semantics.
+
+## M19.6 Boundary
+
+`PersonalizedWorkingContextRuntime` decorates the existing
+`WorkingContextRuntime` seam. It combines dynamically resolved personalization
+with persisted active personalization and injects the resulting signals into
+the same provider-neutral `WorkingContext` consumed by the core.
+
+The local runtime now constructs durable processors through this personalized
+context runtime, so personalization participates in the same canonical
+interface → session → JARVIS path used by normal requests. The core authority
+chain is unchanged.
+
+Personalization cannot route a request, authorize an action, mutate policy,
+satisfy confirmation, or execute a capability.
 
 ## Invariants
 
