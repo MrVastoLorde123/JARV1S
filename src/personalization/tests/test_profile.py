@@ -8,7 +8,7 @@ from src.personalization.profile import (
 
 
 class PersonalizationProfileTests(unittest.TestCase):
-    def signal(self, signal_id="pref-1", category="PREFERENCE"):
+    def signal(self, signal_id="pref-1", category="PREFERENCE", source_ids=("memory:1",)):
         return PersonalizationSignal(
             signal_id=signal_id,
             category=category,
@@ -16,7 +16,7 @@ class PersonalizationProfileTests(unittest.TestCase):
             value="formal",
             confidence=0.9,
             importance=0.7,
-            source_ids=("memory:1",),
+            source_ids=source_ids,
         )
 
     def test_signal_is_immutable_and_non_authoritative(self):
@@ -31,13 +31,16 @@ class PersonalizationProfileTests(unittest.TestCase):
         self.assertFalse(data["policy_mutation"])
         self.assertFalse(data["execution_requested"])
 
+    def test_category_is_normalized(self):
+        self.assertEqual(self.signal(category="preference").category, "PREFERENCE")
+
     def test_profile_groups_signals_by_category(self):
         profile = build_profile(
             "profile-1",
             (
                 self.signal("p1", "PREFERENCE"),
-                self.signal("b1", "BEHAVIOR"),
-                self.signal("w1", "WORKING_STYLE"),
+                self.signal("b1", "BEHAVIOR", ("memory:2",)),
+                self.signal("w1", "WORKING_STYLE", ("memory:3",)),
             ),
         )
         self.assertEqual(len(profile.preferences), 1)
@@ -52,6 +55,10 @@ class PersonalizationProfileTests(unittest.TestCase):
     def test_invalid_category_is_rejected(self):
         with self.assertRaises(ValueError):
             self.signal(category="AUTHORIZATION")
+
+    def test_missing_provenance_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.signal(source_ids=())
 
     def test_profile_is_immutable(self):
         profile = build_profile("profile-1", (self.signal(),))
