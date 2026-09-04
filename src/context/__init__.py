@@ -1,5 +1,17 @@
 """Provider-neutral context boundaries."""
 
+from .cross_domain import (
+    MAX_DOMAINS,
+    MAX_ID_LENGTH,
+    MAX_LABEL_LENGTH,
+    MAX_LINKS,
+    MAX_METADATA_ITEMS,
+    MAX_REFERENCES,
+    CrossDomainContext,
+    CrossDomainContextValidationError,
+    CrossDomainLink,
+    DomainReference,
+)
 from .goal_project import (
     GoalContext,
     GoalProjectContext,
@@ -31,6 +43,16 @@ from .world_state import (
 )
 
 __all__ = [
+    "CrossDomainContext",
+    "CrossDomainContextValidationError",
+    "CrossDomainLink",
+    "DomainReference",
+    "MAX_DOMAINS",
+    "MAX_ID_LENGTH",
+    "MAX_LABEL_LENGTH",
+    "MAX_LINKS",
+    "MAX_METADATA_ITEMS",
+    "MAX_REFERENCES",
     "GoalContext",
     "GoalProjectContext",
     "GoalProjectContextValidationError",
