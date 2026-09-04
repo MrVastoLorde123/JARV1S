@@ -10,6 +10,7 @@ from .goals import (
     ObjectiveTransitionError,
     Provenance,
 )
+from .planning import LongHorizonPlan, LongHorizonPlanner, PlanStatus, PlanStep, PlanningError
 from .progress import (
     ObservedState,
     ProgressEvidence,
@@ -31,6 +32,11 @@ __all__ = [
     "ObjectiveState",
     "ObjectiveTransitionError",
     "Provenance",
+    "LongHorizonPlan",
+    "LongHorizonPlanner",
+    "PlanStatus",
+    "PlanStep",
+    "PlanningError",
     "ObservedState",
     "ProgressEvidence",
     "ProgressEvaluation",
