@@ -68,13 +68,15 @@ class TaskModelLifecycleTests(unittest.TestCase):
             self.task.transition(TaskState.READY, reference_id="")
 
     def test_terminal_tasks_cannot_transition(self) -> None:
-        for terminal_state, reference_id in (
-            (TaskState.COMPLETED, "complete-1"),
-            (TaskState.CANCELLED, "cancel-1"),
-            (TaskState.SUPERSEDED, "replace-1"),
-        ):
-            terminal = self.task.transition(terminal_state, reference_id=reference_id)
-            with self.subTest(state=terminal_state):
+        terminal_candidates = (
+            self.task.transition(TaskState.READY, reference_id="ready-1").transition(
+                TaskState.IN_PROGRESS, reference_id="start-1"
+            ).transition(TaskState.COMPLETED, reference_id="complete-1"),
+            self.task.transition(TaskState.CANCELLED, reference_id="cancel-1"),
+            self.task.transition(TaskState.SUPERSEDED, reference_id="replace-1"),
+        )
+        for terminal in terminal_candidates:
+            with self.subTest(state=terminal.state):
                 with self.assertRaises(TaskTransitionError):
                     terminal.transition(TaskState.READY, reference_id="reopen-1")
 
@@ -134,7 +136,7 @@ class TaskModelLifecycleTests(unittest.TestCase):
                 state=TaskState.READY,
             )
         )
-        store.put_task(self.task.transition(TaskState.CANCELLED, reference_id="cancel-1"))
+        store.replace_task(self.task.transition(TaskState.CANCELLED, reference_id="cancel-1"))
 
         current = store.list_tasks("objective-1", include_terminal=False)
         self.assertEqual(tuple(task.task_id for task in current), ("task-2",))
