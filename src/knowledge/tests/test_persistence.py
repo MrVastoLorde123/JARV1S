@@ -33,10 +33,13 @@ class EntityRepositoryTests(unittest.TestCase):
 
     def test_initialize_creates_entity_table(self):
         self.repository.initialize()
-        with sqlite3.connect(self.database_path) as connection:
+        connection = sqlite3.connect(self.database_path)
+        try:
             table = connection.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='knowledge_entities'"
             ).fetchone()
+        finally:
+            connection.close()
         self.assertEqual(table[0], "knowledge_entities")
 
     def test_save_and_get_round_trip(self):
@@ -90,21 +93,29 @@ class EntityRepositoryTests(unittest.TestCase):
 
     def test_invalid_entity_type_in_storage_is_rejected(self):
         self.repository.save(self.entity)
-        with sqlite3.connect(self.database_path) as connection:
+        connection = sqlite3.connect(self.database_path)
+        try:
             connection.execute(
                 "UPDATE knowledge_entities SET entity_type = ? WHERE entity_id = ?",
                 ("NOT_REAL", "person-1"),
             )
+            connection.commit()
+        finally:
+            connection.close()
         with self.assertRaises(EntityPersistenceError):
             self.repository.get("person-1")
 
     def test_invalid_json_in_storage_is_rejected(self):
         self.repository.save(self.entity)
-        with sqlite3.connect(self.database_path) as connection:
+        connection = sqlite3.connect(self.database_path)
+        try:
             connection.execute(
                 "UPDATE knowledge_entities SET metadata_json = ? WHERE entity_id = ?",
                 ("{broken", "person-1"),
             )
+            connection.commit()
+        finally:
+            connection.close()
         with self.assertRaises(EntityPersistenceError):
             self.repository.get("person-1")
 
@@ -120,11 +131,14 @@ class EntityRepositoryTests(unittest.TestCase):
 
     def test_storage_is_json_encoded_without_authority_fields(self):
         self.repository.save(self.entity)
-        with sqlite3.connect(self.database_path) as connection:
+        connection = sqlite3.connect(self.database_path)
+        try:
             row = connection.execute(
                 "SELECT metadata_json, evidence_refs_json FROM knowledge_entities WHERE entity_id = ?",
                 ("person-1",),
             ).fetchone()
+        finally:
+            connection.close()
         self.assertEqual(json.loads(row[0])["role"], "builder")
         self.assertEqual(json.loads(row[1]), ["evidence-1", "evidence-2"])
 
