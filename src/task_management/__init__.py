@@ -10,6 +10,14 @@ from .goals import (
     ObjectiveTransitionError,
     Provenance,
 )
+from .progress import (
+    ObservedState,
+    ProgressEvidence,
+    ProgressEvaluation,
+    ProgressEvaluationError,
+    ProgressStatus,
+    TaskProgressEvaluator,
+)
 from .task import Task, TaskState, TaskStore, TaskTransitionError
 
 __all__ = [
@@ -23,6 +31,12 @@ __all__ = [
     "ObjectiveState",
     "ObjectiveTransitionError",
     "Provenance",
+    "ObservedState",
+    "ProgressEvidence",
+    "ProgressEvaluation",
+    "ProgressEvaluationError",
+    "ProgressStatus",
+    "TaskProgressEvaluator",
     "Task",
     "TaskState",
     "TaskStore",
