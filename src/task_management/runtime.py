@@ -16,7 +16,7 @@ from .continuation import ContinuationDecision, NextStepEngine
 from .dependencies import TaskDependencyGraph
 from .goals import Goal, Objective
 from .persistence import PersistenceError, PersistenceSnapshot, build_snapshot, recover_snapshot
-from .planning import LongHorizonPlan, PlanStatus, PlanStep
+from .planning import LongHorizonPlan, LongHorizonPlanner, PlanStatus, PlanStep
 from .progress import ProgressEvaluation, ProgressStatus, ProgressEvidence, ObservedState, TaskProgressEvaluator
 from .task import Task
 
