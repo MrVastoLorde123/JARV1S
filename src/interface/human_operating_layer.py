@@ -9,11 +9,13 @@ authority, authorize execution, mutate policy, or execute capabilities.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Mapping
+from typing import TYPE_CHECKING, Callable
 from uuid import uuid4
 
-from src.core.jarvis_runtime import JARVISRuntime
 from src.interface.boundary import InterfaceBoundary, InterfaceChannel
+
+if TYPE_CHECKING:
+    from src.core.jarvis_runtime import JARVISRuntime
 
 
 @dataclass(frozen=True)
@@ -45,20 +47,29 @@ class HumanOperatingLayer:
 
     def __init__(
         self,
-        runtime: JARVISRuntime,
+        runtime: "JARVISRuntime",
         *,
         session_id: str | None = None,
         channel: InterfaceChannel = InterfaceChannel.TEXT,
         request_id_factory: Callable[[], str] | None = None,
     ) -> None:
-        if not isinstance(runtime, JARVISRuntime):
+        # Import only when constructing the operator. Core modules import
+        # interface request types, so module-level runtime import would create
+        # a circular dependency through src.interface.__init__.
+        from src.core.jarvis_runtime import JARVISRuntime as CanonicalJARVISRuntime
+
+        if not isinstance(runtime, CanonicalJARVISRuntime):
             raise TypeError("runtime must be a JARVISRuntime")
         if not isinstance(channel, InterfaceChannel):
             raise TypeError("channel must be an InterfaceChannel")
         self.runtime = runtime
         self.boundary = InterfaceBoundary()
         self.channel = channel
-        self._session_id = self._normalize_session_id(session_id) if session_id else self._new_id("local")
+        self._session_id = (
+            self._normalize_session_id(session_id)
+            if session_id
+            else self._new_id("local")
+        )
         self._request_id_factory = request_id_factory or (lambda: self._new_id("request"))
 
     @property
