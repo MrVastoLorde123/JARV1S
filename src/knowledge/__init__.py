@@ -27,6 +27,12 @@ from .identity import (
     MAX_REFERENCE_LENGTH,
     normalize_identity_reference,
 )
+from .persistence import (
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    EntityPersistenceError,
+    EntityRepository,
+)
 from .relationships import (
     Relationship,
     RelationshipType,
@@ -58,6 +64,10 @@ __all__ = [
     "MAX_REASON_LENGTH",
     "MAX_REFERENCE_LENGTH",
     "normalize_identity_reference",
+    "EntityAlreadyExistsError",
+    "EntityNotFoundError",
+    "EntityPersistenceError",
+    "EntityRepository",
     "Relationship",
     "RelationshipType",
     "RelationshipValidationError",
