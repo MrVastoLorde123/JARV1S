@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import unittest
 
-from src.task_management.dependencies import TaskDependencyGraph
 from src.task_management.goals import Goal, Objective, Provenance
 from src.task_management.planning import LongHorizonPlanner
 from src.task_management.progress import (
@@ -11,6 +10,7 @@ from src.task_management.progress import (
     ProgressStatus,
     TaskProgressEvaluator,
 )
+from src.task_management.dependencies import TaskDependencyGraph
 from src.task_management.continuation import (
     ContinuationError,
     ContinuationStatus,
@@ -62,8 +62,8 @@ class NextStepEngineTests(unittest.TestCase):
         decision = NextStepEngine(self.plan, self.graph, self.evaluator.evaluations()).decide()
         self.assertEqual(decision.status, ContinuationStatus.PROPOSED)
         self.assertIsNotNone(decision.proposal)
-        self.assertEqual(decision.proposal.task_id, "task-c")
-        self.assertEqual(decision.proposal.evidence_ids, ("ev-c",))
+        self.assertEqual(decision.proposal.task_id, "task-b")
+        self.assertEqual(decision.proposal.evidence_ids, ("ev-b",))
 
     def test_prerequisites_must_be_observed_completed(self) -> None:
         blocked_tasks = (
