@@ -1,7 +1,7 @@
 import unittest
 
 from src.learning.adaptation import AdaptationController, AdaptationKind, AdaptationState
-from src.learning.evaluation import Evaluation
+from src.learning.evaluation import Evaluation, EvaluationState
 from src.personalization.behavior_context import BehaviorAdaptationResolver
 
 
@@ -9,10 +9,10 @@ class BehaviorAdaptationResolverTests(unittest.TestCase):
     def record(self, kind=AdaptationKind.BEHAVIOR, state=AdaptationState.ACCEPTED):
         evaluation = Evaluation(
             evaluation_id="eval-1",
-            memory_id=None,
-            outcome="useful",
-            score=0.9,
+            experience_id="experience-1",
+            state=EvaluationState.SUCCESS,
             evidence_ids=(),
+            rationale="Observed useful response behavior.",
             confidence=0.9,
         )
         controller = AdaptationController()
