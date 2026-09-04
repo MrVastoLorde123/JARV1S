@@ -41,6 +41,15 @@ from .relationships import (
     MAX_RELATIONSHIP_METADATA_ITEMS,
     MAX_RELATIONSHIP_ID_LENGTH,
 )
+from .retrieval import (
+    KnowledgeMatch,
+    KnowledgeRetrievalError,
+    KnowledgeRetriever,
+    KnowledgeSearchResult,
+    MAX_QUERY_LENGTH,
+    MAX_RESULTS,
+    RetrievalMatchField,
+)
 
 __all__ = [
     "AssociationEvidence",
@@ -74,4 +83,11 @@ __all__ = [
     "MAX_RELATIONSHIP_EVIDENCE_REFS",
     "MAX_RELATIONSHIP_METADATA_ITEMS",
     "MAX_RELATIONSHIP_ID_LENGTH",
+    "KnowledgeMatch",
+    "KnowledgeRetrievalError",
+    "KnowledgeRetriever",
+    "KnowledgeSearchResult",
+    "MAX_QUERY_LENGTH",
+    "MAX_RESULTS",
+    "RetrievalMatchField",
 ]
