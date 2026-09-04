@@ -1,7 +1,7 @@
 """M20.8 bounded end-to-end long-horizon runtime.
 
 Composes the existing M20 goal/objective, task, dependency, progress,
-planning, continuation, and persistence boundaries. This runtime coordinates
+planning, continuation, and persistence/recovery boundaries. This runtime coordinates
 those components without introducing authority or execution rights.
 """
 
@@ -14,9 +14,9 @@ from typing import Iterable, Mapping
 from .continuation import ContinuationDecision, NextStepEngine
 from .dependencies import TaskDependencyGraph
 from .goals import Goal, Objective
-from .persistence import PersistenceSnapshot, TaskProgressEvaluator, build_snapshot, recover_snapshot
+from .persistence import PersistenceSnapshot, build_snapshot, recover_snapshot
 from .planning import LongHorizonPlan, LongHorizonPlanner, PlanStatus, PlanStep
-from .progress import ProgressEvaluation, ProgressStatus
+from .progress import ProgressEvaluation, ProgressEvidence, ProgressStatus, TaskProgressEvaluator
 from .task import Task
 
 
@@ -54,7 +54,7 @@ class LongHorizonRuntime:
         objective: Objective,
         tasks: Iterable[Task],
         graph: TaskDependencyGraph,
-        evaluator: object,
+        evaluator: TaskProgressEvaluator,
     ) -> None:
         task_values = tuple(tasks)
         if objective.goal_id != goal.goal_id:
@@ -143,12 +143,19 @@ class LongHorizonRuntime:
         for dependent, prerequisite in snapshot.dependencies:
             graph.add_dependency(dependent, prerequisite)
 
+        evaluator = TaskProgressEvaluator(snapshot.tasks)
+        for evidence in snapshot.evidence:
+            evaluator.add_evidence(evidence)
+
+        recovered_evaluations = evaluator.evaluations()
+        if recovered_evaluations != snapshot.evaluations:
+            raise LongHorizonRuntimeError("recovered evaluations differ from persisted evaluations")
+
         plan = self._plan_from_snapshot(snapshot, graph)
         if plan.status is not snapshot.plan_status:
             raise LongHorizonRuntimeError("recovered plan status does not match persisted plan status")
 
-        evaluations = snapshot.evaluations
-        decision = NextStepEngine(plan, graph, evaluations).decide()
+        decision = NextStepEngine(plan, graph, recovered_evaluations).decide()
         rebuilt = build_snapshot(
             snapshot.snapshot_id,
             plan,
@@ -156,23 +163,8 @@ class LongHorizonRuntime:
             snapshot.objective,
             snapshot.tasks,
             graph,
-            self._evaluator_from_evaluations(snapshot.tasks, evaluations),
+            evaluator,
         )
         if rebuilt.to_json() != snapshot.to_json():
             raise LongHorizonRuntimeError("recovered state does not round-trip deterministically")
-        return RuntimeState(plan, evaluations, rebuilt, decision)
-
-    @staticmethod
-    def _evaluator_from_evaluations(
-        tasks: tuple[Task, ...],
-        evaluations: tuple[ProgressEvaluation, ...],
-    ) -> TaskProgressEvaluator:
-        from .progress import ProgressEvidence
-
-        evaluator = TaskProgressEvaluator(tasks)
-        for evaluation in evaluations:
-            for evidence_id in evaluation.evidence_ids:
-                raise LongHorizonRuntimeError(
-                    f"recovery cannot reconstruct evidence from evaluation-only data: {evaluation.task_id}:{evidence_id}"
-                )
-        return evaluator
+        return RuntimeState(plan, recovered_evaluations, rebuilt, decision)
