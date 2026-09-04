@@ -8,7 +8,9 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M21.1 — Proactive Initiative Boundary: IMPLEMENTED / AWAITING LOCAL RECEIPT**
+**M21.2 — Proactive Proposal Boundary: IMPLEMENTED / AWAITING LOCAL RECEIPT**
+
+M21.1 Proactive Initiative Boundary is VERIFIED / COMPLETE.
 
 M20 Long-Horizon Task Management is VERIFIED / COMPLETE.
 
@@ -27,15 +29,19 @@ Memory + Personal Knowledge
         ↓
 World Model / Current Context
         ↓
-Reasoning + Prediction
+Reasoning + Uncertainty
         ↓
-Learning / Adaptation
+Prediction / Evaluation
         ↓
-Goals + Planning
+Initiative Candidate
         ↓
-Initiative
+Initiative Evaluation
         ↓
-Validation + Policy
+Proactive Proposal
+        ↓
+Prioritization / Value
+        ↓
+Validation / Policy
         ↓
 Confirmation
         ↓
@@ -96,6 +102,8 @@ Interpretation ≠ Belief
 Belief ≠ Prediction
 Knowledge ≠ Truth
 Memory ≠ User Intent
+Confidence ≠ Certainty
+Reliability ≠ Truth
 Prediction ≠ Permission
 ```
 
@@ -109,6 +117,7 @@ Initiative ≠ Authorization
 Capability ≠ Permission
 Planning ≠ Execution
 Recovery ≠ Execution
+Proposal ≠ Authorization
 ```
 
 ## Model Boundary
@@ -116,7 +125,10 @@ Recovery ≠ Execution
 ```text
 Model ≠ JARVIS
 LLM ≠ JARVIS
+AI Provider ≠ JARVIS
 Interface ≠ JARVIS
+Plugin ≠ JARVIS
+Worker ≠ JARVIS
 ```
 
 ## Milestone Roadmap
@@ -137,9 +149,9 @@ M17 Human Operating Layer           ✅
 M18 Personal Continuity             ✅
 M19 Deep Personalization            ✅ VERIFIED
 M20 Long-Horizon Task Management    ✅ VERIFIED
-M21 Proactive JARVIS                → M21.1
+M21 Proactive JARVIS                → M21.2
 M22 Capability / Plugin Ecosystem   →
-M23 Workforce Intelligence         →
+M23 Workforce Intelligence          →
 M24 Continuous Self-Improvement     →
 M25+ Personal Intelligence Evolution→
 ```
@@ -158,4 +170,5 @@ M21+ will progressively connect the cognitive substrate, personal world model, l
 - [M10.3 Preference / Behavior Adaptation](docs/milestones/M10_3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
 - [M20.8 End-to-End Runtime](docs/milestones/M20_8_END_TO_END_LONG_HORIZON_RUNTIME.md)
 - [M21.1 Proactive Initiative Boundary](docs/milestones/M21_1_PROACTIVE_INITIATIVE_BOUNDARY.md)
+- [M21.2 Proactive Proposal Boundary](docs/milestones/M21_2_PROACTIVE_PROPOSAL_BOUNDARY.md)
 - [Architecture Decisions](docs/decisions/)
