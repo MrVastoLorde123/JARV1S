@@ -8,6 +8,12 @@ from .initiative import (
     ProactiveTriggerSource,
     evaluate_initiative,
 )
+from .proposal import (
+    InitiativeProposal,
+    ProposalEvaluation,
+    ProposalStatus,
+    build_proposal,
+)
 
 __all__ = [
     "InitiativeCandidate",
@@ -16,4 +22,8 @@ __all__ = [
     "ProactiveTrigger",
     "ProactiveTriggerSource",
     "evaluate_initiative",
+    "InitiativeProposal",
+    "ProposalEvaluation",
+    "ProposalStatus",
+    "build_proposal",
 ]
