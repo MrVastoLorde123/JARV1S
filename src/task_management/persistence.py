@@ -191,7 +191,7 @@ def recover_snapshot(payload: Mapping[str, Any] | str) -> PersistenceSnapshot:
     task_ids = {task.task_id for task in snapshot.tasks}
     graph = TaskDependencyGraph(task_ids)
     try:
-        for dependent, prerequisite in snapshot.dependencies:
+        for prerequisite, dependent in snapshot.dependencies:
             graph.add_dependency(prerequisite, dependent)
     except (KeyError, ValueError, TypeError) as exc:
         raise PersistenceError("invalid dependency structure") from exc
@@ -356,7 +356,6 @@ def _evaluation_from_dict(value: Mapping[str, Any]) -> ProgressEvaluation:
 
 def _dependencies(graph: TaskDependencyGraph) -> tuple[tuple[str, str], ...]:
     return tuple(
-        (dependent, prerequisite)
-        for dependent in graph.all_task_ids()
-        for prerequisite in graph.prerequisites(dependent)
+        dependency.edge
+        for dependency in graph.dependencies()
     )
