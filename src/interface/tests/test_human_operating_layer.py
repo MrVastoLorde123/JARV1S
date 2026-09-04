@@ -26,7 +26,7 @@ class HumanOperatingLayerTests(unittest.TestCase):
         self.operator.boundary = InterfaceBoundary()
         self.operator.channel = InterfaceChannel.TEXT
         self.operator._session_id = "test-session"
-        self.operator._request_id_factory = lambda: "request-1"
+        self.operator._request_id_factory = iter(["request-1", "request-2"]).__next__
 
     def test_plain_text_becomes_runtime_request(self):
         result = self.operator.handle("hello jarvis")
@@ -59,6 +59,18 @@ class HumanOperatingLayerTests(unittest.TestCase):
     def test_empty_input_is_not_sent(self):
         self.assertEqual(self.operator.handle("   "), "Please enter a request.")
         self.assertEqual(len(self.runtime.received), 0)
+
+    def test_run_keeps_accepting_normal_requests_until_quit(self):
+        inputs = iter(["first", ":session", "second", ":quit"])
+        outputs = []
+        self.operator.run(input_fn=lambda prompt: next(inputs), output_fn=outputs.append)
+        self.assertEqual(len(self.runtime.received), 2)
+        self.assertEqual(self.runtime.received[0].session_id, "test-session")
+        self.assertEqual(self.runtime.received[1].session_id, "test-session")
+        self.assertTrue(any("echo: first" in output for output in outputs))
+        self.assertTrue(any("echo: second" in output for output in outputs))
+        self.assertTrue(any("Active session: test-session" in output for output in outputs))
+        self.assertTrue(outputs[-1].endswith("session ended."))
 
 
 if __name__ == "__main__":
