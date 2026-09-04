@@ -1,5 +1,13 @@
 """Provider-neutral context boundaries."""
 
+from .goal_project import (
+    GoalContext,
+    GoalProjectContext,
+    GoalProjectContextValidationError,
+    GoalStatus,
+    ProjectContext,
+    ProjectStatus,
+)
 from .temporal import (
     MAX_HISTORY_ITEMS,
     MAX_QUERY_RESULTS,
@@ -15,6 +23,12 @@ from .world_state import (
 )
 
 __all__ = [
+    "GoalContext",
+    "GoalProjectContext",
+    "GoalProjectContextValidationError",
+    "GoalStatus",
+    "ProjectContext",
+    "ProjectStatus",
     "ContextState",
     "ContextStateValidationError",
     "MAX_CONTEXT_ID_LENGTH",
