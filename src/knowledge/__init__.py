@@ -1,5 +1,13 @@
 """M13 personal knowledge boundaries."""
 
+from .associations import (
+    AssociationEvidence,
+    AssociationEvidenceValidationError,
+    EvidenceBackedAssociation,
+    MAX_ASSOCIATION_EVIDENCE_REFS,
+    MAX_EVIDENCE_REF_LENGTH,
+    MAX_SOURCE_LENGTH,
+)
 from .entities import (
     Entity,
     EntityType,
@@ -19,8 +27,22 @@ from .identity import (
     MAX_REFERENCE_LENGTH,
     normalize_identity_reference,
 )
+from .relationships import (
+    Relationship,
+    RelationshipType,
+    RelationshipValidationError,
+    MAX_RELATIONSHIP_EVIDENCE_REFS,
+    MAX_RELATIONSHIP_METADATA_ITEMS,
+    MAX_RELATIONSHIP_ID_LENGTH,
+)
 
 __all__ = [
+    "AssociationEvidence",
+    "AssociationEvidenceValidationError",
+    "EvidenceBackedAssociation",
+    "MAX_ASSOCIATION_EVIDENCE_REFS",
+    "MAX_EVIDENCE_REF_LENGTH",
+    "MAX_SOURCE_LENGTH",
     "Entity",
     "EntityType",
     "EntityValidationError",
@@ -36,4 +58,10 @@ __all__ = [
     "MAX_REASON_LENGTH",
     "MAX_REFERENCE_LENGTH",
     "normalize_identity_reference",
+    "Relationship",
+    "RelationshipType",
+    "RelationshipValidationError",
+    "MAX_RELATIONSHIP_EVIDENCE_REFS",
+    "MAX_RELATIONSHIP_METADATA_ITEMS",
+    "MAX_RELATIONSHIP_ID_LENGTH",
 ]
