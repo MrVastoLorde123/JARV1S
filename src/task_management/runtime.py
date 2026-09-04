@@ -14,7 +14,7 @@ from typing import Iterable, Mapping
 from .continuation import ContinuationDecision, NextStepEngine
 from .dependencies import TaskDependencyGraph
 from .goals import Goal, Objective
-from .persistence import PersistenceSnapshot, build_snapshot, recover_snapshot
+from .persistence import PersistenceSnapshot, TaskProgressEvaluator, build_snapshot, recover_snapshot
 from .planning import LongHorizonPlan, LongHorizonPlanner, PlanStatus, PlanStep
 from .progress import ProgressEvaluation, ProgressStatus
 from .task import Task
@@ -61,6 +61,8 @@ class LongHorizonRuntime:
             raise LongHorizonRuntimeError("objective does not belong to goal")
         if {task.task_id for task in task_values} != set(graph.all_task_ids()):
             raise LongHorizonRuntimeError("task and graph identities do not match")
+        if not isinstance(evaluator, TaskProgressEvaluator):
+            raise TypeError("evaluator must be a TaskProgressEvaluator")
         self._goal = goal
         self._objective = objective
         self._tasks = tuple(sorted(task_values, key=lambda item: item.task_id))
@@ -83,7 +85,7 @@ class LongHorizonRuntime:
             self._objective,
             self._tasks,
             self._graph,
-            evaluations,
+            self._evaluator,
         )
         decision = NextStepEngine(plan, self._graph, evaluations).decide()
         return RuntimeState(plan, evaluations, snapshot, decision)
@@ -154,8 +156,23 @@ class LongHorizonRuntime:
             snapshot.objective,
             snapshot.tasks,
             graph,
-            evaluations,
+            self._evaluator_from_evaluations(snapshot.tasks, evaluations),
         )
         if rebuilt.to_json() != snapshot.to_json():
             raise LongHorizonRuntimeError("recovered state does not round-trip deterministically")
         return RuntimeState(plan, evaluations, rebuilt, decision)
+
+    @staticmethod
+    def _evaluator_from_evaluations(
+        tasks: tuple[Task, ...],
+        evaluations: tuple[ProgressEvaluation, ...],
+    ) -> TaskProgressEvaluator:
+        from .progress import ProgressEvidence
+
+        evaluator = TaskProgressEvaluator(tasks)
+        for evaluation in evaluations:
+            for evidence_id in evaluation.evidence_ids:
+                raise LongHorizonRuntimeError(
+                    f"recovery cannot reconstruct evidence from evaluation-only data: {evaluation.task_id}:{evidence_id}"
+                )
+        return evaluator
