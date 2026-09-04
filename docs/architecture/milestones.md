@@ -180,19 +180,27 @@ M21 extends JARVIS from reacting to explicit requests toward bounded proactive c
 The updated architecture changes how M21 is built: proactive behavior is no longer treated as a simple trigger-to-action pipeline. It sits on top of the cognitive substrate established by M10, personal context from M13–M14, long-horizon state from M20, and the existing authority chain.
 
 ```text
-Signal / Observation
+Environment / User
+        ↓
+Perception / Input
         ↓
 Evidence + Provenance
         ↓
-Context / World Model
+Memory + Personal Knowledge
         ↓
-Reasoning / Uncertainty
+World Model / Current Context
+        ↓
+Reasoning + Uncertainty
+        ↓
+Prediction / Evaluation
         ↓
 Initiative Candidate
         ↓
-Evaluation
+Initiative Evaluation
         ↓
-Proposal
+Proactive Proposal
+        ↓
+Prioritization / Value
         ↓
 Validation / Policy
         ↓
@@ -202,20 +210,42 @@ Authorization
         ↓
 Bounded Action
         ↓
-Outcome
-        ↓
-Learning
+Outcome / Feedback
+        └──────────────→ Learning
 ```
 
 ### M21.1 — Proactive Initiative Boundary
 
 A signal may create an initiative candidate without becoming a task, proposal, authorization, notification, schedule, or execution request.
 
+**Status: VERIFIED / COMPLETE.**
+
+### M21.2 — Proactive Proposal Boundary
+
+An eligible initiative candidate may be formulated into an immutable proposal that preserves candidate/trigger identity and evidence provenance. The proposal is a recommendation only.
+
+```text
+Initiative Candidate
+        ↓
+Eligibility
+        ↓
+Proposal
+        ↓
+[future prioritization / value assessment]
+```
+
 **Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
-### M21.2 and later
+### Future M21 boundaries
 
-Future M21 modules should add proactive proposal formation, prioritization, user-value estimation, bounded scheduling/notification, and controlled integration with M20 continuation while preserving the cognitive and authority boundaries.
+```text
+M21.3 Prioritization / User-Value Estimation
+M21.4 Information-Gain / Uncertainty Reduction
+M21.5 Bounded Proactive Scheduling / Notification
+M21.6 Proactive Runtime / Feedback Integration
+```
+
+These names are directional; the boundary contract remains authoritative. No M21 stage may grant authority by virtue of being proactive or predictive.
 
 ## Cross-cutting cognitive architecture
 
@@ -228,6 +258,19 @@ Memory + Knowledge + Reasoning + Prediction + Learning + Planning + Feedback
 ```
 
 No single model owns the intelligence of JARVIS.
+
+### Model boundary
+
+```text
+Model ≠ JARVIS
+LLM ≠ JARVIS
+AI Provider ≠ JARVIS
+Interface ≠ JARVIS
+Plugin ≠ JARVIS
+Worker ≠ JARVIS
+```
+
+Models are replaceable cognitive components. JARVIS owns durable state, orchestration, authority semantics, identity, and capability boundaries.
 
 ### Learning is multi-form
 
@@ -242,6 +285,8 @@ Predictive
 Meta-learning
 ```
 
+Learning may change future behavior and reasoning. Learning cannot grant authority.
+
 ### Mathematical mechanisms are selected by problem
 
 ```text
@@ -255,6 +300,8 @@ Information theory            → uncertainty reduction
 Control / feedback            → closed-loop correction
 ```
 
+Mathematics is used as a substrate where the structure of the problem supports it; it is not added merely to appear intelligent.
+
 ### Epistemic boundaries
 
 ```text
@@ -265,6 +312,9 @@ Interpretation ≠ Belief
 Belief ≠ Prediction
 Knowledge ≠ Truth
 Memory ≠ User Intent
+Confidence ≠ Certainty
+Reliability ≠ Truth
+Prediction ≠ Permission
 ```
 
 ### Authority boundaries
@@ -272,18 +322,18 @@ Memory ≠ User Intent
 ```text
 Intelligence ≠ Authority
 Learning ≠ Authority
-Prediction ≠ Permission
 Adaptation ≠ Authorization
 Initiative ≠ Authorization
 Capability ≠ Permission
 Planning ≠ Execution
 Recovery ≠ Execution
+Proposal ≠ Authorization
 ```
 
-## Long-term direction
+### Long-term direction
 
-M21–M25 and later milestones should increasingly compose the cognitive substrate into a persistent personal intelligence system. Machine learning may be introduced wherever it materially improves perception, representation, prediction, generalization, or adaptation; it is not required for a capability to be considered intelligent.
+M21–M25 and later milestones progressively compose cognition into a persistent personal intelligence system. Machine learning may be introduced wherever it materially improves perception, generalization, prediction, or adaptation, but it is not required for a system component to be intelligent.
 
-The target is a personal "pseudo-AI" only in the narrow engineering sense: a genuine cognitive architecture whose intelligent behavior emerges from many bounded mechanisms, with models as replaceable components rather than the source of identity or authority.
+The project may be described as a "pseudo-AI" only as an engineering shorthand: an intentionally constructed cognitive architecture whose intelligent behavior emerges from interacting bounded mechanisms rather than from one giant learned model.
 
 Final security hardening remains separate from milestone semantics and will cover database isolation, filesystem boundaries, credential handling, plugin security, concurrency, process isolation, auditability, recovery, backup, secrets, and adversarial testing.
