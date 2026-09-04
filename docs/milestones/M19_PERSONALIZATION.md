@@ -19,8 +19,8 @@ Working Context / Response Quality
 
 ## Slices
 
-- M19.1 Personalization Profile
-- M19.2 Preference Context Resolution
+- M19.1 Personalization Profile — implemented
+- M19.2 Preference Context Resolution — implemented
 - M19.3 Behavior Adaptation Resolution
 - M19.4 Personalization Integration
 - M19.5 Persistence + Reversal
@@ -36,6 +36,15 @@ The profile may inform presentation, prioritization, or other bounded behavior.
 It cannot grant authority, mutate policy, authorize execution, or establish
 truth.
 
+## M19.2 Boundary
+
+`PreferenceContextResolver` is read-only. It searches already-established
+memory records, filters only `PREFERENCE` memories, preserves memory/evidence
+provenance, and converts those records into profile signals.
+
+It does not create memories, modify memories, accept adaptations, change
+policy, or authorize anything.
+
 ## Invariants
 
 - Personalization ≠ Authority
@@ -46,5 +55,6 @@ truth.
 - Learned behavior ≠ Policy
 - Personalization ≠ Execution
 - User model ≠ User intent
+- Retrieval ≠ Mutation
 
-M19.1 does not alter the canonical authority chain.
+M19 does not alter the canonical authority chain.
