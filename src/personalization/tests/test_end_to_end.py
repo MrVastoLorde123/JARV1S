@@ -64,10 +64,10 @@ class EndToEndPersonalizationTests(unittest.TestCase):
         runtime = PersonalizedWorkingContextRuntime(self.base_runtime())
         context = runtime.compose("Explain JARVIS")
         self.assertTrue(context.metadata.get("personalization_integrated"))
-        self.assertFalse(context.metadata["authority_granted"])
-        self.assertFalse(context.metadata["authorization_granted"])
-        self.assertFalse(context.metadata["policy_mutation"])
-        self.assertFalse(context.metadata["execution_requested"])
+        self.assertFalse(context.metadata["personalization_authority_granted"])
+        self.assertFalse(context.metadata["personalization_authorization_granted"])
+        self.assertFalse(context.metadata["personalization_policy_mutation"])
+        self.assertFalse(context.metadata["personalization_execution_requested"])
 
     def test_existing_context_is_preserved(self):
         runtime = PersonalizedWorkingContextRuntime(self.base_runtime())
