@@ -27,6 +27,7 @@ from .identity import (
     MAX_REFERENCE_LENGTH,
     normalize_identity_reference,
 )
+from .integration import KnowledgeIntegrationError, KnowledgeRuntime, KnowledgeSnapshot
 from .persistence import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
@@ -44,8 +45,8 @@ from .relationships import (
 from .retrieval import (
     KnowledgeMatch,
     KnowledgeRetrievalError,
-    KnowledgeRetriever,
     KnowledgeSearchResult,
+    KnowledgeRetriever,
     MAX_QUERY_LENGTH,
     MAX_RESULTS,
     RetrievalMatchField,
@@ -73,6 +74,9 @@ __all__ = [
     "MAX_REASON_LENGTH",
     "MAX_REFERENCE_LENGTH",
     "normalize_identity_reference",
+    "KnowledgeIntegrationError",
+    "KnowledgeRuntime",
+    "KnowledgeSnapshot",
     "EntityAlreadyExistsError",
     "EntityNotFoundError",
     "EntityPersistenceError",
@@ -85,8 +89,8 @@ __all__ = [
     "MAX_RELATIONSHIP_ID_LENGTH",
     "KnowledgeMatch",
     "KnowledgeRetrievalError",
-    "KnowledgeRetriever",
     "KnowledgeSearchResult",
+    "KnowledgeRetriever",
     "MAX_QUERY_LENGTH",
     "MAX_RESULTS",
     "RetrievalMatchField",
