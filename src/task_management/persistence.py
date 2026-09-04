@@ -192,7 +192,7 @@ def recover_snapshot(payload: Mapping[str, Any] | str) -> PersistenceSnapshot:
     graph = TaskDependencyGraph(task_ids)
     try:
         for dependent, prerequisite in snapshot.dependencies:
-            graph.add_dependency(dependent, prerequisite)
+            graph.add_dependency(prerequisite, dependent)
     except (KeyError, ValueError, TypeError) as exc:
         raise PersistenceError("invalid dependency structure") from exc
 
