@@ -260,8 +260,8 @@ try {
         }
 
         Write-Host "Branch     : $branch"
-        if ($branch -notmatch '^feature/m13-1-entity-boundary$') {
-            Write-Host "Warning: this launcher is intended for feature/m13-1-entity-boundary." -ForegroundColor Yellow
+        if (-not $branch -or $branch -eq "main") {
+            Write-Host "Warning: run JARVIS from a development feature branch rather than main." -ForegroundColor Yellow
         }
     }
 
@@ -271,6 +271,13 @@ try {
 
     New-Item -ItemType Directory -Force (Join-Path $repoRoot "data\processed") | Out-Null
     New-Item -ItemType Directory -Force (Join-Path $repoRoot "logs\local") | Out-Null
+
+    Write-Stage "Database bootstrap"
+    python -m src.database_bootstrap
+    if ($LASTEXITCODE -ne 0) {
+        Fail "Database bootstrap failed. JARVIS will not be launched."
+    }
+    Write-Host "Local database schema is ready." -ForegroundColor Green
 
     Write-Stage "Local model server"
 
