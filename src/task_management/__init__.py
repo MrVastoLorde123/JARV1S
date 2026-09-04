@@ -27,6 +27,7 @@ from .progress import (
     TaskProgressEvaluator,
 )
 from .persistence import PersistenceError, PersistenceSnapshot, PersistenceStore, build_snapshot, recover_snapshot
+from .runtime import LongHorizonRuntime, LongHorizonRuntimeError, RuntimeState
 from .task import Task, TaskState, TaskStore, TaskTransitionError
 
 __all__ = [
@@ -61,6 +62,9 @@ __all__ = [
     "PersistenceStore",
     "build_snapshot",
     "recover_snapshot",
+    "LongHorizonRuntime",
+    "LongHorizonRuntimeError",
+    "RuntimeState",
     "Task",
     "TaskState",
     "TaskStore",
