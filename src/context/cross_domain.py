@@ -88,6 +88,20 @@ class DomainReference:
             )
         object.__setattr__(self, "metadata", _freeze(self.metadata))
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "domain": self.domain,
+            "reference_id": self.reference_id,
+            "label": self.label,
+            "metadata": _thaw(self.metadata),
+            "truth_guaranteed": False,
+            "fact_guaranteed": False,
+            "intent_guaranteed": False,
+            "authorization_granted": False,
+            "policy_authority": False,
+            "execution_requested": False,
+        }
+
 
 @dataclass(frozen=True)
 class CrossDomainLink:
@@ -226,21 +240,7 @@ class CrossDomainContext:
             "context_state": None if self.context_state is None else self.context_state.to_dict(),
             "goal_project": None if self.goal_project is None else self.goal_project.to_dict(),
             "situational": None if self.situational is None else self.situational.to_dict(),
-            "references": [
-                {
-                    "domain": item.domain,
-                    "reference_id": item.reference_id,
-                    "label": item.label,
-                    "metadata": _thaw(item.metadata),
-                    "truth_guaranteed": False,
-                    "fact_guaranteed": False,
-                    "intent_guaranteed": False,
-                    "authorization_granted": False,
-                    "policy_authority": False,
-                    "execution_requested": False,
-                }
-                for item in self.references
-            ],
+            "references": [item.to_dict() for item in self.references],
             "links": [link.to_dict() for link in self.links],
             "truth_guaranteed": False,
             "fact_guaranteed": False,
@@ -252,21 +252,3 @@ class CrossDomainContext:
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True, default=str)
-
-
-def _domain_reference_to_dict(self: DomainReference) -> dict[str, Any]:
-    return {
-        "domain": self.domain,
-        "reference_id": self.reference_id,
-        "label": self.label,
-        "metadata": _thaw(self.metadata),
-        "truth_guaranteed": False,
-        "fact_guaranteed": False,
-        "intent_guaranteed": False,
-        "authorization_granted": False,
-        "policy_authority": False,
-        "execution_requested": False,
-    }
-
-
-DomainReference.to_dict = _domain_reference_to_dict  # type: ignore[attr-defined]
