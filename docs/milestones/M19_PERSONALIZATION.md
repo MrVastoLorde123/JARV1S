@@ -21,7 +21,7 @@ Working Context / Response Quality
 
 - M19.1 Personalization Profile — implemented
 - M19.2 Preference Context Resolution — implemented
-- M19.3 Behavior Adaptation Resolution
+- M19.3 Behavior Adaptation Resolution — implemented
 - M19.4 Personalization Integration
 - M19.5 Persistence + Reversal
 - M19.6 End-to-End Personalization
@@ -45,6 +45,13 @@ provenance, and converts those records into profile signals.
 It does not create memories, modify memories, accept adaptations, change
 policy, or authorize anything.
 
+## M19.3 Boundary
+
+`BehaviorAdaptationResolver` is read-only. It consumes only already-accepted
+M10 behavior adaptations and converts them into descriptive `BEHAVIOR`
+signals. It preserves adaptation/evaluation lineage and never accepts,
+rejects, reverses, or authorizes an adaptation.
+
 ## Invariants
 
 - Personalization ≠ Authority
@@ -56,5 +63,6 @@ policy, or authorize anything.
 - Personalization ≠ Execution
 - User model ≠ User intent
 - Retrieval ≠ Mutation
+- Resolution ≠ Authorization
 
 M19 does not alter the canonical authority chain.
