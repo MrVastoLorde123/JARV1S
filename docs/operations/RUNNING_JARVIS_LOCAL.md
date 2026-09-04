@@ -2,7 +2,7 @@
 
 This is the operational guide for starting the local JARVIS runtime with `llama-server` and a local GGUF model.
 
-> **Development state:** use the current milestone/integration feature branch. The launcher no longer requires a specific historical milestone branch.
+> **Current development branch:** use the active milestone feature branch shown by `git branch --show-current`.
 >
 > The repository's launcher is `scripts/run_jarvis.ps1`.
 
@@ -11,7 +11,7 @@ This is the operational guide for starting the local JARVIS runtime with `llama-
 PowerShell:
 
 ```powershell
-cd C:\Users\jeoop\PycharmProjects\JARV1S
+cd <JARVIS_REPO>
 ```
 
 Check the branch before doing development work:
@@ -20,15 +20,7 @@ Check the branch before doing development work:
 git branch --show-current
 ```
 
-For the current local runtime integration work:
-
-```powershell
-git fetch --all
-git checkout feature/runtime-bootstrap-final
-git pull origin feature/runtime-bootstrap-final
-```
-
-Do **not** use `main` as the working branch for milestone development.
+For milestone development, switch to the feature branch named by the current milestone. Do **not** use `main` as the working branch for milestone implementation.
 
 ## 2. Verify Python
 
@@ -39,32 +31,14 @@ python --version
 python -c "import src; print('JARVIS Python environment OK')"
 ```
 
-The import check should print:
-
-```text
-JARVIS Python environment OK
-```
-
 ## 3. Verify llama-server
 
 The launcher can find `llama-server.exe` from `PATH` or several common locations. An explicit path can always be supplied with `-LlamaServerPath`.
 
-The locally installed executable used during setup was:
-
-```text
-C:\Users\jeoop\AppData\Local\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-server.exe
-```
-
-Check whether PowerShell can find it:
+For a machine-specific installation, pass the local executable path without committing that path into the repository:
 
 ```powershell
-Get-Command llama-server.exe -ErrorAction SilentlyContinue
-```
-
-If it is not on `PATH`, pass the full path when launching JARVIS:
-
-```powershell
-.\scripts\run_jarvis.ps1 -LlamaServerPath "C:\path\to\llama-server.exe"
+.\scripts\run_jarvis.ps1 -LlamaServerPath "<PATH_TO_LLAMA_SERVER_EXE>"
 ```
 
 ## 4. Put the GGUF model where the launcher can find it
@@ -78,12 +52,10 @@ Without `-ModelPath`, the launcher looks for `.gguf` files in:
 
 Exactly one GGUF should be available for automatic selection.
 
-The local model used during setup was Qwen3 4B GGUF, quantized as `Q4_K_M`.
-
 For an explicit model path:
 
 ```powershell
-.\scripts\run_jarvis.ps1 -ModelPath "C:\path\to\model.gguf"
+.\scripts\run_jarvis.ps1 -ModelPath "<PATH_TO_MODEL_GGUF>"
 ```
 
 ## 5. Normal JARVIS startup
@@ -99,7 +71,7 @@ The launcher performs this sequence:
 ```text
 Repository checks
         ↓
-Database bootstrap / schema readiness
+Database bootstrap
         ↓
 Find / start llama-server
         ↓
@@ -111,12 +83,10 @@ Run AI provider regression tests
         ↓
 Run core tests
         ↓
-Launch JARVIS
+Launch the Human Operating Layer
         ↓
-Stop the server when the session ends
+Interactive JARVIS session
 ```
-
-Database bootstrap is idempotent. A fresh local database receives the base conversation, conversation-state, memory, and memory-evidence tables before runtime startup. Existing initialized databases are left intact.
 
 The launcher binds locally by default:
 
@@ -124,29 +94,45 @@ The launcher binds locally by default:
 http://127.0.0.1:8080
 ```
 
-This is the intended local setup.
+The local model server is a capability provider. It is not JARVIS itself.
 
-## 6. Check the database manually
+## 6. Interactive Human Operating Layer
 
-The launcher runs the bootstrap automatically. To run it directly:
+The local runner now stays alive for repeated requests instead of sending one hard-coded prompt and exiting.
+
+Example:
+
+```text
+JARVIS Human Operating Layer
+Commands:
+:help          show this help
+:session       show the active session ID
+:new           start a new session
+:quit          end the JARVIS session
+
+You > What do you know about PCVUE?
+JARVIS > ...
+
+You > What were we working on?
+JARVIS > ...
+
+You > :quit
+JARVIS session ended.
+```
+
+Normal text is sent through the existing canonical JARVIS runtime. The local control commands stay at the interface layer and do not grant authority or authorization.
+
+## 7. Resume a durable session
+
+To resume an existing session identity, pass a stable session ID:
 
 ```powershell
-python -m src.database_bootstrap
+.\scripts\run_jarvis.ps1 -SessionId "my-session-id"
 ```
 
-A successful run prints:
+The session ID is an identity/continuity handle. It is not an authority token.
 
-```text
-JARVIS database bootstrap complete.
-```
-
-The local database path is:
-
-```text
-data\processed\jarvis.db
-```
-
-## 7. Check llama-server manually
+## 8. Check llama-server manually
 
 When debugging the model server, check the OpenAI-compatible models endpoint:
 
@@ -156,17 +142,13 @@ Invoke-RestMethod http://127.0.0.1:8080/v1/models
 
 A healthy server should return a model entry.
 
-To test the server itself without launching JARVIS, run `llama-server.exe` manually and keep the terminal open. This is mainly useful for troubleshooting; the normal workflow should let `run_jarvis.ps1` manage the server.
-
-## 8. Useful launcher options
+## 9. Useful launcher options
 
 ### Keep llama-server running
 
 ```powershell
 .\scripts\run_jarvis.ps1 -KeepServer
 ```
-
-Use this when repeatedly restarting JARVIS without restarting the model server.
 
 ### Skip regression tests
 
@@ -179,44 +161,42 @@ Use this only when the normal test gate is intentionally being bypassed for loca
 ### Explicit llama-server executable
 
 ```powershell
-.\scripts\run_jarvis.ps1 -LlamaServerPath "C:\path\to\llama-server.exe"
+.\scripts\run_jarvis.ps1 -LlamaServerPath "<PATH_TO_LLAMA_SERVER_EXE>"
 ```
 
 ### Explicit GGUF model
 
 ```powershell
-.\scripts\run_jarvis.ps1 -ModelPath "C:\path\to\model.gguf"
+.\scripts\run_jarvis.ps1 -ModelPath "<PATH_TO_MODEL_GGUF>"
 ```
 
-### Combine options
+### Explicit durable session
 
 ```powershell
-.\scripts\run_jarvis.ps1 `
-    -LlamaServerPath "C:\path\to\llama-server.exe" `
-    -ModelPath "C:\path\to\model.gguf" `
-    -KeepServer
+.\scripts\run_jarvis.ps1 -SessionId "my-session-id"
 ```
 
-## 9. What happens when a server is already running?
+## 10. What happens when a server is already running?
 
 The launcher first checks whether anything is listening on the configured host/port.
 
-If `127.0.0.1:8080` is already occupied, it checks `/v1/models` before using that server. It does not blindly assume that every process on port 8080 is llama-server.
+If the port is occupied, it checks `/v1/models` before using that server. It does not blindly assume that every process on the port is llama-server.
 
 If the existing service is healthy, JARVIS reuses it instead of starting another server.
 
-## 10. Environment variables used by JARVIS
+## 11. Environment variables used by JARVIS
 
 Before launching the runtime, the script sets:
 
 ```text
 JARVIS_LOCAL_BASE_URL=http://127.0.0.1:8080
 JARVIS_LOCAL_MODEL=<resolved model id>
+JARVIS_SESSION_ID=<optional durable session id>
 ```
 
 These variables are removed when the launcher exits.
 
-## 11. Server logs
+## 12. Server logs
 
 When the launcher starts llama-server itself, stdout and stderr logs are written under:
 
@@ -233,28 +213,27 @@ llama-server-YYYYMMDD-HHMMSS.err.log
 
 When startup fails, inspect the `.err.log` first.
 
-## 12. Stopping JARVIS
+## 13. Stopping JARVIS
 
 During an interactive JARVIS session, stop the runtime with:
 
 ```text
-Ctrl+C
+:quit
 ```
 
-When `run_jarvis.ps1` started the model server, it normally stops that server automatically when the JARVIS session ends.
+`Ctrl+C` / EOF also exits the operator loop.
 
-When started with `-KeepServer`, the server is intentionally left running.
+When `run_jarvis.ps1` started the model server, it normally stops that server automatically when the JARVIS session ends. With `-KeepServer`, the server is intentionally left running.
 
-## 13. First-time setup checklist
+## 14. First-time setup checklist
 
 Use this sequence on a fresh clone:
 
 ```powershell
-cd C:\Users\jeoop\PycharmProjects\JARV1S
+cd <JARVIS_REPO>
 
 git fetch --all
-git checkout feature/runtime-bootstrap-final
-git pull origin feature/runtime-bootstrap-final
+git branch --show-current
 
 python --version
 python -c "import src; print('JARVIS Python environment OK')"
@@ -262,33 +241,31 @@ python -c "import src; print('JARVIS Python environment OK')"
 .\scripts\run_jarvis.ps1
 ```
 
-The launcher now initializes the local database automatically, so there is no separate first-run migration command required.
-
 If automatic model discovery cannot find exactly one GGUF, use `-ModelPath` explicitly.
 
 If automatic `llama-server.exe` discovery fails, use `-LlamaServerPath` explicitly.
 
-## 14. Mental model
+## 15. Mental model
 
 The local runtime is:
 
 ```text
 YOU
   ↓
-JARVIS runtime
+Human Operating Layer
   ↓
-Working/context + persistence layers
+JARVISRuntime
   ↓
 OpenAI-compatible local API
   ↓
 llama-server
   ↓
-Qwen3 4B GGUF
+Local model
 ```
 
-JARVIS owns the runtime semantics. `llama-server` is the local model-serving layer, and the model is a capability provider rather than JARVIS itself.
+JARVIS owns the runtime semantics. The interface is only the human operating surface, and the model is a capability provider.
 
-## 15. Development rule
+## 16. Development rule
 
 Before starting a milestone:
 
@@ -297,18 +274,3 @@ git branch --show-current
 ```
 
 Work on the milestone feature branch, run the focused receipt for the slice, then run the relevant regressions. Do not write milestone work directly to `main`.
-
-## 16. Current local runtime receipts
-
-The local environment has demonstrated:
-
-- Python imports for JARVIS
-- `llama-server.exe` installation
-- Qwen3 4B GGUF model availability
-- llama-server listening on `127.0.0.1:8080`
-- `/v1/models` responding successfully
-- local model loading and inference
-- AI provider regression tests: 10/10
-- core suite: 485/485 after the conversation-schema isolation fix
-
-The remaining validation for the bootstrap change is the fresh-database startup path on the user's Windows environment. The intended receipt is a successful `run_jarvis.ps1` session reaching the JARVIS response instead of failing on a missing persistence table.
