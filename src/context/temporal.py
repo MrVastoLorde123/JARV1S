@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable
 
 from .world_state import ContextState
 
@@ -120,7 +119,7 @@ class TemporalContext:
             for snapshot in self.snapshots
             if _parse_timestamp(snapshot.observed_at) < cutoff
         )
-        return results[-limit:]
+        return tuple(reversed(results[-limit:]))
 
     def after(
         self,
