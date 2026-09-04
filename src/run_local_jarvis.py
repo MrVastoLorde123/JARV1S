@@ -3,12 +3,17 @@ from pathlib import Path
 
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
+from src.context.memory_context_source_provider import MemoryContextSourceProvider
+from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
 from src.database_bootstrap import bootstrap_database
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
+from src.personalization.end_to_end import PersonalizedWorkingContextRuntime
+from src.personalization.persistence import PersonalizationStore
+from src.personalization.runtime import PersonalizationRuntime
 
 
 def main():
@@ -35,13 +40,29 @@ def main():
     ai_service.register_provider(provider)
 
     conversation_store = ConversationStore()
+    personalization_store = PersonalizationStore(
+        data_dir / "personalization.json",
+    )
+    personalization_runtime = PersonalizationRuntime()
 
     def processor_factory(session_id, conversation_id):
+        base_context_runtime = WorkingContextRuntime(
+            MemoryContextSourceProvider(
+                include_memories=True,
+                include_evidence=True,
+            )
+        )
+        personalized_context_runtime = PersonalizedWorkingContextRuntime(
+            base_context_runtime,
+            personalization_runtime=personalization_runtime,
+            persistence_store=personalization_store,
+        )
         return JARVIS(
             ai_service=ai_service,
             conversation_store=conversation_store,
             conversation_id=conversation_id,
             enable_memory_formation=True,
+            working_context_runtime=personalized_context_runtime,
         )
 
     default_processor = JARVIS(ai_service=ai_service)
