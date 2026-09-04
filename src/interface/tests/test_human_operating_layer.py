@@ -21,12 +21,11 @@ class FakeRuntime:
 class HumanOperatingLayerTests(unittest.TestCase):
     def setUp(self):
         self.runtime = FakeRuntime()
-        self.operator = HumanOperatingLayer.__new__(HumanOperatingLayer)
-        self.operator.runtime = self.runtime
-        self.operator.boundary = InterfaceBoundary()
-        self.operator.channel = InterfaceChannel.TEXT
-        self.operator._session_id = "test-session"
-        self.operator._request_id_factory = iter(["request-1", "request-2"]).__next__
+        self.operator = HumanOperatingLayer(
+            self.runtime,
+            session_id="test-session",
+            request_id_factory=iter(["request-1", "request-2"]).__next__,
+        )
 
     def test_plain_text_becomes_runtime_request(self):
         result = self.operator.handle("hello jarvis")
@@ -71,6 +70,10 @@ class HumanOperatingLayerTests(unittest.TestCase):
         self.assertTrue(any("echo: second" in output for output in outputs))
         self.assertTrue(any("Active session: test-session" in output for output in outputs))
         self.assertTrue(outputs[-1].endswith("session ended."))
+
+    def test_invalid_runtime_shape_is_rejected(self):
+        with self.assertRaises(TypeError):
+            HumanOperatingLayer(object())
 
 
 if __name__ == "__main__":
