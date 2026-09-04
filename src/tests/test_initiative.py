@@ -1,11 +1,7 @@
 import json
 import unittest
 
-from src.initiative import (
-    InitiativeCandidate,
-    InitiativeValidationError,
-    MAX_CONTEXT_REFS if False else MAX_REFERENCES,
-)
+from src.initiative import InitiativeCandidate, InitiativeValidationError, MAX_REFERENCES
 
 
 class InitiativeCandidateTests(unittest.TestCase):
