@@ -1,5 +1,6 @@
 """M20 long-horizon task management primitives."""
 
+from .dependencies import DependencyError, TaskDependency, TaskDependencyGraph
 from .goals import (
     Goal,
     GoalObjectiveStore,
@@ -12,6 +13,9 @@ from .goals import (
 from .task import Task, TaskState, TaskStore, TaskTransitionError
 
 __all__ = [
+    "DependencyError",
+    "TaskDependency",
+    "TaskDependencyGraph",
     "Goal",
     "GoalObjectiveStore",
     "GoalState",
