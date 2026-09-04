@@ -17,7 +17,7 @@ from .dependencies import TaskDependencyGraph
 from .goals import Goal, Objective
 from .persistence import PersistenceError, PersistenceSnapshot, build_snapshot, recover_snapshot
 from .planning import LongHorizonPlan, LongHorizonPlanner, PlanStatus, PlanStep
-from .progress import ProgressEvaluation, ProgressStatus, ProgressEvidence, ObservedState, TaskProgressEvaluator
+from .progress import ProgressEvaluation, ProgressStatus, TaskProgressEvaluator
 from .task import Task
 
 
@@ -144,8 +144,8 @@ class LongHorizonRuntime:
             raise LongHorizonRuntimeError("recovered task/objective identity mismatch")
 
         graph = TaskDependencyGraph(task.task_id for task in snapshot.tasks)
-        for dependent, prerequisite in snapshot.dependencies:
-            graph.add_dependency(dependent, prerequisite)
+        for prerequisite, dependent in snapshot.dependencies:
+            graph.add_dependency(prerequisite, dependent)
 
         evaluator = TaskProgressEvaluator(snapshot.tasks)
         for evidence in snapshot.evidence:
