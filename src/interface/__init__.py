@@ -1,4 +1,4 @@
-"""M11 interface boundary package."""
+"""M17 human operating layer over the M11 interface boundary."""
 
 from .boundary import InterfaceBoundary, InterfaceChannel, InterfaceRequest, InterfaceResponse
 from .events import InterfaceEvent, InterfaceEventKind, InterfaceEventRuntime, InterfaceEventStream
@@ -11,6 +11,7 @@ from .hitl import (
     HumanDecisionStore,
     HumanResponseStatus,
 )
+from .human_operating_layer import HumanCommand, HumanOperatingLayer, HumanTurn
 from .multimodal import InterfaceModality, ModalityDescriptor, MultiModalRequest, MultiModalRuntime
 from .reliability import (
     InterfaceRecoveryAction,
@@ -27,19 +28,21 @@ __all__ = [
     "ConversationSession",
     "ConversationTurn",
     "DecisionOption",
+    "HumanCommand",
     "HumanDecisionRequest",
     "HumanDecisionResponse",
     "HumanDecisionRuntime",
     "HumanDecisionState",
     "HumanDecisionStore",
+    "HumanOperatingLayer",
     "HumanResponseStatus",
+    "HumanTurn",
     "InterfaceBoundary",
     "InterfaceChannel",
     "InterfaceEvent",
     "InterfaceEventKind",
     "InterfaceEventRuntime",
     "InterfaceEventStream",
-    "InterfaceModality",
     "InterfaceRecoveryAction",
     "InterfaceRecoveryState",
     "InterfaceRecoveryStore",
