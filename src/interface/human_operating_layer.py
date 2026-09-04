@@ -9,13 +9,20 @@ authority, authorize execution, mutate policy, or execute capabilities.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Protocol
 from uuid import uuid4
 
 from src.interface.boundary import InterfaceBoundary, InterfaceChannel
 
 if TYPE_CHECKING:
     from src.core.jarvis_runtime import JARVISRuntime
+
+
+class HumanRuntime(Protocol):
+    """Minimal runtime contract consumed by the human operating layer."""
+
+    def process(self, request): ...
+    def respond(self, result): ...
 
 
 @dataclass(frozen=True)
@@ -47,19 +54,16 @@ class HumanOperatingLayer:
 
     def __init__(
         self,
-        runtime: "JARVISRuntime",
+        runtime: "JARVISRuntime | HumanRuntime",
         *,
         session_id: str | None = None,
         channel: InterfaceChannel = InterfaceChannel.TEXT,
         request_id_factory: Callable[[], str] | None = None,
     ) -> None:
-        # Import only when constructing the operator. Core modules import
-        # interface request types, so module-level runtime import would create
-        # a circular dependency through src.interface.__init__.
-        from src.core.jarvis_runtime import JARVISRuntime as CanonicalJARVISRuntime
-
-        if not isinstance(runtime, CanonicalJARVISRuntime):
-            raise TypeError("runtime must be a JARVISRuntime")
+        if not callable(getattr(runtime, "process", None)) or not callable(
+            getattr(runtime, "respond", None)
+        ):
+            raise TypeError("runtime must provide process(request) and respond(result) methods")
         if not isinstance(channel, InterfaceChannel):
             raise TypeError("channel must be an InterfaceChannel")
         self.runtime = runtime
