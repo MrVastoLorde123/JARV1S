@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Iterator
 
 from .entities import Entity, EntityType
 
@@ -36,8 +37,20 @@ class EntityRepository:
 
     connection_factory: ConnectionFactory
 
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        connection = self.connection_factory()
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
     def initialize(self) -> None:
-        with self.connection_factory() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS knowledge_entities (
@@ -55,7 +68,7 @@ class EntityRepository:
             raise TypeError("entity must be an Entity")
         self.initialize()
         try:
-            with self.connection_factory() as connection:
+            with self._connection() as connection:
                 connection.execute(
                     """
                     INSERT INTO knowledge_entities
@@ -79,7 +92,7 @@ class EntityRepository:
         if not isinstance(entity_id, str) or not entity_id.strip():
             raise ValueError("entity_id must be a non-empty string")
         self.initialize()
-        with self.connection_factory() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 """
                 SELECT entity_id, entity_type, canonical_name,
@@ -101,7 +114,7 @@ class EntityRepository:
 
     def list_all(self) -> tuple[Entity, ...]:
         self.initialize()
-        with self.connection_factory() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT entity_id, entity_type, canonical_name,
@@ -116,7 +129,7 @@ class EntityRepository:
         if not isinstance(entity_id, str) or not entity_id.strip():
             raise ValueError("entity_id must be a non-empty string")
         self.initialize()
-        with self.connection_factory() as connection:
+        with self._connection() as connection:
             cursor = connection.execute(
                 "DELETE FROM knowledge_entities WHERE entity_id = ?",
                 (entity_id,),
