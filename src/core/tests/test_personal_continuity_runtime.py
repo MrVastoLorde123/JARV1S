@@ -74,7 +74,9 @@ class PersonalContinuityRuntimeTests(unittest.TestCase):
             content="My current project is JARVIS.",
             session_id=session_id,
         )
-        self.assertEqual(first.session_id, session_id)
+        first_response = first.to_interface_response()
+        self.assertEqual(first_response.request_id, "request-1")
+        self.assertIn("No prior context.", first_response.content)
 
         second_runtime = JARVISRuntime.from_processor(
             JARVIS(ai_service=ai_service),
