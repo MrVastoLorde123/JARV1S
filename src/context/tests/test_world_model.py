@@ -14,7 +14,11 @@ class WorldModelContextTests(unittest.TestCase):
     def test_empty_world_model_is_valid(self):
         model = WorldModelContext()
         self.assertIsNone(model.state)
-        self.assertEqual({}, model.to_dict()["state"] if False else {})
+        self.assertIsNone(model.temporal)
+        self.assertIsNone(model.goal_project)
+        self.assertIsNone(model.situational)
+        self.assertIsNone(model.cross_domain)
+        self.assertIsNone(model.relevance)
 
     def test_accepts_all_context_domains(self):
         state = ContextState("state-1", {"active": True})
@@ -110,9 +114,15 @@ class WorldModelContextTests(unittest.TestCase):
         self.assertIs(original.state, state)
 
     def test_serialization_contains_all_domains(self):
-        model = WorldModelContext()
-        payload = model.to_dict()
-        self.assertEqual({"state", "temporal", "goal_project", "situational", "cross_domain", "relevance", "truth_guaranteed", "fact_guaranteed", "intent_guaranteed", "authorization_granted", "policy_authority", "execution_requested"}, set(payload))
+        payload = WorldModelContext().to_dict()
+        self.assertEqual(
+            {
+                "state", "temporal", "goal_project", "situational", "cross_domain",
+                "relevance", "truth_guaranteed", "fact_guaranteed", "intent_guaranteed",
+                "authorization_granted", "policy_authority", "execution_requested",
+            },
+            set(payload),
+        )
 
     def test_serialization_preserves_non_authority_boundary(self):
         payload = WorldModelContext().to_dict()
@@ -129,7 +139,7 @@ class WorldModelContextTests(unittest.TestCase):
 
     def test_world_model_is_frozen(self):
         model = WorldModelContext()
-        with self.assertRaises((AttributeError, TypeError)):
+        with self.assertRaises(AttributeError):
             model.state = ContextState("state-1")
 
     def test_replacing_with_none_is_supported(self):
