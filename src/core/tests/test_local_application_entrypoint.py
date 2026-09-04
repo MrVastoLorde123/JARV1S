@@ -2,7 +2,7 @@ import io
 import os
 import unittest
 from contextlib import redirect_stdout
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch, ANY
 
 from src import run_local_jarvis
 
@@ -59,7 +59,7 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         runtime_cls.from_processor.assert_called_once_with(
             processor,
             conversation_store=store,
-            durable_processor_factory=MagicMock(),
+            durable_processor_factory=ANY,
         )
         operator_cls.assert_called_once_with(
             runtime,
