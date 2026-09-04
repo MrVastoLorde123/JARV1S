@@ -87,11 +87,10 @@ class SafeModificationTests(unittest.TestCase):
         self.assertFalse(execution.executed)
 
     def test_scope_is_immutable_functional_update(self):
-        execution = build_verified_execution().with_scope("src/another.py")
-        self.assertEqual(execution.execution_scope, ("src/example.py",))
-        self.assertEqual(execution.execution_scope, ("src/example.py",))
-        self.assertEqual(execution.with_scope("src/another.py").execution_scope,
-                         ("src/example.py", "src/another.py"))
+        original = build_verified_execution()
+        updated = original.with_scope("src/another.py")
+        self.assertEqual(original.execution_scope, ("src/example.py",))
+        self.assertEqual(updated.execution_scope, ("src/example.py", "src/another.py"))
 
     def test_preconditions_are_immutable_functional_update(self):
         execution = build_verified_execution()
