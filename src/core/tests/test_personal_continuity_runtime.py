@@ -6,6 +6,7 @@ from src import database
 from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.conversation_store import ConversationStore
+from src.core.models import JARVISResponse
 from src.database_bootstrap import bootstrap_database
 
 
@@ -25,9 +26,9 @@ class FakeAIService:
         del provider_name
         self.requests.append(request)
         state_items = [
-            item.content
-            for item in request.context.items
-            if item.source_type == "STATE"
+            item["content"]
+            for item in request.context["context"]["items"]
+            if item["source_type"] == "STATE"
         ]
         if state_items:
             content = "Remembered context: " + " | ".join(state_items)
@@ -90,10 +91,7 @@ class PersonalContinuityRuntimeTests(unittest.TestCase):
         response = second.to_interface_response()
         self.assertIn("user: My current project is JARVIS.", response.content)
         self.assertIn("assistant: No prior context.", response.content)
-        self.assertEqual(
-            store.get_messages(session_id)[0][3],
-            "My current project is JARVIS.",
-        )
+        self.assertEqual(store.get_messages(session_id)[0][3], "My current project is JARVIS.")
         self.assertEqual(len(store.get_messages(session_id)), 4)
 
     def test_new_session_does_not_inherit_previous_conversation(self):
