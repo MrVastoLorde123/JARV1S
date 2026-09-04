@@ -9,6 +9,7 @@ from .goals import (
     ObjectiveTransitionError,
     Provenance,
 )
+from .task import Task, TaskState, TaskStore, TaskTransitionError
 
 __all__ = [
     "Goal",
@@ -18,4 +19,8 @@ __all__ = [
     "ObjectiveState",
     "ObjectiveTransitionError",
     "Provenance",
+    "Task",
+    "TaskState",
+    "TaskStore",
+    "TaskTransitionError",
 ]
