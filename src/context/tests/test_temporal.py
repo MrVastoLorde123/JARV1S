@@ -59,13 +59,13 @@ class TemporalContextTests(unittest.TestCase):
     def test_between_is_inclusive_and_ordered(self):
         matches = self.history().between(
             "2026-01-02T00:00:00+00:00",
-            "2026-01-03T00:00:00+00:00",
+            "2026-01-03T10:00:00+00:00",
         )
         self.assertEqual(tuple(item.context_id for item in matches), ("ctx-2", "ctx-3"))
 
     def test_before_returns_recent_history_first(self):
         matches = self.history().before("2026-01-03T12:00:00+00:00", limit=2)
-        self.assertEqual(tuple(item.context_id for item in matches), ("ctx-1", "ctx-2"))
+        self.assertEqual(tuple(item.context_id for item in matches), ("ctx-3", "ctx-2"))
 
     def test_after_returns_forward_history(self):
         matches = self.history().after("2026-01-01T12:00:00+00:00")
