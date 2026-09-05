@@ -102,6 +102,8 @@ Learning Write Admission
 ↓
 Learning Write Execution
 ↓
+Learning Write Outcome
+↓
 Learning State / Memory Mutation
 ```
 
@@ -170,13 +172,11 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 
 Current milestone branch:
 
-`feature/m22.19-learning-write-execution-boundary`
+`feature/m22.20-learning-write-outcome-integrity`
 
 Latest verified local receipt:
 
 - **M22.19:** 12/12 focused + 502/502 core regression = **514/514**
-
-The user-provided receipt for M22.19 is the verification authority for this milestone.
 
 Previously verified checkpoints:
 
@@ -224,6 +224,7 @@ Previously verified checkpoints:
 - M22.17 Learning Write Proposal Boundary — VERIFIED / COMPLETE (515/515)
 - M22.18 Learning Write Admission Boundary — VERIFIED / COMPLETE (514/514)
 - M22.19 Learning Write Execution Boundary — VERIFIED / COMPLETE (514/514)
+- M22.20 Learning Write Outcome / Result Integrity Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## 7. M22 learning architecture and authority walls
 
@@ -270,6 +271,23 @@ M22.19 walls:
 - Completion ≠ Certainty
 
 M22.19 does not grant authorization, bypass sandbox boundaries, invoke ordinary capability execution, retry failed writes, revoke permissions, or define concrete persistent learning stores.
+
+### M22.20 — Learning Write Outcome / Result Integrity
+
+`LearningWriteOutcomeService` interprets a `LearningWriteExecutionResult` against the exact `LearningWriteExecutionRequest` that produced it. It verifies execution, admission, proposal, decision, candidate, and domain identity; normalizes success/failure; and fingerprints successful writer results deterministically.
+
+M22.20 remains an evidence boundary, not a truth boundary. A successful writer response is an observed result, not unquestionable proof that the learned information is correct.
+
+M22.20 walls:
+
+- Learning Write Execution Result ≠ Learning Write Outcome
+- Learning Write Outcome ≠ Learning Truth
+- Completion ≠ Certainty
+- Result Fingerprint ≠ Truth
+- Outcome ≠ Retry Authorization
+- Outcome ≠ Revocation
+- Outcome ≠ Memory Mutation
+- Learning ≠ Authority
 
 ## 8. Existing memory decision/write architecture
 
@@ -554,14 +572,14 @@ No merge is performed unless the user explicitly requests it.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.19 Learning Write Execution Boundary — VERIFIED / COMPLETE
+**Current milestone:** M22.20 Learning Write Outcome / Result Integrity Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-**Current branch:** `feature/m22.19-learning-write-execution-boundary`
+**Current branch:** `feature/m22.20-learning-write-outcome-integrity`
 
-**Latest verified test suite:** 514/514 for M22.19 (12 focused + 502 core regression)
+**Latest verified milestone:** M22.19 — 514/514 (12 focused + 502 core regression)
 
 **Learning pipeline:**
 
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning State / Memory`
+`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning State / Memory`
 
-**Next milestone:** derive from the live repository after M22.19 verification; do not guess it from memory.
+**Next milestone:** derive from the live repository after M22.20 verification; do not guess it from memory.
