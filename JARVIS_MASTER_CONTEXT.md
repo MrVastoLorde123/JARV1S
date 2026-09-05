@@ -126,11 +126,13 @@ M21.5 may represent an advisory recommendation for when a proactive proposal cou
 Current bounded contract:
 - `ProactiveScheduleProposal` is immutable advisory metadata.
 - `SchedulingEvaluation` distinguishes `PROPOSED`, `NEEDS_REVIEW`, and `NOT_SCHEDULABLE`.
+- `NotificationChannel` makes the notification surface explicit.
 - Time values must be timezone-aware.
-- Notification channels are explicit and require a message when selected.
+- Notification messages are required when a channel is selected.
 - Expiry cannot precede the proposed schedule time.
 - Mapping identity must match the represented proposal identity.
 - Ranking is deterministic by proposed time, then proposal identity.
+- Inactive source proposals are not schedulable.
 - Context explicitly reports `scheduled=False` and `notification_sent=False`.
 
 M21.5 authority walls:
