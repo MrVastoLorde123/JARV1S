@@ -48,6 +48,7 @@ M22.2 stops at provenance and trust assessment.
 - Provenance evidence is structured and immutable.
 - Trust assessments require a stable capability identity and bounded confidence in `[0, 1]`.
 - `UNASSESSED` trust must carry zero confidence.
+- Non-`UNASSESSED` trust assessments require supporting evidence.
 - Trust assessments may only be validated against matching capability identity.
 - Provenance and trust assessment context is metadata only.
 - Trust is an assessment, not a permission decision.
@@ -82,6 +83,6 @@ M22.2 does not:
 
 ## Verification
 
-Remote implementation status: **IMPLEMENTED / AWAITING LOCAL RECEIPT**.
+Remote implementation status: **VERIFIED / COMPLETE**.
 
-The milestone becomes VERIFIED / COMPLETE only after the user's local focused and regression test receipt passes.
+Local verification receipt: **9/9 M22.2 focused + 8/8 M22.1 focused + 487/487 core tests passed locally.**
