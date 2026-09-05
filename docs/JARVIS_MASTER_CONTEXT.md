@@ -64,8 +64,10 @@ No merge is performed unless explicitly requested.
 - M23.3 — VERIFIED / COMPLETE: 13/13 focused + 535/535 core = **548/548**
 - M23.4 — VERIFIED / COMPLETE: 14/14 focused + 549/549 core = **563/563**
 - M23.5 — VERIFIED / COMPLETE: 14/14 focused + 563/563 core = **577/577**
+- M23.6 — VERIFIED / COMPLETE: 13/13 focused + 576/576 core = **589/589**
 
 Selected recent receipts:
+- M23.6: **589/589**
 - M23.5: **577/577**
 - M23.4: **563/563**
 - M23.3: **548/548**
@@ -103,17 +105,23 @@ Receipt:
 ### M23.5 — Environment Observation Consistency Contract
 **Status: VERIFIED / COMPLETE.** Deterministic comparison of independent observations without selecting authoritative truth. `EnvironmentObservationConsistencyService` compares observations from the same environment and domain; canonical payload comparison yields `CONSISTENT` or `CONFLICTING`. Immutable results preserve both observation identities and adapter identities. Batch comparison is deterministic and preserves pair order while skipping unrelated environments/domains. Duplicate observation identities and invalid input types are rejected. Raw observations are not merged, discarded, mutated, or selected as truth.
 
-M23.3 direct snapshot composition still rejects duplicate domains. M23.5 is the explicit conflict/consistency seam required before a later aggregation contract can combine multiple observers without silently collapsing conflicts.
-
-Files:
-- `src/core/environment_observation_consistency.py`
-- `src/core/tests/test_environment_observation_consistency.py`
-- `docs/decisions/050-environment-observation-consistency-contract.md`
-
 Receipt:
 - Focused: `python -m unittest src.core.tests.test_environment_observation_consistency -v` → **14/14 OK**
 - Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **563/563 OK**
 - Combined: **577/577 OK**
+
+### M23.6 — Environment Observation Aggregation Contract
+**Status: VERIFIED / COMPLETE.** Deterministic derived-evidence aggregation of multiple independent observations for one environment/domain only after M23.4 freshness and M23.5 consistency gates pass. At least two observations are required; every validity artifact must be `CURRENT` and identity/scope matched; pairwise consistency must be complete and `CONSISTENT`; duplicate observation and adapter identities are rejected; aggregate source IDs, adapter IDs, and observed timestamps are preserved; aggregate payload is recursively immutable; and source observations are never mutated. Aggregation does not choose an authoritative provider, establish truth, authorize execution, grant permissions, imply capability executability, retry observers, mutate memory, rewrite/discard source observations, or establish adaptation truth.
+
+Files:
+- `src/core/environment_observation_aggregation.py`
+- `src/core/tests/test_environment_observation_aggregation.py`
+- `docs/decisions/051-environment-observation-aggregation-contract.md`
+
+Receipt:
+- Focused: `python -m unittest src.core.tests.test_environment_observation_aggregation -v` → **13/13 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **576/576 OK**
+- Combined: **589/589 OK**
 
 ## 8. Namespace and lineage rules
 
@@ -147,10 +155,10 @@ No merge is performed unless explicitly requested.
 
 ## 12. Current snapshot
 
-**Latest verified milestone:** M23.5 — 14/14 focused + 563/563 core = **577/577**.
+**Latest verified milestone:** M23.6 — 13/13 focused + 576/576 core = **589/589**.
 
-**Active milestone:** M23.6 — Environment Observation Aggregation Contract.
+**Active milestone:** M23.7 — Environment Observation Provenance Contract.
 
-**M23.6 status:** NOT YET IMPLEMENTED.
+**M23.7 status:** NOT YET IMPLEMENTED.
 
-**Next engineering action:** define a deterministic aggregation boundary that can combine multiple observations for one environment/domain only after consistency/freshness evidence is available, while preserving source lineage and never silently selecting conflicting evidence as truth. No merge performed.
+**Next engineering action:** define immutable provenance for environment observations and derived aggregates, including source adapter identity, observation identity, collection/assessment context, and evidence lineage, without treating provenance as truth or authority. No merge performed.
