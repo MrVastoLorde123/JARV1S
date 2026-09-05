@@ -112,6 +112,18 @@ class EnvironmentWorldModelRollbackRepairApplicationService:
             raise EnvironmentWorldModelRollbackRepairApplicationError(
                 "proposal and decision environments must match"
             )
+        if proposal.proposal_id != decision.proposal_id:
+            raise EnvironmentWorldModelRollbackRepairApplicationError(
+                "decision identity does not match repair proposal"
+            )
+        if proposal.expected_model_id != decision.expected_model_id:
+            raise EnvironmentWorldModelRollbackRepairApplicationError(
+                "proposal and decision expected identities must match"
+            )
+        if proposal.observed_model_id != decision.observed_model_id:
+            raise EnvironmentWorldModelRollbackRepairApplicationError(
+                "proposal and decision observed identities must match"
+            )
         if proposal.expected_model_id != expected_model.model_id:
             raise EnvironmentWorldModelRollbackRepairApplicationError(
                 "proposal expected identity does not match expected model"
@@ -119,10 +131,6 @@ class EnvironmentWorldModelRollbackRepairApplicationService:
         if proposal.environment_id != expected_model.environment_id:
             raise EnvironmentWorldModelRollbackRepairApplicationError(
                 "proposal and expected model environments must match"
-            )
-        if decision.verification_decision_id != proposal.verification_decision_id:
-            raise EnvironmentWorldModelRollbackRepairApplicationError(
-                "decision identity does not match repair proposal lineage"
             )
 
         current = current_model if current_model is not None else store.get(proposal.environment_id)
