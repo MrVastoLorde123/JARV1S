@@ -228,10 +228,47 @@ Registration ≠ Trust
 
 M22.2 does not execute capabilities, grant permission, create authorization, infer execution authority from trust, mutate policy, schedule, notify, select/assign workers, or treat provenance as proof of truth.
 
+### M22.3 — Capability Lifecycle / Versioning
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+
+M22.3 establishes immutable capability version identities, lifecycle states, explicit forward-only lifecycle transitions, deterministic version ordering, and historical retention. Lifecycle/version metadata does not create trust, permission, authorization, or execution.
+
+```text
+Capability Descriptor
+        ↓
+Provenance / Trust
+        ↓
+Version Identity
+        ↓
+Lifecycle State
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution
+```
+
+Boundary walls:
+
+```text
+Version ≠ Identity Authority
+Lifecycle ≠ Permission
+Latest ≠ Authorized
+Active ≠ Trusted
+Deprecated ≠ Forbidden
+Retired ≠ Deleted
+Versioning ≠ Execution
+Capability ≠ Permission
+```
+
+M22.3 does not execute capabilities, grant permission, create authorization, infer trust from lifecycle state, infer authorization from `ACTIVE`, select workers, mutate policy, automatically replace versions, or delete retired history.
+
 ### Future M22 boundaries
 
 ```text
-M22.3 Capability Lifecycle / Versioning
 M22.4 Capability Permission / Policy Binding
 M22.5 Plugin Isolation / Execution Sandbox
 M22.6 Capability Discovery + Selection Integration
