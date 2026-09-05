@@ -1,10 +1,12 @@
-"""Policy, confirmation, authorization, and integrity boundary for invocation."""
+"""Policy, confirmation, authorization, integrity, and sandbox gate for invocation."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 from typing import Optional
+
+from src.plugins.sandbox import SandboxProfileRegistry
 
 from .authorization import AuthorizationDecision, ExplicitAuthorizationService
 from .authorization_integrity import AuthorizationIntegrityService
@@ -13,15 +15,19 @@ from .errors import InvalidRequestError
 from .models import ToolDefinition, ToolError, ToolRequest, ToolResult
 from .policy import Policy, PolicyDecision
 from .registry import ToolRegistry
+from .sandbox_admission import (
+    SandboxAdmissionService,
+    build_default_sandbox_profiles,
+)
 from .service import ToolService
 
 
 class PolicyGate:
-    """Enforces policy, confirmation, authorization, and integrity before execution.
+    """Enforces policy, confirmation, authorization, integrity, and sandbox admission.
 
     ``authorize()`` is the explicit non-executing authority boundary. ``invoke()``
-    consumes the resulting decision and verifies its binding to the exact request
-    before crossing into ``ToolService``.
+    consumes the resulting decision, verifies its binding to the exact request,
+    evaluates sandbox admission, and only then crosses into ``ToolService``.
     """
 
     def __init__(
@@ -30,6 +36,7 @@ class PolicyGate:
         service: ToolService,
         policy: Policy,
         confirmation_provider: Optional[ConfirmationProvider] = None,
+        sandbox_profile_registry: Optional[SandboxProfileRegistry] = None,
     ) -> None:
         self._registry = registry
         self._service = service
@@ -40,6 +47,8 @@ class PolicyGate:
             self._confirmation_provider,
         )
         self._authorization_integrity = AuthorizationIntegrityService()
+        self._sandbox_profiles = sandbox_profile_registry or build_default_sandbox_profiles()
+        self._sandbox_admission = SandboxAdmissionService(self._sandbox_profiles)
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
         """Return the immutable capability catalog visible to callers."""
@@ -67,7 +76,7 @@ class PolicyGate:
         )
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        """Run one request through authorization + integrity, then ToolService."""
+        """Run one request through authorization, integrity, sandbox admission, then service."""
         decision = self.authorize(request)
 
         if not decision.authorized:
@@ -91,6 +100,22 @@ class PolicyGate:
                 request,
                 code="authorization_integrity_failed",
                 message=integrity.reason or "Authorization integrity verification failed",
+            )
+
+        handler = self._registry.get(request.tool_name)
+        definition = handler.definition()
+        declared_profile = definition.metadata.get("sandbox_profile_id")
+        admission = self._sandbox_admission.admit(
+            decision,
+            integrity,
+            request,
+            profile_id=declared_profile,
+        )
+        if not admission.admissible:
+            return self._blocked_result(
+                request,
+                code="sandbox_admission_failed",
+                message=admission.reason or "Sandbox admission failed",
             )
 
         return self._service.invoke(request)
