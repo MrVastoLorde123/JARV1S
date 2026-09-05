@@ -97,9 +97,19 @@ class M22_50_Tests(unittest.TestCase):
 
     def test_full_lineage_is_preserved(self):
         preparation = make_preparation()
-        result = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionService(SuccessfulApplier()).execute(preparation)
-        for field in ("preparation_id", "admission_id", "proposal_id", "decision_id", "evaluation_id", "feedback_id", "outcome_id", "execution_id", "source_admission_id", "source_proposal_id", "decision_source_evaluation_id", "evaluation_id_from_feedback", "source_feedback_id", "candidate_id", "source_candidate_id", "execution_source_id", "source_execution_id", "domain", "source_policy_id", "policy_id"):
+        applier = SuccessfulApplier()
+        result = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionService(applier).execute(preparation)
+        preserved_fields = (
+            "preparation_id", "admission_id", "proposal_id", "decision_id", "evaluation_id", "feedback_id",
+            "outcome_id", "source_admission_id", "source_proposal_id", "decision_source_evaluation_id",
+            "evaluation_id_from_feedback", "source_feedback_id", "candidate_id", "source_candidate_id",
+            "execution_source_id", "source_execution_id", "domain", "source_policy_id", "policy_id",
+        )
+        for field in preserved_fields:
             self.assertEqual(getattr(result, field), getattr(preparation, field))
+        self.assertEqual(result.execution_id, applier.request.execution_id)
+        self.assertNotEqual(result.execution_id, preparation.execution_id)
+        self.assertEqual(result.source_execution_id, preparation.source_execution_id)
 
     def test_execution_id_is_deterministic(self):
         service = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionService(SuccessfulApplier())
