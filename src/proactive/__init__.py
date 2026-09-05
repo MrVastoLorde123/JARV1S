@@ -21,6 +21,13 @@ from .value import (
     assess_proposal_value,
     rank_assessments,
 )
+from .information_gain import (
+    InformationGainAssessment,
+    InformationGainError,
+    InformationGainFactors,
+    assess_information_gain,
+    rank_information_gain,
+)
 
 __all__ = [
     "InitiativeCandidate",
@@ -38,4 +45,9 @@ __all__ = [
     "ValueAssessmentError",
     "assess_proposal_value",
     "rank_assessments",
+    "InformationGainAssessment",
+    "InformationGainError",
+    "InformationGainFactors",
+    "assess_information_gain",
+    "rank_information_gain",
 ]
