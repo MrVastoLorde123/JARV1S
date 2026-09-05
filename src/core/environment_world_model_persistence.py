@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -29,19 +30,30 @@ def _restore(value: Any) -> Any:
     return value
 
 
+def _json_safe(value: Any) -> Any:
+    """Convert recursively frozen containers into JSON-compatible containers."""
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 def _serialize_model(model: EnvironmentWorldModel) -> dict[str, Any]:
     return {
         "model_id": model.model_id,
         "environment_id": model.environment_id,
-        "state_by_domain": dict(model.state_by_domain),
-        "represented_domains": list(model.represented_domains),
-        "missing_domains": list(model.missing_domains),
-        "context_ids": list(model.context_ids),
-        "qualification_ids": list(model.qualification_ids),
-        "provenance_ids": list(model.provenance_ids),
+        "state_by_domain": _json_safe(model.state_by_domain),
+        "represented_domains": _json_safe(model.represented_domains),
+        "missing_domains": _json_safe(model.missing_domains),
+        "context_ids": _json_safe(model.context_ids),
+        "qualification_ids": _json_safe(model.qualification_ids),
+        "provenance_ids": _json_safe(model.provenance_ids),
         "readiness_id": model.readiness_id,
         "source_bundle_id": model.source_bundle_id,
-        "lineage": dict(model.lineage),
+        "lineage": _json_safe(model.lineage),
     }
 
 
@@ -131,7 +143,7 @@ class FileEnvironmentWorldModelStore:
                 encoding="utf-8",
             )
             temporary.replace(path)
-        except OSError as exc:
+        except (OSError, TypeError) as exc:
             try:
                 temporary.unlink(missing_ok=True)
             except OSError:
