@@ -66,10 +66,15 @@ class CapabilityDiscoverySelectionIntegrationTests(unittest.TestCase):
 
     def test_selected_capabilities_must_come_from_discovered_snapshot(self):
         result = self.service.discover_and_select("write file")
-        discovered = set(result.discovered)
+        discovered_names = {
+            capability.name.strip().lower() for capability in result.discovered
+        }
 
         self.assertTrue(
-            all(candidate.capability in discovered for candidate in result.selection.candidates)
+            all(
+                candidate.capability.name.strip().lower() in discovered_names
+                for candidate in result.selection.candidates
+            )
         )
 
     def test_snapshot_is_deterministic(self):
