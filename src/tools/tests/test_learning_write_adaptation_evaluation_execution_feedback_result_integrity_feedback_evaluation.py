@@ -33,12 +33,13 @@ class M22_45_Tests(unittest.TestCase):
             payload={"outcome_status": "succeeded", "execution_result": {"changed": True}, "result_fingerprint": "fp"},
             provenance={"source": "test"}, reason="successful result-integrity evidence", **common,
         )
+        failure_data = {**common, "outcome_id": "outcome-2", "execution_id": "execution-2", "feedback_id": "feedback-2"}
         self.failure = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback(
-            feedback_id="feedback-2",
             kind=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind.INTEGRITY_FAILURE,
-            payload={"outcome_status": "failed", "reason": "bad execution"}, provenance={"source": "test"},
+            payload={"outcome_status": "failed", "reason": "bad execution"},
+            provenance={"source": "test"},
             reason="failed result-integrity evidence",
-            **{**common, "outcome_id": "outcome-2", "execution_id": "execution-2", "feedback_id": "feedback-2"},
+            **failure_data,
         )
         self.service = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationService()
 
