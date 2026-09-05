@@ -54,6 +54,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback:
     proposal_id: str
     decision_id: str
     evaluation_id: str
+    decision_source_evaluation_id: str
     source_feedback_id: str
     candidate_id: str
     source_candidate_id: str
@@ -75,6 +76,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback:
             ("execution_id", self.execution_id), ("preparation_id", self.preparation_id),
             ("admission_id", self.admission_id), ("proposal_id", self.proposal_id),
             ("decision_id", self.decision_id), ("evaluation_id", self.evaluation_id),
+            ("decision_source_evaluation_id", self.decision_source_evaluation_id),
             ("source_feedback_id", self.source_feedback_id), ("candidate_id", self.candidate_id),
             ("source_candidate_id", self.source_candidate_id), ("execution_source_id", self.execution_source_id),
             ("source_execution_id", self.source_execution_id), ("source_admission_id", self.source_admission_id),
@@ -118,7 +120,9 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback:
             "learning_write_adaptation_evaluation_execution_feedback_proposal_id": self.proposal_id,
             "learning_write_adaptation_evaluation_execution_feedback_decision_id": self.decision_id,
             "learning_write_adaptation_evaluation_execution_feedback_evaluation_id": self.evaluation_id,
-            "learning_write_adaptation_evaluation_execution_feedback_id": self.source_feedback_id,
+            "learning_write_adaptation_evaluation_feedback_decision_source_evaluation_id": self.decision_source_evaluation_id,
+            "learning_write_adaptation_evaluation_execution_feedback_id": self.feedback_id,
+            "learning_write_adaptation_evaluation_execution_source_feedback_id": self.source_feedback_id,
             "learning_write_adaptation_candidate_id": self.candidate_id,
             "learning_candidate_id": self.source_candidate_id,
             "learning_write_adaptation_evaluation_execution_source_id": self.execution_source_id,
@@ -179,7 +183,9 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackS
             "proposal_id": integrity.proposal_id,
             "decision_id": integrity.decision_id,
             "evaluation_id": integrity.evaluation_id,
-            "source_feedback_id": integrity.feedback_id,
+            "decision_source_evaluation_id": integrity.evaluation_id,
+            "feedback_id": integrity.feedback_id,
+            "source_feedback_id": integrity.source_feedback_id,
             "candidate_id": integrity.candidate_id,
             "source_candidate_id": integrity.source_candidate_id,
             "execution_source_id": integrity.execution_source_id,
@@ -200,7 +206,8 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackS
             proposal_id=integrity.proposal_id,
             decision_id=integrity.decision_id,
             evaluation_id=integrity.evaluation_id,
-            source_feedback_id=integrity.feedback_id,
+            decision_source_evaluation_id=integrity.evaluation_id,
+            source_feedback_id=integrity.source_feedback_id,
             candidate_id=integrity.candidate_id,
             source_candidate_id=integrity.source_candidate_id,
             execution_source_id=integrity.execution_source_id,
@@ -227,7 +234,9 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackS
                 "proposal_id": integrity.proposal_id,
                 "decision_id": integrity.decision_id,
                 "evaluation_id": integrity.evaluation_id,
-                "source_feedback_id": integrity.feedback_id,
+                "decision_source_evaluation_id": integrity.evaluation_id,
+                "feedback_id": integrity.feedback_id,
+                "source_feedback_id": integrity.source_feedback_id,
                 "candidate_id": integrity.candidate_id,
                 "source_candidate_id": integrity.source_candidate_id,
                 "execution_source_id": integrity.execution_source_id,
