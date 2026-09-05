@@ -51,10 +51,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     related_context: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not isinstance(
-            self.proposal,
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal,
-        ):
+        if not isinstance(self.proposal, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal):
             raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
                 "proposal must be a LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal"
             )
@@ -183,10 +180,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider(Protocol):
     """Provider-neutral, non-mutating M22.48 admission interface."""
 
-    def admit(
-        self,
-        context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext,
-    ) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
+    def admit(self, context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
         ...
 
 
@@ -218,7 +212,6 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultInteg
         else:
             status = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus.ADMITTED
             reason = "proposal satisfies deterministic admission requirements"
-
         admission_id = self._admission_id(proposal, status, reason)
         return LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission(
             admission_id=admission_id,
@@ -268,7 +261,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     """Validate and obtain a non-authorizing M22.48 admission result."""
 
     def __init__(self, provider: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider | None = None) -> None:
-        self._provider = provider or LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider()
+        self._provider = provider or DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider()
 
     def admit(self, context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
         if not isinstance(context, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext):
