@@ -19,7 +19,7 @@ def feedback(**overrides):
         evaluation_id="upstream-evaluation-1", decision_source_evaluation_id="decision-source-evaluation-1",
         evaluation_id_from_feedback="feedback-evaluation-1", source_feedback_id="source-feedback-1",
         candidate_id="candidate-1", source_candidate_id="source-candidate-1", execution_source_id="execution-source-1",
-        source_execution_id="historical-execution-1", source_admission_id="source-admission-1", proposal_source_id="source-proposal-1",
+        source_execution_id="historical-execution-1", source_admission_id="source-admission-1", source_proposal_id="source-proposal-1",
         domain="learning", source_policy_id="source-policy-1", policy_id="policy-1",
         kind=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind.INTEGRITY_SUCCESS,
         payload={"integrity_status": "succeeded", "execution_result": {"ok": True}, "result_fingerprint": "a" * 64},
@@ -55,7 +55,7 @@ class M22_53_Tests(unittest.TestCase):
         for field in (
             "feedback_id", "integrity_id", "execution_id", "preparation_id", "admission_id", "proposal_id", "decision_id",
             "evaluation_id_from_feedback", "decision_source_evaluation_id", "source_feedback_id", "candidate_id",
-            "source_candidate_id", "execution_source_id", "source_execution_id", "source_admission_id", "proposal_source_id",
+            "source_candidate_id", "execution_source_id", "source_execution_id", "source_admission_id", "source_proposal_id",
             "domain", "source_policy_id", "policy_id",
         ):
             self.assertEqual(getattr(out, field), getattr(source, field))
