@@ -1,6 +1,7 @@
 import hashlib
 import json
 import unittest
+from collections.abc import Mapping
 
 from src.tools.learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation_decision_proposal_admission_preparation_execution_result_integrity import (
     LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity,
@@ -13,6 +14,16 @@ from src.tools.learning_write_adaptation_evaluation_execution_feedback_result_in
     LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResult,
     LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionStatus,
 )
+
+
+def _json_ready(value):
+    if isinstance(value, Mapping):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return sorted((_json_ready(item) for item in value), key=repr)
+    return value
 
 
 def request(**overrides):
@@ -54,7 +65,7 @@ class M22_51_Tests(unittest.TestCase):
     def test_success_has_sha256_fingerprint(self):
         req = request(); out = result(req)
         integrity = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityService().evaluate(out, req)
-        expected = hashlib.sha256(json.dumps(out.execution_result, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        expected = hashlib.sha256(json.dumps(_json_ready(out.execution_result), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         self.assertEqual(integrity.result_fingerprint, expected)
 
     def test_failed_normalizes_to_failed(self):
@@ -115,7 +126,7 @@ class M22_51_Tests(unittest.TestCase):
     def test_success_cannot_have_reason(self):
         req = request(); out = result(req)
         with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityError):
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityService().evaluate(out, req)._replace(reason="bad") if False else LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity(
+            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity(
                 integrity_id="integrity-1", execution_id=req.execution_id, preparation_id=req.preparation_id, admission_id=req.admission_id,
                 proposal_id=req.proposal_id, decision_id=req.decision_id, evaluation_id=req.evaluation_id, feedback_id=req.feedback_id,
                 outcome_id=req.outcome_id, source_admission_id=req.source_admission_id, source_proposal_id=req.source_proposal_id,
