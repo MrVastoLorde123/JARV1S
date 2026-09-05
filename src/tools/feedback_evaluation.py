@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 import hashlib
 import json
+from types import MappingProxyType
 from typing import Any, Mapping
 
 from .execution_feedback import ExecutionFeedbackEvent, FeedbackKind
@@ -26,6 +27,19 @@ class LearningSignalKind(str, Enum):
     SUCCESS_SIGNAL = "success_signal"
     TOOL_FAILURE_SIGNAL = "tool_failure_signal"
     EXECUTOR_FAILURE_SIGNAL = "executor_failure_signal"
+
+
+def _freeze(value: Any) -> Any:
+    """Recursively freeze common mutable containers into immutable snapshots."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(item) for item in value)
+    return value
 
 
 @dataclass(frozen=True)
@@ -72,6 +86,9 @@ class LearningCandidate:
             raise FeedbackEvaluationError(
                 "provenance must contain non-empty string keys and values"
             )
+
+        object.__setattr__(self, "evidence", _freeze(self.evidence))
+        object.__setattr__(self, "provenance", _freeze(self.provenance))
 
     def to_context(self) -> dict[str, object]:
         return {
