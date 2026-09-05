@@ -91,10 +91,10 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalTests(unittest.T
         for field in (
             "decision_id", "evaluation_id", "decision_source_evaluation_id", "feedback_id",
             "source_feedback_id", "candidate_id", "source_candidate_id", "execution_id",
-            "source_execution_id", "preparation_id", "admission_id", "proposal_source_id",
-            "domain", "policy_id",
+            "source_execution_id", "preparation_id", "admission_id", "domain", "policy_id",
         ):
             self.assertEqual(getattr(proposal, field), getattr(self.decision, field))
+        self.assertEqual(proposal.proposal_source_id, self.decision.proposal_id)
 
     def test_proposal_id_is_deterministic(self) -> None:
         first = self.service.propose(self._context())
