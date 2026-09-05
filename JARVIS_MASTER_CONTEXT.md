@@ -121,10 +121,83 @@ Outcome / Feedback
 - M22.12 Execution Attempt / Worker Boundary — VERIFIED / COMPLETE (11/11 execution attempt + 4/4 execution attempt gate + 9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 583/583)
 - M22.13 Execution Outcome / Result Integrity Boundary — VERIFIED / COMPLETE (12/12 focused + 502/502 core regression = 514/514)
 - M22.14 Execution Outcome → Feedback Boundary — VERIFIED / COMPLETE (10/10 focused + 502/502 core regression = 512/512)
-- M22.15 Feedback Evaluation / Learning Candidate Boundary — ACTIVE
+- M22.15 Feedback Evaluation / Learning Candidate Boundary — VERIFIED / COMPLETE (9/9 focused + 502/502 core regression = 511/511)
+- M22.16 Learning Decision Boundary — VERIFIED / COMPLETE (10/10 focused + 502/502 core regression = 512/512)
+- M22.17 Learning Write Proposal Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-## M22.15 direction
-M22.15 establishes the boundary that evaluates inert execution feedback into a structured learning candidate without writing memory, changing authorization, executing tools, retrying, revoking capabilities, or treating feedback as unquestionable truth. The result should preserve feedback provenance, classify the learning signal, expose uncertainty/confidence explicitly, and remain suitable for a later learning decision layer.
+## M22.17 direction
+M22.17 establishes the inert proposal boundary between an accepted `LearningDecision` and any later learning-state or memory mutation. An accepted decision may produce a structured `LearningWriteProposal`, while `DEFER` and `REJECT` produce no write proposal. The proposal preserves candidate provenance and identity, carries an explicit learning domain and payload, and remains non-writing, non-authorizing, and non-executing.
+
+Directional boundary:
+```text
+ExecutionFeedbackEvent
+↓
+Feedback Evaluation
+↓
+LearningCandidate
+↓
+LearningDecisionService
+↓
+LearningDecision
+↓
+LearningWriteProposalService
+↓
+LearningWriteProposal
+↓
+Learning / Memory Write Policy
+↓
+Learning State / Memory Mutation
+```
+
+M22.17 authority walls:
+- Learning Decision ≠ Learning Write Proposal
+- Learning Write Proposal ≠ Learning Write
+- Learning Write Proposal ≠ Memory Mutation
+- Learning ≠ Authority
+- Proposal ≠ Authorization
+- Proposal ≠ Execution
+- Candidate Evidence ≠ Truth
+- Confidence ≠ Certainty
+- Learning Domain ≠ Memory Domain
+
+M22.17 should not persist learning, mutate memory, authorize execution, trigger retries, revoke capabilities, or bypass the existing memory decision/executor architecture.
+
+## M22.16 verified semantics
+M22.16 establishes the provider-neutral decision boundary between an inert `LearningCandidate` and any later learning or memory write. The decision preserves candidate identity, exposes confidence, distinguishes `ACCEPT`, `DEFER`, and `REJECT`, and remains non-authorizing and non-writing.
+
+M22.16 verification receipt: **10/10 focused + 502/502 core regression tests passed locally = 512/512.**
+
+Directional boundary:
+```text
+ExecutionFeedbackEvent
+↓
+Feedback Evaluation
+↓
+LearningCandidate
+↓
+LearningDecisionService
+↓
+LearningDecision
+↓
+Learning / Memory Write Boundary
+```
+
+M22.16 authority walls:
+- Learning Candidate ≠ Learning Decision
+- Learning Decision ≠ Learning Write
+- Learning Decision ≠ Memory Mutation
+- Learning ≠ Authority
+- Confidence ≠ Certainty
+- Evidence ≠ Truth
+- Learning Decision ≠ Retry Authorization
+- Learning Decision ≠ Execution
+
+M22.16 does not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
+
+## M22.15 verified semantics
+M22.15 establishes the evaluation boundary between inert execution feedback and any learning or memory decision. `FeedbackEvaluationService` produces an immutable `LearningCandidate` with explicit signal classification, bounded confidence, and preserved feedback/execution/handoff provenance. Recursive evidence/provenance snapshots remain immutable.
+
+M22.15 verification receipt: **9/9 focused + 502/502 core regression tests passed locally = 511/511.**
 
 Directional boundary:
 ```text
@@ -147,32 +220,7 @@ M22.15 authority walls:
 - Outcome ≠ Permission
 - Learning ≠ Authority
 
-M22.15 should not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
-
-## M22.14 verified semantics
-M22.14 establishes the first explicit feedback boundary after execution outcomes. `ExecutionFeedbackService` converts a verified `ExecutionOutcome` into an immutable, provenance-bearing feedback event with deterministic identity and payload hashing. Feedback remains inert and cannot authorize, execute, retry, revoke, or write learning state.
-
-M22.14 verification receipt: **10/10 focused + 502/502 core regression tests passed locally = 512/512.**
-
-Directional boundary:
-```text
-ExecutionOutcome
-↓
-Feedback Event
-↓
-Feedback Evaluation / Learning
-```
-
-M22.14 authority walls:
-- Outcome ≠ Feedback
-- Feedback ≠ Learning
-- Feedback ≠ Authorization
-- Feedback ≠ Execution
-- Failure ≠ Revocation
-- Feedback ≠ Retry Authorization
-- Feedback evidence ≠ Truth
-
-M22.14 does not add automatic retries, re-authorization, revocation, durable learning writes, or alternate execution paths.
+M22.15 does not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
