@@ -56,17 +56,21 @@ class M22_48_Tests(unittest.TestCase):
 
     def test_admission_id_is_distinct(self) -> None:
         admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
-        for upstream_id in (admission.proposal_id, admission.decision_id, admission.evaluation_id, admission.feedback_id, admission.execution_id):
-            self.assertNotEqual(admission.admission_id, upstream_id)
+        self.assertNotEqual(admission.admission_id, admission.proposal_id)
+        self.assertNotEqual(admission.admission_id, admission.decision_id)
+        self.assertNotEqual(admission.admission_id, admission.evaluation_id)
+        self.assertNotEqual(admission.admission_id, admission.feedback_id)
+        self.assertNotEqual(admission.admission_id, admission.execution_id)
 
     def test_full_lineage_is_preserved(self) -> None:
         admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         for name in (
             "proposal_id", "decision_id", "evaluation_id", "feedback_id", "outcome_id", "execution_id", "preparation_id",
             "decision_source_evaluation_id", "evaluation_id_from_feedback", "source_feedback_id", "candidate_id",
-            "source_candidate_id", "execution_source_id", "source_execution_id", "domain", "source_policy_id",
+            "source_candidate_id", "execution_source_id", "source_execution_id", "domain",
         ):
             self.assertEqual(getattr(admission, name), getattr(self.proposal, name))
+        self.assertEqual(admission.source_policy_id, self.proposal.policy_id)
         self.assertEqual(admission.source_proposal_id, self.proposal.source_proposal_id)
         self.assertEqual(admission.source_admission_id, self.proposal.admission_id)
 
@@ -117,8 +121,9 @@ class M22_48_Tests(unittest.TestCase):
 
     def test_empty_payload_is_rejected(self) -> None:
         bad = self.proposal.__class__(**{**self.proposal.__dict__, "payload": {}, "proposal_id": "proposal-empty"})
-        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError):
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=bad)
+        context = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=bad)
+        admission = self.service.admit(context)
+        self.assertEqual(admission.status, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus.REJECTED)
 
     def test_wrong_provider_identity_is_rejected(self) -> None:
         class _BadProvider(DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider):
