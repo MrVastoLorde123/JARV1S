@@ -68,15 +68,18 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposal:
     proposal_id: str
     decision_id: str
     evaluation_id: str
-    evaluation_id_from_feedback: str
+    decision_source_evaluation_id: str
     feedback_id: str
     source_feedback_id: str
     candidate_id: str
     source_candidate_id: str
     execution_id: str
     source_execution_id: str
+    preparation_id: str
     admission_id: str
+    proposal_source_id: str
     domain: str
+    policy_id: str
     proposal: Mapping[str, Any]
     evidence: Mapping[str, Any]
     provenance: Mapping[str, str]
@@ -93,15 +96,18 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposal:
             ("proposal_id", self.proposal_id),
             ("decision_id", self.decision_id),
             ("evaluation_id", self.evaluation_id),
-            ("evaluation_id_from_feedback", self.evaluation_id_from_feedback),
+            ("decision_source_evaluation_id", self.decision_source_evaluation_id),
             ("feedback_id", self.feedback_id),
             ("source_feedback_id", self.source_feedback_id),
             ("candidate_id", self.candidate_id),
             ("source_candidate_id", self.source_candidate_id),
             ("execution_id", self.execution_id),
             ("source_execution_id", self.source_execution_id),
+            ("preparation_id", self.preparation_id),
             ("admission_id", self.admission_id),
+            ("proposal_source_id", self.proposal_source_id),
             ("domain", self.domain),
+            ("policy_id", self.policy_id),
             ("reason", self.reason),
         ):
             if not isinstance(value, str) or not value.strip():
@@ -154,15 +160,18 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposal:
             "learning_write_adaptation_evaluation_execution_feedback_proposal_id": self.proposal_id,
             "learning_write_adaptation_evaluation_execution_feedback_decision_id": self.decision_id,
             "learning_write_adaptation_evaluation_execution_feedback_evaluation_id": self.evaluation_id,
-            "learning_write_adaptation_feedback_evaluation_id": self.evaluation_id_from_feedback,
+            "learning_write_adaptation_feedback_evaluation_id": self.decision_source_evaluation_id,
             "learning_write_adaptation_evaluation_execution_feedback_id": self.feedback_id,
             "learning_write_adaptation_source_feedback_id": self.source_feedback_id,
             "learning_write_adaptation_candidate_id": self.candidate_id,
             "learning_candidate_id": self.source_candidate_id,
             "learning_write_adaptation_evaluation_execution_id": self.execution_id,
             "learning_write_adaptation_source_execution_id": self.source_execution_id,
+            "learning_write_adaptation_evaluation_execution_preparation_id": self.preparation_id,
             "learning_write_adaptation_evaluation_proposal_admission_id": self.admission_id,
+            "learning_write_adaptation_evaluation_proposal_id": self.proposal_source_id,
             "learning_write_adaptation_domain": self.domain,
+            "learning_write_adaptation_evaluation_execution_policy_id": self.policy_id,
             "proposal": dict(self.proposal),
             "evidence": dict(self.evidence),
             "provenance": dict(self.provenance),
@@ -202,35 +211,41 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalService:
             "decision_reason": decision.reason,
             "decision_confidence": decision.confidence,
             "evaluation_id": decision.evaluation_id,
-            "evaluation_id_from_feedback": decision.evaluation_id_from_feedback,
+            "evaluation_id_from_feedback": decision.decision_source_evaluation_id,
         }
         provenance = {
             "source": "adaptation_evaluation_execution_feedback_decision",
             "decision_id": decision.decision_id,
             "evaluation_id": decision.evaluation_id,
-            "evaluation_id_from_feedback": decision.evaluation_id_from_feedback,
+            "evaluation_id_from_feedback": decision.decision_source_evaluation_id,
             "feedback_id": decision.feedback_id,
             "source_feedback_id": decision.source_feedback_id,
             "candidate_id": decision.candidate_id,
             "source_candidate_id": decision.source_candidate_id,
             "execution_id": decision.execution_id,
             "source_execution_id": decision.source_execution_id,
+            "preparation_id": decision.preparation_id,
             "admission_id": decision.admission_id,
+            "proposal_source_id": decision.proposal_id,
+            "policy_id": decision.policy_id,
         }
         proposal_id = self._proposal_id(decision, proposal_payload)
         return LearningWriteAdaptationEvaluationExecutionFeedbackProposal(
             proposal_id=proposal_id,
             decision_id=decision.decision_id,
             evaluation_id=decision.evaluation_id,
-            evaluation_id_from_feedback=decision.evaluation_id_from_feedback,
+            decision_source_evaluation_id=decision.decision_source_evaluation_id,
             feedback_id=decision.feedback_id,
             source_feedback_id=decision.source_feedback_id,
             candidate_id=decision.candidate_id,
             source_candidate_id=decision.source_candidate_id,
             execution_id=decision.execution_id,
             source_execution_id=decision.source_execution_id,
+            preparation_id=decision.preparation_id,
             admission_id=decision.admission_id,
+            proposal_source_id=decision.proposal_id,
             domain=decision.domain,
+            policy_id=decision.policy_id,
             proposal=proposal_payload,
             evidence=evidence,
             provenance=provenance,
@@ -247,11 +262,16 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalService:
             {
                 "decision_id": decision.decision_id,
                 "evaluation_id": decision.evaluation_id,
-                "evaluation_id_from_feedback": decision.evaluation_id_from_feedback,
+                "decision_source_evaluation_id": decision.decision_source_evaluation_id,
                 "feedback_id": decision.feedback_id,
                 "source_feedback_id": decision.source_feedback_id,
                 "candidate_id": decision.candidate_id,
                 "execution_id": decision.execution_id,
+                "preparation_id": decision.preparation_id,
+                "admission_id": decision.admission_id,
+                "proposal_source_id": decision.proposal_id,
+                "domain": decision.domain,
+                "policy_id": decision.policy_id,
                 "proposal": proposal,
             },
             sort_keys=True,
