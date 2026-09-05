@@ -124,10 +124,11 @@ Outcome / Feedback
 - M22.15 Feedback Evaluation / Learning Candidate Boundary — VERIFIED / COMPLETE (9/9 focused + 502/502 core regression = 511/511)
 - M22.16 Learning Decision Boundary — VERIFIED / COMPLETE (10/10 focused + 502/502 core regression = 512/512)
 - M22.17 Learning Write Proposal Boundary — VERIFIED / COMPLETE (13/13 focused + 502/502 core regression = 515/515)
-- M22.18 Learning Write Admission Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.18 Learning Write Admission Boundary — VERIFIED / COMPLETE (12/12 focused + 502/502 core regression = 514/514)
+- M22.19 Learning Write Execution Boundary — ACTIVE
 
-## M22.18 direction
-M22.18 establishes the policy admission boundary between an inert `LearningWriteProposal` and any later learning-state or memory mutation. The admission service preserves exact proposal, decision, and candidate identity, applies explicit structural admission requirements, returns `ADMITTED` or `REJECTED`, and remains non-writing and non-authorizing.
+## M22.19 direction
+M22.19 establishes the controlled execution boundary between an admitted `LearningWriteProposal` and a replaceable learning writer. Only an `ADMITTED` write may proceed. The service binds admission, proposal, decision, and candidate identity, creates deterministic execution identity, passes an immutable request to the writer, and converts writer exceptions into an explicit immutable result.
 
 Directional boundary:
 ```text
@@ -149,9 +150,41 @@ LearningWriteAdmissionService
 ↓
 LearningWriteAdmission
 ↓
-Learning / Memory Write Executor
+LearningWriteExecutionService
 ↓
-Learning State / Memory Mutation
+LearningWriteExecutionRequest
+↓
+LearningWriter
+↓
+LearningWriteExecutionResult
+↓
+Learning State / Memory
+```
+
+M22.19 authority walls:
+- Learning Write Admission ≠ Learning Write Execution
+- Learning Write Execution ≠ Authorization
+- Learning Write Execution ≠ Tool Execution
+- Learning Write Execution Result ≠ Learning Truth
+- Learning ≠ Authority
+- Completion ≠ Certainty
+
+M22.19 should not grant authorization, bypass sandbox boundaries, invoke ordinary capability execution, retry failed writes, revoke permissions, or define concrete persistent learning stores.
+
+## M22.18 verified semantics
+M22.18 establishes the policy admission boundary between an inert `LearningWriteProposal` and any later learning-state or memory mutation. The admission service preserves exact proposal, decision, and candidate identity, applies explicit structural admission requirements, returns `ADMITTED` or `REJECTED`, and remains non-writing and non-authorizing.
+
+M22.18 verification receipt: **12/12 focused + 502/502 core regression tests passed locally = 514/514.**
+
+Directional boundary:
+```text
+LearningWriteProposal
+↓
+LearningWriteAdmissionService
+↓
+LearningWriteAdmission
+↓
+Learning / Memory Write Executor
 ```
 
 M22.18 authority walls:
@@ -171,106 +204,22 @@ M22.18 baseline admission policy:
 - proposal confidence must be at least 0.5;
 - policy identity is recorded with the immutable admission result.
 
-M22.18 should not persist learning, mutate memory, authorize execution, trigger retries, revoke capabilities, or bypass the existing memory decision/executor architecture.
+M22.18 does not persist learning, mutate memory, authorize execution, trigger retries, revoke capabilities, or bypass existing memory decision/executor architecture.
 
 ## M22.17 verified semantics
 M22.17 establishes the inert proposal boundary between an accepted `LearningDecision` and any later learning-state or memory mutation. An accepted decision may produce a structured `LearningWriteProposal`, while `DEFER` and `REJECT` produce no write proposal. The proposal preserves candidate provenance and identity, carries an explicit learning domain and payload, and remains non-writing, non-authorizing, and non-executing.
 
 M22.17 verification receipt: **13/13 focused + 502/502 core regression tests passed locally = 515/515.**
 
-Directional boundary:
-```text
-ExecutionFeedbackEvent
-↓
-Feedback Evaluation
-↓
-LearningCandidate
-↓
-LearningDecisionService
-↓
-LearningDecision
-↓
-LearningWriteProposalService
-↓
-LearningWriteProposal
-↓
-Learning / Memory Write Policy
-↓
-Learning State / Memory Mutation
-```
-
-M22.17 authority walls:
-- Learning Decision ≠ Learning Write Proposal
-- Learning Write Proposal ≠ Learning Write
-- Learning Write Proposal ≠ Memory Mutation
-- Learning ≠ Authority
-- Proposal ≠ Authorization
-- Proposal ≠ Execution
-- Candidate Evidence ≠ Truth
-- Confidence ≠ Certainty
-- Learning Domain ≠ Memory Domain
-
-M22.17 does not persist learning, mutate memory, authorize execution, trigger retries, revoke capabilities, or bypass existing memory decision/executor contracts.
-
 ## M22.16 verified semantics
 M22.16 establishes the provider-neutral decision boundary between an inert `LearningCandidate` and any later learning or memory write. The decision preserves candidate identity, exposes confidence, distinguishes `ACCEPT`, `DEFER`, and `REJECT`, and remains non-authorizing and non-writing.
 
 M22.16 verification receipt: **10/10 focused + 502/502 core regression tests passed locally = 512/512.**
 
-Directional boundary:
-```text
-ExecutionFeedbackEvent
-↓
-Feedback Evaluation
-↓
-LearningCandidate
-↓
-LearningDecisionService
-↓
-LearningDecision
-↓
-Learning / Memory Write Boundary
-```
-
-M22.16 authority walls:
-- Learning Candidate ≠ Learning Decision
-- Learning Decision ≠ Learning Write
-- Learning Decision ≠ Memory Mutation
-- Learning ≠ Authority
-- Confidence ≠ Certainty
-- Evidence ≠ Truth
-- Learning Decision ≠ Retry Authorization
-- Learning Decision ≠ Execution
-
-M22.16 does not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
-
 ## M22.15 verified semantics
 M22.15 establishes the evaluation boundary between inert execution feedback and any learning or memory decision. `FeedbackEvaluationService` produces an immutable `LearningCandidate` with explicit signal classification, bounded confidence, and preserved feedback/execution/handoff provenance. Recursive evidence/provenance snapshots remain immutable.
 
 M22.15 verification receipt: **9/9 focused + 502/502 core regression tests passed locally = 511/511.**
-
-Directional boundary:
-```text
-ExecutionFeedbackEvent
-↓
-Feedback Evaluation
-↓
-Learning Candidate
-↓
-Memory / Learning Decision
-```
-
-M22.15 authority walls:
-- Feedback ≠ Learning
-- Feedback Evaluation ≠ Learning Write
-- Learning Candidate ≠ Memory
-- Learning Candidate ≠ User Intent
-- Evidence ≠ Truth
-- Confidence ≠ Certainty
-- Outcome ≠ Permission
-- Learning ≠ Authority
-
-M22.15 does not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
