@@ -81,6 +81,14 @@ class EnvironmentWorldModelUncertaintyTests(unittest.TestCase):
                 confidence_by_domain={"hardware": True},
             )
 
+    def test_non_numeric_scores_are_rejected(self) -> None:
+        with self.assertRaises(TypeError):
+            self.service.assess(
+                self.model,
+                uncertainty_id="unc-nonnumeric",
+                confidence_by_domain={"hardware": "0.8"},
+            )
+
     def test_missing_domains_do_not_receive_confidence(self) -> None:
         result = self.service.assess(
             self.model,
