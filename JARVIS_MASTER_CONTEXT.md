@@ -94,7 +94,8 @@ Outcome / Feedback
 - M21.2 Proactive Proposal Boundary — VERIFIED / COMPLETE (8/8 focused + 11/11 initiative + 487/487 core)
 - M21.3 Proactive Value Assessment — VERIFIED / COMPLETE (7/7 focused + 8/8 proposal + 11/11 initiative + 487/487 core)
 - M21.4 Information Gain / Uncertainty Reduction — VERIFIED / COMPLETE (7/7 focused + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
-- M21.5 Bounded Proactive Scheduling / Notification — IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M21.5 Bounded Proactive Scheduling / Notification — VERIFIED / COMPLETE (9/9 focused + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
+- M21.6 Proactive Runtime / Feedback Integration — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## M21.3 verified semantics
 Bounded deterministic advisory scoring uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version is `linear-v1`; score is bounded to [0, 1]; ranking is deterministic by score descending and proposal identity ascending. Value assessment grants no authority and performs no scheduling, notification, assignment, or execution.
@@ -120,8 +121,8 @@ Boundary walls:
 - High Information Gain ≠ Authorization
 - Ranking ≠ Scheduling
 
-## M21.5 boundary
-M21.5 may represent an advisory recommendation for when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry or deliver a notification.
+## M21.5 verified semantics
+M21.5 represents an advisory recommendation for when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry or deliver a notification.
 
 Current bounded contract:
 - `ProactiveScheduleProposal` is immutable advisory metadata.
@@ -143,6 +144,20 @@ M21.5 authority walls:
 - Scheduling ≠ Permission
 - Notification ≠ Execution
 - Initiative ≠ Authorization
+
+## M21.6 boundary
+M21.6 is the integration layer that composes proactive cognition outputs into a bounded runtime result and records outcome/feedback signals for later learning. It may consume initiatives, proposals, value assessments, information-gain assessments, and scheduling recommendations, but it must not bypass validation, confirmation, authorization, or execution boundaries.
+
+M21.6 must preserve the following walls:
+- Runtime Integration ≠ Authorization
+- Feedback ≠ Truth
+- Outcome ≠ User Intent
+- Learning Signal ≠ Policy Change
+- Recommendation ≠ Execution
+- Recovery ≠ Execution
+- Integration ≠ Authority Escalation
+
+The M21.6 runtime is expected to make the proactive chain composable while keeping every stage advisory until the existing authority chain explicitly takes over.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
