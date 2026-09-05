@@ -152,7 +152,7 @@ Integration ≠ Authority Escalation
 M22 establishes a governed, extensible capability ecosystem while preserving the distinction between capability availability and permission to invoke it.
 
 ### M22.1 — Capability / Plugin Contract + Registry Boundary
-**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**Status: VERIFIED / COMPLETE.**
 
 M22.1 establishes immutable capability descriptors and a conflict-aware metadata registry. Discovery answers what capability exists; it does not grant permission to invoke it.
 
@@ -188,10 +188,49 @@ Metadata ≠ Execution Request
 
 M22.1 does not execute plugins, create authorization, grant permissions, establish trust, bypass validation/policy/confirmation/authorization, schedule, notify, assign workers, or mutate policy.
 
+### M22.2 — Capability Trust / Provenance Boundary
+**Status: VERIFIED / COMPLETE.**
+
+M22.2 establishes immutable capability provenance records, structured evidence, and evidence-linked trust assessments. Provenance records where a capability came from; trust assessments describe the current evidence-backed trust state. Neither creates permission or authorization.
+
+```text
+Capability Descriptor
+        ↓
+Provenance Record
+        ↓
+Evidence
+        ↓
+Trust Assessment
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution
+```
+
+Verified receipt: **9/9 M22.2 focused + 8/8 M22.1 focused + 487/487 core tests passed locally.**
+
+Boundary walls:
+
+```text
+Provenance ≠ Trust
+Trust ≠ Permission
+Trust ≠ Authorization
+Evidence ≠ Truth
+Confidence ≠ Certainty
+Assessment ≠ Execution
+Capability ≠ Permission
+Registration ≠ Trust
+```
+
+M22.2 does not execute capabilities, grant permission, create authorization, infer execution authority from trust, mutate policy, schedule, notify, select/assign workers, or treat provenance as proof of truth.
+
 ### Future M22 boundaries
 
 ```text
-M22.2 Capability Trust / Provenance Boundary
 M22.3 Capability Lifecycle / Versioning
 M22.4 Capability Permission / Policy Binding
 M22.5 Plugin Isolation / Execution Sandbox
