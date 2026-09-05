@@ -94,6 +94,8 @@ Future Adaptation Execution Feedback Evaluation
 ↓
 Future Adaptation Execution Feedback Decision
 ↓
+Future Adaptation Execution Feedback Proposal
+↓
 Learning State / Memory Mutation
 ```
 
@@ -158,10 +160,11 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.38-adaptation-evaluation-execution-feedback-decision`
+`feature/m22.39-adaptation-evaluation-execution-feedback-proposal`
 
 Latest verified local receipts:
-- **M22.38 pending**
+- **M22.39:** 15/15 focused + 502/502 core regression = **517/517**
+- **M22.38:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.37:** 12/12 focused + 502/502 core regression = **514/514**
 - **M22.36:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.35:** 14/14 focused + 502/502 core regression = **516/516**
@@ -174,17 +177,21 @@ Latest verified local receipts:
 - **M22.27:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.26:** 11/11 focused + 502/502 core regression = **513/513**
 
+Previous verified checkpoints remain recorded below.
+
 ## 6. Milestone state
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.37 — VERIFIED / COMPLETE.
+M22.1–M22.39 — VERIFIED / COMPLETE.
 
 M22.35 Future Adaptation Execution Result Integrity — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 M22.36 Future Adaptation Execution → Feedback — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 M22.37 Future Adaptation Execution Feedback → Evaluation — VERIFIED / COMPLETE (12/12 focused + 502/502 core = 514/514).
+M22.38 Future Adaptation Execution Feedback → Decision — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515).
+M22.39 Future Adaptation Execution Feedback → Proposal — VERIFIED / COMPLETE (15/15 focused + 502/502 core = 517/517).
 
-**M22.38 Future Adaptation Execution Feedback → Decision — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.40 Future Adaptation Execution Feedback Proposal → Admission — ACTIVE / NEXT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -198,23 +205,34 @@ M22.34 executes exactly one M22.33 preparation artifact through a replaceable ap
 
 M22.36 consumes exactly one M22.35 future-execution outcome and creates immutable feedback while preserving exact lineage. M22.37 consumes exactly one M22.36 feedback event and creates immutable evaluation evidence.
 
-### M22.38 — Future Adaptation Execution Feedback → Decision
-`LearningWriteAdaptationEvaluationExecutionFeedbackDecisionService` consumes exactly one M22.37 evaluation artifact and produces an immutable explicit decision. It preserves the complete future-execution lineage, including preparation, admission, proposal, upstream evaluation identity, source feedback, candidate, source execution, domain, and policy identity.
+M22.38 consumes exactly one M22.37 evaluation artifact and creates an immutable explicit `ACCEPT`, `DEFER`, or `REJECT` decision. The decision remains non-authorizing.
 
-The deterministic baseline produces `ACCEPT`, `DEFER`, or `REJECT` decisions. Failure signals defer; confidence below `0.5` defers; otherwise the observed evaluation is accepted for the next boundary.
+### M22.39 — Future Adaptation Execution Feedback → Proposal
+`LearningWriteAdaptationEvaluationExecutionFeedbackProposalService` consumes exactly one M22.38 decision plus a non-empty proposal payload. Only `ACCEPT` produces a proposal; `DEFER` and `REJECT` produce none.
 
-The M22.38 decision is deliberately non-authorizing. It cannot authorize execution, request retry, revoke execution, mutate memory, or grant general authority. The decision is planning/evaluation state for a downstream boundary.
+The proposal preserves the complete known future-execution lineage: decision identity, M22.37 evaluation identity, the historical evaluation identity carried by M22.36, feedback identity, source feedback, candidate, source candidate, execution, source execution, preparation, admission, source proposal identity, domain, and policy identity.
+
+Proposal payload, evidence, and provenance are recursively frozen. Proposal confidence remains bounded to `[0.0, 1.0]`, and the proposal receives a deterministic identity distinct from the upstream decision.
+
+The M22.39 proposal is inert. It cannot authorize execution, request execution, retry, revoke, or mutate memory. Downstream admission remains a separate boundary.
+
+### M22.40 — Future Adaptation Execution Feedback Proposal → Admission
+The next boundary is admission of the immutable M22.39 proposal. Admission must remain deterministic and structurally separate from proposal creation: it validates the exact proposal type and required lineage, applies admission policy, and produces an immutable admission artifact without authorizing execution, retry, revocation, or memory mutation.
+
+The admission artifact should preserve the complete proposal lineage and proposal identity, record an explicit admission decision/status and reason, remain recursively immutable, and carry a deterministic admission identity distinct from the proposal identity. Admission is not execution authorization; downstream execution preparation remains a separate boundary.
 
 Walls:
 - Execution ≠ Result Integrity
 - Result Integrity ≠ Feedback
 - Feedback ≠ Feedback Evaluation
 - Feedback Evaluation ≠ Feedback Evaluation Decision
-- Feedback Evaluation Decision ≠ Authorization
-- Feedback Evaluation Decision ≠ Execution
-- Feedback Evaluation Decision ≠ Retry
-- Feedback Evaluation Decision ≠ Revocation
-- Feedback Evaluation Decision ≠ Memory Mutation
+- Decision ≠ Proposal
+- Proposal ≠ Admission
+- Admission ≠ Authorization
+- Admission ≠ Execution
+- Admission ≠ Retry
+- Admission ≠ Revocation
+- Admission ≠ Memory Mutation
 - Evidence ≠ Truth
 - Learning ≠ Authority
 
@@ -325,12 +343,14 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.38 Future Adaptation Execution Feedback → Decision — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.40 Future Adaptation Execution Feedback Proposal → Admission — ACTIVE / NEXT.
 
-**Current branch:** `feature/m22.38-adaptation-evaluation-execution-feedback-decision`
+**Current branch:** `feature/m22.39-adaptation-evaluation-execution-feedback-proposal`
 
-**Latest verified milestone:** M22.37 — 514/514 (12 focused + 502 core regression)
+**Latest verified milestone:** M22.39 — 517/517 (15 focused + 502 core regression)
 
-**Active boundary:** Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision.
+**Active boundary:** Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission.
 
-**Next milestone:** derive M22.39 from the live M22.38 decision artifact after local verification; do not guess.
+**M22.40 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackProposal` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_proposal.py`.
+
+**Next action:** inspect analogous admission contracts in the live repository, then implement M22.40 on a new branch based on M22.39. Do not merge.
