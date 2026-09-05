@@ -100,8 +100,9 @@ class LearningWriteAdaptationEvaluationProposalTests(unittest.TestCase):
         self.assertEqual(proposal.source_candidate_id, self.decision.source_candidate_id)
         self.assertEqual(proposal.execution_id, self.decision.execution_id)
         self.assertEqual(proposal.admission_id, self.decision.admission_id)
-        self.assertEqual(proposal.proposal_id, self.decision.proposal_id)
         self.assertEqual(proposal.domain, self.decision.domain)
+        self.assertEqual(proposal.provenance["proposal_id"], self.decision.proposal_id)
+        self.assertNotEqual(proposal.proposal_id, self.decision.proposal_id)
 
     def test_proposal_id_is_deterministic(self) -> None:
         context = LearningWriteAdaptationEvaluationProposalContext(
