@@ -61,8 +61,10 @@ No merge is performed unless explicitly requested.
 - M22.55 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
 - M22.56 — VERIFIED / COMPLETE: 16/16 focused + 502/502 core = **518/518**
 - M23.1 — VERIFIED / COMPLETE: 12/12 focused + 514/514 core = **526/526**
+- M23.2 — VERIFIED / COMPLETE: 8/8 focused + 522/522 core = **530/530**
 
 Selected recent receipts:
+- M23.2: **530/530**
 - M23.1: **526/526**
 - M22.56: **518/518**
 - M22.55: **517/517**
@@ -137,7 +139,7 @@ M23.1 receipt: **12/12 focused + 514/514 core = 526/526**.
 
 ## 9. M23.2 — Environment State Contract
 
-**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+**Status: VERIFIED / COMPLETE.**
 
 Branch:
 `feature/m23.2-environment-state-contract`
@@ -151,20 +153,17 @@ The snapshot recursively freezes its domain mappings so later routing, planning,
 
 Environment state is descriptive, not authoritative. Recording a permission does not grant it; recording a capability does not imply that it is executable. The snapshot cannot authorize execution, request execution, mutate memory, establish adaptation truth, or elevate permissions.
 
-Hardware discovery, operating-system probing, telemetry collection, and external-service health checks remain separate observation adapters. M23.2 intentionally does not hard-code detection of the host machine.
+Hardware discovery, operating-system probing, telemetry, and external-service health checks remain separate observation adapters. M23.2 intentionally does not hard-code detection of the host machine.
 
 Files:
 - `src/core/environment_model.py`
 - `src/core/tests/test_environment_model.py`
 - `docs/decisions/047-environment-state-contract.md`
 
-Focused:
-`python -m unittest src.core.tests.test_environment_model -v`
-
-Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
-
-Local verification is required before M23.2 can be marked VERIFIED / COMPLETE.
+Receipt:
+- Focused: `python -m unittest src.core.tests.test_environment_model -v` → **8/8 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **522/522 OK**
+- Combined: **530/530 OK**
 
 ## 10. Namespace and lineage rules
 
@@ -198,10 +197,10 @@ No merge is performed unless explicitly requested.
 
 ## 14. Current snapshot
 
-**Latest verified milestone:** M23.1 — 12/12 focused + 514/514 core = **526/526**.
+**Latest verified milestone:** M23.2 — 8/8 focused + 522/522 core = **530/530**.
 
-**Active milestone:** M23.2 — Environment State Contract.
+**Active milestone:** M23.3 — Environment Observation Adapter Contract.
 
-**M23.2 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
+**M23.3 status:** NOT YET IMPLEMENTED.
 
-**Next local action:** pull `feature/m23.2-environment-state-contract`, run the focused environment-model suite, then the `src\\core` regression. Do not mark M23.2 verified until those receipts are supplied.
+**Next engineering action:** define the provider-neutral observation-adapter interface and deterministic composition into `EnvironmentSnapshot`, without probing the host or granting authority. No merge performed.
