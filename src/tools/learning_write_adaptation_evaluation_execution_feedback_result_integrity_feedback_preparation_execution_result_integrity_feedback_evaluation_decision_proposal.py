@@ -107,8 +107,6 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
                 raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalError(f"{field_name} must be a mapping")
         if not self.payload:
             raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalError("payload must be non-empty")
-        if not self.evidence:
-            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalError("evidence must be non-empty")
         if not self.provenance:
             raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalError("provenance must be non-empty")
         if not all(isinstance(k, str) and k.strip() and isinstance(v, str) and v.strip() for k, v in self.provenance.items()):
