@@ -75,6 +75,8 @@ Bounded Scheduling / Notification Proposal
 ↓
 Proactive Runtime / Feedback
 ↓
+Capability Discovery / Selection
+↓
 Prioritization
 ↓
 Validation / Policy
@@ -98,7 +100,7 @@ Outcome / Feedback
 - M21.4 Information Gain / Uncertainty Reduction — VERIFIED / COMPLETE (7/7 focused + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
 - M21.5 Bounded Proactive Scheduling / Notification — VERIFIED / COMPLETE (9/9 focused + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
 - M21.6 Proactive Runtime / Feedback Integration — VERIFIED / COMPLETE (10/10 runtime + 9/9 scheduling + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
-- M22 Capability / Plugin Ecosystem — NEXT
+- M22 Capability / Plugin Ecosystem — ACTIVE
 - M22.1 Capability / Plugin Contract + Registry Boundary — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## M21.3 verified semantics
@@ -176,11 +178,13 @@ M21.6 does not confirm user intent, schedule or dispatch work, deliver notificat
 M22.1 establishes the foundational contract and registry boundary for the plugin/capability ecosystem. A capability is a discoverable contract, not permission to invoke it.
 
 Current bounded contract:
-- Immutable plugin/capability descriptors expose stable identity, name, version, description, and capability metadata.
-- Registry registration is explicit and conflict-aware; duplicate identity cannot silently replace an existing descriptor.
-- Discovery is deterministic and returns metadata only.
-- Registry operations do not invoke plugins, workers, schedulers, notifiers, or capabilities.
-- Registration does not grant authorization, trust, execution permission, or policy authority.
+- `CapabilityDescriptor` is an immutable metadata-only description with stable capability identity, name, version, description, and metadata.
+- `CapabilityRegistry` provides explicit, conflict-aware registration and deterministic discovery.
+- Duplicate identities cannot silently replace existing registrations; replacement requires explicit `replace=True`.
+- Discovery and lookup expose metadata only and never invoke registered capability code.
+- Registry operations never invoke plugins, workers, schedulers, notifiers, or capabilities.
+- Registration does not grant authorization, permission, trust, execution rights, or policy authority.
+- Descriptor metadata is declarative; executable behavior remains outside the registry boundary.
 
 M22.1 authority walls:
 - Plugin ≠ JARVIS
@@ -191,7 +195,7 @@ M22.1 authority walls:
 - Availability ≠ Permission
 - Metadata ≠ Execution Request
 
-M22.1 remains advisory/discovery-only. Existing validation, policy, confirmation, authorization, and execution boundaries remain the only route to actual capability invocation.
+M22.1 remains discovery/registry-only. Existing validation, policy, confirmation, authorization, and execution boundaries remain the only route to actual capability invocation.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
