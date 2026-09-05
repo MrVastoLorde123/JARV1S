@@ -248,7 +248,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
                 "execution_source_id": feedback.execution_source_id,
                 "source_execution_id": feedback.source_execution_id,
                 "source_admission_id": feedback.source_admission_id,
-                "proposal_source_id": feedback.proposal_source_id,
+                "source_proposal_id": feedback.source_proposal_id,
                 "domain": feedback.domain,
                 "source_policy_id": feedback.source_policy_id,
                 "policy_id": feedback.policy_id,
