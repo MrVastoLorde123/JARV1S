@@ -30,9 +30,15 @@ Learning / Adaptation Evaluation
 
 ## Verification
 
-Remote implementation status: **IMPLEMENTED / AWAITING LOCAL RECEIPT**.
+Remote implementation status: **VERIFIED / COMPLETE**.
 
-Expected focused command:
+Local receipt:
+
+- 10/10 focused
+- 502/502 core regression
+- 512/512 total
+
+Focused command:
 
 ```powershell
 python -m unittest src.tools.tests.test_learning_write_feedback -v
@@ -44,8 +50,4 @@ Regression command:
 python -m unittest discover -s src\core -p "test*.py"
 ```
 
-Parent M22.20 is locally verified:
-
-- 15/15 focused
-- 502/502 core regression
-- 517/517 total
+Parent M22.20 was locally verified at 517/517.
