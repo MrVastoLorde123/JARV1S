@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from types import MappingProxyType
 
 from src.core.environment_world_model_rollback_repair_retry_authorization_decision import (
@@ -25,8 +26,8 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationIntegrityTests(unitte
             observed_model_id="observed",
             requested_action="RETRY_REPAIR",
             eligible=True,
-            evaluated_at="2026-09-05T20:00:00+00:00",
-            next_eligible_at="2026-09-05T20:00:20+00:00",
+            evaluated_at=datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc),
+            next_eligible_at=datetime(2026, 9, 5, 20, 0, 20, tzinfo=timezone.utc),
             reasons={"status": "eligible"},
             lineage={"source": "eligibility"},
         )
@@ -62,7 +63,7 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationIntegrityTests(unitte
             observed_model_id="observed",
             requested_action="RETRY_REPAIR",
             eligible=False,
-            evaluated_at="2026-09-05T20:00:00+00:00",
+            evaluated_at=datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc),
             next_eligible_at=None,
             reasons={},
             lineage={},
@@ -93,7 +94,7 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationIntegrityTests(unitte
             observed_model_id="observed",
             requested_action="NO_AUTHORIZATION",
             eligible=False,
-            evaluated_at="2026-09-05T20:00:00+00:00",
+            evaluated_at=datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc),
             next_eligible_at=None,
             reasons={},
             lineage={},
@@ -206,7 +207,7 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationIntegrityTests(unitte
             "observed_model_id": "observed",
             "requested_action": "OTHER",
             "eligible": True,
-            "evaluated_at": "2026-09-05T20:00:00+00:00",
+            "evaluated_at": datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc),
             "next_eligible_at": None,
             "reasons": MappingProxyType({}),
             "lineage": MappingProxyType({}),
