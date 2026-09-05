@@ -54,7 +54,7 @@ class LearningWriteAdaptationFeedbackEvent:
     proposal_id: str
     decision_id: str
     candidate_id: str
-    feedback_source_id: str
+    source_feedback_id: str
     source_candidate_id: str
     domain: str
     kind: LearningWriteAdaptationFeedbackKind
@@ -70,7 +70,7 @@ class LearningWriteAdaptationFeedbackEvent:
             ("proposal_id", self.proposal_id),
             ("decision_id", self.decision_id),
             ("candidate_id", self.candidate_id),
-            ("feedback_source_id", self.feedback_source_id),
+            ("source_feedback_id", self.source_feedback_id),
             ("source_candidate_id", self.source_candidate_id),
             ("domain", self.domain),
             ("reason", self.reason),
@@ -109,7 +109,7 @@ class LearningWriteAdaptationFeedbackEvent:
             "learning_write_adaptation_proposal_id": self.proposal_id,
             "learning_write_adaptation_decision_id": self.decision_id,
             "learning_write_adaptation_candidate_id": self.candidate_id,
-            "learning_write_adaptation_feedback_source_id": self.feedback_source_id,
+            "learning_write_feedback_id": self.source_feedback_id,
             "learning_candidate_id": self.source_candidate_id,
             "learning_write_adaptation_domain": self.domain,
             "learning_write_adaptation_feedback_kind": self.kind.value,
@@ -157,7 +157,7 @@ class LearningWriteAdaptationFeedbackService:
 
         provenance = {
             "source": "learning_write_adaptation_outcome",
-            "feedback_source_id": outcome.execution_id,
+            "feedback_id": outcome.feedback_id,
             "execution_id": outcome.execution_id,
             "admission_id": outcome.admission_id,
             "proposal_id": outcome.proposal_id,
@@ -173,7 +173,7 @@ class LearningWriteAdaptationFeedbackService:
             proposal_id=outcome.proposal_id,
             decision_id=outcome.decision_id,
             candidate_id=outcome.candidate_id,
-            feedback_source_id=outcome.execution_id,
+            source_feedback_id=outcome.feedback_id,
             source_candidate_id=outcome.source_candidate_id,
             domain=outcome.domain,
             kind=kind,
@@ -190,6 +190,7 @@ class LearningWriteAdaptationFeedbackService:
     ) -> str:
         serialized = json.dumps(
             {
+                "source_feedback_id": outcome.feedback_id,
                 "execution_id": outcome.execution_id,
                 "admission_id": outcome.admission_id,
                 "proposal_id": outcome.proposal_id,
