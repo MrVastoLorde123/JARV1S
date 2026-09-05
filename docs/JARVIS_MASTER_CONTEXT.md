@@ -29,10 +29,10 @@ Everything is a capability/plugin. Scraping and automation are backbone capabili
 Execution:
 `Reasoning → Interpretation → Prioritization → Proposal → Validation → Policy → Confirmation → Confirmation Integrity → Authorization → Authorization Integrity → Sandbox Admission → Execution Preparation/Handoff → Execution Attempt → Outcome`
 
-Current learning/adaptation chain through M22.55:
-`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal`
+Current learning/adaptation chain through M22.56:
+`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission`
 
-A decision is not a proposal; a proposal is not authorization. The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, result integrity, feedback, and evaluation.
+A decision is not a proposal; a proposal is not authorization; admission is not authorization. The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, result integrity, feedback, and evaluation.
 
 ## 4. Cognitive architecture
 
@@ -58,20 +58,18 @@ No merge is performed unless explicitly requested.
 - M22.52 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
 - M22.53 — VERIFIED / COMPLETE: 13/13 focused + 502/502 core = **515/515**
 - M22.54 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
+- M22.55 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
+- M22.56 — VERIFIED / COMPLETE: 16/16 focused + 502/502 core = **518/518**
 
 Selected recent receipts:
+- M22.56: **518/518**
+- M22.55: **517/517**
+- M22.54: **517/517**
+- M22.53: **515/515**
+- M22.52: **517/517**
 - M22.51: **520/520**
-- M22.50: **518/518**
-- M22.49: **518/518**
-- M22.48: **519/519**
-- M22.47: **518/518**
-- M22.46: **517/517**
-- M22.45: **515/515**
 
-## 7. Current verified boundaries
-
-### M22.51 — Execution → Result Integrity
-Consumes exactly one M22.50 execution result plus the exact execution request and produces immutable result-integrity evidence. COMPLETED normalizes to SUCCEEDED with deterministic SHA-256 over the logical observed result; FAILED normalizes to FAILED with a non-empty reason and no fingerprint. No authority, retry, revocation, memory mutation, or adaptation truth.
+## 7. Verified recent boundaries
 
 ### M22.52 — Result Integrity → Feedback
 Consumes exactly one M22.51 result-integrity artifact and produces immutable feedback. Preserves complete known lineage, including `source_proposal_id`, M22.51 `integrity_id`, evaluation lineage, and historical source feedback identity. INTEGRITY_SUCCESS becomes INTEGRITY_SUCCESS feedback; INTEGRITY_FAILURE becomes INTEGRITY_FAILURE feedback. Observational only.
@@ -87,39 +85,38 @@ Consumes exactly one dedicated M22.53 evaluation artifact and produces one immut
 
 Decision identity is deterministic and distinct from upstream identities. Lineage includes `source_proposal_id`. Provider is replaceable. Decision cannot authorize execution, request execution, retry, revoke, mutate memory, grant authority, or establish adaptation truth.
 
-## 8. M22.55 — Decision → Proposal
+### M22.55 — Decision → Proposal
+Consumes exactly one dedicated M22.54 decision. ACCEPT produces one immutable advisory proposal; DEFER and REJECT produce no proposal. The proposal preserves complete known lineage, distinguishes the new `proposal_id` from upstream decision identity, and keeps inherited `source_proposal_id` distinct from the immediate decision-source lineage `proposal_source_id`.
 
-**Status: IMPLEMENTED / NOT YET LOCALLY VERIFIED.**
+Payload, evidence, provenance, and metadata are recursively immutable. Confidence remains bounded to [0,1]. Proposal formation grants no execution, authorization, retry, revocation, memory mutation, general authority, or adaptation truth.
 
-Branch:
-`feature/m22.55-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal`
+M22.55 receipt: **15/15 focused + 502/502 core = 517/517**.
 
-Contract:
-`M22.54 Decision → M22.55 Proposal`
+### M22.56 — Proposal → Admission
+Consumes exactly one dedicated M22.55 proposal and produces one immutable admission artifact. The deterministic baseline admits supported accepted proposals with confidence >= 0.5 and non-empty payload/provenance; otherwise it rejects. Admission is policy evidence, not authorization.
 
-M22.55 consumes exactly one M22.54 decision. ACCEPT produces one immutable advisory proposal; DEFER and REJECT produce no proposal. The proposal preserves complete known lineage, adds a deterministic proposal identity, and separates the new proposal identity (`proposal_id`) from upstream decision identity and the inherited `source_proposal_id`.
+The artifact preserves the complete known lineage, including both M22.55 proposal-source roles:
+- `proposal_source_id` — the immediate upstream M22.54 decision proposal identity
+- `source_proposal_id` — the inherited upstream proposal lineage
 
-Proposal payload/evidence/provenance/metadata are recursively immutable. Confidence remains bounded to [0,1]. The proposal is provider-neutral through the upstream decision boundary and is not authorization or execution.
+The new `admission_id` is deterministic and distinct from the proposal identity. `source_policy_id` records the incoming M22.55 policy identity while the new `policy_id` identifies the admission policy.
 
-Authority wall:
-- Proposal ≠ Authorization
-- Proposal ≠ Execution
-- Proposal ≠ Retry
-- Proposal ≠ Revocation
-- Proposal ≠ Memory Mutation
-- Proposal ≠ Authority
-- Proposal ≠ Adaptation Truth
+The artifact is recursively immutable and confidence-bounded. Authority walls explicitly prevent execution authorization, authorization grant, execution request, retry, revocation, memory mutation, and general authority. Admission does not establish adaptation truth.
 
-Dedicated M22.55 namespace:
-`src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_preparation_execution_result_integrity_feedback_evaluation_decision_proposal.py`
+Dedicated namespace:
+`src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_preparation_execution_result_integrity_feedback_evaluation_decision_proposal_admission.py`
 
-Historical M22.47 proposal namespace remains untouched.
+Historical M22.48 admission namespace remains untouched.
 
-## 9. Namespace rules
+M22.56 receipt: **16/16 focused + 502/502 core = 518/518**.
 
-M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because the class names are similar.
+## 9. Namespace and lineage rules
 
-Canonical lineage naming for the current chain uses `source_proposal_id` for inherited proposal lineage where M22.52+ defines it. Do not introduce compatibility aliases unless the contract explicitly requires them.
+M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because class names are similar.
+
+Canonical lineage naming for the current chain uses `source_proposal_id` for inherited proposal lineage where M22.52+ defines it. When a boundary introduces an immediate upstream identity with the same conceptual domain, preserve distinct roles explicitly rather than aliasing them.
+
+Do not introduce compatibility aliases unless the contract explicitly requires them.
 
 ## 10. Memory and capability architecture
 
@@ -145,10 +142,10 @@ No merge is performed unless explicitly requested.
 
 ## 13. Current snapshot
 
-**Latest verified milestone:** M22.54 — 15/15 focused + 502/502 core = **517/517**.
+**Latest verified milestone:** M22.56 — 16/16 focused + 502/502 core = **518/518**.
 
-**Active milestone:** M22.55 Decision → Proposal.
+**Active milestone:** M22.56 is complete. The next milestone must be derived from the live repository rather than assumed from the milestone numbering.
 
-**M22.55 status:** implementation exists on its dedicated branch; local verification is pending.
+**M22.56 status:** VERIFIED / COMPLETE.
 
-**Next local action:** pull the M22.55 branch and run its focused proposal suite, then the 502-test core regression. Do not mark M22.55 verified until those receipts are supplied.
+**Next action:** inspect the live repository for the next explicit boundary or architectural milestone. Do not invent M22.57 without repository evidence.
