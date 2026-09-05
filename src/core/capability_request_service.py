@@ -13,10 +13,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from src.core.capability_argument_planner import (
-    CapabilityArgumentPlanner,
-    CapabilityInvocationService,
-)
+from src.core.capability_argument_planner import CapabilityArgumentPlanner
+from src.core.capability_invocation import CapabilityInvocationBuilder
 from src.core.capability_selection import CapabilityCandidate
 from src.core.capability_selection_service import CapabilityDiscoverySelection
 from src.tools.models import ToolRequest
@@ -66,13 +64,11 @@ class CapabilityRequestProposal:
 class CapabilityRequestProposalService:
     """Materialize one selected capability into an inert validated request."""
 
-    def __init__(
-        self,
-        argument_planner: CapabilityArgumentPlanner,
-    ) -> None:
+    def __init__(self, argument_planner: CapabilityArgumentPlanner) -> None:
         if not isinstance(argument_planner, CapabilityArgumentPlanner):
             raise TypeError("argument_planner must implement CapabilityArgumentPlanner")
-        self._invocation = CapabilityInvocationService(argument_planner)
+        self._argument_planner = argument_planner
+        self._builder = CapabilityInvocationBuilder()
 
     def propose(
         self,
@@ -93,8 +89,8 @@ class CapabilityRequestProposalService:
         ):
             raise ValueError("candidate must originate from the discovery selection snapshot")
 
-        arguments = self._invocation._argument_planner.propose(snapshot.query, selected)
-        request = self._invocation._builder.build(
+        arguments = self._argument_planner.propose(snapshot.query, selected)
+        request = self._builder.build(
             selected.capability,
             arguments,
             invocation_id=invocation_id,
