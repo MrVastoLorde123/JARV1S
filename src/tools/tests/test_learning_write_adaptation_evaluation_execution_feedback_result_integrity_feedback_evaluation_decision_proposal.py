@@ -42,8 +42,7 @@ class M22_47_Tests(unittest.TestCase):
         self.assertEqual(proposal.action, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationAction.ACCEPT)
 
     def test_defer_creates_no_proposal(self):
-        failure = self.evaluation.__class__(**{**self.evaluation.__dict__, "evaluation_id": "evaluation-f", "signal": self.evaluation.signal, "confidence": 0.2})
-        defer = self.decision.__class__(**{**self.decision.__dict__, "decision_id": "decision-f", "evaluation_id": failure.evaluation_id, "action": LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationAction.DEFER})
+        defer = self.decision.__class__(**{**self.decision.__dict__, "decision_id": "decision-f", "action": LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationAction.DEFER})
         self.assertIsNone(self.service.propose(defer, {"change": True}))
 
     def test_payload_must_be_nonempty_mapping(self):
@@ -104,9 +103,9 @@ class M22_47_Tests(unittest.TestCase):
         self.assertGreaterEqual(proposal.confidence, 0.0)
         self.assertLessEqual(proposal.confidence, 1.0)
 
-    def test_only_accept_can_be_stored(self):
-        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalError):
-            self.service._validate_action(self.decision.__class__(**{**self.decision.__dict__, "action": LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationAction.DEFER}))
+    def test_only_accept_can_be_proposed(self):
+        reject = self.decision.__class__(**{**self.decision.__dict__, "decision_id": "decision-r", "action": LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationAction.REJECT})
+        self.assertIsNone(self.service.propose(reject, {"change": True}))
 
     def test_proposal_kind_is_explicit(self):
         proposal = self.service.propose(self.decision, {"change": "candidate"})
