@@ -84,16 +84,42 @@ Receipt: **12/12 focused + 514/514 core = 526/526**.
 Receipt: **8/8 focused + 522/522 core = 530/530**.
 
 ### M23.3 — Environment Observation Adapter Contract
-**Status: VERIFIED / COMPLETE.** Provider-neutral replaceable observation layer composed into M23.2.
-
-`EnvironmentObservationAdapter` exposes an adapter identity, one explicit environment domain, and `observe(environment_id)`. `EnvironmentObservation` is immutable descriptive evidence tied to one adapter, environment, and domain. `EnvironmentObservationService` validates adapter identity, domain identity, environment identity, and exact observation type; rejects duplicate adapter IDs/domains; wraps adapter failures without retry; composes accepted observations through `EnvironmentSnapshotService`; keeps missing domains empty; and retains observation source identities as descriptive metadata.
-
-Authority boundary: observation does not authorize execution, elevate permissions, imply capability executability, retry, revoke, mutate memory, or establish adaptation truth.
+**Status: VERIFIED / COMPLETE.** Provider-neutral replaceable observation layer composed into M23.2. `EnvironmentObservationAdapter` exposes adapter identity, one explicit environment domain, and `observe(environment_id)`. `EnvironmentObservation` is immutable descriptive evidence. `EnvironmentObservationService` validates adapter/domain/environment continuity and exact observation type; rejects duplicates; wraps failures without retry; composes through M23.2; keeps missing domains empty; and records observation-source identities as metadata. Observation remains non-authorizing and non-mutating.
 
 Receipt:
 - Focused: `python -m unittest src.core.tests.test_environment_observation -v` → **13/13 OK**
 - Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **535/535 OK**
 - Combined: **548/548 OK**
+
+### M23.4 — Environment Observation Freshness/Validity Contract
+**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+
+Branch:
+`feature/m23.4-environment-observation-freshness-contract`
+
+M23.4 introduces deterministic temporal validity assessment without mutating raw observation evidence. `EnvironmentObservationFreshnessService` evaluates an immutable `EnvironmentObservation` using an observation timestamp, assessment timestamp, and non-negative maximum age. `EnvironmentObservationValidity` preserves observation identity, environment identity, domain, timestamps, age bound, and the derived classification.
+
+Classifications:
+- `CURRENT` — non-negative age within the configured limit; usable as current by this contract.
+- `STALE` — age exceeds the configured limit; not usable as current.
+- `FUTURE` — observation timestamp is later than assessment time; not usable as current.
+
+Timestamps must be timezone-aware and are normalized to UTC. `assess_many` preserves input order and rejects duplicate observation identities.
+
+The freshness boundary does not rewrite or discard stale evidence, probe the host, grant authorization, grant permission, imply capability executability, execute tools, retry, revoke, mutate memory, or establish truth.
+
+Files:
+- `src/core/environment_observation_freshness.py`
+- `src/core/tests/test_environment_observation_freshness.py`
+- `docs/decisions/049-environment-observation-freshness-contract.md`
+
+Focused:
+`python -m unittest src.core.tests.test_environment_observation_freshness -v`
+
+Regression:
+`python -m unittest discover -s src\\core -p "test*.py"`
+
+Local verification is required before M23.4 can be marked VERIFIED / COMPLETE.
 
 ## 8. Namespace and lineage rules
 
@@ -131,6 +157,6 @@ No merge is performed unless explicitly requested.
 
 **Active milestone:** M23.4 — Environment Observation Freshness/Validity Contract.
 
-**M23.4 status:** NOT YET IMPLEMENTED.
+**M23.4 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
 
-**Next engineering action:** establish deterministic freshness/validity semantics for environment observations, preserving raw observation evidence while preventing stale state from being treated as current state. The contract should remain provider-neutral, immutable, composable with M23.3/M23.2, and non-authorizing. No merge performed.
+**Next local action:** pull `feature/m23.4-environment-observation-freshness-contract`, run the focused freshness suite, then the `src\\core` regression. Do not mark M23.4 verified until those receipts are supplied.
