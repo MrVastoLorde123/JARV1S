@@ -76,7 +76,11 @@ Adaptation Outcome / Result Integrity
 ↓
 Adaptation Feedback
 ↓
-Adaptation Evaluation
+Adaptation Feedback Evaluation
+↓
+Adaptation Evaluation Decision
+↓
+Future Adaptation Proposal / Admission
 ↓
 Learning State / Memory Mutation
 ```
@@ -142,9 +146,10 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.29-adaptation-feedback-evaluation`
+`feature/m22.30-adaptation-evaluation-decision`
 
 Latest verified local receipts:
+- **M22.29:** 11/11 focused + 502/502 core regression = **513/513**
 - **M22.28:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.27:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.26:** 11/11 focused + 502/502 core regression = **513/513**
@@ -174,7 +179,7 @@ Previous verified checkpoints:
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.28 — VERIFIED / COMPLETE.
+M22.1–M22.29 — VERIFIED / COMPLETE.
 
 - M22.1 Capability / Plugin Contract + Registry — VERIFIED / COMPLETE
 - M22.2 Capability Trust / Provenance — VERIFIED / COMPLETE
@@ -204,7 +209,8 @@ M22.1–M22.28 — VERIFIED / COMPLETE.
 - M22.26 Adaptation Execution — VERIFIED / COMPLETE (513/513)
 - M22.27 Adaptation Execution Outcome / Result Integrity — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515)
 - M22.28 Adaptation Outcome → Feedback — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515)
-- **M22.29 Adaptation Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT**
+- M22.29 Adaptation Feedback → Evaluation — VERIFIED / COMPLETE (11/11 focused + 502/502 core = 513/513)
+- **M22.30 Adaptation Evaluation → Decision — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -235,18 +241,25 @@ These milestones establish inert candidate, decision, proposal, admission, execu
 ### M22.29 — Adaptation Feedback → Evaluation
 `LearningWriteAdaptationFeedbackEvaluationService` converts immutable adaptation feedback into an immutable evaluation candidate. Success/failure become explicit evaluation signals. Exact feedback/source-feedback/adaptation-candidate/source-candidate/execution/admission/proposal/decision/domain lineage is preserved, with recursively frozen evidence/provenance and bounded confidence. Evaluation is interpretive evidence only and must not silently authorize adaptation, mutate memory, retry, revoke, or execute.
 
+### M22.30 — Adaptation Evaluation → Decision
+`LearningWriteAdaptationEvaluationDecisionService` converts an immutable adaptation-feedback evaluation candidate into an immutable decision. The deterministic baseline accepts successful evaluations at confidence >= 0.5 and defers failed evaluations or low-confidence evaluations. Exact evaluation/feedback/source-feedback/candidate/source-candidate/execution/admission/proposal/decision/domain lineage is preserved and provider output is identity-validated.
+
+The M22.30 decision remains non-authorizing: it cannot grant adaptation authority, memory mutation, execution authorization, retry, or revocation.
+
 Walls:
 - Adaptation Execution Result ≠ Adaptation Outcome
 - Adaptation Outcome ≠ Adaptation Feedback
 - Adaptation Feedback ≠ Adaptation Evaluation
+- Adaptation Evaluation ≠ Adaptation Evaluation Decision
+- Adaptation Evaluation Decision ≠ Adaptation Authorization
 - Adaptation Evaluation ≠ Adaptation Truth
 - Result Fingerprint ≠ Truth
 - Feedback ≠ Authorization
 - Evaluation ≠ Authorization
-- Evaluation ≠ Retry Authorization
-- Evaluation ≠ Revocation
-- Evaluation ≠ Execution
-- Evaluation ≠ Memory Mutation
+- Decision ≠ Execution
+- Decision ≠ Retry Authorization
+- Decision ≠ Revocation
+- Decision ≠ Memory Mutation
 - Completion ≠ Certainty
 - Evidence ≠ Truth
 - Learning ≠ Authority
@@ -372,13 +385,13 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.29 Adaptation Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+**Current milestone:** M22.30 Adaptation Evaluation → Decision — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-**Current branch:** `feature/m22.29-adaptation-feedback-evaluation`
+**Current branch:** `feature/m22.30-adaptation-evaluation-decision`
 
-**Latest verified milestone:** M22.28 — 515/515 (13 focused + 502 core regression)
+**Latest verified milestone:** M22.29 — 513/513 (11 focused + 502 core regression)
 
 **Learning/adaptation pipeline:**
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Evaluation → Learning State / Memory`
+`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Future Adaptation Proposal / Admission → Learning State / Memory`
 
-**Next milestone:** derive from the live repository after M22.29 verification; do not guess it from memory.
+**Next milestone:** derive from the live repository after M22.30 verification; do not guess it from memory.
