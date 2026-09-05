@@ -47,80 +47,51 @@ class M22_48_Tests(unittest.TestCase):
         self.service = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionService()
 
     def test_admitted_for_valid_proposal(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(
-                proposal=self.proposal
-            )
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         self.assertEqual(admission.status, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus.ADMITTED)
 
     def test_admission_id_is_deterministic(self) -> None:
         context = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        first = self.service.admit(context)
-        second = self.service.admit(context)
-        self.assertEqual(first.admission_id, second.admission_id)
+        self.assertEqual(self.service.admit(context).admission_id, self.service.admit(context).admission_id)
 
     def test_admission_id_is_distinct(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
-        self.assertNotEqual(admission.admission_id, admission.proposal_id)
-        self.assertNotEqual(admission.admission_id, admission.decision_id)
-        self.assertNotEqual(admission.admission_id, admission.evaluation_id)
-        self.assertNotEqual(admission.admission_id, admission.feedback_id)
-        self.assertNotEqual(admission.admission_id, admission.execution_id)
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
+        for upstream_id in (admission.proposal_id, admission.decision_id, admission.evaluation_id, admission.feedback_id, admission.execution_id):
+            self.assertNotEqual(admission.admission_id, upstream_id)
 
     def test_full_lineage_is_preserved(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         for name in (
-            "proposal_id", "decision_id", "evaluation_id", "feedback_id", "outcome_id", "execution_id",
-            "preparation_id", "source_proposal_id", "decision_source_evaluation_id", "evaluation_id_from_feedback",
-            "source_feedback_id", "candidate_id", "source_candidate_id", "execution_source_id", "source_execution_id",
-            "source_admission_id", "proposal_source_id", "domain", "source_policy_id",
+            "proposal_id", "decision_id", "evaluation_id", "feedback_id", "outcome_id", "execution_id", "preparation_id",
+            "decision_source_evaluation_id", "evaluation_id_from_feedback", "source_feedback_id", "candidate_id",
+            "source_candidate_id", "execution_source_id", "source_execution_id", "domain", "source_policy_id",
         ):
-            expected_name = "proposal_id" if name == "source_proposal_id" else "admission_id" if name == "source_admission_id" else name
-            expected_obj = self.proposal if name != "source_admission_id" else self.proposal
-            if name == "source_proposal_id":
-                self.assertEqual(getattr(admission, name), self.proposal.source_proposal_id)
-            elif name == "source_admission_id":
-                self.assertEqual(getattr(admission, name), self.proposal.admission_id)
-            else:
-                self.assertEqual(getattr(admission, name), getattr(expected_obj, expected_name))
+            self.assertEqual(getattr(admission, name), getattr(self.proposal, name))
+        self.assertEqual(admission.source_proposal_id, self.proposal.source_proposal_id)
+        self.assertEqual(admission.source_admission_id, self.proposal.admission_id)
 
     def test_admission_is_immutable(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         with self.assertRaises(FrozenInstanceError):
             admission.reason = "changed"  # type: ignore[misc]
 
     def test_payload_is_recursively_immutable(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         with self.assertRaises(TypeError):
             admission.proposal["new"] = True  # type: ignore[index]
 
     def test_evidence_is_recursively_immutable(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         with self.assertRaises(TypeError):
             admission.evidence["new"] = True  # type: ignore[index]
 
     def test_provenance_is_immutable(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         with self.assertRaises(TypeError):
             admission.provenance["new"] = "blocked"  # type: ignore[index]
 
     def test_metadata_is_immutable(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         with self.assertRaises(TypeError):
             admission.metadata["new"] = True  # type: ignore[index]
 
@@ -134,9 +105,7 @@ class M22_48_Tests(unittest.TestCase):
             context.proposal = self.proposal  # type: ignore[misc]
 
     def test_context_preserves_authority_wall(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         context = admission.to_context()
         for key in ("execution_authorized", "authorization_granted", "execution_requested", "retry_requested", "revocation_requested", "memory_mutation_allowed", "authority_granted"):
             self.assertFalse(context[key])
@@ -155,13 +124,11 @@ class M22_48_Tests(unittest.TestCase):
         class _BadProvider(DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider):
             def admit(self, context):
                 result = super().admit(context)
-                object.__setattr__(result, "policy_id", "wrong-policy")
+                object.__setattr__(result, "proposal_id", "wrong-proposal")
                 return result
 
         with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError):
-            self.service.__class__(_BadProvider()).admit(
-                LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-            )
+            self.service.__class__(_BadProvider()).admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
 
     def test_invalid_proposal_type_is_rejected(self) -> None:
         with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError):
@@ -182,9 +149,7 @@ class M22_48_Tests(unittest.TestCase):
             )
 
     def test_status_is_explicit(self) -> None:
-        admission = self.service.admit(
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal)
-        )
+        admission = self.service.admit(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext(proposal=self.proposal))
         self.assertEqual(admission.status.value, "admitted")
 
 
