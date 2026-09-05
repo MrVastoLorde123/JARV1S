@@ -1,7 +1,7 @@
 # M23.9 — Environment Evidence → Current Context Contract
 
 ## Status
-IMPLEMENTED / AWAITING LOCAL VERIFICATION
+VERIFIED / COMPLETE
 
 ## Purpose
 Define the first explicit seam between qualified environment evidence and the world-model/current-context layer without converting evidence into unquestioned truth.
@@ -54,12 +54,12 @@ M23.4 supplies temporal validity; M23.5 supplies consistency evidence; M23.6 sup
 - `docs/JARVIS_MASTER_CONTEXT.md`
 
 ## Verification
-Local verification is required before marking VERIFIED / COMPLETE.
-
 Focused:
-`python -m unittest src.core.tests.test_environment_evidence_current_context -v`
+`python -m unittest src.core.tests.test_environment_evidence_current_context -v` → **7/7 OK**
 
 Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
+`python -m unittest discover -s src\\core -p "test*.py"` → **607/607 OK**
+
+Combined: **614/614 OK**.
 
 No merge performed.
