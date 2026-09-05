@@ -42,6 +42,8 @@ Information Gain / Uncertainty Reduction
         ↓
 Bounded Scheduling / Notification Proposal
         ↓
+Proactive Runtime / Feedback
+        ↓
 Prioritization
         ↓
 Validation / Policy
@@ -85,19 +87,8 @@ information_gain = current_uncertainty
 
 The estimate is advisory and bounded to [0, 1]. It does not establish truth or certainty and cannot create authority, permission, scheduling, notification, worker/plugin assignment, execution requests, execution, or policy changes.
 
-Boundary walls:
-
-```text
-Information Gain ≠ Truth
-Uncertainty Reduction ≠ Certainty
-Information Need ≠ User Intent
-Recommended Information ≠ Permission
-High Information Gain ≠ Authorization
-Ranking ≠ Scheduling
-```
-
 ### M21.5 — Bounded Proactive Scheduling / Notification
-**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**Status: VERIFIED / COMPLETE.**
 
 M21.5 represents when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry and does not deliver a notification.
 
@@ -123,13 +114,51 @@ Initiative ≠ Authorization
 
 M21.5 does not create persistent scheduler entries, enqueue delayed work, send notifications, invoke capabilities/plugins, assign workers, create authorization, or mutate policy.
 
-### Future M21 boundary
+### M21.6 — Proactive Runtime / Feedback Integration
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+
+M21.6 composes initiative, proposal, value, information-gain, and scheduling outputs into one inspectable bounded runtime result and records outcome/feedback signals for later learning.
 
 ```text
-M21.6 Proactive Runtime / Feedback Integration
+Initiative → Proposal → Value → Information Gain
+                         ↓
+              Scheduling Recommendation
+                         ↓
+                Runtime Composition
+                         ↓
+                  Feedback / Outcome
+                         ↓
+                    Future Learning
 ```
 
-No M21 stage may grant authority merely because behavior is proactive, predictive, useful, information-seeking, scheduled-looking, or notification-oriented.
+The runtime preserves the existing authority chain and does not bypass validation, policy, confirmation, authorization, or execution. Feedback is an outcome signal, not a truth claim, user-intent claim, policy mutation, or authority grant.
+
+Core contracts:
+
+```text
+ProactiveFeedback
+ProactiveRuntimeResult
+RuntimeStatus
+FeedbackOutcome
+compose_proactive_runtime()
+rank_runtime_results()
+```
+
+Boundary walls:
+
+```text
+Runtime Integration ≠ Authorization
+Feedback ≠ Truth
+Outcome ≠ User Intent
+Learning Signal ≠ Policy Change
+Recommendation ≠ Execution
+Recovery ≠ Execution
+Integration ≠ Authority Escalation
+```
+
+M21.6 does not authorize, confirm user intent, schedule or dispatch work, deliver notifications, assign workers, invoke plugins/capabilities, mutate policy, or execute actions.
+
+No M21 stage may grant authority merely because behavior is proactive, predictive, useful, information-seeking, scheduled-looking, notification-oriented, or feedback-driven.
 
 ## Cross-cutting cognitive architecture
 
