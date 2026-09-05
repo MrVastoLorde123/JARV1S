@@ -56,7 +56,7 @@ class EnvironmentWorldModelRollbackRepairApplicationTests(unittest.TestCase):
         self.decision = EnvironmentWorldModelRollbackRepairDecision(
             decision_id="decision1",
             environment_id="env1",
-            repair_proposal_id="proposal1",
+            proposal_id="proposal1",
             expected_model_id="expected",
             observed_model_id="observed",
             decision="ACCEPT",
@@ -84,7 +84,7 @@ class EnvironmentWorldModelRollbackRepairApplicationTests(unittest.TestCase):
         rejected = EnvironmentWorldModelRollbackRepairDecision(
             decision_id="decision2",
             environment_id="env1",
-            repair_proposal_id="proposal1",
+            proposal_id="proposal1",
             expected_model_id="expected",
             observed_model_id="observed",
             decision="REJECT",
