@@ -104,6 +104,8 @@ Learning Write Execution
 ↓
 Learning Write Outcome
 ↓
+Learning Write Feedback
+↓
 Learning State / Memory Mutation
 ```
 
@@ -172,14 +174,15 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 
 Current milestone branch:
 
-`feature/m22.20-learning-write-outcome-integrity`
+`feature/m22.21-learning-write-feedback-boundary`
 
 Latest verified local receipt:
 
-- **M22.19:** 12/12 focused + 502/502 core regression = **514/514**
+- **M22.20:** 15/15 focused + 502/502 core regression = **517/517**
 
 Previously verified checkpoints:
 
+- **M22.19:** 12/12 focused + 502/502 core regression = 514/514
 - **M22.18:** 12/12 focused + 502/502 core = 514/514
 - **M22.17:** 13/13 focused + 502/502 core = 515/515
 - **M22.16:** 10/10 focused + 502/502 core = 512/512
@@ -224,7 +227,8 @@ Previously verified checkpoints:
 - M22.17 Learning Write Proposal Boundary — VERIFIED / COMPLETE (515/515)
 - M22.18 Learning Write Admission Boundary — VERIFIED / COMPLETE (514/514)
 - M22.19 Learning Write Execution Boundary — VERIFIED / COMPLETE (514/514)
-- M22.20 Learning Write Outcome / Result Integrity Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.20 Learning Write Outcome / Result Integrity Boundary — VERIFIED / COMPLETE (517/517)
+- M22.21 Learning Write Outcome → Feedback Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## 7. M22 learning architecture and authority walls
 
@@ -287,6 +291,24 @@ M22.20 walls:
 - Outcome ≠ Retry Authorization
 - Outcome ≠ Revocation
 - Outcome ≠ Memory Mutation
+- Learning ≠ Authority
+
+### M22.21 — Learning Write Outcome → Feedback
+
+`LearningWriteFeedbackService` converts a verified `LearningWriteOutcome` into an immutable `LearningWriteFeedbackEvent` for later learning/adaptation evaluation. Success and failure are explicit feedback kinds; identity and provenance are preserved; payload and provenance snapshots are recursively frozen; feedback identity is deterministic.
+
+M22.21 is deliberately inert. It does not evaluate correctness, mutate memory or learning state, authorize, retry, revoke, or execute tools.
+
+M22.21 walls:
+
+- Learning Write Outcome ≠ Learning Write Feedback
+- Learning Write Feedback ≠ Learning Truth
+- Feedback ≠ Authorization
+- Feedback ≠ Retry Authorization
+- Feedback ≠ Revocation
+- Feedback ≠ Memory Mutation
+- Completion ≠ Certainty
+- Evidence ≠ Truth
 - Learning ≠ Authority
 
 ## 8. Existing memory decision/write architecture
@@ -572,14 +594,14 @@ No merge is performed unless the user explicitly requests it.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.20 Learning Write Outcome / Result Integrity Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+**Current milestone:** M22.21 Learning Write Outcome → Feedback Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-**Current branch:** `feature/m22.20-learning-write-outcome-integrity`
+**Current branch:** `feature/m22.21-learning-write-feedback-boundary`
 
-**Latest verified milestone:** M22.19 — 514/514 (12 focused + 502 core regression)
+**Latest verified milestone:** M22.20 — 517/517 (15 focused + 502 core regression)
 
 **Learning pipeline:**
 
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning State / Memory`
+`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning / Memory Evaluation → Learning State / Memory`
 
-**Next milestone:** derive from the live repository after M22.20 verification; do not guess it from memory.
+**Next milestone:** derive from the live repository after M22.21 verification; do not guess it from memory.
