@@ -20,7 +20,7 @@ class LearningWriteFeedbackTests(unittest.TestCase):
         self.service = LearningWriteFeedbackService()
 
     @staticmethod
-    def _outcome(status: LearningWriteOutcomeStatus) -> LearningWriteOutcome:
+    def _build_outcome(status: LearningWriteOutcomeStatus) -> LearningWriteOutcome:
         if status is LearningWriteOutcomeStatus.SUCCEEDED:
             return LearningWriteOutcome(
                 execution_id="exec-1",
@@ -45,17 +45,17 @@ class LearningWriteFeedbackTests(unittest.TestCase):
         )
 
     def test_success_outcome_becomes_success_feedback(self) -> None:
-        feedback = self.service.from_outcome(self._outcome(LearningWriteOutcomeStatus.SUCCEEDED))
+        feedback = self.service.from_outcome(self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED))
         self.assertEqual(feedback.kind, LearningWriteFeedbackKind.WRITE_SUCCESS)
         self.assertEqual(feedback.payload["result_fingerprint"], "fp-1")
 
     def test_failed_outcome_becomes_failure_feedback(self) -> None:
-        feedback = self.service.from_outcome(self._outcome(LearningWriteOutcomeStatus.FAILED))
+        feedback = self.service.from_outcome(self._build_outcome(LearningWriteOutcomeStatus.FAILED))
         self.assertEqual(feedback.kind, LearningWriteFeedbackKind.WRITE_FAILURE)
         self.assertEqual(feedback.payload["reason"], "writer unavailable")
 
     def test_feedback_preserves_exact_identity(self) -> None:
-        outcome = self._outcome(LearningWriteOutcomeStatus.SUCCEEDED)
+        outcome = self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED)
         feedback = self.service.from_outcome(outcome)
         self.assertEqual(feedback.execution_id, outcome.execution_id)
         self.assertEqual(feedback.admission_id, outcome.admission_id)
@@ -65,13 +65,13 @@ class LearningWriteFeedbackTests(unittest.TestCase):
         self.assertEqual(feedback.domain, outcome.domain)
 
     def test_feedback_id_is_deterministic(self) -> None:
-        outcome = self._outcome(LearningWriteOutcomeStatus.SUCCEEDED)
+        outcome = self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED)
         first = self.service.from_outcome(outcome)
         second = self.service.from_outcome(outcome)
         self.assertEqual(first.feedback_id, second.feedback_id)
 
     def test_payload_is_immutable(self) -> None:
-        feedback = self.service.from_outcome(self._outcome(LearningWriteOutcomeStatus.SUCCEEDED))
+        feedback = self.service.from_outcome(self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED))
         with self.assertRaises(TypeError):
             feedback.payload["nested"] = {"bad": True}  # type: ignore[index]
 
@@ -93,12 +93,12 @@ class LearningWriteFeedbackTests(unittest.TestCase):
             feedback.payload["nested"]["items"][0]["x"] = 2
 
     def test_feedback_is_immutable(self) -> None:
-        feedback = self.service.from_outcome(self._outcome(LearningWriteOutcomeStatus.SUCCEEDED))
+        feedback = self.service.from_outcome(self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED))
         with self.assertRaises(FrozenInstanceError):
             feedback.kind = LearningWriteFeedbackKind.WRITE_FAILURE  # type: ignore[misc]
 
     def test_feedback_is_non_authorizing_and_non_writing(self) -> None:
-        feedback = self.service.from_outcome(self._outcome(LearningWriteOutcomeStatus.SUCCEEDED))
+        feedback = self.service.from_outcome(self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED))
         context = feedback.to_context()
         self.assertTrue(context["learning_written"])
         self.assertFalse(context["memory_mutated"])
