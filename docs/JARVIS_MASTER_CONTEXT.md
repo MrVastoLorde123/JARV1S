@@ -165,7 +165,38 @@ Receipt:
 - Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **522/522 OK**
 - Combined: **530/530 OK**
 
-## 10. Namespace and lineage rules
+## 10. M23.3 — Environment Observation Adapter Contract
+
+**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+
+Branch:
+`feature/m23.3-environment-observation-adapter-contract`
+
+Contract:
+`Replaceable environment observation adapters composed deterministically into EnvironmentSnapshot`
+
+M23.3 introduces `EnvironmentObservationAdapter`, a provider-neutral protocol for one explicit environment domain, plus immutable `EnvironmentObservation` evidence and `EnvironmentObservationService` composition.
+
+The service rejects duplicate adapter identities and duplicate domains, validates observation identity/domain/environment continuity, wraps adapter failures, and composes accepted observations through the existing M23.2 `EnvironmentSnapshotService`. Missing domains remain empty rather than being inferred as unavailable.
+
+Observation payloads and metadata are recursively immutable. Observation-source identities are retained as descriptive snapshot metadata.
+
+The layer is observational only. It does not probe the host itself, authorize execution, elevate permissions, imply capability executability, retry failed probes, mutate memory, or establish adaptation truth.
+
+Files:
+- `src/core/environment_observation.py`
+- `src/core/tests/test_environment_observation.py`
+- `docs/decisions/048-environment-observation-adapter-contract.md`
+
+Focused:
+`python -m unittest src.core.tests.test_environment_observation -v`
+
+Regression:
+`python -m unittest discover -s src\\core -p "test*.py"`
+
+Local verification is required before M23.3 can be marked VERIFIED / COMPLETE.
+
+## 11. Namespace and lineage rules
 
 M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because class names are similar.
 
@@ -173,7 +204,7 @@ Canonical lineage naming for the current chain uses `source_proposal_id` for inh
 
 Do not introduce compatibility aliases unless the contract explicitly requires them.
 
-## 11. Memory and capability architecture
+## 12. Memory and capability architecture
 
 Memory separates decision from mutation: `MemoryDecisionProvider` is provider-neutral/non-mutating; `MemoryDecisionService` selects and validates; `MemoryDecisionExecutor` is the mutation boundary for CREATE, CONFIRM, UPDATE, CONTRADICT, or IGNORE. Adaptation must not bypass this architecture.
 
@@ -181,13 +212,13 @@ Capability ecosystem: contract/registry, trust/provenance, lifecycle/versioning,
 
 Workspace capabilities are `read_file`, `list_directory`, `search_files`, and `write_file`; `write_file` is confirmation-gated.
 
-## 12. Self-work target architecture
+## 13. Self-work target architecture
 
 `User goal → Understand → Discover capabilities → Inspect current state → Reason/plan → Propose actions → Validate → Policy/confirmation → Execute → Run tests/observe → Evaluate → Correct → Report`
 
 The model is never final authority over execution.
 
-## 13. Verification rule
+## 14. Verification rule
 
 A milestone is not GREEN / VERIFIED / COMPLETE until the user provides the local test receipt.
 
@@ -195,12 +226,12 @@ Remote implementation status and local verification status remain distinct.
 
 No merge is performed unless explicitly requested.
 
-## 14. Current snapshot
+## 15. Current snapshot
 
 **Latest verified milestone:** M23.2 — 8/8 focused + 522/522 core = **530/530**.
 
 **Active milestone:** M23.3 — Environment Observation Adapter Contract.
 
-**M23.3 status:** NOT YET IMPLEMENTED.
+**M23.3 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
 
-**Next engineering action:** define the provider-neutral observation-adapter interface and deterministic composition into `EnvironmentSnapshot`, without probing the host or granting authority. No merge performed.
+**Next local action:** pull `feature/m23.3-environment-observation-adapter-contract`, run the focused observation-adapter suite, then the `src\\core` regression. Do not mark M23.3 verified until those receipts are supplied.
