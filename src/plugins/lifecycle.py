@@ -251,7 +251,7 @@ class CapabilityLifecycleRegistry:
         return tuple(
             sorted(
                 versions,
-                key=lambda item: (item.semantic_version, item.version),
+                key=lambda item: (item.semantic_version._precedence_key(), item.version),
                 reverse=True,
             )
         )
