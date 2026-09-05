@@ -7,11 +7,11 @@ from src.tools.learning_write_adaptation_evaluation_execution_feedback_result_in
     LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback,
     LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind,
 )
-from src.tools.learning_write_adaptation_evaluation_execution_feedback_evaluation import (
-    LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation,
-    LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationError,
-    LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationService,
-    LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationSignalKind,
+from src.tools.learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation import (
+    LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluation,
+    LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationError,
+    LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationService,
+    LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationSignalKind,
 )
 
 
@@ -28,26 +28,36 @@ class M22_45_Tests(unittest.TestCase):
             policy_id="policy-1",
         )
         self.success = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback(
-            feedback_id="feedback-1", kind=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind.INTEGRITY_SUCCESS,
-            payload={"outcome_status":"succeeded", "execution_result":{"changed": True}, "result_fingerprint":"fp"},
-            provenance={"source":"test"}, reason="successful result-integrity evidence", **common,
+            feedback_id="feedback-1",
+            kind=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind.INTEGRITY_SUCCESS,
+            payload={"outcome_status": "succeeded", "execution_result": {"changed": True}, "result_fingerprint": "fp"},
+            provenance={"source": "test"}, reason="successful result-integrity evidence", **common,
         )
+        failure_data = {**common, "outcome_id": "outcome-2", "execution_id": "execution-2", "feedback_id": "feedback-2"}
         self.failure = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback(
-            feedback_id="feedback-2", kind=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind.INTEGRITY_FAILURE,
-            payload={"outcome_status":"failed", "reason":"bad execution"}, provenance={"source":"test"},
-            reason="failed result-integrity evidence", **{**common, "outcome_id":"outcome-2", "execution_id":"execution-2", "feedback_id":"feedback-2"},
+            kind=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackKind.INTEGRITY_FAILURE,
+            payload={"outcome_status": "failed", "reason": "bad execution"},
+            provenance={"source": "test"},
+            reason="failed result-integrity evidence",
+            **failure_data,
         )
-        self.service = LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationService()
+        self.service = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationService()
 
     def test_success_feedback_becomes_integrity_success_signal(self) -> None:
         result = self.service.evaluate(self.success)
-        self.assertEqual(result.signal, LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationSignalKind.INTEGRITY_SUCCESS_SIGNAL)
+        self.assertEqual(
+            result.signal,
+            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationSignalKind.INTEGRITY_SUCCESS_SIGNAL,
+        )
         self.assertEqual(result.confidence, 0.5)
         self.assertEqual(result.evidence["payload"]["execution_result"]["changed"], True)
 
     def test_failure_feedback_becomes_integrity_failure_signal(self) -> None:
         result = self.service.evaluate(self.failure)
-        self.assertEqual(result.signal, LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationSignalKind.INTEGRITY_FAILURE_SIGNAL)
+        self.assertEqual(
+            result.signal,
+            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationSignalKind.INTEGRITY_FAILURE_SIGNAL,
+        )
         self.assertEqual(result.evidence["payload"]["reason"], "bad execution")
 
     def test_full_lineage_is_preserved(self) -> None:
@@ -93,9 +103,11 @@ class M22_45_Tests(unittest.TestCase):
 
     def test_context_preserves_authority_wall(self) -> None:
         context = self.service.evaluate(self.success).to_context()
-        for key in ("feedback_evaluation_observed", "adaptation_truth_proven", "authority_granted",
-                    "authorization_granted", "execution_requested", "retry_requested",
-                    "revocation_requested", "memory_mutation_allowed"):
+        for key in (
+            "feedback_evaluation_observed", "adaptation_truth_proven", "authority_granted",
+            "authorization_granted", "execution_requested", "retry_requested",
+            "revocation_requested", "memory_mutation_allowed",
+        ):
             self.assertEqual(context[key], key == "feedback_evaluation_observed")
 
     def test_invalid_feedback_type_is_rejected(self) -> None:
@@ -103,28 +115,30 @@ class M22_45_Tests(unittest.TestCase):
             self.service.evaluate({"bad": True})  # type: ignore[arg-type]
 
     def test_invalid_signal_is_rejected(self) -> None:
-        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationError):
-            LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation(
+        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationError):
+            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluation(
                 evaluation_id="eval", feedback_id="feedback", outcome_id="outcome", execution_id="execution",
                 preparation_id="prep", admission_id="admission", proposal_id="proposal", decision_id="decision",
                 evaluation_id_from_feedback="evaluation-source", decision_source_evaluation_id="historical-evaluation",
                 source_feedback_id="source-feedback", candidate_id="candidate", source_candidate_id="source-candidate",
-                execution_source_id="execution-source", source_execution_id="source-execution", source_admission_id="source-admission",
-                proposal_source_id="source-proposal", domain="semantic", source_policy_id="source-policy", policy_id="policy",
-                signal="bad", confidence=0.5, evidence={}, provenance={"source":"test"}, reason="test",
+                execution_source_id="execution-source", source_execution_id="source-execution",
+                source_admission_id="source-admission", proposal_source_id="source-proposal", domain="semantic",
+                source_policy_id="source-policy", policy_id="policy", signal="bad", confidence=0.5,
+                evidence={}, provenance={"source": "test"}, reason="test",
             )  # type: ignore[arg-type]
 
     def test_confidence_must_be_bounded(self) -> None:
-        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationError):
-            LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation(
+        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationError):
+            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluation(
                 evaluation_id="eval", feedback_id="feedback", outcome_id="outcome", execution_id="execution",
                 preparation_id="prep", admission_id="admission", proposal_id="proposal", decision_id="decision",
                 evaluation_id_from_feedback="evaluation-source", decision_source_evaluation_id="historical-evaluation",
                 source_feedback_id="source-feedback", candidate_id="candidate", source_candidate_id="source-candidate",
-                execution_source_id="execution-source", source_execution_id="source-execution", source_admission_id="source-admission",
-                proposal_source_id="source-proposal", domain="semantic", source_policy_id="source-policy", policy_id="policy",
-                signal=LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationSignalKind.INTEGRITY_SUCCESS_SIGNAL,
-                confidence=1.1, evidence={}, provenance={"source":"test"}, reason="test",
+                execution_source_id="execution-source", source_execution_id="source-execution",
+                source_admission_id="source-admission", proposal_source_id="source-proposal", domain="semantic",
+                source_policy_id="source-policy", policy_id="policy",
+                signal=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationSignalKind.INTEGRITY_SUCCESS_SIGNAL,
+                confidence=1.1, evidence={}, provenance={"source": "test"}, reason="test",
             )
 
 
