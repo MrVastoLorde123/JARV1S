@@ -15,7 +15,7 @@ import json
 from typing import Optional, Protocol
 
 from .execution_preparation import ExecutionHandoff
-from .models import ToolRequest, ToolResult
+from .models import ToolResult
 
 
 class ExecutionAttemptError(ValueError):
@@ -127,15 +127,19 @@ class ExecutionAttemptService:
             )
 
         if not isinstance(result, ToolResult):
-            return ExecutionAttemptResult(
-                execution_id=execution_id,
-                handoff_id=handoff.handoff_id,
-                tool_name=handoff.tool_name,
-                invocation_id=handoff.invocation_id,
-                status=ExecutionAttemptStatus.FAILED,
-                reason=(
-                    f"executor returned {type(result).__name__}, expected ToolResult"
-                ),
+            return self._failed(handoff, execution_id, "executor returned an invalid result type")
+
+        if result.tool_name.strip().lower() != handoff.tool_name.strip().lower():
+            return self._failed(
+                handoff,
+                execution_id,
+                "executor result tool identity does not match handoff",
+            )
+        if result.invocation_id != handoff.invocation_id:
+            return self._failed(
+                handoff,
+                execution_id,
+                "executor result invocation identity does not match handoff",
             )
 
         status = (
@@ -153,6 +157,21 @@ class ExecutionAttemptService:
             reason=None if result.success else (
                 result.error.message if result.error is not None else "tool execution failed"
             ),
+        )
+
+    @staticmethod
+    def _failed(
+        handoff: ExecutionHandoff,
+        execution_id: str,
+        reason: str,
+    ) -> ExecutionAttemptResult:
+        return ExecutionAttemptResult(
+            execution_id=execution_id,
+            handoff_id=handoff.handoff_id,
+            tool_name=handoff.tool_name,
+            invocation_id=handoff.invocation_id,
+            status=ExecutionAttemptStatus.FAILED,
+            reason=reason,
         )
 
     @staticmethod
