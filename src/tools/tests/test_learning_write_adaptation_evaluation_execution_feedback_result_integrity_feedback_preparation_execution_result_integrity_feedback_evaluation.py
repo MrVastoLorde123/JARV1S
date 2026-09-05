@@ -92,7 +92,7 @@ class M22_53_Tests(unittest.TestCase):
                 admission_id="admission", proposal_id="proposal", decision_id="decision", evaluation_id_from_feedback="eval-fb",
                 decision_source_evaluation_id="decision-eval", source_feedback_id="source-fb", candidate_id="candidate",
                 source_candidate_id="source-candidate", execution_source_id="source-exec", source_execution_id="historical",
-                source_admission_id="source-admission", proposal_source_id="source-proposal", domain="learning",
+                source_admission_id="source-admission", source_proposal_id="source-proposal", domain="learning",
                 source_policy_id="source-policy", policy_id="policy",
                 signal=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationSignalKind.INTEGRITY_SUCCESS_SIGNAL,
                 confidence=1.1, evidence={"x": 1}, provenance={"source": "test"}, reason="reason",
