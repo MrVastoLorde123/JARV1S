@@ -144,8 +144,8 @@ class LearningWriteAdaptationEvaluationExecutionTests(unittest.TestCase):
 
     def test_execution_rejects_authorized_preparation(self) -> None:
         invalid = object.__new__(self.preparation.__class__)
-        for field_name, value in self.preparation.__dict__.items():
-            object.__setattr__(invalid, field_name, value)
+        for field_name in self.preparation.__dataclass_fields__:
+            object.__setattr__(invalid, field_name, getattr(self.preparation, field_name))
         object.__setattr__(invalid, "execution_authorized", True)
         with self.assertRaises(LearningWriteAdaptationEvaluationExecutionError):
             LearningWriteAdaptationEvaluationExecutionService(_RecordingApplier()).execute(invalid)
