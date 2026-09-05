@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+from types import MappingProxyType
 from typing import Any, Mapping, Optional
 
 from .authorization import AuthorizationDecision
@@ -149,5 +150,5 @@ class ExecutionPreparationService:
             sandbox_profile_id=admission.profile_id.strip(),
             tool_name=request.tool_name,
             invocation_id=request.invocation_id,
-            arguments=dict(request.arguments),
+            arguments=MappingProxyType(dict(request.arguments)),
         )
