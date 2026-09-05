@@ -24,16 +24,17 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalTests(unittest.T
             preparation_id="preparation-1",
             admission_id="admission-1",
             proposal_id="proposal-source-1",
+            decision_source_evaluation_id="historical-evaluation-1",
             source_feedback_id="source-feedback-1",
             candidate_id="candidate-1",
             source_candidate_id="source-candidate-1",
             execution_id="execution-1",
             source_execution_id="source-execution-1",
             domain="semantic",
+            policy_id="policy-1",
             action=LearningWriteAdaptationEvaluationExecutionFeedbackAction.ACCEPT,
             reason="sufficient observed evidence",
             confidence=0.8,
-            evaluation_id_from_feedback="historical-evaluation-1",
         )
         self.service = LearningWriteAdaptationEvaluationExecutionFeedbackProposalService()
 
@@ -43,46 +44,55 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalTests(unittest.T
             proposal=proposal or {"strategy": {"mode": "retain"}},
         )
 
-    def test_accepted_decision_creates_proposal(self) -> None:
-        proposal = self.service.propose(self._context())
-        self.assertIsInstance(proposal, LearningWriteAdaptationEvaluationExecutionFeedbackProposal)
-        self.assertEqual(proposal.decision_id, self.decision.decision_id)
-
-    def test_non_accept_decision_creates_no_proposal(self) -> None:
-        deferred = self.decision.__class__(
+    def _decision_with_action(self, action):
+        return LearningWriteAdaptationEvaluationExecutionFeedbackDecision(
             decision_id=self.decision.decision_id,
             evaluation_id=self.decision.evaluation_id,
             feedback_id=self.decision.feedback_id,
             preparation_id=self.decision.preparation_id,
             admission_id=self.decision.admission_id,
             proposal_id=self.decision.proposal_id,
+            decision_source_evaluation_id=self.decision.decision_source_evaluation_id,
             source_feedback_id=self.decision.source_feedback_id,
             candidate_id=self.decision.candidate_id,
             source_candidate_id=self.decision.source_candidate_id,
             execution_id=self.decision.execution_id,
             source_execution_id=self.decision.source_execution_id,
             domain=self.decision.domain,
-            action=LearningWriteAdaptationEvaluationExecutionFeedbackAction.DEFER,
+            policy_id=self.decision.policy_id,
+            action=action,
             reason="need more evidence",
             confidence=self.decision.confidence,
-            evaluation_id_from_feedback=self.decision.evaluation_id_from_feedback,
         )
-        self.assertIsNone(
-            self.service.propose(
-                LearningWriteAdaptationEvaluationExecutionFeedbackProposalContext(
-                    decision=deferred,
-                    proposal={"strategy": "retain"},
+
+    def test_accepted_decision_creates_proposal(self) -> None:
+        proposal = self.service.propose(self._context())
+        self.assertIsInstance(proposal, LearningWriteAdaptationEvaluationExecutionFeedbackProposal)
+        self.assertEqual(proposal.decision_id, self.decision.decision_id)
+
+    def test_non_accept_decision_creates_no_proposal(self) -> None:
+        for action in (
+            LearningWriteAdaptationEvaluationExecutionFeedbackAction.DEFER,
+            LearningWriteAdaptationEvaluationExecutionFeedbackAction.REJECT,
+        ):
+            decision = self._decision_with_action(action)
+            self.assertIsNone(
+                self.service.propose(
+                    LearningWriteAdaptationEvaluationExecutionFeedbackProposalContext(
+                        decision=decision,
+                        proposal={"strategy": "retain"},
+                    )
                 )
             )
-        )
 
     def test_full_lineage_is_preserved(self) -> None:
         proposal = self.service.propose(self._context())
         assert proposal is not None
         for field in (
-            "decision_id", "evaluation_id", "evaluation_id_from_feedback", "feedback_id",
+            "decision_id", "evaluation_id", "decision_source_evaluation_id", "feedback_id",
             "source_feedback_id", "candidate_id", "source_candidate_id", "execution_id",
-            "source_execution_id", "admission_id", "domain",
+            "source_execution_id", "preparation_id", "admission_id", "proposal_source_id",
+            "domain", "policy_id",
         ):
             self.assertEqual(getattr(proposal, field), getattr(self.decision, field))
 
@@ -90,6 +100,11 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalTests(unittest.T
         first = self.service.propose(self._context())
         second = self.service.propose(self._context())
         self.assertEqual(first.proposal_id, second.proposal_id)
+
+    def test_proposal_id_changes_with_payload(self) -> None:
+        first = self.service.propose(self._context({"strategy": "retain"}))
+        second = self.service.propose(self._context({"strategy": "revise"}))
+        self.assertNotEqual(first.proposal_id, second.proposal_id)
 
     def test_proposal_id_is_distinct_from_decision_id(self) -> None:
         proposal = self.service.propose(self._context())
@@ -140,6 +155,11 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackProposalTests(unittest.T
         self.assertFalse(context["retry_requested"])
         self.assertFalse(context["revocation_requested"])
         self.assertFalse(context["memory_mutation_allowed"])
+
+    def test_proposal_preserves_policy_identity(self) -> None:
+        proposal = self.service.propose(self._context())
+        assert proposal is not None
+        self.assertEqual(proposal.policy_id, "policy-1")
 
     def test_invalid_decision_type_is_rejected(self) -> None:
         with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackProposalError):
