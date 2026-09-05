@@ -92,17 +92,21 @@ M22.44 = **11/11 focused + 502/502 core = 513/513**.
 `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackService` consumes exactly one M22.43 integrity outcome. It converts SUCCEEDED/FAILED into immutable feedback evidence, preserves complete known M22.43 lineage, preserves observed execution evidence/fingerprint/failure reason, recursively freezes payload/provenance, derives deterministic feedback identity distinct from source outcome/execution identity, and does not authorize execution, retry, revocation, memory mutation, or adaptation truth.
 
 ### M22.45 — Feedback → Evaluation
-`LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationService` consumes exactly one M22.44 result-integrity feedback artifact.
+`LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationService` consumes exactly one M22.44 result-integrity feedback artifact.
 
-It produces immutable `LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation` evidence with:
+Its source artifact is `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluation` in `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation.py`.
+
+It produces immutable evaluation evidence with:
 - deterministic evaluation identity distinct from feedback/execution identities;
-- separate preservation of the M22.44 feedback evaluation identity and the earlier decision-source evaluation identity;
+- separate preservation of the M22.44 feedback identity and the earlier decision-source evaluation identity;
 - complete known lineage: outcome, execution, preparation, admission, proposal, decision, feedback, historical evaluation identities, source feedback, candidate/source candidate, execution source/source execution, source admission/source proposal, domain, source policy, and admission policy;
 - integrity-success and integrity-failure evaluation signals;
 - confidence bounded to [0,1];
 - recursively frozen evidence and provenance.
 
-M22.45 is evaluation evidence only. It does not establish adaptation truth, authorize execution, request retry, request revocation, mutate memory, or grant general authority.
+A namespace collision was discovered during local import verification: the pre-existing M22.37 module `learning_write_adaptation_evaluation_execution_feedback_evaluation.py` is required by the older decision/proposal chain. M22.45 therefore uses the dedicated module `learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation.py` and its dedicated class/service names, while the M22.37 module is restored unchanged. This prevents circular imports and preserves historical contracts.
+
+M22.45 remains evaluation evidence only. It does not establish adaptation truth, authorize execution, request retry, request revocation, mutate memory, or grant general authority.
 
 ## 8. Authority walls
 
@@ -160,8 +164,10 @@ No merge is performed unless explicitly requested.
 
 **Active boundary:** Future Adaptation Execution Feedback Result Integrity Feedback → Future Adaptation Execution Feedback Evaluation.
 
-**M22.45 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_evaluation.py`.
+**M22.45 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluation` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation.py`.
 
-**M22.45 service:** `LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationService`.
+**M22.45 service:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationService`.
 
-**Next action:** run the M22.45 focused suite and core regression locally. Do not merge.
+**Known correction:** the shared M22.37 evaluation module name was restored to preserve the established decision/proposal import graph; M22.45 uses a dedicated result-integrity-feedback evaluation namespace to avoid circular imports.
+
+**Next action:** run the dedicated M22.45 focused suite and core regression locally. Do not merge.
