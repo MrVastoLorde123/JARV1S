@@ -73,6 +73,8 @@ Information Gain / Uncertainty Reduction
 ↓
 Bounded Scheduling / Notification Proposal
 ↓
+Proactive Runtime / Feedback
+↓
 Prioritization
 ↓
 Validation / Policy
@@ -148,7 +150,17 @@ M21.5 authority walls:
 ## M21.6 boundary
 M21.6 is the integration layer that composes proactive cognition outputs into a bounded runtime result and records outcome/feedback signals for later learning. It may consume initiatives, proposals, value assessments, information-gain assessments, and scheduling recommendations, but it must not bypass validation, confirmation, authorization, or execution boundaries.
 
-M21.6 must preserve the following walls:
+Current bounded contract:
+- `ProactiveFeedback` is immutable outcome metadata for an observed or not-observed result.
+- `FeedbackOutcome` is bounded to `NOT_OBSERVED`, `ACCEPTED`, `DECLINED`, `EXPIRED`, `SUPERSEDED`, and `FAILED`.
+- `ProactiveRuntimeResult` composes the proactive stages into one inspectable immutable result.
+- All participating identities must agree on `proposal_id`; initiative candidate/trigger identity is preserved.
+- Missing/non-eligible proposal state or non-proposed scheduling remains `NEEDS_REVIEW`.
+- Feedback cannot grant authority or mutate policy.
+- Runtime context explicitly reports `authority_granted=False`, `authorization_granted=False`, `execution_requested=False`, and `executed=False`.
+- Runtime ranking is deterministic by combined advisory value + information-gain score, then proposal identity.
+
+M21.6 authority walls:
 - Runtime Integration ≠ Authorization
 - Feedback ≠ Truth
 - Outcome ≠ User Intent
@@ -157,7 +169,7 @@ M21.6 must preserve the following walls:
 - Recovery ≠ Execution
 - Integration ≠ Authority Escalation
 
-The M21.6 runtime is expected to make the proactive chain composable while keeping every stage advisory until the existing authority chain explicitly takes over.
+M21.6 does not confirm user intent, schedule or dispatch work, deliver notifications, assign workers, invoke plugins/capabilities, mutate policy, infer truth from feedback, or execute actions.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
