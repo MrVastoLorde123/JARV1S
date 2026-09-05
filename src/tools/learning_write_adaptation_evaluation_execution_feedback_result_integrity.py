@@ -13,12 +13,12 @@ from enum import Enum
 import hashlib
 import json
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
 
 from .learning_write_adaptation_evaluation_execution_feedback_execution import (
-    LearningWriteAdaptationEvaluationExecutionRequest,
-    LearningWriteAdaptationEvaluationExecutionResult,
-    LearningWriteAdaptationEvaluationExecutionStatus,
+    LearningWriteAdaptationEvaluationExecutionFeedbackExecutionRequest,
+    LearningWriteAdaptationEvaluationExecutionFeedbackExecutionResult,
+    LearningWriteAdaptationEvaluationExecutionFeedbackExecutionStatus,
 )
 
 
@@ -34,7 +34,9 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus(str, Enum)
 
 
 def _freeze(value: Any) -> Any:
-    if isinstance(value, Mapping):
+    if isinstance(value, dict):
+        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, MappingProxyType):
         return MappingProxyType({key: _freeze(item) for key, item in value.items()})
     if isinstance(value, list):
         return tuple(_freeze(item) for item in value)
@@ -60,6 +62,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackOutcome:
     source_feedback_id: str
     candidate_id: str
     source_candidate_id: str
+    execution_source_id: str
     source_execution_id: str
     source_admission_id: str
     proposal_source_id: str
@@ -79,9 +82,10 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackOutcome:
             ("decision_source_evaluation_id", self.decision_source_evaluation_id),
             ("feedback_id", self.feedback_id), ("source_feedback_id", self.source_feedback_id),
             ("candidate_id", self.candidate_id), ("source_candidate_id", self.source_candidate_id),
-            ("source_execution_id", self.source_execution_id), ("source_admission_id", self.source_admission_id),
-            ("proposal_source_id", self.proposal_source_id), ("domain", self.domain),
-            ("source_policy_id", self.source_policy_id), ("policy_id", self.policy_id),
+            ("execution_source_id", self.execution_source_id), ("source_execution_id", self.source_execution_id),
+            ("source_admission_id", self.source_admission_id), ("proposal_source_id", self.proposal_source_id),
+            ("domain", self.domain), ("source_policy_id", self.source_policy_id),
+            ("policy_id", self.policy_id),
         ):
             if not isinstance(value, str) or not value.strip():
                 raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityError(
@@ -125,6 +129,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackOutcome:
             "learning_write_adaptation_source_feedback_id": self.source_feedback_id,
             "learning_write_adaptation_candidate_id": self.candidate_id,
             "learning_candidate_id": self.source_candidate_id,
+            "learning_write_adaptation_evaluation_execution_source_id": self.execution_source_id,
             "learning_write_adaptation_source_execution_id": self.source_execution_id,
             "learning_write_adaptation_evaluation_execution_source_admission_id": self.source_admission_id,
             "learning_write_adaptation_evaluation_proposal_id": self.proposal_source_id,
@@ -151,13 +156,23 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityService:
 
     def interpret(
         self,
-        result: LearningWriteAdaptationEvaluationExecutionResult,
-        request: LearningWriteAdaptationEvaluationExecutionRequest,
+        result: LearningWriteAdaptationEvaluationExecutionFeedbackExecutionResult,
+        request: LearningWriteAdaptationEvaluationExecutionFeedbackExecutionRequest,
     ) -> LearningWriteAdaptationEvaluationExecutionFeedbackOutcome:
-        if not isinstance(result, LearningWriteAdaptationEvaluationExecutionResult):
-            raise TypeError("result must be a LearningWriteAdaptationEvaluationExecutionResult")
-        if not isinstance(request, LearningWriteAdaptationEvaluationExecutionRequest):
-            raise TypeError("request must be a LearningWriteAdaptationEvaluationExecutionRequest")
+        if not isinstance(
+            result,
+            LearningWriteAdaptationEvaluationExecutionFeedbackExecutionResult,
+        ):
+            raise TypeError(
+                "result must be a LearningWriteAdaptationEvaluationExecutionFeedbackExecutionResult"
+            )
+        if not isinstance(
+            request,
+            LearningWriteAdaptationEvaluationExecutionFeedbackExecutionRequest,
+        ):
+            raise TypeError(
+                "request must be a LearningWriteAdaptationEvaluationExecutionFeedbackExecutionRequest"
+            )
 
         checks = (
             ("execution", result.execution_id, request.execution_id),
@@ -166,12 +181,17 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityService:
             ("proposal", result.proposal_id, request.proposal_id),
             ("decision", result.decision_id, request.decision_id),
             ("evaluation", result.evaluation_id, request.evaluation_id),
+            ("decision source evaluation", result.decision_source_evaluation_id, request.decision_source_evaluation_id),
             ("feedback", result.feedback_id, request.feedback_id),
             ("source feedback", result.source_feedback_id, request.source_feedback_id),
             ("candidate", result.candidate_id, request.candidate_id),
             ("source candidate", result.source_candidate_id, request.source_candidate_id),
+            ("execution source", result.execution_source_id, request.execution_source_id),
             ("source execution", result.source_execution_id, request.source_execution_id),
+            ("source admission", result.source_admission_id, request.source_admission_id),
+            ("proposal source", result.proposal_source_id, request.proposal_source_id),
             ("domain", result.domain, request.domain),
+            ("source policy", result.source_policy_id, request.source_policy_id),
             ("policy", result.policy_id, request.policy_id),
         )
         for label, actual, expected in checks:
@@ -180,47 +200,30 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityService:
                     f"future adaptation execution feedback result {label} identity mismatch"
                 )
 
-        # M22.42 execution request carries the exact execution lineage available
-        # at execution time. The richer source-admission/source-proposal/source-policy
-        # lineage remains preserved downstream by the preparation artifact itself.
-        if result.status is LearningWriteAdaptationEvaluationExecutionStatus.COMPLETED:
+        if result.status is LearningWriteAdaptationEvaluationExecutionFeedbackExecutionStatus.COMPLETED:
             fingerprint = self._fingerprint(result.execution_result)
-            return self._build_success(request, result.execution_result, fingerprint)
+            return self._build_outcome(
+                request=request,
+                status=LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus.SUCCEEDED,
+                execution_result=result.execution_result,
+                result_fingerprint=fingerprint,
+                reason=None,
+            )
 
-        return self._build_failure(request, result.reason)
-
-    @staticmethod
-    def _build_success(
-        request: LearningWriteAdaptationEvaluationExecutionRequest,
-        execution_result: Any,
-        fingerprint: str,
-    ) -> LearningWriteAdaptationEvaluationExecutionFeedbackOutcome:
-        return LearningWriteAdaptationEvaluationExecutionFeedbackOutcome(
-            execution_id=request.execution_id,
-            preparation_id=request.preparation_id,
-            admission_id=request.admission_id,
-            proposal_id=request.proposal_id,
-            decision_id=request.decision_id,
-            evaluation_id=request.evaluation_id,
-            decision_source_evaluation_id=request.evaluation_id,
-            feedback_id=request.feedback_id,
-            source_feedback_id=request.source_feedback_id,
-            candidate_id=request.candidate_id,
-            source_candidate_id=request.source_candidate_id,
-            source_execution_id=request.source_execution_id,
-            source_admission_id=request.admission_id,
-            proposal_source_id=request.proposal_id,
-            domain=request.domain,
-            source_policy_id=request.policy_id,
-            policy_id=request.policy_id,
-            status=LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus.SUCCEEDED,
-            execution_result=execution_result,
-            result_fingerprint=fingerprint,
+        return self._build_outcome(
+            request=request,
+            status=LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus.FAILED,
+            execution_result=None,
+            result_fingerprint=None,
+            reason=result.reason,
         )
 
     @staticmethod
-    def _build_failure(
-        request: LearningWriteAdaptationEvaluationExecutionRequest,
+    def _build_outcome(
+        request: LearningWriteAdaptationEvaluationExecutionFeedbackExecutionRequest,
+        status: LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus,
+        execution_result: Any,
+        result_fingerprint: str | None,
         reason: str | None,
     ) -> LearningWriteAdaptationEvaluationExecutionFeedbackOutcome:
         return LearningWriteAdaptationEvaluationExecutionFeedbackOutcome(
@@ -230,18 +233,21 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityService:
             proposal_id=request.proposal_id,
             decision_id=request.decision_id,
             evaluation_id=request.evaluation_id,
-            decision_source_evaluation_id=request.evaluation_id,
+            decision_source_evaluation_id=request.decision_source_evaluation_id,
             feedback_id=request.feedback_id,
             source_feedback_id=request.source_feedback_id,
             candidate_id=request.candidate_id,
             source_candidate_id=request.source_candidate_id,
+            execution_source_id=request.execution_source_id,
             source_execution_id=request.source_execution_id,
-            source_admission_id=request.admission_id,
-            proposal_source_id=request.proposal_id,
+            source_admission_id=request.source_admission_id,
+            proposal_source_id=request.proposal_source_id,
             domain=request.domain,
-            source_policy_id=request.policy_id,
+            source_policy_id=request.source_policy_id,
             policy_id=request.policy_id,
-            status=LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus.FAILED,
+            status=status,
+            execution_result=execution_result,
+            result_fingerprint=result_fingerprint,
             reason=reason,
         )
 
