@@ -102,7 +102,7 @@ Outcome / Feedback
 - M21.6 Proactive Runtime / Feedback Integration — VERIFIED / COMPLETE (10/10 runtime + 9/9 scheduling + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
 - M22 Capability / Plugin Ecosystem — ACTIVE
 - M22.1 Capability / Plugin Contract + Registry Boundary — VERIFIED / COMPLETE (8/8 focused + 487/487 core)
-- M22.2 Capability Trust / Provenance Boundary — IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.2 Capability Trust / Provenance Boundary — VERIFIED / COMPLETE (9/9 focused + 8/8 M22.1 + 487/487 core)
 
 ## M21.3 verified semantics
 Bounded deterministic advisory scoring uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version is `linear-v1`; score is bounded to [0, 1]; ranking is deterministic by score descending and proposal identity ascending. Value assessment grants no authority and performs no scheduling, notification, assignment, or execution.
@@ -189,8 +189,11 @@ Current bounded contract:
 - `CapabilityTrustAssessment` is immutable, evidence-linked metadata with bounded confidence in `[0, 1]`.
 - `TrustStatus` is bounded to `UNASSESSED`, `CONDITIONAL`, `TRUSTED`, and `UNTRUSTED`.
 - `UNASSESSED` must have zero confidence.
+- Non-`UNASSESSED` trust assessments require supporting evidence.
 - Trust assessments must validate against matching capability identity.
 - Provenance and trust context explicitly report no authority, permission, authorization, or execution request.
+
+M22.2 verification receipt: **9/9 focused + 8/8 M22.1 + 487/487 core tests passed locally.**
 
 M22.2 authority walls:
 - Provenance ≠ Trust
