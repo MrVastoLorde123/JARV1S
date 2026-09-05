@@ -108,10 +108,42 @@ Outcome / Feedback
 - M22.5 Plugin Isolation / Execution Sandbox — VERIFIED / COMPLETE (10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core = 538/538)
 - M22.6 Capability Discovery + Selection Integration — VERIFIED / COMPLETE (8/8 focused + 495/495 core regression)
 - M22.7 Capability Proposal → Validated ToolRequest Boundary — VERIFIED / COMPLETE (7/7 request service + 8/8 invocation + 7/7 argument planner + 8/8 M22.6 integration + 4/4 catalog + 9/9 selection + 3/3 selection service + 502/502 core regression)
-- M22.8 Explicit Authorization Boundary — ACTIVE
+- M22.8 Explicit Authorization Boundary — VERIFIED / COMPLETE (9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression)
+- M22.9 Authorization Integrity — ACTIVE
 
-## M22.8 direction
+## M22.9 direction
+M22.9 establishes the integrity boundary between an explicit `AuthorizationDecision` and execution. `AuthorizationIntegrityService` deterministically binds a granted authorization to the exact `ToolRequest` through request and decision fingerprints plus tool/invocation identity checks. `PolicyGate.invoke()` verifies that integrity before delegating to `ToolService`.
+
+Directional boundary:
+```text
+Validated ToolRequest
+↓
+Policy
+↓
+Confirmation (when required)
+↓
+AuthorizationDecision
+↓
+Authorization Integrity
+↓
+Sandbox
+↓
+Execution
+```
+
+M22.9 authority walls:
+- Authorization ≠ Authorization Integrity
+- Authorization Integrity ≠ Execution
+- Validated ToolRequest ≠ Authorized ToolRequest
+- Authorization ≠ Permission
+- Authorization ≠ Sandbox Admission
+
+M22.9 does not implement durable authorization storage, revocation, expiration policy, distributed consensus, worker assignment, sandbox admission, or plugin execution.
+
+## M22.8 verified semantics
 M22.8 makes the authority transition from a validated `ToolRequest` to an explicit immutable `AuthorizationDecision`. `ExplicitAuthorizationService` evaluates the existing policy contract and, when required, the existing confirmation contract. `PolicyGate.authorize()` exposes authorization without execution; `PolicyGate.invoke()` consumes that decision before delegating to `ToolService`.
+
+M22.8 verification receipt: **9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression tests passed locally.**
 
 Directional boundary:
 ```text
@@ -221,105 +253,6 @@ M22.6 authority walls:
 
 M22.6 does not invoke tools or plugins, construct a privileged execution path, authorize selected capabilities, interpret selection as confirmation, bypass `PolicyGate`, assign workers, infer trust/permission/authorization from rank, mutate registries or policy, or perform sandbox admission.
 
-## M22.5 verified semantics
-M22.5 establishes the execution-isolation boundary for plugins/capabilities. Sandbox profiles describe containment and resource constraints; admission evaluation determines whether the declared isolation contract is structurally admissible for the supported runtime. Neither creates permission, authorization, or execution.
-
-Current bounded contract:
-- `SandboxProfile` is immutable declarative containment/resource metadata.
-- `IsolationMode` is bounded to `PROCESS` in this initial contract.
-- `SandboxAdmissionEvaluator` performs deterministic contract admission only; it never launches or invokes a capability.
-- `SandboxAdmissionResult` is immutable and carries an explicit `ADMISSIBLE` or `REJECTED` status.
-- `SandboxProfileRegistry` provides explicit, conflict-aware registration and deterministic listing of sandbox profiles.
-- Read-only filesystem profiles cannot declare writable paths.
-- Resource constraints require positive timeout, memory, and CPU values; CPU is bounded to 100 percent.
-- Sandbox context explicitly reports no permission, authority, authorization, or execution state.
-
-M22.5 verification receipt: **10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally (538/538 total).**
-
-M22.5 authority walls:
-- Sandbox ≠ Authorization
-- Isolation ≠ Trust
-- Admission ≠ Permission
-- Permission ≠ Execution
-- Process Boundary ≠ Authority Boundary
-- Containment ≠ Cancellation
-- Capability ≠ Worker
-- Plugin ≠ JARVIS
-
-M22.5 does not spawn plugin subprocesses, execute arbitrary plugin code, convert sandbox admission into authorization, infer trust from isolation checks, grant permission, replace confirmation/authorization, revoke authorization, select workers, mutate policy, or bypass the existing validation → policy → confirmation → authorization chain.
-
-## M22.4 verified semantics
-M22.4 establishes bounded declarative permission/policy bindings for capabilities and specific capability versions. A binding describes whether a named permission is allowed or denied under a policy; it is not itself an authorization decision.
-
-Current bounded contract:
-- `CapabilityPermissionBinding` is immutable declarative metadata linking capability identity, permission, effect, optional version, and policy identity.
-- `PermissionEffect` is bounded to `ALLOW` and `DENY`.
-- Versioned and version-agnostic bindings are distinct and use M22.3 Semantic Versioning normalization when a version is supplied.
-- `CapabilityPolicyBindingRegistry` provides explicit registration, deterministic lookup, and deterministic listing.
-- Duplicate binding identities are rejected rather than silently replaced, preventing unresolved policy conflicts at the binding boundary.
-- Binding context explicitly reports `permission_bound=True` while authority and authorization remain false.
-- Policy-layer version validation preserves the M22.4 error boundary by converting lifecycle SemVer validation failures into `CapabilityPolicyError`.
-
-M22.4 verification receipt: **9/9 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally.**
-
-M22.4 authority walls:
-- Permission Binding ≠ Authorization
-- Policy ≠ Authorization
-- ALLOW ≠ Authorized
-- DENY ≠ Execution Cancellation
-- Active ≠ Permission
-- Latest ≠ Authorized
-- Trust ≠ Permission
-- Permission ≠ Execution
-
-M22.4 does not authorize an invocation, confirm user intent, execute capabilities, select workers, mutate policy, infer trust from permission, or convert an `ALLOW` binding into an execution request.
-
-## M22.3 verified semantics
-M22.3 establishes bounded capability version identity and lifecycle history. `SemanticVersion` enforces Semantic Versioning syntax and precedence; `CapabilityVersion` provides immutable version/lifecycle metadata; `CapabilityLifecycleRegistry` provides explicit version registration, lookup, forward-only lifecycle transitions, deterministic ordering, and retained history. Build metadata does not change SemVer precedence; a deterministic version-string tiebreaker is used when precedence is equal.
-
-Lifecycle states are `ACTIVE`, `DEPRECATED`, and `RETIRED`. Allowed transitions are `ACTIVE → DEPRECATED → RETIRED` or `ACTIVE → RETIRED`; retired versions cannot be reactivated. `supersedes`, when present, must identify an older semantic version. `latest()` is metadata lookup only and excludes retired versions by default.
-
-M22.3 verification receipt: **15/15 focused + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally.**
-
-M22.3 authority walls:
-- Version ≠ Identity Authority
-- Lifecycle ≠ Permission
-- Latest ≠ Authorized
-- Active ≠ Trusted
-- Deprecated ≠ Forbidden
-- Retired ≠ Deleted
-- Versioning ≠ Execution
-- Capability ≠ Permission
-
-M22.3 does not execute capabilities, grant permission, create authorization, infer trust from lifecycle state, infer authorization from `ACTIVE`, select workers, mutate policy, automatically replace versions, or delete retired history.
-
-## M22.2 boundary
-M22.2 establishes the bounded provenance and trust-assessment layer for capabilities. Provenance records origin and supporting evidence; trust records an evidence-linked assessment. Neither creates permission or authorization.
-
-Current bounded contract:
-- `ProvenanceEvidence` is immutable structured evidence for provenance/trust claims.
-- `CapabilityProvenance` is an immutable origin record bound to a capability identity.
-- `CapabilityTrustAssessment` is immutable, evidence-linked metadata with bounded confidence in `[0, 1]`.
-- `TrustStatus` is bounded to `UNASSESSED`, `CONDITIONAL`, `TRUSTED`, and `UNTRUSTED`.
-- `UNASSESSED` must have zero confidence.
-- Non-`UNASSESSED` trust assessments require supporting evidence.
-- Trust assessments must validate against matching capability identity.
-- Provenance and trust context explicitly report no authority, permission, authorization, or execution request.
-
-M22.2 verification receipt: **9/9 focused + 8/8 M22.1 + 487/487 core tests passed locally.**
-
-M22.2 authority walls:
-- Provenance ≠ Trust
-- Trust ≠ Permission
-- Trust ≠ Authorization
-- Evidence ≠ Truth
-- Confidence ≠ Certainty
-- Assessment ≠ Execution
-- Capability ≠ Permission
-- Registration ≠ Trust
-
-M22.2 does not execute capabilities, grant permission, create authorization, infer execution authority from trust, mutate policy, schedule, notify, assign workers, or treat provenance as proof of truth.
-
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
 
@@ -327,7 +260,7 @@ Learning is multi-form: episodic, semantic, procedural, preference, failure/outc
 `PERSONAL, SKILL, PREFERENCE, PROJECT, GOAL, FACT, WORKFLOW, RELATIONSHIP, EXPERIENCE, OTHER`
 
 ## GitHub session protocol
-Every GitHub engineering session begins by reading this file from the current working branch/ref. Before moving to the next milestone, update this file with the newest verified receipt, implementation state, boundary, and next active milestone. Never assume a remembered milestone state is newer than this repository ledger.
+Every GitHub engineering session begins by reading this file from the current working branch/ref. Before moving to the next milestone, update this file with the newest verified receipt, implementation state, architecture boundary, and next active milestone. Never assume a remembered milestone state is newer than this repository ledger.
 
 ## Verification rule
 A milestone is not considered GREEN / VERIFIED / COMPLETE until the user provides the local test receipt. Remote implementation status is kept distinct from local verification status.
