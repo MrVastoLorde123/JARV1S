@@ -104,6 +104,7 @@ Outcome / Feedback
 - M22.1 Capability / Plugin Contract + Registry Boundary — VERIFIED / COMPLETE (8/8 focused + 487/487 core)
 - M22.2 Capability Trust / Provenance Boundary — VERIFIED / COMPLETE (9/9 focused + 8/8 M22.1 + 487/487 core)
 - M22.3 Capability Lifecycle / Versioning Boundary — VERIFIED / COMPLETE (15/15 focused + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
+- M22.4 Capability Permission / Policy Binding — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## M22.3 verified semantics
 M22.3 establishes bounded capability version identity and lifecycle history. `SemanticVersion` enforces Semantic Versioning syntax and precedence; `CapabilityVersion` provides immutable version/lifecycle metadata; `CapabilityLifecycleRegistry` provides explicit version registration, lookup, forward-only lifecycle transitions, deterministic ordering, and retained history. Build metadata does not change SemVer precedence; a deterministic version-string tiebreaker is used when precedence is equal.
@@ -123,6 +124,29 @@ M22.3 authority walls:
 - Capability ≠ Permission
 
 M22.3 does not execute capabilities, grant permission, create authorization, infer trust from lifecycle state, infer authorization from `ACTIVE`, select workers, mutate policy, automatically replace versions, or delete retired history.
+
+## M22.4 boundary
+M22.4 establishes bounded declarative permission/policy bindings for capabilities and specific capability versions. A binding describes whether a named permission is allowed or denied under a policy; it is not itself an authorization decision.
+
+Current bounded contract:
+- `CapabilityPermissionBinding` is immutable declarative metadata linking capability identity, permission, effect, optional version, and policy identity.
+- `PermissionEffect` is bounded to `ALLOW` and `DENY`.
+- Versioned and version-agnostic bindings are distinct and use M22.3 Semantic Versioning normalization when a version is supplied.
+- `CapabilityPolicyBindingRegistry` provides explicit registration, deterministic lookup, and deterministic listing.
+- Duplicate binding identities are rejected rather than silently replaced, preventing unresolved policy conflicts at the binding boundary.
+- Binding context explicitly reports `permission_bound=True` while authority and authorization remain false.
+
+M22.4 authority walls:
+- Permission Binding ≠ Authorization
+- Policy ≠ Authorization
+- ALLOW ≠ Authorized
+- DENY ≠ Execution Cancellation
+- Active ≠ Permission
+- Latest ≠ Authorized
+- Trust ≠ Permission
+- Permission ≠ Execution
+
+M22.4 does not authorize an invocation, confirm user intent, execute capabilities, select workers, mutate policy, infer trust from permission, or convert an `ALLOW` binding into an execution request.
 
 ## M22.2 boundary
 M22.2 establishes the bounded provenance and trust-assessment layer for capabilities. Provenance records origin and supporting evidence; trust records an evidence-linked assessment. Neither creates permission or authorization.
