@@ -109,7 +109,17 @@ class EnvironmentWorldModelUncertaintyService:
     ) -> EnvironmentWorldModelUncertainty:
         if type(model) is not EnvironmentWorldModel:
             raise TypeError("model must be EnvironmentWorldModel")
-        confidence = {str(key): float(value) for key, value in confidence_by_domain.items()}
+        if not isinstance(confidence_by_domain, Mapping):
+            raise TypeError("confidence_by_domain must be a mapping")
+
+        confidence: dict[str, float] = {}
+        for domain, value in confidence_by_domain.items():
+            if not isinstance(domain, str) or not domain.strip():
+                raise ValueError("confidence_by_domain contains an invalid domain")
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                raise TypeError("confidence_by_domain values must be numeric")
+            confidence[domain] = float(value)
+
         expected = set(model.represented_domains)
         if set(confidence) != expected:
             raise EnvironmentWorldModelUncertaintyError(
