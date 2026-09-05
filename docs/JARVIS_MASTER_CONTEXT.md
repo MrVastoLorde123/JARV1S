@@ -61,8 +61,10 @@ No merge is performed unless explicitly requested.
 - M22.55 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
 - M22.56 — VERIFIED / COMPLETE: 16/16 focused + 502/502 core = **518/518**
 - M23.1 — VERIFIED / COMPLETE: 12/12 focused + 514/514 core = **526/526**
+- M23.2 — VERIFIED / COMPLETE: 8/8 focused + 522/522 core = **530/530**
 
 Selected recent receipts:
+- M23.2: **530/530**
 - M23.1: **526/526**
 - M22.56: **518/518**
 - M22.55: **517/517**
@@ -135,7 +137,35 @@ Files:
 
 M23.1 receipt: **12/12 focused + 514/514 core = 526/526**.
 
-## 9. Namespace and lineage rules
+## 9. M23.2 — Environment State Contract
+
+**Status: VERIFIED / COMPLETE.**
+
+Branch:
+`feature/m23.2-environment-state-contract`
+
+Contract:
+`Provider-neutral immutable representation of JARVIS's operating environment`
+
+M23.2 introduces `EnvironmentSnapshot`, which models descriptive environment state across hardware, software, network, installed/available models, capabilities, permissions, performance observations, costs, resources, and metadata. `EnvironmentSnapshotService` constructs validated snapshots from observed inputs.
+
+The snapshot recursively freezes its domain mappings so later routing, planning, anomaly detection, scheduling, and optimization can reason from a stable state representation without embedding host-specific assumptions into individual services.
+
+Environment state is descriptive, not authoritative. Recording a permission does not grant it; recording a capability does not imply that it is executable. The snapshot cannot authorize execution, request execution, mutate memory, establish adaptation truth, or elevate permissions.
+
+Hardware discovery, operating-system probing, telemetry, and external-service health checks remain separate observation adapters. M23.2 intentionally does not hard-code detection of the host machine.
+
+Files:
+- `src/core/environment_model.py`
+- `src/core/tests/test_environment_model.py`
+- `docs/decisions/047-environment-state-contract.md`
+
+Receipt:
+- Focused: `python -m unittest src.core.tests.test_environment_model -v` → **8/8 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **522/522 OK**
+- Combined: **530/530 OK**
+
+## 10. Namespace and lineage rules
 
 M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because class names are similar.
 
@@ -143,7 +173,7 @@ Canonical lineage naming for the current chain uses `source_proposal_id` for inh
 
 Do not introduce compatibility aliases unless the contract explicitly requires them.
 
-## 10. Memory and capability architecture
+## 11. Memory and capability architecture
 
 Memory separates decision from mutation: `MemoryDecisionProvider` is provider-neutral/non-mutating; `MemoryDecisionService` selects and validates; `MemoryDecisionExecutor` is the mutation boundary for CREATE, CONFIRM, UPDATE, CONTRADICT, or IGNORE. Adaptation must not bypass this architecture.
 
@@ -151,13 +181,13 @@ Capability ecosystem: contract/registry, trust/provenance, lifecycle/versioning,
 
 Workspace capabilities are `read_file`, `list_directory`, `search_files`, and `write_file`; `write_file` is confirmation-gated.
 
-## 11. Self-work target architecture
+## 12. Self-work target architecture
 
 `User goal → Understand → Discover capabilities → Inspect current state → Reason/plan → Propose actions → Validate → Policy/confirmation → Execute → Run tests/observe → Evaluate → Correct → Report`
 
 The model is never final authority over execution.
 
-## 12. Verification rule
+## 13. Verification rule
 
 A milestone is not GREEN / VERIFIED / COMPLETE until the user provides the local test receipt.
 
@@ -165,12 +195,12 @@ Remote implementation status and local verification status remain distinct.
 
 No merge is performed unless explicitly requested.
 
-## 13. Current snapshot
+## 14. Current snapshot
 
-**Latest verified milestone:** M23.1 — 12/12 focused + 514/514 core = **526/526**.
+**Latest verified milestone:** M23.2 — 8/8 focused + 522/522 core = **530/530**.
 
-**Active milestone:** M23.1 is complete. The next milestone must be derived from the live repository rather than assumed from milestone numbering.
+**Active milestone:** M23.3 — Environment Observation Adapter Contract.
 
-**M23.1 status:** VERIFIED / COMPLETE.
+**M23.3 status:** NOT YET IMPLEMENTED.
 
-**Next architectural direction:** build upon the new boundary composition primitive rather than creating another repetitive one-off M22-style wrapper. Model routing, environment awareness, anomaly detection, asynchronous execution, interface, multimodality, and agent orchestration remain separate future concerns and should be introduced through explicit contracts.
+**Next engineering action:** define the provider-neutral observation-adapter interface and deterministic composition into `EnvironmentSnapshot`, without probing the host or granting authority. No merge performed.
