@@ -1,7 +1,7 @@
 # M23.7 — Environment Observation Provenance Contract
 
 ## Status
-IMPLEMENTED / AWAITING LOCAL VERIFICATION
+VERIFIED / COMPLETE
 
 ## Purpose
 Provide immutable provenance for environment observation evidence and derived aggregates without treating provenance as truth or authority.
@@ -21,7 +21,7 @@ Provide immutable provenance for environment observation evidence and derived ag
 
 Provenance can be created directly from one `EnvironmentObservation` or from one `EnvironmentObservationAggregate`.
 
-Timestamps are required to be timezone-aware and normalized to UTC. Source identities must be unique and aligned. Lineage is recursively immutable.
+Timestamps are required to be timezone-aware and normalized to UTC. Source identities must be unique and aligned. Lineage is recursively immutable while preserving mapping semantics.
 
 ## Authority boundary
 Provenance answers **where this evidence came from and what evidence it descends from**. It does not answer whether that evidence is true.
@@ -48,12 +48,12 @@ M23.3 established replaceable observation adapters; M23.4 established temporal v
 - `docs/decisions/052-environment-observation-provenance-contract.md`
 
 ## Verification
-Local verification is required before marking VERIFIED / COMPLETE.
-
 Focused:
-`python -m unittest src.core.tests.test_environment_observation_provenance -v`
+`python -m unittest src.core.tests.test_environment_observation_provenance -v` → **12/12 OK**
 
 Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
+`python -m unittest discover -s src\\core -p "test*.py"` → **588/588 OK**
+
+Combined: **600/600 OK**.
 
 No merge performed.
