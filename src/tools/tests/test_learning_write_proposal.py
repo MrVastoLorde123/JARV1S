@@ -4,9 +4,10 @@ import unittest
 from dataclasses import FrozenInstanceError
 
 from src.tools.feedback_evaluation import LearningCandidate, LearningSignalKind
-from src.tools.learning_decision import LearningAction, LearningDecision, LearningDecisionError
+from src.tools.learning_decision import LearningAction, LearningDecision
 from src.tools.learning_write_proposal import (
     LearningWriteDomain,
+    LearningWriteProposal,
     LearningWriteProposalContext,
     LearningWriteProposalError,
     LearningWriteProposalService,
@@ -37,7 +38,8 @@ class LearningWriteProposalTests(unittest.TestCase):
             reason="successful execution provides an observed positive signal",
         )
 
-    def _decision(self, candidate: LearningCandidate, action: LearningAction = LearningAction.ACCEPT):
+    @staticmethod
+    def _decision(candidate: LearningCandidate, action: LearningAction = LearningAction.ACCEPT):
         return LearningDecision(
             decision_id="decision-1",
             candidate_id=candidate.candidate_id,
@@ -58,7 +60,7 @@ class LearningWriteProposalTests(unittest.TestCase):
     def test_accepted_decision_creates_proposal(self) -> None:
         proposal = self.service.propose(self._context())
         self.assertIsNotNone(proposal)
-        self.assertEqual(proposal.action if hasattr(proposal, "action") else "", "")
+        self.assertEqual(proposal.decision_id, "decision-1")
         self.assertEqual(proposal.domain, LearningWriteDomain.SEMANTIC)
 
     def test_deferred_decision_creates_no_proposal(self) -> None:
@@ -89,7 +91,6 @@ class LearningWriteProposalTests(unittest.TestCase):
                 payload={"rule": "validate before execution"},
             )
         )
-        self.assertEqual(proposal.decision_id, "decision-1")
         self.assertEqual(proposal.candidate_id, candidate.candidate_id)
         self.assertEqual(proposal.feedback_id, candidate.feedback_id)
         self.assertEqual(proposal.execution_id, candidate.execution_id)
@@ -139,8 +140,6 @@ class LearningWriteProposalTests(unittest.TestCase):
     def test_write_proposal_cannot_grant_authority(self) -> None:
         candidate = self._candidate()
         with self.assertRaises(LearningWriteProposalError):
-            from src.tools.learning_write_proposal import LearningWriteProposal
-
             LearningWriteProposal(
                 proposal_id="proposal-1",
                 decision_id="decision-1",
@@ -158,22 +157,16 @@ class LearningWriteProposalTests(unittest.TestCase):
                 learning_write_allowed=True,
             )
 
-    def test_invalid_action_does_not_reach_write_proposal(self) -> None:
+    def test_invalid_decision_type_is_rejected(self) -> None:
         candidate = self._candidate()
-        decision = LearningDecision(
-            decision_id="decision-2",
-            candidate_id=candidate.candidate_id,
-            action=LearningAction.DEFER,
-            reason="defer",
-            confidence=0.5,
-        )
         context = LearningWriteProposalContext(
-            decision=decision,
+            decision="bad",  # type: ignore[arg-type]
             candidate=candidate,
-            domain=LearningWriteDomain.META,
+            domain=LearningWriteDomain.SEMANTIC,
             payload={"x": 1},
         )
-        self.assertIsNone(self.service.propose(context))
+        with self.assertRaises(TypeError):
+            self.service.propose(context)
 
 
 if __name__ == "__main__":
