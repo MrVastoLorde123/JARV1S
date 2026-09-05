@@ -59,9 +59,10 @@ No merge is performed unless explicitly requested.
 - M22.53 — VERIFIED / COMPLETE: 13/13 focused + 502/502 core = **515/515**
 - M22.54 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
 - M22.55 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
-- M22.56 — IMPLEMENTED / NOT YET LOCALLY VERIFIED
+- M22.56 — VERIFIED / COMPLETE: 16/16 focused + 502/502 core = **518/518**
 
 Selected recent receipts:
+- M22.56: **518/518**
 - M22.55: **517/517**
 - M22.54: **517/517**
 - M22.53: **515/515**
@@ -91,17 +92,8 @@ Payload, evidence, provenance, and metadata are recursively immutable. Confidenc
 
 M22.55 receipt: **15/15 focused + 502/502 core = 517/517**.
 
-## 8. M22.56 — Proposal → Admission
-
-**Status: IMPLEMENTED / NOT YET LOCALLY VERIFIED.**
-
-Branch:
-`feature/m22.56-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission`
-
-Contract:
-`M22.55 Proposal → M22.56 Admission`
-
-M22.56 consumes exactly one dedicated M22.55 proposal and produces one immutable admission artifact. The deterministic baseline admits supported accepted proposals with confidence >= 0.5 and non-empty payload/provenance; otherwise it rejects. Admission is policy evidence, not authorization.
+### M22.56 — Proposal → Admission
+Consumes exactly one dedicated M22.55 proposal and produces one immutable admission artifact. The deterministic baseline admits supported accepted proposals with confidence >= 0.5 and non-empty payload/provenance; otherwise it rejects. Admission is policy evidence, not authorization.
 
 The artifact preserves the complete known lineage, including both M22.55 proposal-source roles:
 - `proposal_source_id` — the immediate upstream M22.54 decision proposal identity
@@ -115,6 +107,8 @@ Dedicated namespace:
 `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_preparation_execution_result_integrity_feedback_evaluation_decision_proposal_admission.py`
 
 Historical M22.48 admission namespace remains untouched.
+
+M22.56 receipt: **16/16 focused + 502/502 core = 518/518**.
 
 ## 9. Namespace and lineage rules
 
@@ -148,10 +142,10 @@ No merge is performed unless explicitly requested.
 
 ## 13. Current snapshot
 
-**Latest verified milestone:** M22.55 — 15/15 focused + 502/502 core = **517/517**.
+**Latest verified milestone:** M22.56 — 16/16 focused + 502/502 core = **518/518**.
 
-**Active milestone:** M22.56 Proposal → Admission.
+**Active milestone:** M22.56 is complete. The next milestone must be derived from the live repository rather than assumed from the milestone numbering.
 
-**M22.56 status:** implementation and focused regression suite exist on its dedicated branch; local verification is pending.
+**M22.56 status:** VERIFIED / COMPLETE.
 
-**Next local action:** pull the M22.56 branch and run its focused admission suite, then the 502-test core regression. Do not mark M22.56 verified until those receipts are supplied.
+**Next action:** inspect the live repository for the next explicit boundary or architectural milestone. Do not invent M22.57 without repository evidence.
