@@ -15,7 +15,6 @@ from src.tools.learning_write_adaptation_proposal import (
     LearningWriteAdaptationProposalContext,
     LearningWriteAdaptationProposalService,
 )
-from src.tools.learning_write_feedback_evaluation import LearningWriteAdaptationSignalKind
 
 
 class LearningWriteAdaptationAdmissionTests(unittest.TestCase):
