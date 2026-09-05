@@ -62,14 +62,15 @@ No merge is performed unless explicitly requested.
 - M23.1 — VERIFIED / COMPLETE: 12/12 focused + 514/514 core = **526/526**
 - M23.2 — VERIFIED / COMPLETE: 8/8 focused + 522/522 core = **530/530**
 - M23.3 — VERIFIED / COMPLETE: 13/13 focused + 535/535 core = **548/548**
+- M23.4 — VERIFIED / COMPLETE: 14/14 focused + 549/549 core = **563/563**
+- M23.5 — VERIFIED / COMPLETE: 14/14 focused + 563/563 core = **577/577**
 
 Selected recent receipts:
+- M23.5: **577/577**
+- M23.4: **563/563**
 - M23.3: **548/548**
 - M23.2: **530/530**
 - M23.1: **526/526**
-- M22.56: **518/518**
-- M22.55: **517/517**
-- M22.54: **517/517**
 
 ## 7. Verified recent boundaries
 
@@ -92,34 +93,27 @@ Receipt:
 - Combined: **548/548 OK**
 
 ### M23.4 — Environment Observation Freshness/Validity Contract
-**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+**Status: VERIFIED / COMPLETE.** Deterministic temporal validity assessment for immutable observations. `EnvironmentObservationFreshnessService` evaluates observation time against assessment time and a non-negative maximum age. `EnvironmentObservationValidity` preserves observation identity, environment identity, domain, timestamps, age bound, and derived freshness. `CURRENT`, `STALE`, `FUTURE`, and `INVALID` are explicit classifications; only `CURRENT` is usable as current by this contract. Timezone-aware timestamps are required and normalized to UTC. Batch assessment preserves order and rejects duplicate observation identities. Raw observations remain unchanged.
 
-Branch:
-`feature/m23.4-environment-observation-freshness-contract`
+Receipt:
+- Focused: `python -m unittest src.core.tests.test_environment_observation_freshness -v` → **14/14 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **549/549 OK**
+- Combined: **563/563 OK**
 
-M23.4 introduces deterministic temporal validity assessment without mutating raw observation evidence. `EnvironmentObservationFreshnessService` evaluates an immutable `EnvironmentObservation` using an observation timestamp, assessment timestamp, and non-negative maximum age. `EnvironmentObservationValidity` preserves observation identity, environment identity, domain, timestamps, age bound, and the derived classification.
+### M23.5 — Environment Observation Consistency Contract
+**Status: VERIFIED / COMPLETE.** Deterministic comparison of independent observations without selecting authoritative truth. `EnvironmentObservationConsistencyService` compares observations from the same environment and domain; canonical payload comparison yields `CONSISTENT` or `CONFLICTING`. Immutable results preserve both observation identities and adapter identities. Batch comparison is deterministic and preserves pair order while skipping unrelated environments/domains. Duplicate observation identities and invalid input types are rejected. Raw observations are not merged, discarded, mutated, or selected as truth.
 
-Classifications:
-- `CURRENT` — non-negative age within the configured limit; usable as current by this contract.
-- `STALE` — age exceeds the configured limit; not usable as current.
-- `FUTURE` — observation timestamp is later than assessment time; not usable as current.
-
-Timestamps must be timezone-aware and are normalized to UTC. `assess_many` preserves input order and rejects duplicate observation identities.
-
-The freshness boundary does not rewrite or discard stale evidence, probe the host, grant authorization, grant permission, imply capability executability, execute tools, retry, revoke, mutate memory, or establish truth.
+M23.3 direct snapshot composition still rejects duplicate domains. M23.5 is the explicit conflict/consistency seam required before a later aggregation contract can combine multiple observers without silently collapsing conflicts.
 
 Files:
-- `src/core/environment_observation_freshness.py`
-- `src/core/tests/test_environment_observation_freshness.py`
-- `docs/decisions/049-environment-observation-freshness-contract.md`
+- `src/core/environment_observation_consistency.py`
+- `src/core/tests/test_environment_observation_consistency.py`
+- `docs/decisions/050-environment-observation-consistency-contract.md`
 
-Focused:
-`python -m unittest src.core.tests.test_environment_observation_freshness -v`
-
-Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
-
-Local verification is required before M23.4 can be marked VERIFIED / COMPLETE.
+Receipt:
+- Focused: `python -m unittest src.core.tests.test_environment_observation_consistency -v` → **14/14 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **563/563 OK**
+- Combined: **577/577 OK**
 
 ## 8. Namespace and lineage rules
 
@@ -147,16 +141,16 @@ The model is never final authority over execution.
 
 A milestone is not GREEN / VERIFIED / COMPLETE until the user provides the local test receipt.
 
-Remote implementation status and local verification status remain distinct.
+Remote implementation and local verification remain distinct.
 
 No merge is performed unless explicitly requested.
 
 ## 12. Current snapshot
 
-**Latest verified milestone:** M23.3 — 13/13 focused + 535/535 core = **548/548**.
+**Latest verified milestone:** M23.5 — 14/14 focused + 563/563 core = **577/577**.
 
-**Active milestone:** M23.4 — Environment Observation Freshness/Validity Contract.
+**Active milestone:** M23.6 — Environment Observation Aggregation Contract.
 
-**M23.4 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
+**M23.6 status:** NOT YET IMPLEMENTED.
 
-**Next local action:** pull `feature/m23.4-environment-observation-freshness-contract`, run the focused freshness suite, then the `src\\core` regression. Do not mark M23.4 verified until those receipts are supplied.
+**Next engineering action:** define a deterministic aggregation boundary that can combine multiple observations for one environment/domain only after consistency/freshness evidence is available, while preserving source lineage and never silently selecting conflicting evidence as truth. No merge performed.
