@@ -115,7 +115,7 @@ Initiative ≠ Authorization
 M21.5 does not create persistent scheduler entries, enqueue delayed work, send notifications, invoke capabilities/plugins, assign workers, create authorization, or mutate policy.
 
 ### M21.6 — Proactive Runtime / Feedback Integration
-**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**Status: VERIFIED / COMPLETE.**
 
 M21.6 composes initiative, proposal, value, information-gain, and scheduling outputs into one inspectable bounded runtime result and records outcome/feedback signals for later learning.
 
@@ -131,18 +131,9 @@ Initiative → Proposal → Value → Information Gain
                     Future Learning
 ```
 
+Verified receipt: **10/10 runtime + 9/9 scheduling + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core**.
+
 The runtime preserves the existing authority chain and does not bypass validation, policy, confirmation, authorization, or execution. Feedback is an outcome signal, not a truth claim, user-intent claim, policy mutation, or authority grant.
-
-Core contracts:
-
-```text
-ProactiveFeedback
-ProactiveRuntimeResult
-RuntimeStatus
-FeedbackOutcome
-compose_proactive_runtime()
-rank_runtime_results()
-```
 
 Boundary walls:
 
@@ -156,9 +147,58 @@ Recovery ≠ Execution
 Integration ≠ Authority Escalation
 ```
 
-M21.6 does not authorize, confirm user intent, schedule or dispatch work, deliver notifications, assign workers, invoke plugins/capabilities, mutate policy, or execute actions.
+## M22 — Capability / Plugin Ecosystem
 
-No M21 stage may grant authority merely because behavior is proactive, predictive, useful, information-seeking, scheduled-looking, notification-oriented, or feedback-driven.
+M22 establishes a governed, extensible capability ecosystem while preserving the distinction between capability availability and permission to invoke it.
+
+### M22.1 — Capability / Plugin Contract + Registry Boundary
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+
+M22.1 establishes immutable capability descriptors and a conflict-aware metadata registry. Discovery answers what capability exists; it does not grant permission to invoke it.
+
+```text
+Capability Descriptor
+        ↓
+Registry Registration
+        ↓
+Deterministic Discovery
+        ↓
+Proposal / Worker Selection
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution
+```
+
+Boundary walls:
+
+```text
+Plugin ≠ JARVIS
+Capability ≠ Permission
+Registration ≠ Authorization
+Discovery ≠ Execution
+Manifest ≠ Trust
+Availability ≠ Permission
+Metadata ≠ Execution Request
+```
+
+M22.1 does not execute plugins, create authorization, grant permissions, establish trust, bypass validation/policy/confirmation/authorization, schedule, notify, assign workers, or mutate policy.
+
+### Future M22 boundaries
+
+```text
+M22.2 Capability Trust / Provenance Boundary
+M22.3 Capability Lifecycle / Versioning
+M22.4 Capability Permission / Policy Binding
+M22.5 Plugin Isolation / Execution Sandbox
+M22.6 Capability Discovery + Selection Integration
+```
+
+These remain directional until implemented and locally verified.
 
 ## Cross-cutting cognitive architecture
 
@@ -171,4 +211,4 @@ Plugin ≠ JARVIS
 Worker ≠ JARVIS
 ```
 
-JARVIS is a distributed cognitive architecture composed of bounded mechanisms for memory, knowledge, reasoning, uncertainty, prediction, planning, learning, feedback, initiative, and authority. Machine learning is an implementation technique, not the definition of intelligence.
+JARVIS is a distributed cognitive architecture composed of bounded mechanisms for memory, knowledge, reasoning, uncertainty, prediction, planning, learning, feedback, initiative, capability discovery, and authority. Machine learning is an implementation technique, not the definition of intelligence.
