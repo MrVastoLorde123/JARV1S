@@ -211,15 +211,99 @@ M22.17 establishes the inert proposal boundary between an accepted `LearningDeci
 
 M22.17 verification receipt: **13/13 focused + 502/502 core regression tests passed locally = 515/515.**
 
+Directional boundary:
+```text
+ExecutionFeedbackEvent
+↓
+Feedback Evaluation
+↓
+LearningCandidate
+↓
+LearningDecisionService
+↓
+LearningDecision
+↓
+LearningWriteProposalService
+↓
+LearningWriteProposal
+↓
+Learning / Memory Write Policy
+↓
+Learning State / Memory Mutation
+```
+
+M22.17 authority walls:
+- Learning Decision ≠ Learning Write Proposal
+- Learning Write Proposal ≠ Learning Write
+- Learning Write Proposal ≠ Memory Mutation
+- Learning ≠ Authority
+- Proposal ≠ Authorization
+- Proposal ≠ Execution
+- Candidate Evidence ≠ Truth
+- Confidence ≠ Certainty
+- Learning Domain ≠ Memory Domain
+
+M22.17 does not persist learning, mutate memory, authorize execution, trigger retries, revoke capabilities, or bypass existing memory decision/executor contracts.
+
 ## M22.16 verified semantics
 M22.16 establishes the provider-neutral decision boundary between an inert `LearningCandidate` and any later learning or memory write. The decision preserves candidate identity, exposes confidence, distinguishes `ACCEPT`, `DEFER`, and `REJECT`, and remains non-authorizing and non-writing.
 
 M22.16 verification receipt: **10/10 focused + 502/502 core regression tests passed locally = 512/512.**
 
+Directional boundary:
+```text
+ExecutionFeedbackEvent
+↓
+Feedback Evaluation
+↓
+LearningCandidate
+↓
+LearningDecisionService
+↓
+LearningDecision
+↓
+Learning / Memory Write Boundary
+```
+
+M22.16 authority walls:
+- Learning Candidate ≠ Learning Decision
+- Learning Decision ≠ Learning Write
+- Learning Decision ≠ Memory Mutation
+- Learning ≠ Authority
+- Confidence ≠ Certainty
+- Evidence ≠ Truth
+- Learning Decision ≠ Retry Authorization
+- Learning Decision ≠ Execution
+
+M22.16 does not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
+
 ## M22.15 verified semantics
 M22.15 establishes the evaluation boundary between inert execution feedback and any learning or memory decision. `FeedbackEvaluationService` produces an immutable `LearningCandidate` with explicit signal classification, bounded confidence, and preserved feedback/execution/handoff provenance. Recursive evidence/provenance snapshots remain immutable.
 
 M22.15 verification receipt: **9/9 focused + 502/502 core regression tests passed locally = 511/511.**
+
+Directional boundary:
+```text
+ExecutionFeedbackEvent
+↓
+Feedback Evaluation
+↓
+Learning Candidate
+↓
+Memory / Learning Decision
+```
+
+M22.15 authority walls:
+- Feedback ≠ Learning
+- Feedback Evaluation ≠ Learning Write
+- Learning Candidate ≠ Memory
+- Learning Candidate ≠ User Intent
+- Evidence ≠ Truth
+- Confidence ≠ Certainty
+- Outcome ≠ Permission
+- Learning ≠ Authority
+
+M22.15 does not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
