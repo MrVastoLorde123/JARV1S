@@ -121,24 +121,31 @@ Verification receipt:
 
 ## 8. M23.8 — Environment Observation Evidence Qualification Contract
 
-**Status: NOT STARTED.**
+**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+
+Branch:
+`feature/m23.8-environment-observation-evidence-qualification`
 
 Purpose: provide one immutable, deterministic evidence-qualification artifact that binds the M23.4 temporal validity, M23.5 consistency evidence, M23.6 aggregation evidence, and M23.7 provenance without converting evidence into truth or authority.
 
-Contract direction:
-- accept one observation or one M23.6 aggregate plus its required supporting validity/consistency/provenance evidence
-- validate identity and scope alignment across all supplied artifacts
-- explicitly classify qualification as usable, unusable, conflicting, or insufficient based only on deterministic evidence gates
-- preserve every upstream identity and classification used by the qualification
-- recursively freeze derived metadata
-- never mutate upstream observations or evidence artifacts
-- never select an authoritative source
-- never establish truth
-- never authorize execution or grant permissions
-- never infer executability, capability availability, or adaptation truth
-- never retry providers
+The qualification boundary supports individual observations and M23.6 aggregates. `USABLE` means all required evidence gates pass; `UNUSABLE` means structurally valid evidence is not temporally current; `CONFLICTING` preserves explicit consistency conflict; `INSUFFICIENT` represents an aligned but incomplete evidence bundle. Identity/scope mismatches are contract violations and are rejected.
 
-Architectural role: M23.8 is the seam between the observation/evidence subsystem and later world-model/current-context construction. It should answer **whether an evidence bundle satisfies the defined evidence gates for downstream reasoning**, not whether the underlying world is true.
+The result preserves source observation IDs, adapter IDs, validity classifications, consistency classifications, provenance identity, qualification time, reasons, and recursively immutable lineage. It does not mutate upstream evidence.
+
+The boundary does not select an authoritative source, establish truth, authorize execution, grant permissions, imply capability executability, retry providers, mutate memory, revoke anything, or establish adaptation truth.
+
+Files:
+- `src/core/environment_observation_evidence_qualification.py`
+- `src/core/tests/test_environment_observation_evidence_qualification.py`
+- `docs/decisions/053-environment-observation-evidence-qualification-contract.md`
+
+Focused:
+`python -m unittest src.core.tests.test_environment_observation_evidence_qualification -v`
+
+Regression:
+`python -m unittest discover -s src\\core -p "test*.py"`
+
+Local verification is required before M23.8 can be marked VERIFIED / COMPLETE.
 
 ## 9. Namespace and lineage rules
 
@@ -176,6 +183,6 @@ No merge is performed unless explicitly requested.
 
 **Active milestone:** M23.8 — Environment Observation Evidence Qualification Contract.
 
-**M23.8 status:** NOT STARTED.
+**M23.8 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
 
-**Next implementation action:** build the M23.8 qualification boundary on top of M23.4–M23.7 without establishing truth or authority.
+**Next local action:** pull `feature/m23.8-environment-observation-evidence-qualification`, run the focused qualification suite, then the `src\\core` regression. Do not mark M23.8 verified until those receipts are supplied.
