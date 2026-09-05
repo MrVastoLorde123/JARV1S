@@ -1,7 +1,7 @@
 # M22.48 — Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission
 
 ## Status
-IMPLEMENTED / AWAITING LOCAL VERIFICATION
+VERIFIED / COMPLETE
 
 ## Boundary
 M22.48 consumes exactly one M22.47 proposal artifact and produces one immutable admission artifact.
@@ -66,7 +66,13 @@ M22.48 uses the dedicated `..._evaluation_decision_proposal_admission.py` namesp
 Focused suite:
 `python -m unittest src.tools.tests.test_learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation_decision_proposal_admission -v`
 
+Receipt: **17/17 focused tests passed.**
+
 Regression suite:
 `python -m unittest discover -s src\\core -p "test*.py"`
 
-Target receipt: focused suite plus full core regression, with no merge performed.
+Receipt: **502/502 core tests passed.**
+
+Combined receipt: **17/17 + 502/502 = 519/519, all passing.**
+
+No merge performed.
