@@ -39,6 +39,27 @@ def _freeze(value: Any) -> Any:
 
 
 @dataclass(frozen=True)
+class LearningWriteAdaptationEvaluationExecutionPreparationContext:
+    """Immutable inputs for future adaptation execution preparation."""
+
+    proposal: LearningWriteAdaptationEvaluationProposal
+    admission: LearningWriteAdaptationEvaluationProposalAdmission
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.proposal, LearningWriteAdaptationEvaluationProposal):
+            raise LearningWriteAdaptationEvaluationExecutionPreparationError(
+                "proposal must be a LearningWriteAdaptationEvaluationProposal"
+            )
+        if not isinstance(
+            self.admission,
+            LearningWriteAdaptationEvaluationProposalAdmission,
+        ):
+            raise LearningWriteAdaptationEvaluationExecutionPreparationError(
+                "admission must be a LearningWriteAdaptationEvaluationProposalAdmission"
+            )
+
+
+@dataclass(frozen=True)
 class LearningWriteAdaptationEvaluationExecutionPreparation:
     """Immutable handoff artifact for future adaptation execution."""
 
