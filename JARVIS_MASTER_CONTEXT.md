@@ -120,10 +120,39 @@ Outcome / Feedback
 - M22.11 Execution Preparation / Handoff Boundary — VERIFIED / COMPLETE (9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 571/571)
 - M22.12 Execution Attempt / Worker Boundary — VERIFIED / COMPLETE (11/11 execution attempt + 4/4 execution attempt gate + 9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 583/583)
 - M22.13 Execution Outcome / Result Integrity Boundary — VERIFIED / COMPLETE (12/12 focused + 502/502 core regression = 514/514)
-- M22.14 Execution Outcome → Feedback Boundary — ACTIVE
+- M22.14 Execution Outcome → Feedback Boundary — VERIFIED / COMPLETE (10/10 focused + 502/502 core regression = 512/512)
+- M22.15 Feedback Evaluation / Learning Candidate Boundary — ACTIVE
 
-## M22.14 direction
-M22.14 establishes the first explicit feedback boundary after execution outcomes. A verified `ExecutionOutcome` may be transformed into an inert, provenance-bearing feedback event for later evaluation, correction, and learning, but feedback must not silently mutate authorization, request state, execute again, revoke capabilities, or write learning state directly.
+## M22.15 direction
+M22.15 establishes the boundary that evaluates inert execution feedback into a structured learning candidate without writing memory, changing authorization, executing tools, retrying, revoking capabilities, or treating feedback as unquestionable truth. The result should preserve feedback provenance, classify the learning signal, expose uncertainty/confidence explicitly, and remain suitable for a later learning decision layer.
+
+Directional boundary:
+```text
+ExecutionFeedbackEvent
+↓
+Feedback Evaluation
+↓
+Learning Candidate
+↓
+Memory / Learning Decision
+```
+
+M22.15 authority walls:
+- Feedback ≠ Learning
+- Feedback Evaluation ≠ Learning Write
+- Learning Candidate ≠ Memory
+- Learning Candidate ≠ User Intent
+- Evidence ≠ Truth
+- Confidence ≠ Certainty
+- Outcome ≠ Permission
+- Learning ≠ Authority
+
+M22.15 should not persist learning, mutate memory, re-authorize execution, trigger retries, revoke capabilities, or bypass existing memory-decision contracts.
+
+## M22.14 verified semantics
+M22.14 establishes the first explicit feedback boundary after execution outcomes. `ExecutionFeedbackService` converts a verified `ExecutionOutcome` into an immutable, provenance-bearing feedback event with deterministic identity and payload hashing. Feedback remains inert and cannot authorize, execute, retry, revoke, or write learning state.
+
+M22.14 verification receipt: **10/10 focused + 502/502 core regression tests passed locally = 512/512.**
 
 Directional boundary:
 ```text
@@ -143,34 +172,7 @@ M22.14 authority walls:
 - Feedback ≠ Retry Authorization
 - Feedback evidence ≠ Truth
 
-M22.14 should not add automatic retries, re-authorization, revocation, durable learning writes, or alternate execution paths.
-
-## M22.13 verified semantics
-M22.13 establishes the post-execution outcome boundary after the explicit execution-attempt layer. `ExecutionOutcomeService` binds an `ExecutionAttemptResult` to the exact `ExecutionHandoff`, re-checks execution identity, validates lifecycle consistency, and distinguishes tool-declared failure from executor failure. The resulting immutable `ExecutionOutcome` is suitable for later feedback and learning but grants no authority.
-
-M22.13 verification receipt: **12/12 focused + 502/502 core regression tests passed locally = 514/514.**
-
-Directional boundary:
-```text
-ExecutionHandoff
-↓
-Execution Attempt
-↓
-Outcome / Result Integrity
-↓
-Feedback / Learning
-```
-
-M22.13 authority walls:
-- Execution Attempt ≠ Outcome Truth
-- ToolResult ≠ Authorization
-- ToolResult ≠ User Intent
-- Outcome ≠ Learning
-- Failure ≠ Revocation
-- Successful execution ≠ Permission to execute again
-- Outcome interpretation ≠ Policy bypass
-
-M22.13 does not add retry policy, automatic re-authorization, revocation, durable outcome storage, learning writes, or alternate execution paths.
+M22.14 does not add automatic retries, re-authorization, revocation, durable learning writes, or alternate execution paths.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
