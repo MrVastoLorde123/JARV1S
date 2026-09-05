@@ -188,10 +188,47 @@ Metadata ≠ Execution Request
 
 M22.1 does not execute plugins, create authorization, grant permissions, establish trust, bypass validation/policy/confirmation/authorization, schedule, notify, assign workers, or mutate policy.
 
+### M22.2 — Capability Trust / Provenance Boundary
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+
+M22.2 establishes immutable capability provenance records, structured evidence, and evidence-linked trust assessments. Provenance records where a capability came from; trust assessments describe the current evidence-backed trust state. Neither creates permission or authorization.
+
+```text
+Capability Descriptor
+        ↓
+Provenance Record
+        ↓
+Evidence
+        ↓
+Trust Assessment
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution
+```
+
+Boundary walls:
+
+```text
+Provenance ≠ Trust
+Trust ≠ Permission
+Trust ≠ Authorization
+Evidence ≠ Truth
+Confidence ≠ Certainty
+Assessment ≠ Execution
+Capability ≠ Permission
+Registration ≠ Trust
+```
+
+M22.2 does not execute capabilities, grant permission, create authorization, infer execution authority from trust, mutate policy, schedule, notify, select/assign workers, or treat provenance as proof of truth.
+
 ### Future M22 boundaries
 
 ```text
-M22.2 Capability Trust / Provenance Boundary
 M22.3 Capability Lifecycle / Versioning
 M22.4 Capability Permission / Policy Binding
 M22.5 Plugin Isolation / Execution Sandbox
