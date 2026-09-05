@@ -98,7 +98,7 @@ Future Adaptation Execution Feedback Proposal
 ↓
 Future Adaptation Execution Feedback Proposal Admission
 ↓
-Future Adaptation Execution Feedback Preparation
+Future Adaptation Execution Preparation
 ↓
 Future Adaptation Execution
 ```
@@ -164,9 +164,10 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.41-adaptation-evaluation-execution-feedback-preparation`
+`feature/m22.42-adaptation-evaluation-execution-feedback`
 
 Latest verified local receipts:
+- **M22.41:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.40:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.39:** 15/15 focused + 502/502 core regression = **517/517**
 - **M22.38:** 13/13 focused + 502/502 core regression = **515/515**
@@ -181,26 +182,34 @@ Previous verified checkpoints remain recorded in repository history.
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.40 — VERIFIED / COMPLETE.
+M22.1–M22.41 — VERIFIED / COMPLETE.
 
 M22.39 Future Adaptation Execution Feedback → Proposal — VERIFIED / COMPLETE (15/15 focused + 502/502 core = 517/517).
 M22.40 Future Adaptation Execution Feedback Proposal → Admission — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
+M22.41 Future Adaptation Execution Feedback Proposal Admission → Preparation — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 
-**M22.41 Future Adaptation Execution Feedback Proposal Admission → Preparation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.42 Future Adaptation Execution Feedback Preparation → Execution — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
-M22.34 executes exactly one preparation artifact through a replaceable applier. M22.35 validates execution results. M22.36 converts outcomes into feedback. M22.37 evaluates feedback. M22.38 creates an explicit non-authorizing decision. M22.39 creates an inert proposal. M22.40 admits or rejects that proposal under deterministic policy without granting execution authority.
+M22.34 executes exactly one preparation artifact through a replaceable applier. M22.35 validates execution results. M22.36 converts outcomes into feedback. M22.37 evaluates feedback. M22.38 creates an explicit non-authorizing decision. M22.39 creates an inert proposal. M22.40 admits or rejects that proposal under deterministic policy without granting execution authority. M22.41 converts the exact admitted proposal into immutable execution-preparation state without starting execution.
 
 ### M22.40 — Proposal → Admission
-`LearningWriteAdaptationEvaluationExecutionFeedbackProposalAdmissionService` consumes one exact M22.39 proposal and one admission context. It validates complete known proposal lineage, bounded confidence, non-empty payload/evidence/provenance, and produces immutable `ADMITTED` / `REJECTED` policy evidence with a deterministic admission identity. The result remains non-authorizing.
+`LearningWriteAdaptationEvaluationExecutionFeedbackProposalAdmissionService` consumes one exact M22.39 proposal and validates complete known lineage, bounded confidence, non-empty payload/evidence/provenance, and provider output identity. It produces immutable `ADMITTED` / `REJECTED` policy evidence with a deterministic admission identity. The result remains non-authorizing.
 
 ### M22.41 — Admission → Preparation
-`LearningWriteAdaptationEvaluationExecutionFeedbackPreparationService` consumes exactly one M22.39 proposal and its exact M22.40 admission. Only `ADMITTED` admissions may cross preparation. The preparation artifact preserves the complete known future-execution lineage, including M22.40 admission identity, M22.39 proposal identity, M22.37 evaluation identity, historical evaluation identity, feedback/source-feedback, candidate/source-candidate, execution/source-execution, source admission, source proposal, domain, source policy, admission policy, payload, evidence, and provenance.
+`LearningWriteAdaptationEvaluationExecutionFeedbackPreparationService` consumes exactly one M22.39 proposal and its exact M22.40 admission. Only `ADMITTED` admissions may cross preparation. The preparation artifact preserves the complete known future-execution lineage, including M22.40 admission identity, M22.39 proposal identity, M22.37 evaluation identity, historical evaluation identity, feedback/source-feedback, candidate/source-candidate, current execution identity, historical source execution, source admission, source proposal, domain, source policy, admission policy, payload, evidence, and provenance.
 
 Payload, evidence, and provenance are recursively frozen. Preparation identity is deterministic and distinct from upstream identities.
 
 Preparation is inert handoff state. It cannot authorize or start execution, request retry, request revocation, mutate memory, or grant general authority. Downstream future execution remains a separate boundary.
+
+### M22.42 — Preparation → Execution
+`LearningWriteAdaptationEvaluationExecutionFeedbackExecutionService` consumes exactly one M22.41 preparation artifact and builds an immutable execution request. The request preserves the complete M22.41 lineage and recursively freezes payload, evidence, and provenance.
+
+Execution uses a replaceable applier. A successful applier call produces an immutable `COMPLETED` result; an applier exception becomes an immutable `FAILED` result with a non-empty reason. Execution receives a deterministic identity distinct from the preparation identity and historical execution-source identity.
+
+Execution remains observational and non-authorizing. It cannot create authorization, retry, revocation, memory mutation, or general authority. Result integrity remains a downstream boundary.
 
 Walls:
 - Execution ≠ Result Integrity
@@ -212,9 +221,10 @@ Walls:
 - Admission ≠ Preparation
 - Preparation ≠ Authorization
 - Preparation ≠ Execution
-- Preparation ≠ Retry
-- Preparation ≠ Revocation
-- Preparation ≠ Memory Mutation
+- Execution ≠ Authorization
+- Execution ≠ Retry
+- Execution ≠ Revocation
+- Execution ≠ Memory Mutation
 - Evidence ≠ Truth
 - Learning ≠ Authority
 
@@ -314,14 +324,14 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.41 Future Adaptation Execution Feedback Proposal Admission → Preparation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.42 Future Adaptation Execution Feedback Preparation → Execution — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
 
-**Current branch:** `feature/m22.41-adaptation-evaluation-execution-feedback-preparation`
+**Current branch:** `feature/m22.42-adaptation-evaluation-execution-feedback`
 
-**Latest verified milestone:** M22.40 — 516/516 (14 focused + 502 core regression)
+**Latest verified milestone:** M22.41 — 516/516 (14 focused + 502 core regression)
 
-**Active boundary:** Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Feedback Preparation.
+**Active boundary:** Future Adaptation Execution Feedback Preparation → Future Adaptation Execution.
 
-**M22.41 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackPreparation` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_preparation.py`.
+**M22.42 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackExecutionResult` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_execution.py`.
 
-**Next action:** run the M22.41 focused suite and core regression locally. After verification, derive M22.42 from the live preparation artifact. Do not merge.
+**Next action:** run the M22.42 focused suite and core regression locally. After verification, derive the next boundary from the live M22.42 result artifact. Do not merge.
