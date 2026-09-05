@@ -1,4 +1,4 @@
-"""Policy, confirmation, authorization, integrity, and sandbox gate for invocation."""
+"""Policy, confirmation, authorization, integrity, sandbox, and handoff gate."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from .authorization import AuthorizationDecision, ExplicitAuthorizationService
 from .authorization_integrity import AuthorizationIntegrityService
 from .confirmation import AutoDenyConfirmationProvider, ConfirmationProvider
 from .errors import InvalidRequestError
+from .execution_preparation import ExecutionPreparationError, ExecutionPreparationService
 from .models import ToolDefinition, ToolError, ToolRequest, ToolResult
 from .policy import Policy, PolicyDecision
 from .registry import ToolRegistry
@@ -23,12 +24,7 @@ from .service import ToolService
 
 
 class PolicyGate:
-    """Enforces policy, confirmation, authorization, integrity, and sandbox admission.
-
-    ``authorize()`` is the explicit non-executing authority boundary. ``invoke()``
-    consumes the resulting decision, verifies its binding to the exact request,
-    evaluates sandbox admission, and only then crosses into ``ToolService``.
-    """
+    """Enforces policy, confirmation, authorization, integrity, sandbox admission, and handoff."""
 
     def __init__(
         self,
@@ -49,6 +45,7 @@ class PolicyGate:
         self._authorization_integrity = AuthorizationIntegrityService()
         self._sandbox_profiles = sandbox_profile_registry or build_default_sandbox_profiles()
         self._sandbox_admission = SandboxAdmissionService(self._sandbox_profiles)
+        self._execution_preparation = ExecutionPreparationService()
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
         """Return the immutable capability catalog visible to callers."""
@@ -76,7 +73,7 @@ class PolicyGate:
         )
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        """Run one request through authorization, integrity, sandbox admission, then service."""
+        """Run one request through authorization, integrity, sandbox, handoff, then service."""
         decision = self.authorize(request)
 
         if not decision.authorized:
@@ -116,6 +113,20 @@ class PolicyGate:
                 request,
                 code="sandbox_admission_failed",
                 message=admission.reason or "Sandbox admission failed",
+            )
+
+        try:
+            self._execution_preparation.prepare(
+                decision,
+                integrity,
+                admission,
+                request,
+            )
+        except (ExecutionPreparationError, TypeError) as exc:
+            return self._blocked_result(
+                request,
+                code="execution_preparation_failed",
+                message=str(exc) or "Execution preparation failed",
             )
 
         return self._service.invoke(request)
