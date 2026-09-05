@@ -119,10 +119,36 @@ Outcome / Feedback
 - M22.10 Sandbox Admission Integration — VERIFIED / COMPLETE (9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 558/558)
 - M22.11 Execution Preparation / Handoff Boundary — VERIFIED / COMPLETE (9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 571/571)
 - M22.12 Execution Attempt / Worker Boundary — VERIFIED / COMPLETE (11/11 execution attempt + 4/4 execution attempt gate + 9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 583/583)
-- M22.13 Execution Outcome / Result Integrity Boundary — ACTIVE
+- M22.13 Execution Outcome / Result Integrity Boundary — VERIFIED / COMPLETE (12/12 focused + 502/502 core regression = 514/514)
+- M22.14 Execution Outcome → Feedback Boundary — ACTIVE
 
-## M22.13 direction
-M22.13 establishes the boundary that interprets an execution attempt's returned result without confusing tool output with execution authority, completion truth, or learning. It should bind an `ExecutionAttemptResult` to the exact `ExecutionHandoff`, validate output identity and lifecycle consistency, distinguish transport/executor failure from tool-declared failure, and produce an immutable outcome record suitable for later feedback/learning without mutating authorization or the original request.
+## M22.14 direction
+M22.14 establishes the first explicit feedback boundary after execution outcomes. A verified `ExecutionOutcome` may be transformed into an inert, provenance-bearing feedback event for later evaluation, correction, and learning, but feedback must not silently mutate authorization, request state, execute again, revoke capabilities, or write learning state directly.
+
+Directional boundary:
+```text
+ExecutionOutcome
+↓
+Feedback Event
+↓
+Feedback Evaluation / Learning
+```
+
+M22.14 authority walls:
+- Outcome ≠ Feedback
+- Feedback ≠ Learning
+- Feedback ≠ Authorization
+- Feedback ≠ Execution
+- Failure ≠ Revocation
+- Feedback ≠ Retry Authorization
+- Feedback evidence ≠ Truth
+
+M22.14 should not add automatic retries, re-authorization, revocation, durable learning writes, or alternate execution paths.
+
+## M22.13 verified semantics
+M22.13 establishes the post-execution outcome boundary after the explicit execution-attempt layer. `ExecutionOutcomeService` binds an `ExecutionAttemptResult` to the exact `ExecutionHandoff`, re-checks execution identity, validates lifecycle consistency, and distinguishes tool-declared failure from executor failure. The resulting immutable `ExecutionOutcome` is suitable for later feedback and learning but grants no authority.
+
+M22.13 verification receipt: **12/12 focused + 502/502 core regression tests passed locally = 514/514.**
 
 Directional boundary:
 ```text
@@ -144,70 +170,7 @@ M22.13 authority walls:
 - Successful execution ≠ Permission to execute again
 - Outcome interpretation ≠ Policy bypass
 
-M22.13 should not add retry policy, automatic re-authorization, revocation, durable outcome storage, learning writes, or alternate execution paths.
-
-## M22.12 verified semantics
-M22.12 establishes the first explicit execution-attempt boundary after the inert `ExecutionHandoff`. `ExecutionAttemptService` accepts only a valid handoff, delegates through a replaceable `ToolExecutor`, produces a deterministic `execution_id`, and returns explicit completed/failed attempt state. Executor output must match the exact handoff tool and invocation identity.
-
-M22.12 verification receipt: **11/11 execution attempt + 4/4 execution attempt gate + 9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression tests passed locally = 583/583.**
-
-Directional boundary:
-```text
-ExecutionHandoff
-↓
-Execution Attempt / Worker Boundary
-↓
-Execution
-↓
-Outcome
-```
-
-M22.12 authority walls:
-- Execution Preparation ≠ Execution Attempt
-- Execution Attempt ≠ Successful Outcome
-- Execution Attempt ≠ Worker Identity
-- Worker Assignment ≠ Authorization
-- Execution Attempt ≠ Capability Permission
-- Outcome ≠ Authorization
-
-M22.12 does not silently bypass `PolicyGate`, re-authorize requests from scratch, mutate the original handoff, grant permissions, or collapse execution attempt, worker assignment, and outcome into one undifferentiated operation.
-
-## M22.11 verified semantics
-M22.11 establishes the final non-executing boundary immediately before tool execution. A request may reach execution preparation only after authorization, authorization integrity, and sandbox admission all succeed. The immutable `ExecutionHandoff` preserves request identity, upstream evidence, sandbox identity, and arguments while remaining explicitly non-executing.
-
-M22.11 verification receipt: **9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression tests passed locally = 571/571.**
-
-Directional boundary:
-```text
-Validated ToolRequest
-↓
-Policy
-↓
-Confirmation
-↓
-AuthorizationDecision
-↓
-Authorization Integrity
-↓
-Sandbox Profile Resolution
-↓
-Sandbox Admission
-↓
-Execution Preparation / Handoff
-↓
-Execution
-```
-
-M22.11 authority walls:
-- Sandbox Admission ≠ Execution Preparation
-- Execution Preparation ≠ Execution
-- Execution Preparation ≠ Worker Assignment
-- Execution Preparation ≠ Process Launch
-- Execution Preparation ≠ Containment Activation
-- Upstream authorization evidence ≠ fresh authorization
-- Preparation ≠ permission escalation
-
-M22.11 does not introduce process spawning, worker allocation, sandbox activation, plugin execution, durable authorization storage, revocation/expiration, or an alternate bypass around `PolicyGate`.
+M22.13 does not add retry policy, automatic re-authorization, revocation, durable outcome storage, learning writes, or alternate execution paths.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
