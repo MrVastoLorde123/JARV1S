@@ -81,6 +81,6 @@ M22.5 does not:
 
 ## Verification
 
-Remote implementation status: **IMPLEMENTED / AWAITING LOCAL RECEIPT**.
+M22.5 verification receipt: **10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally (538/538 total).**
 
-M22.5 becomes VERIFIED / COMPLETE only after the user's local focused and regression receipt passes.
+Status: **VERIFIED / COMPLETE.**

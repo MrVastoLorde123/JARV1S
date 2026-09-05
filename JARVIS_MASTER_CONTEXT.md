@@ -105,9 +105,52 @@ Outcome / Feedback
 - M22.2 Capability Trust / Provenance Boundary — VERIFIED / COMPLETE (9/9 focused + 8/8 M22.1 + 487/487 core)
 - M22.3 Capability Lifecycle / Versioning Boundary — VERIFIED / COMPLETE (15/15 focused + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
 - M22.4 Capability Permission / Policy Binding — VERIFIED / COMPLETE (9/9 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
-- M22.5 Plugin Isolation / Execution Sandbox — IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.5 Plugin Isolation / Execution Sandbox — VERIFIED / COMPLETE (10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core = 538/538)
+- M22.6 Capability Discovery + Selection Integration — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-## M22.5 boundary
+## M22.6 direction
+M22.6 makes the existing provider-neutral capability discovery and selection path an explicit integration boundary. `CapabilityCatalog` remains a read-only view over the existing `ToolCapabilityGateway`; `CapabilitySelectionService` composes discovery and selector ranking; `CapabilityDiscoverySelection` captures the exact discovered immutable capabilities and the selection derived from that snapshot.
+
+The deterministic selector remains the current dependency-free fallback, while the selector contract stays replaceable for future model-backed implementations. Selection remains a proposal operation and cannot invoke tools.
+
+Directional boundary:
+```text
+ToolCapabilityGateway
+↓
+CapabilityCatalog
+↓
+CapabilitySelectionService
+↓
+CapabilitySelector
+↓
+CapabilityDiscoverySelection
+↓
+Structured Proposal
+↓
+Validation / Policy
+↓
+Confirmation
+↓
+Authorization
+↓
+Sandbox
+↓
+Execution
+```
+
+M22.6 authority walls:
+- Discovery ≠ Permission
+- Selection ≠ Authorization
+- Selection ≠ Execution
+- Capability ≠ Permission
+- Capability ≠ Worker
+- Proposal ≠ Authorization
+- Sandbox ≠ Authorization
+- Policy ≠ Authorization
+
+M22.6 does not invoke tools or plugins, construct a privileged execution path, authorize selected capabilities, interpret selection as confirmation, bypass `PolicyGate`, assign workers, infer trust/permission/authorization from rank, mutate registries or policy, or perform sandbox admission.
+
+## M22.5 verified semantics
 M22.5 establishes the execution-isolation boundary for plugins/capabilities. Sandbox profiles describe containment and resource constraints; admission evaluation determines whether the declared isolation contract is structurally admissible for the supported runtime. Neither creates permission, authorization, or execution.
 
 Current bounded contract:
@@ -119,6 +162,8 @@ Current bounded contract:
 - Read-only filesystem profiles cannot declare writable paths.
 - Resource constraints require positive timeout, memory, and CPU values; CPU is bounded to 100 percent.
 - Sandbox context explicitly reports no permission, authority, authorization, or execution state.
+
+M22.5 verification receipt: **10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally (538/538 total).**
 
 M22.5 authority walls:
 - Sandbox ≠ Authorization

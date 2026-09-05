@@ -311,11 +311,9 @@ Permission ≠ Execution
 M22.4 does not authorize invocations, confirm user intent, execute capabilities, select workers, mutate policy, infer trust from permission, or convert an `ALLOW` binding into an execution request.
 
 ### M22.5 — Plugin Isolation / Execution Sandbox
-**Status: ACTIVE.**
+**Status: VERIFIED / COMPLETE.**
 
-M22.5 establishes the execution-isolation boundary for plugins/capabilities. Sandbox admission and containment must isolate capability execution from the host process without becoming an authorization mechanism.
-
-Directional boundary:
+M22.5 establishes the execution-isolation boundary for plugins/capabilities. Sandbox profiles describe containment and resource constraints; admission evaluation determines whether the declared isolation contract is structurally admissible for the supported runtime. Neither creates permission, authorization, or execution.
 
 ```text
 Capability Descriptor
@@ -339,7 +337,9 @@ Execution
 Outcome / Feedback
 ```
 
-M22.5 preserves these walls:
+Verified receipt: **10/10 M22.5 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally (538/538 total).**
+
+Boundary walls:
 
 ```text
 Sandbox ≠ Authorization
@@ -352,15 +352,53 @@ Capability ≠ Worker
 Plugin ≠ JARVIS
 ```
 
-M22.5 begins with inspectable sandbox metadata and explicit admission/containment contracts. Real plugin execution is outside the initial boundary until those contracts are defined and verified.
+M22.5 does not spawn plugin subprocesses, execute arbitrary plugin code, convert sandbox admission into authorization, infer trust from isolation checks, grant permission, replace confirmation/authorization, revoke authorization, select workers, mutate policy, or bypass the existing validation → policy → confirmation → authorization chain.
 
-### Future M22 boundary
+### M22.6 — Capability Discovery + Selection Integration
+**Status: ACTIVE.**
+
+M22.6 makes the existing provider-neutral capability discovery and selection path an explicit integration boundary. It composes the existing `ToolCapabilityGateway`, `CapabilityCatalog`, and `CapabilitySelectionService` into an inspectable discovery-plus-selection snapshot.
 
 ```text
-M22.6 Capability Discovery + Selection Integration
+ToolCapabilityGateway
+        ↓
+CapabilityCatalog
+        ↓
+CapabilitySelectionService
+        ↓
+CapabilitySelector
+        ↓
+CapabilityDiscoverySelection
+        ↓
+Structured Proposal
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Sandbox
+        ↓
+Execution
 ```
 
-This remains directional until implemented and locally verified.
+The integrated snapshot records exactly which immutable capability definitions were discovered and which candidates were selected from that snapshot. Selection remains provider-neutral and replaceable; the deterministic selector is the current fallback.
+
+Boundary walls:
+
+```text
+Discovery ≠ Permission
+Selection ≠ Authorization
+Selection ≠ Execution
+Capability ≠ Permission
+Capability ≠ Worker
+Proposal ≠ Authorization
+Sandbox ≠ Authorization
+Policy ≠ Authorization
+```
+
+M22.6 does not invoke tools or plugins, construct a privileged execution path, authorize selected capabilities, interpret selection as confirmation, bypass `PolicyGate`, assign workers, infer trust/permission/authorization from rank, mutate registries or policy, or perform sandbox admission.
 
 ## Cross-cutting cognitive architecture
 
