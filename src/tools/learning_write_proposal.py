@@ -1,9 +1,9 @@
 """Inert learning-write proposal boundary after a learning decision.
 
-This module converts an accepted ``LearningDecision`` into a structured,
-provider-neutral proposal for a later learning/memory write policy. It does
-not persist state, mutate memory, authorize execution, retry, revoke, or
-execute tools.
+This module converts an accepted ``LearningDecision`` plus its exact source
+``LearningCandidate`` into a structured proposal for a later learning-write
+policy. It does not persist state, mutate memory, authorize execution,
+retry, revoke, or execute tools.
 """
 
 from __future__ import annotations
@@ -51,9 +51,10 @@ def _freeze(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class LearningWriteProposalContext:
-    """Explicit inputs required to construct an inert write proposal."""
+    """Exact inputs required to construct an inert write proposal."""
 
     decision: LearningDecision
+    candidate: LearningCandidate
     domain: LearningWriteDomain
     payload: Mapping[str, Any]
 
@@ -98,12 +99,13 @@ class LearningWriteProposal:
             raise LearningWriteProposalError(
                 "domain must be a LearningWriteDomain member"
             )
-        if not isinstance(self.payload, Mapping):
-            raise LearningWriteProposalError("payload must be a mapping")
-        if not isinstance(self.evidence, Mapping):
-            raise LearningWriteProposalError("evidence must be a mapping")
-        if not isinstance(self.provenance, Mapping):
-            raise LearningWriteProposalError("provenance must be a mapping")
+        for field_name, value in (
+            ("payload", self.payload),
+            ("evidence", self.evidence),
+            ("provenance", self.provenance),
+        ):
+            if not isinstance(value, Mapping):
+                raise LearningWriteProposalError(f"{field_name} must be a mapping")
         if not all(
             isinstance(key, str) and key.strip()
             and isinstance(value, str) and value.strip()
@@ -123,9 +125,7 @@ class LearningWriteProposal:
                 "a proposal cannot grant learning-write authority"
             )
         if self.authority_granted:
-            raise LearningWriteProposalError(
-                "a proposal cannot grant authority"
-            )
+            raise LearningWriteProposalError("a proposal cannot grant authority")
         if self.memory_mutated:
             raise LearningWriteProposalError(
                 "a proposal cannot claim memory mutation"
@@ -169,14 +169,25 @@ class LearningWriteProposalService:
     ) -> LearningWriteProposal | None:
         if not isinstance(context, LearningWriteProposalContext):
             raise TypeError("context must be a LearningWriteProposalContext")
+        if not isinstance(context.decision, LearningDecision):
+            raise TypeError("context.decision must be a LearningDecision")
+        if not isinstance(context.candidate, LearningCandidate):
+            raise TypeError("context.candidate must be a LearningCandidate")
+        if not isinstance(context.domain, LearningWriteDomain):
+            raise TypeError("context.domain must be a LearningWriteDomain")
+        if not isinstance(context.payload, Mapping):
+            raise TypeError("context.payload must be a mapping")
 
         decision = context.decision
-        if not isinstance(decision, LearningDecision):
-            raise TypeError("context.decision must be a LearningDecision")
+        candidate = context.candidate
+
+        if decision.candidate_id != candidate.candidate_id:
+            raise LearningWriteProposalError(
+                "learning decision candidate identity does not match source candidate"
+            )
         if decision.action is not LearningAction.ACCEPT:
             return None
 
-        candidate = self._candidate_from_decision(context)
         return LearningWriteProposal(
             proposal_id=self._proposal_id(decision, context.domain, context.payload),
             decision_id=decision.decision_id,
@@ -191,19 +202,6 @@ class LearningWriteProposalService:
             provenance=candidate.provenance,
             confidence=min(float(decision.confidence), float(candidate.confidence)),
             reason="accepted learning decision may proceed to a later learning-write policy",
-        )
-
-    @staticmethod
-    def _candidate_from_decision(context: LearningWriteProposalContext) -> LearningCandidate:
-        candidate = getattr(context.decision, "candidate", None)
-        if candidate is not None:
-            if not isinstance(candidate, LearningCandidate):
-                raise LearningWriteProposalError(
-                    "decision candidate metadata must be a LearningCandidate"
-                )
-            return candidate
-        raise LearningWriteProposalError(
-            "LearningDecision must retain its source candidate for proposal creation"
         )
 
     @staticmethod
