@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from dataclasses import FrozenInstanceError
 
-from src.tools.execution_attempt import ExecutionAttemptResult, ExecutionAttemptStatus
+from src.tools.execution_attempt import ExecutionAttemptService, ExecutionAttemptResult, ExecutionAttemptStatus
 from src.tools.execution_feedback import ExecutionFeedbackService
 from src.tools.execution_outcome import ExecutionOutcomeService, ExecutionOutcomeStatus
 from src.tools.execution_preparation import ExecutionHandoff
@@ -36,16 +36,15 @@ class LearningDecisionTests(unittest.TestCase):
             invocation_id="inv-1",
             arguments={"x": 1},
         )
+
         if status is ExecutionOutcomeStatus.SUCCEEDED:
             result = ToolResult(success=True, tool_name="echo", content={"x": 1}, invocation_id="inv-1")
-            attempt = ExecutionAttemptResult(
-                execution_id="exec-1",
-                handoff_id=handoff.handoff_id,
-                tool_name="echo",
-                invocation_id="inv-1",
-                status=ExecutionAttemptStatus.COMPLETED,
-                result=result,
-            )
+
+            class Executor:
+                def execute(self, prepared_handoff):
+                    return result
+
+            attempt = ExecutionAttemptService(Executor()).attempt(handoff)
         elif status is ExecutionOutcomeStatus.TOOL_FAILED:
             result = ToolResult(
                 success=False,
@@ -53,24 +52,19 @@ class LearningDecisionTests(unittest.TestCase):
                 error=ToolError(code="tool_failure", message="bad input"),
                 invocation_id="inv-1",
             )
-            attempt = ExecutionAttemptResult(
-                execution_id="exec-1",
-                handoff_id=handoff.handoff_id,
-                tool_name="echo",
-                invocation_id="inv-1",
-                status=ExecutionAttemptStatus.FAILED,
-                result=result,
-                reason="bad input",
-            )
+
+            class Executor:
+                def execute(self, prepared_handoff):
+                    return result
+
+            attempt = ExecutionAttemptService(Executor()).attempt(handoff)
         else:
-            attempt = ExecutionAttemptResult(
-                execution_id="exec-1",
-                handoff_id=handoff.handoff_id,
-                tool_name="echo",
-                invocation_id="inv-1",
-                status=ExecutionAttemptStatus.FAILED,
-                reason="worker unavailable",
-            )
+            class Executor:
+                def execute(self, prepared_handoff):
+                    raise RuntimeError("worker unavailable")
+
+            attempt = ExecutionAttemptService(Executor()).attempt(handoff)
+
         outcome = ExecutionOutcomeService().interpret(attempt, handoff)
         return self.evaluation.evaluate(self.feedback.from_outcome(outcome))
 
@@ -123,9 +117,11 @@ class LearningDecisionTests(unittest.TestCase):
             reason="bad",
             confidence=0.5,
         )
+
         class Provider(DeterministicLearningDecisionProvider):
             def decide(self, context):
                 return bad
+
         with self.assertRaises(LearningDecisionError):
             LearningDecisionService(Provider()).decide(LearningDecisionContext(candidate))
 
