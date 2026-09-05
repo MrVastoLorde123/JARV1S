@@ -1,205 +1,145 @@
 # JARVIS Milestone Architecture
 
-This document describes the current architectural progression. Future milestone names are directional and may be refined before implementation; the boundaries below are the important part.
+This document defines the architectural progression of JARVIS. Milestone names may evolve, but the boundaries and invariants are authoritative. The cognitive architecture introduced here applies retroactively to existing intelligence work and prospectively to M21+.
 
-## M6 — Working Context
+## M20 — Long-Horizon Task Management
 
-M6 established the provider-neutral working context runtime and its composition, source selection, resolution, refresh, and consumption boundaries.
-
-## M7 — Deterministic Authority
-
-M7 established the deterministic semantic authority pipeline and ends at an execution-ready handoff.
-
-**Status: CLOSED.**
-
-## M8 — Agency / Execution
-
-M8 implements downstream execution of already-authorized operations through bounded capabilities/plugins.
-
-**Status: CLOSED.**
-
-## M9 — Workforce / Delegation
-
-M9 adds capability-bounded workers that receive work from JARVIS without becoming independent authorities.
-
-**Status: CLOSED.**
-
-## M10 — Intelligence / Learning
-
-M10 develops intelligence from operational experience while keeping learning, prediction, memory, and adaptation outside authority.
-
-**Status: VERIFIED / COMPLETE.**
-
-## M11 — Interface / Experience
-
-M11 exposes JARVIS through replaceable interaction surfaces while keeping interface transport separate from semantics and authority.
-
-**Status: VERIFIED / COMPLETE.**
-
-## M12 — System Integration / Orchestration
-
-M12 integrates interface, session, durable session, event, recovery, and system runtime layers into one canonical application-facing runtime.
-
-**Status: VERIFIED / COMPLETE.**
-
-Verified receipts included core regression through 484/484 before later schema-bootstrap integration work.
-
-## M13 — Personal Knowledge
-
-M13 establishes structured entities, identity resolution, relationships, evidence-backed associations, persistence, retrieval, and integration.
-
-**Status: VERIFIED / COMPLETE.**
-
-## M14 — Personal Context / World Model
-
-M14 turns structured knowledge into bounded contextual state about the user's world.
+Establishes bounded long-horizon work representation and runtime:
 
 ```text
-Entities + Relationships + Memories + Events + Current State + Goals + Temporal Context
-                              ↓
-                     Personal World Model
+Goal → Objective → Task → Dependency Graph → Progress / Evidence
+→ Long-Horizon Plan → Next-Step Proposal → Persistence / Recovery → Runtime
 ```
 
 **Status: VERIFIED / COMPLETE.**
 
-Key invariant: context can inform initiative but cannot become authority.
+## M21 — Proactive JARVIS
 
-## M15 — Initiative / Proactive Agency
-
-M15 detects opportunities/needs, evaluates them, forms proposals, schedules proactive work, and applies an initiative safety boundary before existing authority semantics.
+M21 extends JARVIS from reacting to explicit requests toward bounded proactive cognition.
 
 ```text
-World Model
-   ↓
-Opportunity / Need Detection
-   ↓
+Environment / User
+        ↓
+Perception / Input
+        ↓
+Evidence + Provenance
+        ↓
+Memory + Personal Knowledge
+        ↓
+World Model / Current Context
+        ↓
+Reasoning + Uncertainty
+        ↓
 Initiative Candidate
-   ↓
-Evaluation
-   ↓
-Proposal
-   ↓
-Scheduling
-   ↓
-Safety Boundary
-   ↓
-Existing Authority Chain
+        ↓
+Initiative Evaluation
+        ↓
+Proactive Proposal
+        ↓
+Value Assessment
+        ↓
+Information Gain / Uncertainty Reduction
+        ↓
+Bounded Scheduling / Notification Proposal
+        ↓
+Prioritization
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution / Capabilities
+        ↓
+Outcome / Feedback
+        └──────────────→ Learning
 ```
 
+### M21.1 — Proactive Initiative Boundary
 **Status: VERIFIED / COMPLETE.**
 
-Key invariant: initiative may produce a useful proposal, but it cannot create authority.
+A signal may create an initiative candidate without becoming a task, proposal, authorization, notification, schedule, or execution request.
 
-## M16 — Controlled Self-Development
-
-M16 provides controlled machinery for JARVIS to change how it works without changing what it is authorized to do.
-
-```text
-Inspect → Reason → Plan → Modify → Test → Observe → Correct → Verify → Commit / Rollback
-```
-
-The milestone composes self-development proposal, impact assessment, modification planning, test verification, safe modification handoff, rollback/recovery, and integration.
-
+### M21.2 — Proactive Proposal Boundary
 **Status: VERIFIED / COMPLETE.**
 
-Key invariant:
+An eligible initiative candidate may become an immutable proposal preserving candidate/trigger identity and evidence provenance. Proposal formation grants no authority.
+
+### M21.3 — Proactive Value Assessment
+**Status: VERIFIED / COMPLETE.**
+
+A bounded deterministic advisory score uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version: `linear-v1`. Score is bounded to [0, 1], and ranking is deterministic by score descending then `proposal_id` ascending.
+
+### M21.4 — Information Gain / Uncertainty Reduction
+**Status: VERIFIED / COMPLETE.**
+
+M21.4 estimates how much additional information could reduce uncertainty around a proactive proposal. Factors are current uncertainty, expected reduction, evidence quality, and relevance. Formula version: `multiplicative-v1`.
 
 ```text
-JARVIS may change how it works
-        ≠
-JARVIS may change what it is allowed to do
+information_gain = current_uncertainty
+                 × expected_reduction
+                 × evidence_quality
+                 × relevance
 ```
 
-## M17 — Human Operating Layer
+The estimate is advisory and bounded to [0, 1]. It does not establish truth or certainty and cannot create authority, permission, scheduling, notification, worker/plugin assignment, execution requests, execution, or policy changes.
 
-M17 makes JARVIS continuously driveable from a supported human-facing surface without creating a second reasoning or authority path.
+Boundary walls:
 
 ```text
-Human
-  ↓
-Human Operating Layer
-  ↓
-Interface Boundary
-  ↓
-Canonical JARVIS Runtime
-  ↓
-Existing JARVIS Semantics
+Information Gain ≠ Truth
+Uncertainty Reduction ≠ Certainty
+Information Need ≠ User Intent
+Recommended Information ≠ Permission
+High Information Gain ≠ Authorization
+Ranking ≠ Scheduling
 ```
 
-The first implementation is a persistent local text operator with stable session identity, unique request sequencing, explicit local control commands, and optional durable session resumption.
+### M21.5 — Bounded Proactive Scheduling / Notification
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
-### M17.1 — Operator Boundary
-
-Defines the human-facing control boundary and keeps interface mechanics separate from authority.
-
-### M17.2 — Persistent Interaction
-
-Keeps the local operator alive for repeated normal requests instead of issuing one hard-coded prompt.
-
-### M17.3 — Session Driveability
-
-Carries a stable session identity through normal requests and supports explicit durable session IDs.
-
-### M17.4 — Local Control Commands
-
-Provides `:help`, `:session`, `:new`, and `:quit` as interface-local controls that never grant permission or authorization.
-
-### M17.5 — Request Sequencing
-
-Assigns unique request IDs and routes normal human text through the existing interface boundary and canonical runtime.
-
-### M17.6 — Local Runtime Integration
-
-Connects `src/run_local_jarvis.py` and the PowerShell launcher to the persistent operator, including an optional session ID.
-
-### M17.7 — Human Operating Verification
-
-Contract tests verify normal request routing, session identity, local command isolation, session switching, quit behavior, and empty-input handling.
-
-**Status: IMPLEMENTED — AWAITING LOCAL RUNTIME RECEIPT.**
-
-M17 architectural walls:
+M21.5 represents when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry and does not deliver a notification.
 
 ```text
+ProactiveScheduleProposal — immutable advisory timing metadata
+SchedulingEvaluation       — PROPOSED / NEEDS_REVIEW / NOT_SCHEDULABLE
+NotificationChannel        — explicit channel semantics
+```
+
+Timezone-aware timestamps are required. Notification messages are required when a channel is selected. Expiry cannot precede the proposed schedule time. Evaluation identity must match the schedule proposal identity. Ranking is deterministic by proposed time, then proposal identity. Advisory context explicitly reports `scheduled=False` and `notification_sent=False`.
+
+Boundary walls:
+
+```text
+Scheduling Proposal ≠ Scheduling
+Notification Recommendation ≠ Notification Delivery
+Timing ≠ Authorization
+Reminder Need ≠ User Intent
+Scheduling ≠ Permission
+Notification ≠ Execution
+Initiative ≠ Authorization
+```
+
+M21.5 does not create persistent scheduler entries, enqueue delayed work, send notifications, invoke capabilities/plugins, assign workers, create authorization, or mutate policy.
+
+### Future M21 boundary
+
+```text
+M21.6 Proactive Runtime / Feedback Integration
+```
+
+No M21 stage may grant authority merely because behavior is proactive, predictive, useful, information-seeking, scheduled-looking, or notification-oriented.
+
+## Cross-cutting cognitive architecture
+
+```text
+Model ≠ JARVIS
+LLM ≠ JARVIS
+AI Provider ≠ JARVIS
 Interface ≠ JARVIS
-Input ≠ Authorization
-Session ≠ Authority
-Selection ≠ Approval
-Approval ≠ Authorization
-Response ≠ Execution
-Conversation ≠ Policy
+Plugin ≠ JARVIS
+Worker ≠ JARVIS
 ```
 
-## Architectural Direction
-
-```text
-M6  Context / Working Context       ✅ CLOSED
- ↓
-M7  Deterministic Authority         ✅ CLOSED
- ↓
-M8  Agency / Execution              ✅ CLOSED
- ↓
-M9  Workforce / Delegation          ✅ CLOSED
- ↓
-M10 Intelligence / Learning        ✅ CLOSED
- ↓
-M11 Interface / Experience         ✅ CLOSED
- ↓
-M12 System Integration             ✅ CLOSED
- ↓
-M13 Personal Knowledge             ✅ CLOSED
- ↓
-M14 Personal Context / World Model ✅ CLOSED
- ↓
-M15 Initiative / Proactive Agency  ✅ CLOSED
- ↓
-M16 Controlled Self-Development    ✅ CLOSED
- ↓
-M17 Human Operating Layer          → LOCAL RECEIPT
-```
-
-The sequence is deliberate: establish authority and bounded action first; then learning, interface, integration, knowledge, context, initiative, controlled self-development, and finally a human operating layer that makes those capabilities continuously usable.
-
-M17 is driveability, not unrestricted autonomy. M15 provides initiative machinery and M16 provides controlled self-development machinery; later milestones can connect those mechanisms into longer-horizon proactive operation while preserving the authority architecture.
-
-Final hardening remains a separate concern from milestone semantics. Database isolation/leak prevention, persistence security, filesystem boundaries, credential handling, concurrency, and broader security review will be handled as a dedicated hardening phase.
+JARVIS is a distributed cognitive architecture composed of bounded mechanisms for memory, knowledge, reasoning, uncertainty, prediction, planning, learning, feedback, initiative, and authority. Machine learning is an implementation technique, not the definition of intelligence.

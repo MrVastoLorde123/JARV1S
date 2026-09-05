@@ -8,93 +8,167 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M12 — System Integration / Orchestration: VERIFIED / COMPLETE**
+**M21.2 — Proactive Proposal Boundary: IMPLEMENTED / AWAITING LOCAL RECEIPT**
 
-M11 Interface / Experience is VERIFIED / COMPLETE.
+M21.1 Proactive Initiative Boundary is VERIFIED / COMPLETE.
 
-### M9 roadmap
+M20 Long-Horizon Task Management is VERIFIED / COMPLETE.
 
-```text
-M9.1  Worker Identity / Assignment Boundary       ✅
-M9.2  Bounded Worker Runtime                      ✅
-M9.3  Worker Context / Knowledge Boundary          ✅
-M9.4  Worker Reporting / Result Integration        ✅
-M9.5  Delegation / Coordination                   ✅
-M9.6  Workforce Reliability / Recovery            ✅
-M9.7  Driveability / Objective Continuation       ✅
-```
+## Cognitive Architecture
 
-### M10 roadmap
+JARVIS is not defined as an LLM wrapper. It is a hybrid cognitive architecture in which deterministic state, evidence, memory, knowledge, world context, reasoning, learning, prediction, planning, initiative, authority, execution, and feedback work together.
 
 ```text
-M10.1  Learning / Experience Boundary               ✅ verified
-M10.2  Evidence + Outcome Evaluation                ✅ verified
-M10.3  Preference / Behavior Adaptation             ✅ verified
-M10.4  Memory Consolidation / Retrieval Improvement ✅ verified
-M10.5  Reasoning Quality Feedback Loop              ✅ verified
-M10.6  Learning Reliability / Reversal              ✅ verified
-M10.7  Intelligence Integration                    ✅ verified
+Environment / User
+        ↓
+Perception / Input
+        ↓
+Evidence + Provenance
+        ↓
+Memory + Personal Knowledge
+        ↓
+World Model / Current Context
+        ↓
+Reasoning + Uncertainty
+        ↓
+Prediction / Evaluation
+        ↓
+Initiative Candidate
+        ↓
+Initiative Evaluation
+        ↓
+Proactive Proposal
+        ↓
+Prioritization / Value
+        ↓
+Validation / Policy
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution / Capabilities
+        ↓
+Outcome / Feedback
+        └──────────────→ Learning
 ```
 
-### M11 roadmap
+Machine learning is an implementation technique, not the definition of JARVIS intelligence. A model may provide a capability inside this architecture without becoming JARVIS itself.
+
+## Learning Architecture
+
+JARVIS treats learning as a family of capabilities:
 
 ```text
-M11.1  Interface Boundary                           ✅ verified
-M11.2  Session / Conversation Runtime               ✅ verified
-M11.3  Intent → JARVIS Request                      ✅ verified
-M11.4  Streaming / Event Experience                 ✅ verified
-M11.5  Multi-Modal Interface                        ✅ verified
-M11.6  Human-in-the-Loop Experience                 ✅ verified
-M11.7  Interface Reliability / Recovery             ✅ verified
+Episodic learning
+Semantic learning
+Procedural learning
+Preference learning
+Failure / Outcome learning
+Belief revision
+Predictive learning
+Meta-learning
 ```
 
-### M12 roadmap
-
-```text
-M12.1  Unified Request Runtime                      ✅ verified
-M12.2  Session Runtime Binding                      ✅ verified
-M12.3  System Runtime Facade                       ✅ verified
-M12.4  Durable Session Lifecycle                   ✅ verified
-M12.5  Event Integrated Runtime                    ✅ verified
-M12.6  Recovery Integrated Runtime                 ✅ verified
-M12.7  Canonical JARVIS Runtime Facade             ✅ verified
-M12.8  Application Runtime Entrypoint              ✅ verified
-M12.9  End-to-End Runtime Integration              ✅ verified
-```
-
-### Learning invariant
+The learning invariant remains:
 
 ```text
 JARVIS should be capable of changing how it behaves
 without being allowed to change what it is authorized to do.
 ```
 
-## Road Ahead
+## Mathematical Substrate
+
+Where useful, JARVIS should use the mathematical structure that naturally matches the problem:
 
 ```text
-M6  Working Context            ✅
-M7  Deterministic Authority    ✅ CLOSED
-M8  Agency / Execution         ✅ CLOSED
-M9  Workforce / Delegation     ✅ CLOSED
-M10 Intelligence / Learning   ✅ CLOSED
-M11 Interface / Experience    ✅ CLOSED
-M12 System Integration        ✅ CLOSED
+Probability / Bayesian reasoning → uncertainty and belief update
+Graph theory                  → dependencies and relationships
+Temporal reasoning            → time, validity, expiry, recurrence
+State machines                → lifecycle and safety
+Optimization                  → constrained prioritization
+Decision theory               → risk-aware choices
+Information theory            → uncertainty reduction
+Control / feedback            → closed-loop correction
 ```
 
-M12 integrates the already-bounded subsystems into one application-facing runtime. It composes existing contracts rather than creating a parallel authority path.
+## Epistemic Boundaries
+
+```text
+Signal ≠ Evidence
+Evidence ≠ Truth
+Observation ≠ Interpretation
+Interpretation ≠ Belief
+Belief ≠ Prediction
+Knowledge ≠ Truth
+Memory ≠ User Intent
+Confidence ≠ Certainty
+Reliability ≠ Truth
+Prediction ≠ Permission
+```
+
+## Authority Boundaries
+
+```text
+Intelligence ≠ Authority
+Learning ≠ Authority
+Adaptation ≠ Authorization
+Initiative ≠ Authorization
+Capability ≠ Permission
+Planning ≠ Execution
+Recovery ≠ Execution
+Proposal ≠ Authorization
+```
+
+## Model Boundary
+
+```text
+Model ≠ JARVIS
+LLM ≠ JARVIS
+AI Provider ≠ JARVIS
+Interface ≠ JARVIS
+Plugin ≠ JARVIS
+Worker ≠ JARVIS
+```
+
+## Milestone Roadmap
+
+```text
+M6  Working Context                 ✅
+M7  Deterministic Authority         ✅ CLOSED
+M8  Agency / Execution              ✅ CLOSED
+M9  Workforce / Delegation          ✅ CLOSED
+M10 Intelligence / Learning         ✅ VERIFIED
+M11 Interface / Experience          ✅ VERIFIED
+M12 System Integration              ✅ VERIFIED
+M13 Personal Knowledge              ✅ VERIFIED
+M14 Personal Context / World Model  ✅ VERIFIED
+M15 Initiative / Proactive Agency   ✅ VERIFIED
+M16 Controlled Self-Development     ✅ VERIFIED
+M17 Human Operating Layer           ✅
+M18 Personal Continuity             ✅
+M19 Deep Personalization            ✅ VERIFIED
+M20 Long-Horizon Task Management    ✅ VERIFIED
+M21 Proactive JARVIS                → M21.2
+M22 Capability / Plugin Ecosystem   →
+M23 Workforce Intelligence          →
+M24 Continuous Self-Improvement     →
+M25+ Personal Intelligence Evolution→
+```
+
+M21+ will progressively connect the cognitive substrate, personal world model, long-horizon planning, proactive initiative, and controlled self-development while preserving the existing authority chain.
 
 ## Documentation
 
 - [Architecture Overview](docs/architecture/overview.md)
+- [Cognitive Intelligence Architecture](docs/architecture/cognitive_intelligence.md)
 - [Authority Architecture](docs/architecture/authority.md)
 - [Agency Architecture](docs/architecture/agency.md)
 - [Milestone Architecture](docs/architecture/milestones.md)
-- [M7 Complete](docs/milestones/M7_COMPLETE.md)
-- [M8 Complete](docs/milestones/M8_COMPLETE.md)
-- [M8.6 Reliability / Recovery](docs/milestones/M8_6_AGENCY_RELIABILITY_RECOVERY.md)
 - [M10.1 Learning / Experience Boundary](docs/milestones/M10_1_LEARNING_EXPERIENCE_BOUNDARY.md)
 - [M10.2 Evidence / Outcome Evaluation](docs/milestones/M10_2_EVIDENCE_OUTCOME_EVALUATION.md)
-- [M10.3 Preference / Behavior Adaptation](docs/milestones/M10.3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
-- [M11 Complete](docs/milestones/M11_COMPLETE.md)
-- [M12 Complete](docs/milestones/M12_COMPLETE.md)
+- [M10.3 Preference / Behavior Adaptation](docs/milestones/M10_3_PREFERENCE_BEHAVIOR_ADAPTATION.md)
+- [M20.8 End-to-End Runtime](docs/milestones/M20_8_END_TO_END_LONG_HORIZON_RUNTIME.md)
+- [M21.1 Proactive Initiative Boundary](docs/milestones/M21_1_PROACTIVE_INITIATIVE_BOUNDARY.md)
+- [M21.2 Proactive Proposal Boundary](docs/milestones/M21_2_PROACTIVE_PROPOSAL_BOUNDARY.md)
 - [Architecture Decisions](docs/decisions/)
