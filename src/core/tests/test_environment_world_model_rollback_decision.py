@@ -96,8 +96,9 @@ class EnvironmentWorldModelRollbackDecisionTests(unittest.TestCase):
             environment_id="env-1",
             current_model_id="model-2",
             target_model_id="model-1",
-            recommendation="REVIEW",
+            recommendation="ROLLBACK",
         )
+        object.__setattr__(invalid, "recommendation", "REVIEW")
         with self.assertRaises(EnvironmentWorldModelRollbackDecisionError):
             self.service.decide(invalid, decision_id="dec-7")
 
