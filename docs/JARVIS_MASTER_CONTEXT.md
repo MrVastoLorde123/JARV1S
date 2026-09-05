@@ -29,8 +29,7 @@ Everything is a capability/plugin. Scraping and automation are backbone capabili
 Execution:
 `Reasoning → Interpretation → Prioritization → Proposal → Validation → Policy → Confirmation → Confirmation Integrity → Authorization → Authorization Integrity → Sandbox Admission → Execution Preparation/Handoff → Execution Attempt → Outcome`
 
-Current learning/adaptation chain through M22.56:
-`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission`
+Current learning/adaptation chain through M22.56 remains unchanged.
 
 A decision is not a proposal; a proposal is not authorization; admission is not authorization. The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, result integrity, feedback, and evaluation.
 
@@ -62,149 +61,49 @@ No merge is performed unless explicitly requested.
 - M22.56 — VERIFIED / COMPLETE: 16/16 focused + 502/502 core = **518/518**
 - M23.1 — VERIFIED / COMPLETE: 12/12 focused + 514/514 core = **526/526**
 - M23.2 — VERIFIED / COMPLETE: 8/8 focused + 522/522 core = **530/530**
+- M23.3 — VERIFIED / COMPLETE: 13/13 focused + 535/535 core = **548/548**
 
 Selected recent receipts:
+- M23.3: **548/548**
 - M23.2: **530/530**
 - M23.1: **526/526**
 - M22.56: **518/518**
 - M22.55: **517/517**
 - M22.54: **517/517**
-- M22.53: **515/515**
-- M22.52: **517/517**
-- M22.51: **520/520**
 
 ## 7. Verified recent boundaries
 
-### M22.52 — Result Integrity → Feedback
-Consumes exactly one M22.51 result-integrity artifact and produces immutable feedback. Preserves complete known lineage, including `source_proposal_id`, M22.51 `integrity_id`, evaluation lineage, and historical source feedback identity. INTEGRITY_SUCCESS becomes INTEGRITY_SUCCESS feedback; INTEGRITY_FAILURE becomes INTEGRITY_FAILURE feedback. Observational only.
+### M23.1 — Boundary Composition Contract
+**Status: VERIFIED / COMPLETE.** Reusable typed composition primitive for existing JARVIS boundaries. Ordered stages have exact input/output type continuity, immutable observations, explicit stage identity, and fail-closed error wrapping. No implicit retry, skip, branching, authorization, execution, revoke, memory mutation, permission inference, or truth establishment.
 
-### M22.53 — Feedback → Evaluation
-Consumes exactly one M22.52 feedback artifact and produces immutable evaluation evidence. INTEGRITY_SUCCESS becomes `INTEGRITY_SUCCESS_SIGNAL`; INTEGRITY_FAILURE becomes `INTEGRITY_FAILURE_SIGNAL`. Confidence is bounded to [0,1] with deterministic baseline 0.5. Full known lineage is preserved. Evaluation does not establish adaptation truth or authority.
+Receipt: **12/12 focused + 514/514 core = 526/526**.
 
-### M22.54 — Evaluation → Decision
-Consumes exactly one dedicated M22.53 evaluation artifact and produces one immutable advisory decision. Deterministic baseline:
-- failure signal → DEFER
-- confidence < 0.5 → DEFER
-- otherwise → ACCEPT
+### M23.2 — Environment State Contract
+**Status: VERIFIED / COMPLETE.** Provider-neutral immutable representation of the environment known to JARVIS across hardware, software, network, models, capabilities, permissions, performance, costs, resources, and metadata. Domain mappings are recursively frozen. Environment state is descriptive, not authoritative, and does not hard-code host-specific discovery.
 
-Decision identity is deterministic and distinct from upstream identities. Lineage includes `source_proposal_id`. Provider is replaceable. Decision cannot authorize execution, request execution, retry, revoke, mutate memory, grant authority, or establish adaptation truth.
+Receipt: **8/8 focused + 522/522 core = 530/530**.
 
-### M22.55 — Decision → Proposal
-Consumes exactly one dedicated M22.54 decision. ACCEPT produces one immutable advisory proposal; DEFER and REJECT produce no proposal. The proposal preserves complete known lineage, distinguishes the new `proposal_id` from upstream decision identity, and keeps inherited `source_proposal_id` distinct from the immediate decision-source lineage `proposal_source_id`.
+### M23.3 — Environment Observation Adapter Contract
+**Status: VERIFIED / COMPLETE.** Provider-neutral replaceable observation layer composed into M23.2.
 
-Payload, evidence, provenance, and metadata are recursively immutable. Confidence remains bounded to [0,1]. Proposal formation grants no execution, authorization, retry, revocation, memory mutation, general authority, or adaptation truth.
+`EnvironmentObservationAdapter` exposes an adapter identity, one explicit environment domain, and `observe(environment_id)`. `EnvironmentObservation` is immutable descriptive evidence tied to one adapter, environment, and domain. `EnvironmentObservationService` validates adapter identity, domain identity, environment identity, and exact observation type; rejects duplicate adapter IDs/domains; wraps adapter failures without retry; composes accepted observations through `EnvironmentSnapshotService`; keeps missing domains empty; and retains observation source identities as descriptive metadata.
 
-M22.55 receipt: **15/15 focused + 502/502 core = 517/517**.
-
-### M22.56 — Proposal → Admission
-Consumes exactly one dedicated M22.55 proposal and produces one immutable admission artifact. The deterministic baseline admits supported accepted proposals with confidence >= 0.5 and non-empty payload/provenance; otherwise it rejects. Admission is policy evidence, not authorization.
-
-The artifact preserves the complete known lineage, including both M22.55 proposal-source roles:
-- `proposal_source_id` — the immediate upstream M22.54 decision proposal identity
-- `source_proposal_id` — the inherited upstream proposal lineage
-
-The new `admission_id` is deterministic and distinct from the proposal identity. `source_policy_id` records the incoming M22.55 policy identity while the new `policy_id` identifies the admission policy.
-
-The artifact is recursively immutable and confidence-bounded. Authority walls explicitly prevent execution authorization, authorization grant, execution request, retry, revocation, memory mutation, and general authority. Admission does not establish adaptation truth.
-
-Dedicated namespace:
-`src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_preparation_execution_result_integrity_feedback_evaluation_decision_proposal_admission.py`
-
-Historical M22.48 admission namespace remains untouched.
-
-M22.56 receipt: **16/16 focused + 502/502 core = 518/518**.
-
-## 8. M23.1 — Boundary Composition Contract
-
-**Status: VERIFIED / COMPLETE.**
-
-Branch:
-`feature/m23.1-boundary-composition-contract`
-
-Contract:
-`Generic typed composition primitive for existing JARVIS boundaries`
-
-M23.1 establishes reusable composition of ordered, typed stages without creating new execution or authority. `BoundaryStageSpec` defines a named stage with exact input/output types and a callable handler. `BoundaryPipeline` validates type continuity at construction and exact runtime input/output types at execution. `BoundaryCompositionResult` records immutable stage observations and the final value. Stage failures are wrapped as `BoundaryCompositionError` with stage identity preserved.
-
-Composition is fail-closed: failed stages are not automatically retried, stages are not implicitly skipped, and the layer does not branch, authorize, execute, revoke, mutate memory, infer permission, or establish truth.
-
-M8.5 `ControlledAgency` remains the bounded multi-step execution coordinator. M23.1 is a generic composition primitive above individual boundaries rather than a replacement for agency orchestration.
-
-Files:
-- `src/core/boundary_composition.py`
-- `src/core/tests/test_boundary_composition.py`
-- `docs/decisions/046-boundary-composition-contract.md`
-
-M23.1 receipt: **12/12 focused + 514/514 core = 526/526**.
-
-## 9. M23.2 — Environment State Contract
-
-**Status: VERIFIED / COMPLETE.**
-
-Branch:
-`feature/m23.2-environment-state-contract`
-
-Contract:
-`Provider-neutral immutable representation of JARVIS's operating environment`
-
-M23.2 introduces `EnvironmentSnapshot`, which models descriptive environment state across hardware, software, network, installed/available models, capabilities, permissions, performance observations, costs, resources, and metadata. `EnvironmentSnapshotService` constructs validated snapshots from observed inputs.
-
-The snapshot recursively freezes its domain mappings so later routing, planning, anomaly detection, scheduling, and optimization can reason from a stable state representation without embedding host-specific assumptions into individual services.
-
-Environment state is descriptive, not authoritative. Recording a permission does not grant it; recording a capability does not imply that it is executable. The snapshot cannot authorize execution, request execution, mutate memory, establish adaptation truth, or elevate permissions.
-
-Hardware discovery, operating-system probing, telemetry, and external-service health checks remain separate observation adapters. M23.2 intentionally does not hard-code detection of the host machine.
-
-Files:
-- `src/core/environment_model.py`
-- `src/core/tests/test_environment_model.py`
-- `docs/decisions/047-environment-state-contract.md`
+Authority boundary: observation does not authorize execution, elevate permissions, imply capability executability, retry, revoke, mutate memory, or establish adaptation truth.
 
 Receipt:
-- Focused: `python -m unittest src.core.tests.test_environment_model -v` → **8/8 OK**
-- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **522/522 OK**
-- Combined: **530/530 OK**
+- Focused: `python -m unittest src.core.tests.test_environment_observation -v` → **13/13 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **535/535 OK**
+- Combined: **548/548 OK**
 
-## 10. M23.3 — Environment Observation Adapter Contract
-
-**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
-
-Branch:
-`feature/m23.3-environment-observation-adapter-contract`
-
-Contract:
-`Replaceable environment observation adapters composed deterministically into EnvironmentSnapshot`
-
-M23.3 introduces `EnvironmentObservationAdapter`, a provider-neutral protocol for one explicit environment domain, plus immutable `EnvironmentObservation` evidence and `EnvironmentObservationService` composition.
-
-The service rejects duplicate adapter identities and duplicate domains, validates observation identity/domain/environment continuity, wraps adapter failures, and composes accepted observations through the existing M23.2 `EnvironmentSnapshotService`. Missing domains remain empty rather than being inferred as unavailable.
-
-Observation payloads and metadata are recursively immutable. Observation-source identities are retained as descriptive snapshot metadata.
-
-The layer is observational only. It does not probe the host itself, authorize execution, elevate permissions, imply capability executability, retry failed probes, mutate memory, or establish adaptation truth.
-
-Files:
-- `src/core/environment_observation.py`
-- `src/core/tests/test_environment_observation.py`
-- `docs/decisions/048-environment-observation-adapter-contract.md`
-
-Focused:
-`python -m unittest src.core.tests.test_environment_observation -v`
-
-Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
-
-Local verification is required before M23.3 can be marked VERIFIED / COMPLETE.
-
-## 11. Namespace and lineage rules
+## 8. Namespace and lineage rules
 
 M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because class names are similar.
 
-Canonical lineage naming for the current chain uses `source_proposal_id` for inherited proposal lineage where M22.52+ defines it. When a boundary introduces an immediate upstream identity with the same conceptual domain, preserve distinct roles explicitly rather than aliasing them.
+Canonical lineage naming uses `source_proposal_id` for inherited proposal lineage where defined. When a boundary introduces an immediate upstream identity with the same conceptual domain, preserve distinct roles explicitly rather than aliasing them.
 
 Do not introduce compatibility aliases unless the contract explicitly requires them.
 
-## 12. Memory and capability architecture
+## 9. Memory and capability architecture
 
 Memory separates decision from mutation: `MemoryDecisionProvider` is provider-neutral/non-mutating; `MemoryDecisionService` selects and validates; `MemoryDecisionExecutor` is the mutation boundary for CREATE, CONFIRM, UPDATE, CONTRADICT, or IGNORE. Adaptation must not bypass this architecture.
 
@@ -212,13 +111,13 @@ Capability ecosystem: contract/registry, trust/provenance, lifecycle/versioning,
 
 Workspace capabilities are `read_file`, `list_directory`, `search_files`, and `write_file`; `write_file` is confirmation-gated.
 
-## 13. Self-work target architecture
+## 10. Self-work target architecture
 
 `User goal → Understand → Discover capabilities → Inspect current state → Reason/plan → Propose actions → Validate → Policy/confirmation → Execute → Run tests/observe → Evaluate → Correct → Report`
 
 The model is never final authority over execution.
 
-## 14. Verification rule
+## 11. Verification rule
 
 A milestone is not GREEN / VERIFIED / COMPLETE until the user provides the local test receipt.
 
@@ -226,12 +125,12 @@ Remote implementation status and local verification status remain distinct.
 
 No merge is performed unless explicitly requested.
 
-## 15. Current snapshot
+## 12. Current snapshot
 
-**Latest verified milestone:** M23.2 — 8/8 focused + 522/522 core = **530/530**.
+**Latest verified milestone:** M23.3 — 13/13 focused + 535/535 core = **548/548**.
 
-**Active milestone:** M23.3 — Environment Observation Adapter Contract.
+**Active milestone:** M23.4 — Environment Observation Freshness/Validity Contract.
 
-**M23.3 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
+**M23.4 status:** NOT YET IMPLEMENTED.
 
-**Next local action:** pull `feature/m23.3-environment-observation-adapter-contract`, run the focused observation-adapter suite, then the `src\\core` regression. Do not mark M23.3 verified until those receipts are supplied.
+**Next engineering action:** establish deterministic freshness/validity semantics for environment observations, preserving raw observation evidence while preventing stale state from being treated as current state. The contract should remain provider-neutral, immutable, composable with M23.3/M23.2, and non-authorizing. No merge performed.
