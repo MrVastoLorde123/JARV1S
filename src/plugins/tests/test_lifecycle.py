@@ -30,6 +30,13 @@ class CapabilityLifecycleTests(unittest.TestCase):
         ]
         self.assertEqual(ordered, sorted(ordered))
 
+    def test_semantic_version_build_metadata_does_not_change_precedence(self) -> None:
+        first = SemanticVersion.parse("1.0.0+build.1")
+        second = SemanticVersion.parse("1.0.0+build.2")
+        self.assertFalse(first < second)
+        self.assertFalse(second < first)
+        self.assertNotEqual(first, second)
+
     def test_capability_version_is_immutable(self) -> None:
         version = CapabilityVersion("file.read", "1.0.0")
         with self.assertRaises(Exception):
@@ -59,6 +66,15 @@ class CapabilityLifecycleTests(unittest.TestCase):
         self.assertEqual(
             tuple(item.version for item in registry.list_versions("FILE.READ")),
             ("1.2.0", "1.1.0", "1.0.0"),
+        )
+
+    def test_build_metadata_tiebreak_is_deterministic(self) -> None:
+        registry = CapabilityLifecycleRegistry()
+        registry.register(CapabilityVersion("file.read", "1.0.0+build.1"))
+        registry.register(CapabilityVersion("file.read", "1.0.0+build.2"))
+        self.assertEqual(
+            tuple(item.version for item in registry.list_versions("file.read")),
+            ("1.0.0+build.2", "1.0.0+build.1"),
         )
 
     def test_lifecycle_transitions_are_forward_only(self) -> None:
