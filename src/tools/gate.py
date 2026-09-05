@@ -1,19 +1,27 @@
-"""Policy and confirmation boundary for tool invocation."""
+"""Policy, confirmation, and explicit authorization boundary for tool invocation."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Optional
 
-from .confirmation import AutoDenyConfirmationProvider, ConfirmationProvider, ConfirmationResponse
-from .errors import InvalidConfirmationResponseError, InvalidPolicyVerdictError, InvalidRequestError
+from .authorization import AuthorizationDecision, ExplicitAuthorizationService
+from .confirmation import AutoDenyConfirmationProvider, ConfirmationProvider
+from .errors import InvalidRequestError
 from .models import ToolDefinition, ToolError, ToolRequest, ToolResult
-from .policy import Policy, PolicyDecision, PolicyVerdict
+from .policy import Policy, PolicyDecision
 from .registry import ToolRegistry
 from .service import ToolService
 
 
 class PolicyGate:
-    """Enforces policy and confirmation before delegating to ToolService."""
+    """Enforces policy and confirmation before delegating to ToolService.
+
+    ``authorize()`` is the explicit non-executing authority boundary. ``invoke()``
+    consumes that decision and remains the only public path that crosses into
+    ``ToolService``.
+    """
 
     def __init__(
         self,
@@ -26,49 +34,71 @@ class PolicyGate:
         self._service = service
         self._policy = policy
         self._confirmation_provider = confirmation_provider or AutoDenyConfirmationProvider()
+        self._authorization = ExplicitAuthorizationService(
+            policy,
+            self._confirmation_provider,
+        )
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
         """Return the immutable capability catalog visible to callers."""
         return tuple(self._registry.list_definitions())
 
-    def invoke(self, request: ToolRequest) -> ToolResult:
-        """Run one request through Policy -> Confirmation -> ToolService."""
+    def authorize(
+        self,
+        request: ToolRequest,
+        *,
+        authorization_id: str | None = None,
+    ) -> AuthorizationDecision:
+        """Evaluate one request through policy + confirmation without execution."""
         if not isinstance(request, ToolRequest):
             raise InvalidRequestError(
-                f"PolicyGate.invoke expects a ToolRequest, got {type(request).__name__}"
+                f"PolicyGate.authorize expects a ToolRequest, got {type(request).__name__}"
             )
 
         handler = self._registry.get(request.tool_name)
         definition = handler.definition()
+        identity = authorization_id or self._default_authorization_id(request)
+        return self._authorization.authorize(
+            definition,
+            request,
+            authorization_id=identity,
+        )
 
-        verdict = self._policy.evaluate(definition, request)
-        if not isinstance(verdict, PolicyVerdict):
-            raise InvalidPolicyVerdictError(
-                f"Policy {self._policy!r} returned {type(verdict).__name__}, expected PolicyVerdict"
-            )
+    def invoke(self, request: ToolRequest) -> ToolResult:
+        """Run one request through explicit authorization, then ToolService."""
+        decision = self.authorize(request)
 
-        if verdict.decision == PolicyDecision.DENY:
-            return self._blocked_result(
-                request,
-                code="policy_denied",
-                message=verdict.reason or f"Tool '{request.tool_name}' was denied by policy",
-            )
-
-        if verdict.decision == PolicyDecision.REQUIRE_CONFIRMATION:
-            response = self._confirmation_provider.confirm(definition, request)
-            if not isinstance(response, ConfirmationResponse):
-                raise InvalidConfirmationResponseError(
-                    f"Confirmation provider {self._confirmation_provider!r} returned "
-                    f"{type(response).__name__}, expected ConfirmationResponse"
-                )
-            if not response.approved:
+        if not decision.authorized:
+            if decision.policy_decision is PolicyDecision.DENY:
                 return self._blocked_result(
                     request,
-                    code="confirmation_denied",
-                    message=response.reason or f"Confirmation was not granted for tool '{request.tool_name}'",
+                    code="policy_denied",
+                    message=decision.reason
+                    or f"Tool '{request.tool_name}' was denied by policy",
                 )
+            return self._blocked_result(
+                request,
+                code="confirmation_denied",
+                message=decision.reason
+                or f"Confirmation was not granted for tool '{request.tool_name}'",
+            )
 
         return self._service.invoke(request)
+
+    @staticmethod
+    def _default_authorization_id(request: ToolRequest) -> str:
+        payload = json.dumps(
+            {
+                "tool_name": request.tool_name.strip().lower(),
+                "arguments": request.arguments,
+                "invocation_id": request.invocation_id,
+            },
+            sort_keys=True,
+            default=repr,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        digest = hashlib.sha256(payload).hexdigest()[:24]
+        return f"auth-{digest}"
 
     @staticmethod
     def _blocked_result(request: ToolRequest, *, code: str, message: str) -> ToolResult:

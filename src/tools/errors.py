@@ -49,3 +49,7 @@ class InvalidPolicyVerdictError(ToolLayerError):
 class InvalidConfirmationResponseError(ToolLayerError):
     """Raised when a ``ConfirmationProvider`` returns something other than a
     ``ConfirmationResponse``."""
+
+
+class InvalidAuthorizationDecisionError(ToolLayerError):
+    """Raised when an ``AuthorizationDecision`` contains inconsistent data."""
