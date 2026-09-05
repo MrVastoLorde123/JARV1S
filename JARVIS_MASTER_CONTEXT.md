@@ -106,12 +106,52 @@ Outcome / Feedback
 - M22.3 Capability Lifecycle / Versioning Boundary — VERIFIED / COMPLETE (15/15 focused + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
 - M22.4 Capability Permission / Policy Binding — VERIFIED / COMPLETE (9/9 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
 - M22.5 Plugin Isolation / Execution Sandbox — VERIFIED / COMPLETE (10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core = 538/538)
-- M22.6 Capability Discovery + Selection Integration — IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.6 Capability Discovery + Selection Integration — VERIFIED / COMPLETE (8/8 focused + 495/495 core regression)
+- M22.7 Capability Proposal → Validated ToolRequest Boundary — ACTIVE
 
-## M22.6 direction
-M22.6 makes the existing provider-neutral capability discovery and selection path an explicit integration boundary. `CapabilityCatalog` remains a read-only view over the existing `ToolCapabilityGateway`; `CapabilitySelectionService` composes discovery and selector ranking; `CapabilityDiscoverySelection` captures the exact discovered immutable capabilities and the selection derived from that snapshot.
+## M22.7 direction
+M22.7 binds M22.6 capability selection to the existing structural invocation boundary without granting execution authority. `CapabilityRequestProposalService` accepts an immutable `CapabilityDiscoverySelection`, requires any selected candidate to originate from that exact snapshot, asks a replaceable `CapabilityArgumentPlanner` for inert argument data, and uses `CapabilityInvocationBuilder` to structurally validate and materialize a `ToolRequest`.
+
+Directional boundary:
+```text
+CapabilityDiscoverySelection
+↓
+CapabilityRequestProposalService
+↓
+CapabilityArgumentPlanner
+↓
+CapabilityInvocationBuilder
+↓
+CapabilityRequestProposal
+↓
+Validation / Policy
+↓
+Confirmation
+↓
+Authorization
+↓
+Sandbox
+↓
+Execution
+```
+
+M22.7 authority walls:
+- Selection ≠ Request Authorization
+- Argument Proposal ≠ Execution
+- Validated ToolRequest ≠ Authorized ToolRequest
+- ToolRequest ≠ Tool Execution
+- Capability ≠ Worker
+- Permission ≠ Authorization
+- Sandbox ≠ Authorization
+
+M22.7 does not invoke tools or plugins, authorize a proposal, interpret argument generation as confirmation, bypass `PolicyGate`, grant permission, perform sandbox admission, assign workers, or create an execution request merely because a request was structurally validated.
+
+## M22.6 verified semantics
+M22.6 establishes the explicit provider-neutral capability discovery and selection integration boundary. `CapabilityCatalog` remains a read-only view over the existing `ToolCapabilityGateway`; `CapabilitySelectionService` composes discovery and selector ranking; `CapabilityDiscoverySelection` captures the exact discovered capabilities and the selection derived from that snapshot.
 
 The deterministic selector remains the current dependency-free fallback, while the selector contract stays replaceable for future model-backed implementations. Selection remains a proposal operation and cannot invoke tools.
+
+M22.6 verification receipt: **8/8 focused integration + 495/495 core regression tests passed locally.**
 
 Directional boundary:
 ```text
