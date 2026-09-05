@@ -130,7 +130,7 @@ class EnvironmentWorldModelRollbackPersistenceTests(unittest.TestCase):
             target_model_id="m0",
             decision_id="decision1",
             applied=True,
-            resulting_model_id="m-foreign",
+            resulting_model_id="m0",
             reasons={},
             lineage={},
         )
