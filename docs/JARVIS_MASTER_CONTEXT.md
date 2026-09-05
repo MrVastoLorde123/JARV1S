@@ -52,9 +52,10 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is resolve
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.48 — VERIFIED / COMPLETE.
+M22.1–M22.49 — VERIFIED / COMPLETE.
 
 Recent receipts:
+- M22.49: 16/16 focused + 502/502 core = **518/518**
 - M22.48: 17/17 focused + 502/502 core = **519/519**
 - M22.47: 16/16 focused + 502/502 core = **518/518**
 - M22.46: 15/15 focused + 502/502 core = **517/517**
@@ -74,7 +75,7 @@ M22.34: 13/13 + 502/502 = 515/515.
 
 ## 6. Current milestone
 
-**M22.49 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission → Preparation — ACTIVE / IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+**M22.49 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission → Preparation — VERIFIED / COMPLETE.**
 
 Branch:
 `feature/m22.49-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission-preparation`
@@ -85,7 +86,10 @@ Parent:
 Parent receipt:
 M22.48 = **17/17 focused + 502/502 core = 519/519**.
 
-PR: pending creation after remote implementation is staged.
+PR: #192, open and unmerged.
+
+M22.49 receipt:
+**16/16 focused + 502/502 core = 518/518, all passing.**
 
 ## 7. Recent contracts
 
@@ -110,6 +114,8 @@ The preparation preserves the complete known M22.48 lineage, including admission
 Payload, evidence, and provenance are recursively immutable. Preparation is a handoff boundary only: it cannot authorize or start execution, request retry or revocation, mutate memory, grant authority, or establish adaptation truth. Rejected M22.48 admission cannot cross this boundary.
 
 M22.49 uses the dedicated `..._decision_proposal_admission_preparation.py` namespace and leaves established historical namespaces untouched.
+
+M22.49 is **VERIFIED / COMPLETE: 16/16 focused + 502/502 core = 518/518**.
 
 ## 8. Authority walls
 
@@ -175,13 +181,13 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.49 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission → Preparation — ACTIVE / IMPLEMENTED / AWAITING LOCAL VERIFICATION.
+**Current milestone:** M22.49 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission → Preparation — VERIFIED / COMPLETE.
 
 **Current branch:** `feature/m22.49-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission-preparation`
 
-**Latest verified milestone:** M22.48 — 519/519 (17 focused + 502 core regression).
+**Latest verified milestone:** M22.49 — 518/518 (16 focused + 502 core regression).
 
-**Active boundary:** M22.48 Admission → Preparation.
+**Active boundary:** M22.48 Admission → M22.49 Preparation is complete; next milestone must be derived from the live repository before implementation begins.
 
 **M22.49 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparation` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation_decision_proposal_admission_preparation.py`.
 
@@ -189,4 +195,4 @@ No merge is performed unless explicitly requested.
 
 **Known namespace rule:** M22.37's `learning_write_adaptation_evaluation_execution_feedback_evaluation.py` remains unchanged. M22.45–M22.49 use dedicated result-integrity-feedback namespaces to preserve historical import contracts and prevent circular imports.
 
-**Next action:** run the dedicated M22.49 focused suite and core regression locally. Do not merge.
+**Next action:** derive M22.50 from the live repository state and establish its smallest explicit contract before implementation. Do not merge.
