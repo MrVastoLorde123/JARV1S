@@ -145,6 +145,7 @@ Current milestone branch:
 `feature/m22.28-adaptation-outcome-feedback`
 
 Latest verified local receipts:
+- **M22.28:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.27:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.26:** 11/11 focused + 502/502 core regression = **513/513**
 
@@ -173,7 +174,7 @@ Previous verified checkpoints:
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.27 — VERIFIED / COMPLETE.
+M22.1–M22.28 — VERIFIED / COMPLETE.
 
 - M22.1 Capability / Plugin Contract + Registry — VERIFIED / COMPLETE
 - M22.2 Capability Trust / Provenance — VERIFIED / COMPLETE
@@ -202,7 +203,8 @@ M22.1–M22.27 — VERIFIED / COMPLETE.
 - M22.25 Adaptation Proposal → Admission — VERIFIED / COMPLETE (513/513)
 - M22.26 Adaptation Execution — VERIFIED / COMPLETE (513/513)
 - M22.27 Adaptation Execution Outcome / Result Integrity — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515)
-- **M22.28 Adaptation Outcome → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT**
+- M22.28 Adaptation Outcome → Feedback — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515)
+- **M22.29 Adaptation Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -227,22 +229,25 @@ These milestones establish inert candidate, decision, proposal, admission, execu
 ### M22.27 — Adaptation Execution Outcome / Result Integrity
 `LearningWriteAdaptationOutcomeService` consumes an exact `LearningWriteAdaptationExecutionResult` + `LearningWriteAdaptationExecutionRequest` pair. It verifies execution/admission/proposal/decision/candidate/feedback/source-candidate/domain identity, normalizes `COMPLETED` → `SUCCEEDED` and `FAILED` → `FAILED`, and fingerprints successful adaptation results deterministically.
 
-M22.27 remains an evidence boundary, not a truth boundary.
-
 ### M22.28 — Adaptation Outcome → Feedback
 `LearningWriteAdaptationFeedbackService` converts an immutable adaptation outcome into an immutable feedback event. Success/failure become explicit adaptation-feedback kinds. Execution/admission/proposal/decision/adaptation-candidate/source-learning-feedback/source-learning-candidate/domain lineage is preserved; successful payload carries the adaptation result and existing result fingerprint, while failed payload carries the failure reason.
 
 Feedback is evidence for future evaluation. It does not authorize, mutate memory, retry, revoke, or execute.
 
+### M22.29 — Adaptation Feedback → Evaluation
+M22.29 is the evaluation boundary after adaptation feedback. It must remain explicitly interpretive: convert feedback into a bounded adaptation-evaluation signal/candidate while preserving exact lineage and immutable evidence. Evaluation must not silently authorize adaptation, mutate memory, retry, revoke, or execute.
+
 Walls:
 - Adaptation Execution Result ≠ Adaptation Outcome
 - Adaptation Outcome ≠ Adaptation Feedback
-- Adaptation Feedback ≠ Adaptation Truth
+- Adaptation Feedback ≠ Adaptation Evaluation
+- Adaptation Evaluation ≠ Adaptation Truth
 - Result Fingerprint ≠ Truth
 - Feedback ≠ Authorization
-- Feedback ≠ Retry Authorization
-- Feedback ≠ Revocation
-- Feedback ≠ Memory Mutation
+- Evaluation ≠ Authorization
+- Evaluation ≠ Retry Authorization
+- Evaluation ≠ Revocation
+- Evaluation ≠ Memory Mutation
 - Completion ≠ Certainty
 - Evidence ≠ Truth
 - Learning ≠ Authority
@@ -368,13 +373,13 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.28 Adaptation Outcome → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+**Current milestone:** M22.29 Adaptation Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-**Current branch:** `feature/m22.28-adaptation-outcome-feedback`
+**Current branch:** `feature/m22.29-adaptation-feedback-evaluation`
 
-**Latest verified milestone:** M22.27 — 515/515 (13 focused + 502 core regression)
+**Latest verified milestone:** M22.28 — 515/515 (13 focused + 502 core regression)
 
 **Learning/adaptation pipeline:**
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Future Adaptation Evaluation → Learning State / Memory`
+`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Evaluation → Learning State / Memory`
 
-**Next milestone:** derive from the live repository after M22.28 verification; do not guess it from memory.
+**Next milestone:** derive from the live repository after M22.29 verification; do not guess it from memory.
