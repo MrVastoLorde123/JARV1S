@@ -268,10 +268,49 @@ Capability ≠ Permission
 
 M22.3 does not execute capabilities, grant permission, create authorization, infer trust from lifecycle state, infer authorization from `ACTIVE`, select workers, mutate policy, automatically replace versions, or delete retired history.
 
+### M22.4 — Capability Permission / Policy Binding
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+
+M22.4 establishes immutable declarative permission/policy bindings for capabilities and optionally specific capability versions. A binding records whether a named permission is allowed or denied under a policy; it does not authorize an invocation.
+
+```text
+Capability Descriptor
+        ↓
+Provenance / Trust
+        ↓
+Version / Lifecycle
+        ↓
+Permission Binding
+        ↓
+Policy Context
+        ↓
+Validation / Policy Decision
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution
+```
+
+Boundary walls:
+
+```text
+Permission Binding ≠ Authorization
+Policy ≠ Authorization
+ALLOW ≠ Authorized
+DENY ≠ Execution Cancellation
+Active ≠ Permission
+Latest ≠ Authorized
+Trust ≠ Permission
+Permission ≠ Execution
+```
+
+M22.4 does not authorize invocations, confirm user intent, execute capabilities, select workers, mutate policy, infer trust from permission, or convert an `ALLOW` binding into an execution request.
+
 ### Future M22 boundaries
 
 ```text
-M22.4 Capability Permission / Policy Binding
 M22.5 Plugin Isolation / Execution Sandbox
 M22.6 Capability Discovery + Selection Integration
 ```
