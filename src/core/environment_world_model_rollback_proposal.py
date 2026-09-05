@@ -45,14 +45,16 @@ class EnvironmentWorldModelRollbackProposal:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        if self.current_model_id == self.target_model_id:
-            raise ValueError("current and target model identities must differ")
         if self.recommendation not in {"ROLLBACK", "NO_ROLLBACK"}:
             raise ValueError("recommendation must be ROLLBACK or NO_ROLLBACK")
         if not isinstance(self.reasons, Mapping):
             raise TypeError("reasons must be a mapping")
         if not isinstance(self.lineage, Mapping):
             raise TypeError("lineage must be a mapping")
+        if self.recommendation == "ROLLBACK" and self.current_model_id == self.target_model_id:
+            raise ValueError("rollback recommendation requires different current and target model identities")
+        if self.recommendation == "NO_ROLLBACK" and self.current_model_id != self.target_model_id:
+            raise ValueError("no-rollback recommendation requires identical current and target model identities")
         object.__setattr__(self, "reasons", _freeze(self.reasons))
         object.__setattr__(self, "lineage", _freeze(self.lineage))
 
