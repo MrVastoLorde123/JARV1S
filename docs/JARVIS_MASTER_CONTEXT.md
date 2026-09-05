@@ -29,7 +29,7 @@ Execution:
 `Reasoning → Interpretation → Prioritization → Proposal → Validation → Policy → Confirmation → Confirmation Integrity → Authorization → Authorization Integrity → Sandbox Admission → Execution Preparation/Handoff → Execution Attempt → Outcome`
 
 Learning/adaptation:
-`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal`
+`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal Admission`
 
 The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, result integrity, feedback, and evaluation.
 
@@ -52,9 +52,10 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is resolve
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.47 — VERIFIED / COMPLETE.
+M22.1–M22.48 — VERIFIED / COMPLETE.
 
 Recent receipts:
+- M22.48: 17/17 focused + 502/502 core = **519/519**
 - M22.47: 16/16 focused + 502/502 core = **518/518**
 - M22.46: 15/15 focused + 502/502 core = **517/517**
 - M22.45: 13/13 focused + 502/502 core = **515/515**
@@ -73,7 +74,7 @@ M22.34: 13/13 + 502/502 = 515/515.
 
 ## 6. Current milestone
 
-**M22.48 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.48 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission — VERIFIED / COMPLETE.**
 
 Branch:
 `feature/m22.48-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission`
@@ -84,7 +85,10 @@ Parent:
 Parent receipt:
 M22.47 = **16/16 focused + 502/502 core = 518/518**.
 
-PR: pending creation after remote implementation is staged.
+PR: #191, open and unmerged.
+
+M22.48 receipt:
+**17/17 focused + 502/502 core = 519/519, all passing.**
 
 ## 7. Recent contracts
 
@@ -128,6 +132,19 @@ M22.47 remains non-authorizing. The proposal cannot execute, authorize, request 
 
 M22.47 is verified and remains proposal evidence only.
 
+### M22.48 — Proposal → Admission
+`LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionService` consumes exactly one M22.47 proposal artifact and produces one immutable `ADMITTED` or `REJECTED` admission artifact.
+
+The deterministic baseline rejects unsupported proposal kinds, non-accept actions, confidence below `0.5`, and empty payload/evidence/provenance; otherwise it admits. The provider is replaceable while the service validates returned type and full proposal lineage.
+
+The admission preserves M22.47 proposal identity and the full known upstream lineage. `source_policy_id` preserves the M22.47 proposal policy while the new `policy_id` identifies the M22.48 admission policy. `admission_id` is deterministic and distinct from upstream proposal, decision, evaluation, feedback, and execution identities.
+
+Payload/evidence/provenance/metadata are recursively immutable, confidence remains bounded to [0,1], and the admission authority wall hard-fails any attempt to authorize execution, request execution, request retry, revoke, mutate memory, or grant general authority. M22.48 does not establish adaptation truth.
+
+M22.48 uses the dedicated `..._evaluation_decision_proposal_admission.py` namespace; M22.37 remains unchanged.
+
+M22.48 is **VERIFIED / COMPLETE: 17/17 focused + 502/502 core = 519/519**.
+
 ## 8. Authority walls
 
 - Execution ≠ Result Integrity
@@ -152,13 +169,15 @@ M22.46 additionally cannot authorize execution, request execution, request retry
 
 M22.47 additionally cannot execute, authorize, request execution, retry, revoke, mutate memory, grant authority, or establish adaptation truth.
 
+M22.48 additionally cannot authorize execution, request execution, request retry, request revocation, mutate memory, grant general authority, or establish adaptation truth.
+
 ## 9. M22.48 contract
 
 M22.48 consumes exactly one M22.47 proposal artifact and produces an immutable admission artifact.
 
-Admission validates the exact proposal type, action/status compatibility, complete proposal lineage, and required non-empty payload/evidence/provenance. It emits an explicit `ADMITTED` or `REJECTED` status through a provider-neutral admission interface.
+Admission validates the exact proposal type, accepted proposal kind/action, complete known lineage, bounded confidence, and required non-empty payload/evidence/provenance. It emits an explicit `ADMITTED` or `REJECTED` status through a provider-neutral admission interface.
 
-The admission artifact preserves the complete known M22.47 lineage, including proposal identity, upstream M22.46 decision/evaluation identities, feedback/outcome/execution/preparation/admission/proposal identities, source identities, domain, source policy, proposal policy, and admission policy.
+The admission preserves the complete known M22.47 lineage, including proposal identity, upstream M22.46 decision/evaluation identities, feedback/outcome/execution/preparation/admission/proposal identities, source identities, domain, source policy, and proposal/admission policy identities.
 
 Admission receives its own deterministic identity distinct from proposal/decision/evaluation/feedback/execution identities. Confidence remains bounded to [0,1], nested payload/evidence/provenance remain recursively immutable, and provider output identity is validated by the service.
 
@@ -192,13 +211,13 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.48 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.48 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission — VERIFIED / COMPLETE.
 
 **Current branch:** `feature/m22.48-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission`
 
-**Latest verified milestone:** M22.47 — 518/518 (16 focused + 502 core regression).
+**Latest verified milestone:** M22.48 — 519/519 (17 focused + 502 core regression).
 
-**Active boundary:** Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission.
+**Active boundary:** Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision Proposal → Admission is complete; next milestone must be derived from the live repository before implementation begins.
 
 **M22.48 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation_decision_proposal_admission.py`.
 
@@ -206,4 +225,4 @@ No merge is performed unless explicitly requested.
 
 **Known namespace rule:** M22.37's `learning_write_adaptation_evaluation_execution_feedback_evaluation.py` remains unchanged. M22.45, M22.46, M22.47, and M22.48 use dedicated result-integrity-feedback evaluation/decision/proposal/admission namespaces to preserve historical import contracts and prevent circular imports.
 
-**Next action:** run the dedicated M22.48 focused suite and core regression locally. Do not merge.
+**Next action:** derive M22.49 from the live repository state and establish its smallest explicit contract before implementation. Do not merge.
