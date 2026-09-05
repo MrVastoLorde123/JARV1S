@@ -135,25 +135,22 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityTests(uni
                 proposal_id="proposal-1", decision_id="decision-1", evaluation_id="evaluation-1",
                 decision_source_evaluation_id="historical-evaluation-1", feedback_id="feedback-1",
                 source_feedback_id="source-feedback-1", candidate_id="candidate-1",
-                source_candidate_id="source-candidate-1", execution_source_id="execution-source-1",
-                source_execution_id="source-execution-1", source_admission_id="source-admission-1",
-                proposal_source_id="source-proposal-1", domain="semantic", source_policy_id="source-policy-1",
-                policy_id="policy-1", status=LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus.SUCCEEDED,
+                source_candidate_id="source-candidate-1", execution_source_id="source-execution-1",
+                source_admission_id="source-admission-1", proposal_source_id="source-proposal-1",
+                domain="semantic", source_policy_id="source-policy-1", policy_id="policy-1",
+                status=LearningWriteAdaptationEvaluationExecutionFeedbackOutcomeStatus.SUCCEEDED,
                 result_fingerprint="fp", reason="bad",
             )
 
-    def test_failed_cannot_have_fingerprint(self) -> None:
-        with self.assertRaises(LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityError):
-            self.service.interpret(
-                self._result(
-                    status=LearningWriteAdaptationEvaluationExecutionFeedbackExecutionStatus.FAILED,
-                    execution_result=None,
-                    reason="failed",
-                ).__class__(
-                    **{**self._result(status=LearningWriteAdaptationEvaluationExecutionFeedbackExecutionStatus.FAILED, execution_result=None, reason="failed").__dict__, "execution_result": None}
-                ),
-                self.request,
-            )
+    def test_failed_outcome_has_no_fingerprint(self) -> None:
+        result = self._result(
+            status=LearningWriteAdaptationEvaluationExecutionFeedbackExecutionStatus.FAILED,
+            execution_result=None,
+            reason="failed",
+        )
+        outcome = self.service.interpret(result, self.request)
+        self.assertIsNone(outcome.result_fingerprint)
+        self.assertEqual(outcome.reason, "failed")
 
     def test_to_context_preserves_integrity_wall(self) -> None:
         outcome = self.service.interpret(self._result(), self.request)
