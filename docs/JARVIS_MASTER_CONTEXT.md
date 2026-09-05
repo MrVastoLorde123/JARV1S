@@ -149,6 +149,7 @@ Current milestone branch:
 `feature/m22.31-adaptation-evaluation-proposal`
 
 Latest verified local receipts:
+- **M22.31:** 12/12 focused + 502/502 core regression = **514/514**
 - **M22.30:** 12/12 focused + 502/502 core regression = **514/514**
 - **M22.29:** 11/11 focused + 502/502 core regression = **513/513**
 - **M22.28:** 13/13 focused + 502/502 core regression = **515/515**
@@ -180,7 +181,7 @@ Previous verified checkpoints:
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.30 — VERIFIED / COMPLETE.
+M22.1–M22.31 — VERIFIED / COMPLETE.
 
 M22.1 Capability / Plugin Contract + Registry — VERIFIED / COMPLETE.
 M22.2 Trust / Provenance — VERIFIED / COMPLETE.
@@ -212,7 +213,8 @@ M22.27 Adaptation Execution Outcome / Result Integrity — VERIFIED / COMPLETE (
 M22.28 Adaptation Outcome → Feedback — VERIFIED / COMPLETE (515/515).
 M22.29 Adaptation Feedback → Evaluation — VERIFIED / COMPLETE (513/513).
 M22.30 Adaptation Evaluation → Decision — VERIFIED / COMPLETE (514/514).
-**M22.31 Adaptation Evaluation → Proposal — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+M22.31 Adaptation Evaluation → Proposal — VERIFIED / COMPLETE (12/12 focused + 502/502 core = 514/514).
+**M22.32 Adaptation Evaluation Proposal → Admission — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -221,22 +223,21 @@ M22.15–M22.21 establish inert learning-write candidate, decision, proposal, ad
 M22.22 converts learning-write feedback into an immutable adaptation candidate. M22.23 makes an explicit adaptation decision. M22.24 creates an inert adaptation proposal. M22.25 admits/rejects it before execution. M22.26 executes only admitted proposals. M22.27 normalizes execution results and fingerprints successful results. M22.28 converts outcome into inert feedback. M22.29 converts adaptation feedback into immutable evaluation evidence. M22.30 converts that evaluation into a non-authorizing decision.
 
 ### M22.31 — Adaptation Evaluation → Proposal
-`LearningWriteAdaptationEvaluationProposalService` converts only an accepted adaptation-evaluation decision plus a non-empty proposal payload into an immutable downstream proposal. Deferred or rejected decisions produce no proposal. Proposal, evidence, and provenance are recursively frozen, confidence remains bounded to `[0.0, 1.0]`, deterministic proposal IDs are generated, and exact evaluation/feedback/source-feedback/adaptation-candidate/source-candidate/execution/admission/proposal/domain lineage is preserved.
+`LearningWriteAdaptationEvaluationProposalService` converts only an accepted adaptation-evaluation decision plus a non-empty proposal payload into an immutable downstream proposal. Deferred or rejected decisions produce no proposal. Proposal, evidence, and provenance are recursively frozen, confidence remains bounded to `[0.0, 1.0]`, deterministic proposal IDs are generated, and exact evaluation/feedback/source-feedback/adaptation-candidate/source-candidate/execution/admission/proposal/domain lineage is preserved. The new proposal receives its own deterministic `proposal_id`; the upstream `decision.proposal_id` remains lineage.
 
 M22.31 is an explicit inert proposal boundary. It prepares downstream admission; it does not admit, authorize, execute, retry, revoke, or mutate memory.
 
+### M22.32 — Adaptation Evaluation Proposal → Admission
+M22.32 must evaluate an M22.31 proposal before any downstream execution or mutation. Admission must remain a separate boundary from proposal and authorization, preserve exact proposal/evaluation/feedback/source-feedback/adaptation-candidate/source-candidate/execution/admission/domain lineage, validate proposal evidence/provenance/confidence, and produce an explicit admitted/rejected result without execution or memory mutation.
+
 Walls:
-- Adaptation Execution Result ≠ Adaptation Outcome
-- Adaptation Outcome ≠ Adaptation Feedback
-- Adaptation Feedback ≠ Adaptation Evaluation
-- Adaptation Evaluation ≠ Adaptation Evaluation Decision
 - Adaptation Evaluation Decision ≠ Adaptation Evaluation Proposal
 - Proposal ≠ Admission
-- Proposal ≠ Authorization
-- Proposal ≠ Execution
-- Proposal ≠ Retry Authorization
-- Proposal ≠ Revocation
-- Proposal ≠ Memory Mutation
+- Admission ≠ Authorization
+- Admission ≠ Execution
+- Admission ≠ Retry Authorization
+- Admission ≠ Revocation
+- Admission ≠ Memory Mutation
 - Adaptation Evaluation ≠ Adaptation Truth
 - Result Fingerprint ≠ Truth
 - Completion ≠ Certainty
@@ -350,13 +351,13 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.31 Adaptation Evaluation → Proposal — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+**Current milestone:** M22.32 Adaptation Evaluation Proposal → Admission — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-**Current branch:** `feature/m22.31-adaptation-evaluation-proposal`
+**Current branch:** `feature/m22.32-adaptation-evaluation-proposal-admission`
 
-**Latest verified milestone:** M22.30 — 514/514 (12 focused + 502 core regression)
+**Latest verified milestone:** M22.31 — 514/514 (12 focused + 502 core regression)
 
 **Learning/adaptation pipeline:**
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Future Adaptation Proposal / Admission → Learning State / Memory`
+`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution → Learning State / Memory`
 
-**Next milestone:** derive from the live repository after M22.31 verification; do not guess it from memory.
+**Next milestone:** derive from the live repository after M22.32 verification; do not guess it from memory.
