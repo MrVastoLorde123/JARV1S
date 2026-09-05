@@ -268,15 +268,99 @@ Capability ≠ Permission
 
 M22.3 does not execute capabilities, grant permission, create authorization, infer trust from lifecycle state, infer authorization from `ACTIVE`, select workers, mutate policy, automatically replace versions, or delete retired history.
 
-### Future M22 boundaries
+### M22.4 — Capability Permission / Policy Binding
+**Status: VERIFIED / COMPLETE.**
+
+M22.4 establishes immutable declarative permission/policy bindings for capabilities and optionally specific capability versions. A binding records whether a named permission is allowed or denied under a policy; it does not authorize an invocation.
 
 ```text
-M22.4 Capability Permission / Policy Binding
-M22.5 Plugin Isolation / Execution Sandbox
+Capability Descriptor
+        ↓
+Provenance / Trust
+        ↓
+Version / Lifecycle
+        ↓
+Permission Binding
+        ↓
+Policy Context
+        ↓
+Validation / Policy Decision
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Execution
+```
+
+Verified receipt: **9/9 M22.4 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally.**
+
+Boundary walls:
+
+```text
+Permission Binding ≠ Authorization
+Policy ≠ Authorization
+ALLOW ≠ Authorized
+DENY ≠ Execution Cancellation
+Active ≠ Permission
+Latest ≠ Authorized
+Trust ≠ Permission
+Permission ≠ Execution
+```
+
+M22.4 does not authorize invocations, confirm user intent, execute capabilities, select workers, mutate policy, infer trust from permission, or convert an `ALLOW` binding into an execution request.
+
+### M22.5 — Plugin Isolation / Execution Sandbox
+**Status: ACTIVE.**
+
+M22.5 establishes the execution-isolation boundary for plugins/capabilities. Sandbox admission and containment must isolate capability execution from the host process without becoming an authorization mechanism.
+
+Directional boundary:
+
+```text
+Capability Descriptor
+        ↓
+Provenance / Trust
+        ↓
+Version / Lifecycle
+        ↓
+Permission Binding
+        ↓
+Validation / Policy Decision
+        ↓
+Confirmation
+        ↓
+Authorization
+        ↓
+Sandbox Admission / Execution Isolation
+        ↓
+Execution
+        ↓
+Outcome / Feedback
+```
+
+M22.5 preserves these walls:
+
+```text
+Sandbox ≠ Authorization
+Isolation ≠ Trust
+Admission ≠ Permission
+Permission ≠ Execution
+Process Boundary ≠ Authority Boundary
+Containment ≠ Cancellation
+Capability ≠ Worker
+Plugin ≠ JARVIS
+```
+
+M22.5 begins with inspectable sandbox metadata and explicit admission/containment contracts. Real plugin execution is outside the initial boundary until those contracts are defined and verified.
+
+### Future M22 boundary
+
+```text
 M22.6 Capability Discovery + Selection Integration
 ```
 
-These remain directional until implemented and locally verified.
+This remains directional until implemented and locally verified.
 
 ## Cross-cutting cognitive architecture
 

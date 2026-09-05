@@ -8,6 +8,12 @@ from .lifecycle import (
     LifecycleStatus,
     SemanticVersion,
 )
+from .policy import (
+    CapabilityPermissionBinding,
+    CapabilityPolicyBindingRegistry,
+    CapabilityPolicyError,
+    PermissionEffect,
+)
 from .trust import (
     CapabilityProvenance,
     CapabilityTrustAssessment,
@@ -25,6 +31,10 @@ __all__ = [
     "CapabilityVersion",
     "LifecycleStatus",
     "SemanticVersion",
+    "CapabilityPermissionBinding",
+    "CapabilityPolicyBindingRegistry",
+    "CapabilityPolicyError",
+    "PermissionEffect",
     "CapabilityProvenance",
     "CapabilityTrustAssessment",
     "CapabilityTrustError",
