@@ -19,12 +19,12 @@ from src.tools.learning_write_outcome import LearningWriteOutcomeStatus
 
 class LearningWriteFeedbackEvaluationTests(unittest.TestCase):
     def setUp(self) -> None:
-        outcome = self._outcome(LearningWriteOutcomeStatus.SUCCEEDED)
+        outcome = self._build_outcome(LearningWriteOutcomeStatus.SUCCEEDED)
         self.feedback = LearningWriteFeedbackService().from_outcome(outcome)
         self.service = LearningWriteFeedbackEvaluationService()
 
     @staticmethod
-    def _outcome(status: LearningWriteOutcomeStatus):
+    def _build_outcome(status: LearningWriteOutcomeStatus):
         from src.tools.learning_write_outcome import LearningWriteOutcome
 
         common = dict(
@@ -54,7 +54,7 @@ class LearningWriteFeedbackEvaluationTests(unittest.TestCase):
 
     def test_failure_feedback_becomes_failure_signal(self) -> None:
         feedback = LearningWriteFeedbackService().from_outcome(
-            self._outcome(LearningWriteOutcomeStatus.FAILED)
+            self._build_outcome(LearningWriteOutcomeStatus.FAILED)
         )
         candidate = self.service.evaluate(feedback)
         self.assertEqual(
