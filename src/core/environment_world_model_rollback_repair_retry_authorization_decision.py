@@ -8,6 +8,7 @@ mutate persistence/history.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -32,6 +33,13 @@ def _freeze(value: Any) -> Any:
     return value
 
 
+def _validate_aware_datetime(value: datetime, name: str) -> None:
+    if not isinstance(value, datetime):
+        raise TypeError(f"{name} must be a datetime")
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{name} must be timezone-aware")
+
+
 @dataclass(frozen=True)
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecision:
     """Immutable authorization decision evidence derived from one proposal."""
@@ -44,6 +52,9 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecision:
     expected_model_id: str
     observed_model_id: str
     requested_action: str
+    eligible: bool
+    evaluated_at: datetime
+    next_eligible_at: datetime | None
     decision: str
     reasons: Mapping[str, str] = field(default_factory=dict)
     lineage: Mapping[str, Any] = field(default_factory=dict)
@@ -65,8 +76,13 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecision:
                 raise ValueError(f"{name} must be a non-empty string")
         if self.requested_action not in {"RETRY_REPAIR", "NO_AUTHORIZATION"}:
             raise ValueError("requested_action must be RETRY_REPAIR or NO_AUTHORIZATION")
+        if not isinstance(self.eligible, bool):
+            raise TypeError("eligible must be a boolean")
         if self.decision not in {"ACCEPT", "REJECT", "DEFER"}:
             raise ValueError("decision must be ACCEPT, REJECT, or DEFER")
+        _validate_aware_datetime(self.evaluated_at, "evaluated_at")
+        if self.next_eligible_at is not None:
+            _validate_aware_datetime(self.next_eligible_at, "next_eligible_at")
         if not isinstance(self.reasons, Mapping):
             raise TypeError("reasons must be a mapping")
         if not isinstance(self.lineage, Mapping):
@@ -123,6 +139,9 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionService:
             expected_model_id=proposal.expected_model_id,
             observed_model_id=proposal.observed_model_id,
             requested_action=proposal.requested_action,
+            eligible=proposal.eligible,
+            evaluated_at=proposal.evaluated_at,
+            next_eligible_at=proposal.next_eligible_at,
             decision=decision,
             reasons=reasons or {"status": default_reason},
             lineage=lineage
