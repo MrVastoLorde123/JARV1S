@@ -71,6 +71,8 @@ Value Assessment
 ↓
 Information Gain / Uncertainty Reduction
 ↓
+Bounded Scheduling / Notification Proposal
+↓
 Prioritization
 ↓
 Validation / Policy
@@ -91,12 +93,13 @@ Outcome / Feedback
 - M21.1 Proactive Initiative Boundary — VERIFIED / COMPLETE (11/11 focused + 487/487 core)
 - M21.2 Proactive Proposal Boundary — VERIFIED / COMPLETE (8/8 focused + 11/11 initiative + 487/487 core)
 - M21.3 Proactive Value Assessment — VERIFIED / COMPLETE (7/7 focused + 8/8 proposal + 11/11 initiative + 487/487 core)
-- M21.4 Information Gain / Uncertainty Reduction — IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M21.4 Information Gain / Uncertainty Reduction — VERIFIED / COMPLETE (7/7 focused + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
+- M21.5 Bounded Proactive Scheduling / Notification — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## M21.3 verified semantics
 Bounded deterministic advisory scoring uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version is `linear-v1`; score is bounded to [0, 1]; ranking is deterministic by score descending and proposal identity ascending. Value assessment grants no authority and performs no scheduling, notification, assignment, or execution.
 
-## M21.4 boundary
+## M21.4 verified semantics
 M21.4 estimates expected uncertainty reduction from additional information using bounded factors:
 - current uncertainty
 - expected reduction
@@ -117,11 +120,36 @@ Boundary walls:
 - High Information Gain ≠ Authorization
 - Ranking ≠ Scheduling
 
+## M21.5 boundary
+M21.5 may represent an advisory recommendation for when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry or deliver a notification.
+
+Current bounded contract:
+- `ProactiveScheduleProposal` is immutable advisory metadata.
+- `SchedulingEvaluation` distinguishes `PROPOSED`, `NEEDS_REVIEW`, and `NOT_SCHEDULABLE`.
+- Time values must be timezone-aware.
+- Notification channels are explicit and require a message when selected.
+- Expiry cannot precede the proposed schedule time.
+- Mapping identity must match the represented proposal identity.
+- Ranking is deterministic by proposed time, then proposal identity.
+- Context explicitly reports `scheduled=False` and `notification_sent=False`.
+
+M21.5 authority walls:
+- Scheduling Proposal ≠ Scheduling
+- Notification Recommendation ≠ Notification Delivery
+- Timing ≠ Authorization
+- Reminder Need ≠ User Intent
+- Scheduling ≠ Permission
+- Notification ≠ Execution
+- Initiative ≠ Authorization
+
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
 
 ## Memory taxonomy
 `PERSONAL, SKILL, PREFERENCE, PROJECT, GOAL, FACT, WORKFLOW, RELATIONSHIP, EXPERIENCE, OTHER`
+
+## GitHub session protocol
+Every GitHub engineering session begins by reading this file from the current working branch/ref. Before moving to the next milestone, update this file with the newest verified receipt, implementation state, architecture boundary, and next active milestone. Never assume a remembered milestone state is newer than this repository ledger.
 
 ## Verification rule
 A milestone is not considered GREEN / VERIFIED / COMPLETE until the user provides the local test receipt. Remote implementation status is kept distinct from local verification status.
