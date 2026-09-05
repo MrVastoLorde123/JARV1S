@@ -224,7 +224,7 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultInteg
             source_execution_id=proposal.source_execution_id,
             source_admission_id=proposal.admission_id,
             domain=proposal.domain,
-            source_policy_id=proposal.source_policy_id,
+            source_policy_id=proposal.policy_id,
             policy_id=self._POLICY_ID,
             status=status,
             reason=reason,
@@ -251,7 +251,7 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultInteg
 
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionService:
     def __init__(self, provider: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider | None = None) -> None:
-        self._provider = provider or DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider()
+        self._provider = provider or LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider()
 
     def admit(self, context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
         if not isinstance(context, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext):
