@@ -55,9 +55,10 @@ Regression command:
 python -m unittest discover -s src\core -p "test*.py"
 ```
 
-Parent M22.30 is awaiting/expected local verification from the preceding receipt chain.
-M22.29 is locally verified:
+Parent M22.30 is locally verified:
 
-- 11/11 focused
+- 12/12 focused
 - 502/502 core regression
-- 513/513 total
+- 514/514 total
+
+M22.31 awaits its own local focused and regression receipt.
