@@ -101,7 +101,8 @@ Outcome / Feedback
 - M21.5 Bounded Proactive Scheduling / Notification — VERIFIED / COMPLETE (9/9 focused + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
 - M21.6 Proactive Runtime / Feedback Integration — VERIFIED / COMPLETE (10/10 runtime + 9/9 scheduling + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
 - M22 Capability / Plugin Ecosystem — ACTIVE
-- M22.1 Capability / Plugin Contract + Registry Boundary — IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.1 Capability / Plugin Contract + Registry Boundary — VERIFIED / COMPLETE (8/8 focused + 487/487 core)
+- M22.2 Capability Trust / Provenance Boundary — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## M21.3 verified semantics
 Bounded deterministic advisory scoring uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version is `linear-v1`; score is bounded to [0, 1]; ranking is deterministic by score descending and proposal identity ascending. Value assessment grants no authority and performs no scheduling, notification, assignment, or execution.
@@ -142,39 +143,19 @@ Current bounded contract:
 - Inactive source proposals are not schedulable.
 - Context explicitly reports `scheduled=False` and `notification_sent=False`.
 
-M21.5 authority walls:
-- Scheduling Proposal ≠ Scheduling
-- Notification Recommendation ≠ Notification Delivery
-- Timing ≠ Authorization
-- Reminder Need ≠ User Intent
-- Scheduling ≠ Permission
-- Notification ≠ Execution
-- Initiative ≠ Authorization
-
 ## M21.6 verified semantics
 M21.6 composes bounded proactive outputs into one inspectable immutable runtime result and records outcome/feedback signals for later learning. It preserves initiative, proposal, value, information-gain, scheduling, and feedback identity; missing/non-eligible proposal state or non-proposed scheduling remains `NEEDS_REVIEW`.
 
 Current bounded contract:
 - `ProactiveFeedback` is immutable outcome metadata for an observed or not-observed result.
 - `FeedbackOutcome` is bounded to `NOT_OBSERVED`, `ACCEPTED`, `DECLINED`, `EXPIRED`, `SUPERSEDED`, and `FAILED`.
-- `ProactiveRuntimeResult` composes the M21 proactive stages into one inspectable immutable result.
+- `ProactiveRuntimeResult` composes the M21 proactive stages into one inspectable immutable runtime result.
 - All participating identities must agree on `proposal_id`; initiative candidate/trigger identity is preserved.
 - Feedback cannot grant authority or mutate policy.
 - Runtime context explicitly reports `authority_granted=False`, `authorization_granted=False`, `execution_requested=False`, and `executed=False`.
 - Runtime ranking is deterministic by combined advisory value + information-gain score, then proposal identity.
 
-M21.6 authority walls:
-- Runtime Integration ≠ Authorization
-- Feedback ≠ Truth
-- Outcome ≠ User Intent
-- Learning Signal ≠ Policy Change
-- Recommendation ≠ Execution
-- Recovery ≠ Execution
-- Integration ≠ Authority Escalation
-
-M21.6 does not confirm user intent, schedule or dispatch work, deliver notifications, assign workers, invoke plugins/capabilities, mutate policy, infer truth from feedback, or execute actions.
-
-## M22.1 boundary
+## M22.1 verified semantics
 M22.1 establishes the foundational contract and registry boundary for the plugin/capability ecosystem. A capability is a discoverable contract, not permission to invoke it.
 
 Current bounded contract:
@@ -186,6 +167,8 @@ Current bounded contract:
 - Registration does not grant authorization, permission, trust, execution rights, or policy authority.
 - Descriptor metadata is declarative; executable behavior remains outside the registry boundary.
 
+M22.1 verification receipt: **8/8 focused + 487/487 core tests passed locally.**
+
 M22.1 authority walls:
 - Plugin ≠ JARVIS
 - Capability ≠ Permission
@@ -196,6 +179,30 @@ M22.1 authority walls:
 - Metadata ≠ Execution Request
 
 M22.1 remains discovery/registry-only. Existing validation, policy, confirmation, authorization, and execution boundaries remain the only route to actual capability invocation.
+
+## M22.2 boundary
+M22.2 establishes the bounded provenance and trust-assessment layer for capabilities. Provenance records origin and supporting evidence; trust records an evidence-linked assessment. Neither creates permission or authorization.
+
+Current bounded contract:
+- `ProvenanceEvidence` is immutable structured evidence for provenance/trust claims.
+- `CapabilityProvenance` is an immutable origin record bound to a capability identity.
+- `CapabilityTrustAssessment` is immutable, evidence-linked metadata with bounded confidence in `[0, 1]`.
+- `TrustStatus` is bounded to `UNASSESSED`, `CONDITIONAL`, `TRUSTED`, and `UNTRUSTED`.
+- `UNASSESSED` must have zero confidence.
+- Trust assessments must validate against matching capability identity.
+- Provenance and trust context explicitly report no authority, permission, authorization, or execution request.
+
+M22.2 authority walls:
+- Provenance ≠ Trust
+- Trust ≠ Permission
+- Trust ≠ Authorization
+- Evidence ≠ Truth
+- Confidence ≠ Certainty
+- Assessment ≠ Execution
+- Capability ≠ Permission
+- Registration ≠ Trust
+
+M22.2 does not execute capabilities, grant permission, create authorization, infer execution authority from trust, mutate policy, schedule, notify, assign workers, or treat provenance as proof of truth.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
