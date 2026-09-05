@@ -44,6 +44,8 @@ Authorization Integrity
 Sandbox Admission
 ↓
 Execution Preparation / Handoff
+↓
+Execution
 ```
 
 Identity chain:
@@ -113,10 +115,37 @@ Outcome / Feedback
 - M22.8 Explicit Authorization Boundary — VERIFIED / COMPLETE (9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression)
 - M22.9 Authorization Integrity — VERIFIED / COMPLETE (9/9 integrity + 3/3 integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 544/544)
 - M22.10 Sandbox Admission Integration — VERIFIED / COMPLETE (9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 558/558)
-- M22.11 Execution Preparation / Handoff Boundary — ACTIVE
+- M22.11 Execution Preparation / Handoff Boundary — VERIFIED / COMPLETE (9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 571/571)
+- M22.12 Execution Attempt / Worker Boundary — ACTIVE
 
-## M22.11 direction
-M22.11 establishes the final non-executing boundary immediately before tool execution. A request may reach execution preparation only after authorization, authorization integrity, and sandbox admission all succeed. The preparation artifact should preserve exact request identity plus upstream decision identities and sandbox identity, remain immutable and inspectable, and explicitly stop short of worker assignment, containment activation, process launch, or plugin execution.
+## M22.12 direction
+M22.12 is the next execution boundary after the inert `ExecutionHandoff`. It should introduce a provider-neutral execution-attempt contract that accepts only a valid handoff artifact and records an explicit execution identity and lifecycle outcome without granting authority, bypassing `PolicyGate`, or conflating attempt initiation with successful completion. Worker/process assignment and real external execution should remain bounded behind a replaceable executor contract and explicit safety checks.
+
+Directional boundary:
+```text
+ExecutionHandoff
+↓
+Execution Attempt / Worker Boundary
+↓
+Execution
+↓
+Outcome
+```
+
+M22.12 authority walls:
+- Execution Preparation ≠ Execution Attempt
+- Execution Attempt ≠ Successful Outcome
+- Execution Attempt ≠ Worker Identity
+- Worker Assignment ≠ Authorization
+- Execution Attempt ≠ Capability Permission
+- Outcome ≠ Authorization
+
+M22.12 should not silently bypass `PolicyGate`, re-authorize requests from scratch, mutate the original handoff, grant permissions, or collapse execution attempt, worker assignment, and outcome into one undifferentiated operation.
+
+## M22.11 verified semantics
+M22.11 establishes the final non-executing boundary immediately before tool execution. A request may reach execution preparation only after authorization, authorization integrity, and sandbox admission all succeed. The immutable `ExecutionHandoff` preserves request identity, upstream evidence, sandbox identity, and arguments while remaining explicitly non-executing.
+
+M22.11 verification receipt: **9/9 execution preparation + 4/4 execution preparation gate + 9/9 sandbox admission + 5/5 sandbox admission gate + 9/9 authorization integrity + 3/3 authorization integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression tests passed locally = 571/571.**
 
 Directional boundary:
 ```text
@@ -148,7 +177,7 @@ M22.11 authority walls:
 - Upstream authorization evidence ≠ fresh authorization
 - Preparation ≠ permission escalation
 
-M22.11 should not introduce process spawning, worker allocation, sandbox activation, plugin execution, durable authorization storage, revocation/expiration, or an alternate bypass around `PolicyGate`.
+M22.11 does not introduce process spawning, worker allocation, sandbox activation, plugin execution, durable authorization storage, revocation/expiration, or an alternate bypass around `PolicyGate`.
 
 ## M22.10 verified semantics
 M22.10 integrates the existing sandbox admission contract into the post-authorization path. A granted, integrity-verified request must resolve to an explicit sandbox profile and pass deterministic sandbox admission before execution can be delegated. Admission remains metadata-only: it does not grant authorization, activate containment, launch a worker, or execute a plugin.
