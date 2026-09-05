@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from types import MappingProxyType
 from typing import Any, Mapping
 
 from src.core.environment_observation import EnvironmentObservation
@@ -12,7 +13,7 @@ from src.core.environment_observation_aggregation import EnvironmentObservationA
 
 def _freeze(value: Any) -> Any:
     if isinstance(value, Mapping):
-        return tuple(sorted((str(key), _freeze(item)) for key, item in value.items()))
+        return MappingProxyType({str(key): _freeze(item) for key, item in value.items()})
     if isinstance(value, list):
         return tuple(_freeze(item) for item in value)
     if isinstance(value, tuple):
