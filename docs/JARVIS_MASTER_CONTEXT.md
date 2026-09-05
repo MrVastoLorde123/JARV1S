@@ -163,6 +163,7 @@ Current milestone branch:
 `feature/m22.39-adaptation-evaluation-execution-feedback-proposal`
 
 Latest verified local receipts:
+- **M22.39:** 15/15 focused + 502/502 core regression = **517/517**
 - **M22.38:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.37:** 12/12 focused + 502/502 core regression = **514/514**
 - **M22.36:** 14/14 focused + 502/502 core regression = **516/516**
@@ -182,14 +183,15 @@ Previous verified checkpoints remain recorded below.
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.38 — VERIFIED / COMPLETE.
+M22.1–M22.39 — VERIFIED / COMPLETE.
 
 M22.35 Future Adaptation Execution Result Integrity — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 M22.36 Future Adaptation Execution → Feedback — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 M22.37 Future Adaptation Execution Feedback → Evaluation — VERIFIED / COMPLETE (12/12 focused + 502/502 core = 514/514).
 M22.38 Future Adaptation Execution Feedback → Decision — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515).
+M22.39 Future Adaptation Execution Feedback → Proposal — VERIFIED / COMPLETE (15/15 focused + 502/502 core = 517/517).
 
-**M22.39 Future Adaptation Execution Feedback → Proposal — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.40 Future Adaptation Execution Feedback Proposal → Admission — ACTIVE / NEXT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -214,6 +216,11 @@ Proposal payload, evidence, and provenance are recursively frozen. Proposal conf
 
 The M22.39 proposal is inert. It cannot authorize execution, request execution, retry, revoke, or mutate memory. Downstream admission remains a separate boundary.
 
+### M22.40 — Future Adaptation Execution Feedback Proposal → Admission
+The next boundary is admission of the immutable M22.39 proposal. Admission must remain deterministic and structurally separate from proposal creation: it validates the exact proposal type and required lineage, applies admission policy, and produces an immutable admission artifact without authorizing execution, retry, revocation, or memory mutation.
+
+The admission artifact should preserve the complete proposal lineage and proposal identity, record an explicit admission decision/status and reason, remain recursively immutable, and carry a deterministic admission identity distinct from the proposal identity. Admission is not execution authorization; downstream execution preparation remains a separate boundary.
+
 Walls:
 - Execution ≠ Result Integrity
 - Result Integrity ≠ Feedback
@@ -221,11 +228,11 @@ Walls:
 - Feedback Evaluation ≠ Feedback Evaluation Decision
 - Decision ≠ Proposal
 - Proposal ≠ Admission
-- Proposal ≠ Authorization
-- Proposal ≠ Execution
-- Proposal ≠ Retry
-- Proposal ≠ Revocation
-- Proposal ≠ Memory Mutation
+- Admission ≠ Authorization
+- Admission ≠ Execution
+- Admission ≠ Retry
+- Admission ≠ Revocation
+- Admission ≠ Memory Mutation
 - Evidence ≠ Truth
 - Learning ≠ Authority
 
@@ -336,12 +343,14 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.39 Future Adaptation Execution Feedback → Proposal — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.40 Future Adaptation Execution Feedback Proposal → Admission — ACTIVE / NEXT.
 
 **Current branch:** `feature/m22.39-adaptation-evaluation-execution-feedback-proposal`
 
-**Latest verified milestone:** M22.38 — 515/515 (13 focused + 502 core regression)
+**Latest verified milestone:** M22.39 — 517/517 (15 focused + 502 core regression)
 
-**Active boundary:** Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal.
+**Active boundary:** Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission.
 
-**Next milestone:** derive M22.40 from the live M22.39 proposal artifact after local verification; do not guess.
+**M22.40 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackProposal` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_proposal.py`.
+
+**Next action:** inspect analogous admission contracts in the live repository, then implement M22.40 on a new branch based on M22.39. Do not merge.
