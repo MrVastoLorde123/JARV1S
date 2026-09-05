@@ -65,7 +65,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     execution_source_id: str
     source_execution_id: str
     source_admission_id: str
-    proposal_source_id: str
+    source_proposal_id: str
     domain: str
     source_policy_id: str
     policy_id: str
@@ -81,7 +81,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
             "admission_id", "proposal_id", "decision_id", "evaluation_id_from_feedback",
             "decision_source_evaluation_id", "source_feedback_id", "candidate_id",
             "source_candidate_id", "execution_source_id", "source_execution_id",
-            "source_admission_id", "proposal_source_id", "domain", "source_policy_id",
+            "source_admission_id", "source_proposal_id", "domain", "source_policy_id",
             "policy_id", "reason",
         ):
             value = getattr(self, field_name)
@@ -140,7 +140,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
             "learning_write_adaptation_evaluation_execution_source_id": self.execution_source_id,
             "learning_write_adaptation_source_execution_id": self.source_execution_id,
             "learning_write_adaptation_evaluation_execution_source_admission_id": self.source_admission_id,
-            "learning_write_adaptation_evaluation_proposal_id": self.proposal_source_id,
+            "learning_write_adaptation_evaluation_proposal_id": self.source_proposal_id,
             "learning_write_adaptation_domain": self.domain,
             "learning_write_adaptation_source_policy_id": self.source_policy_id,
             "learning_write_adaptation_evaluation_execution_policy_id": self.policy_id,
@@ -214,7 +214,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
             execution_source_id=feedback.execution_source_id,
             source_execution_id=feedback.source_execution_id,
             source_admission_id=feedback.source_admission_id,
-            proposal_source_id=feedback.source_proposal_id,
+            source_proposal_id=feedback.source_proposal_id,
             domain=feedback.domain,
             source_policy_id=feedback.source_policy_id,
             policy_id=feedback.policy_id,
