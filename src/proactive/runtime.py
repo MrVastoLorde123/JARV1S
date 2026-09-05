@@ -13,8 +13,8 @@ from typing import Mapping
 
 from .information_gain import InformationGainAssessment
 from .initiative import InitiativeCandidate, InitiativeEvaluation
-from .proposal import InitiativeProposal, ProposalEvaluation
-from .scheduling import SchedulingEvaluation
+from .proposal import ProposalEvaluation
+from .scheduling import SchedulingEvaluation, SchedulingStatus
 from .value import ProposalValueAssessment
 
 
@@ -115,23 +115,20 @@ class ProactiveRuntimeResult:
                 object.__setattr__(self, "status", RuntimeStatus(self.status))
             except (TypeError, ValueError) as exc:
                 raise TypeError("status must be a RuntimeStatus") from exc
-        identities = {
-            "initiative": self.initiative.candidate_id,
-            "proposal": self.proposal.proposal.candidate_id if self.proposal.proposal is not None else None,
-            "value": self.value.proposal_id,
-            "information_gain": self.information_gain.proposal_id,
-            "scheduling": self.scheduling.proposal_id,
-            "feedback": self.feedback.proposal_id,
-        }
         if self.proposal.proposal is not None and self.proposal.proposal.proposal_id != self.proposal_id:
             raise ValueError("proposal identity mismatch")
-        for name in ("value", "information_gain", "scheduling", "feedback"):
-            if identities[name] != self.proposal_id:
-                raise ValueError(f"{name}/proposal identity mismatch")
-        if identities["initiative"] != self.proposal.candidate_id:
+        if self.initiative.candidate_id != self.proposal.candidate_id:
             raise ValueError("initiative/proposal candidate identity mismatch")
-        if identities["proposal"] is not None and identities["proposal"] != self.proposal_id:
-            raise ValueError("proposal identity mismatch")
+        if self.initiative.trigger_id != self.proposal.trigger_id:
+            raise ValueError("initiative/proposal trigger identity mismatch")
+        for name, value in (
+            ("value", self.value.proposal_id),
+            ("information_gain", self.information_gain.proposal_id),
+            ("scheduling", self.scheduling.proposal_id),
+            ("feedback", self.feedback.proposal_id),
+        ):
+            if value != self.proposal_id:
+                raise ValueError(f"{name}/proposal identity mismatch")
 
     def to_context(self) -> dict[str, object]:
         return {
@@ -184,13 +181,12 @@ def compose_proactive_runtime(
         raise ValueError("initiative evaluation candidate identity mismatch")
     if initiative_evaluation.trigger_id != initiative.trigger_id:
         raise ValueError("initiative evaluation trigger identity mismatch")
-    if proposal_evaluation.proposal is not None:
-        if proposal_evaluation.proposal.proposal_id != proposal_id:
-            raise ValueError("proposal evaluation identity mismatch")
-        if proposal_evaluation.proposal.candidate_id != initiative.candidate_id:
-            raise ValueError("proposal candidate identity mismatch")
-        if proposal_evaluation.proposal.trigger_id != initiative.trigger_id:
-            raise ValueError("proposal trigger identity mismatch")
+    if proposal_evaluation.candidate_id != initiative.candidate_id:
+        raise ValueError("proposal candidate identity mismatch")
+    if proposal_evaluation.trigger_id != initiative.trigger_id:
+        raise ValueError("proposal trigger identity mismatch")
+    if proposal_evaluation.proposal is not None and proposal_evaluation.proposal.proposal_id != proposal_id:
+        raise ValueError("proposal evaluation identity mismatch")
     if value_assessment.proposal_id != proposal_id:
         raise ValueError("value assessment identity mismatch")
     if information_gain.proposal_id != proposal_id:
@@ -199,23 +195,16 @@ def compose_proactive_runtime(
         raise ValueError("scheduling identity mismatch")
     if feedback.proposal_id != proposal_id:
         raise ValueError("feedback identity mismatch")
-
-    blocking_statuses = {
-        RuntimeStatus.NEEDS_REVIEW,
-        RuntimeStatus.INCOMPLETE,
-    }
-    status = RuntimeStatus.READY
-    if proposal_evaluation.proposal is None:
+    if initiative_evaluation.disposition.value != "ELIGIBLE" or proposal_evaluation.proposal is None:
         status = RuntimeStatus.NEEDS_REVIEW
-    if scheduling.status.value != "PROPOSED" and status is RuntimeStatus.READY:
+    elif scheduling.status is not SchedulingStatus.PROPOSED:
         status = RuntimeStatus.NEEDS_REVIEW
-    if initiative_evaluation.disposition.value != "ELIGIBLE" and status is RuntimeStatus.READY:
-        status = RuntimeStatus.NEEDS_REVIEW
+    else:
+        status = RuntimeStatus.READY
     if value_assessment.authority_granted or value_assessment.authorization_granted or value_assessment.execution_requested:
         raise RuntimeError("value assessment contains forbidden authority or execution state")
     if information_gain.authority_granted or information_gain.authorization_granted or information_gain.execution_requested:
         raise RuntimeError("information-gain assessment contains forbidden authority or execution state")
-
     return ProactiveRuntimeResult(
         proposal_id=proposal_id,
         status=status,
@@ -231,16 +220,13 @@ def compose_proactive_runtime(
 def rank_runtime_results(
     results: Mapping[str, ProactiveRuntimeResult],
 ) -> tuple[ProactiveRuntimeResult, ...]:
-    """Order bounded runtime results deterministically by value, information gain, identity."""
+    """Order bounded runtime results deterministically by combined advisory score."""
     for proposal_id, result in results.items():
         if result.proposal_id != proposal_id:
             raise ValueError("mapping key must match runtime proposal_id")
     return tuple(
         sorted(
             results.values(),
-            key=lambda item: (
-                -(item.value.score + item.information_gain.score),
-                item.proposal_id,
-            ),
+            key=lambda item: (-(item.value.score + item.information_gain.score), item.proposal_id),
         )
     )
