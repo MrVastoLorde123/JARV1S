@@ -37,6 +37,17 @@ def _freeze(value: Any) -> Any:
     return value
 
 
+def _json_ready(value: Any) -> Any:
+    """Convert recursively frozen containers back to deterministic JSON values."""
+    if isinstance(value, Mapping):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return sorted((_json_ready(item) for item in value), key=repr)
+    return value
+
+
 @dataclass(frozen=True)
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity:
     integrity_id: str
@@ -139,7 +150,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
             source_policy_id=execution_result.source_policy_id, policy_id=execution_result.policy_id,
         )
         if execution_result.status is LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionStatus.COMPLETED:
-            serialized = json.dumps(execution_result.execution_result, sort_keys=True, default=repr, separators=(",", ":")).encode("utf-8")
+            serialized = json.dumps(_json_ready(execution_result.execution_result), sort_keys=True, separators=(",", ":")).encode("utf-8")
             return LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity(
                 **base, status=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.SUCCEEDED,
                 execution_result=execution_result.execution_result, result_fingerprint=hashlib.sha256(serialized).hexdigest()
@@ -155,7 +166,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     def _integrity_id(execution_result, execution_request) -> str:
         serialized = json.dumps({
             "execution_id": execution_result.execution_id, "preparation_id": execution_result.preparation_id,
-            "status": execution_result.status.value, "result": execution_result.execution_result,
+            "status": execution_result.status.value, "result": _json_ready(execution_result.execution_result),
             "reason": execution_result.reason, "request_execution_id": execution_request.execution_id,
-        }, sort_keys=True, default=repr, separators=(",", ":")).encode("utf-8")
+        }, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return "adaptation-evaluation-execution-feedback-result-integrity-preparation-execution-result-integrity-" + hashlib.sha256(serialized).hexdigest()[:24]
