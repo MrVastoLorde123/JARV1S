@@ -90,6 +90,8 @@ Future Adaptation Execution Result / Result Integrity
 ↓
 Future Adaptation Execution Feedback
 ↓
+Future Adaptation Execution Feedback Evaluation
+↓
 Learning State / Memory Mutation
 ```
 
@@ -154,9 +156,10 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.36-adaptation-evaluation-execution-feedback`
+`feature/m22.37-adaptation-evaluation-execution-feedback-evaluation`
 
 Latest verified local receipts:
+- **M22.36:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.35:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.34:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.32:** 11/11 focused + 502/502 core regression = **513/513**
@@ -167,15 +170,18 @@ Latest verified local receipts:
 - **M22.27:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.26:** 11/11 focused + 502/502 core regression = **513/513**
 
+Previous verified checkpoints remain recorded below.
+
 ## 6. Milestone state
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.35 — VERIFIED / COMPLETE.
+M22.1–M22.36 — VERIFIED / COMPLETE.
 
 M22.35 Future Adaptation Execution Result Integrity — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
+M22.36 Future Adaptation Execution → Feedback — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 
-**M22.36 Future Adaptation Execution → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.37 Future Adaptation Execution Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -187,19 +193,22 @@ M22.31–M22.33 establish the downstream proposal, admission, and execution-prep
 
 M22.34 executes exactly one M22.33 preparation artifact through a replaceable applier. M22.35 validates the M22.34 execution request/result pair and produces immutable result-integrity evidence.
 
-### M22.36 — Future Adaptation Execution → Feedback
-`LearningWriteAdaptationEvaluationExecutionFeedbackService` consumes exactly one M22.35 execution outcome and creates immutable feedback for downstream evaluation. Success and failure are normalized into distinct feedback kinds, exact M22.34/M22.35 lineage is preserved, payload and provenance are recursively frozen, and the feedback ID is deterministic.
+M22.36 consumes exactly one M22.35 future-execution outcome and creates immutable feedback while preserving exact lineage. Feedback remains inert and cannot authorize execution, request retry, revoke anything, establish adaptation truth, or mutate memory.
 
-M22.36 is intentionally inert. Feedback does not authorize execution, grant retry, revoke anything, establish adaptation truth, or mutate memory. It is evidence for later evaluation.
+### M22.37 — Future Adaptation Execution Feedback → Evaluation
+`LearningWriteAdaptationEvaluationExecutionFeedbackEvaluationService` consumes exactly one M22.36 future adaptation execution feedback event and creates immutable evaluation evidence. Success and failure become explicit evaluation signals with bounded confidence. Exact execution/preparation/admission/proposal/decision/evaluation/feedback/source-feedback/candidate/source-candidate/source-execution/domain/policy lineage is preserved, together with recursively frozen evidence/provenance and a deterministic evaluation ID.
+
+M22.37 is intentionally inert. Evaluation describes observed feedback; it does not establish adaptation truth, authorize execution, request retry, revoke anything, or mutate memory. It also does not decide whether an adaptation should be retained or create a downstream proposal.
 
 Walls:
 - Execution ≠ Result Integrity
 - Result Integrity ≠ Feedback
-- Feedback ≠ Adaptation Truth
-- Feedback ≠ Authorization
-- Feedback ≠ Retry
-- Feedback ≠ Revocation
-- Feedback ≠ Memory Mutation
+- Feedback ≠ Feedback Evaluation
+- Feedback Evaluation ≠ Adaptation Truth
+- Feedback Evaluation ≠ Authorization
+- Feedback Evaluation ≠ Retry
+- Feedback Evaluation ≠ Revocation
+- Feedback Evaluation ≠ Memory Mutation
 - Evidence ≠ Truth
 - Learning ≠ Authority
 
@@ -310,12 +319,12 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.36 Future Adaptation Execution → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.37 Future Adaptation Execution Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
 
-**Current branch:** `feature/m22.36-adaptation-evaluation-execution-feedback`
+**Current branch:** `feature/m22.37-adaptation-evaluation-execution-feedback-evaluation`
 
-**Latest verified milestone:** M22.35 — 516/516 (14 focused + 502 core regression)
+**Latest verified milestone:** M22.36 — 516/516 (14 focused + 502 core regression)
 
-**Active boundary:** Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback.
+**Active boundary:** Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation.
 
-**Next milestone:** derive M22.37 from the live M22.36 feedback artifact after local verification; do not guess.
+**Next milestone:** derive M22.38 from the live M22.37 evaluation artifact after local verification; do not guess.
