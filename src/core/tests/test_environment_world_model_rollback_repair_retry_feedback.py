@@ -1,9 +1,12 @@
 import unittest
-from datetime import datetime, timezone
 from types import MappingProxyType
 
+from src.core.environment_world_model_rollback_repair_retry_execution_attempt import (
+    EnvironmentWorldModelRollbackRepairRetryExecutionAttemptStatus,
+)
 from src.core.environment_world_model_rollback_repair_retry_outcome import (
     EnvironmentWorldModelRollbackRepairRetryOutcome,
+    EnvironmentWorldModelRollbackRepairRetryOutcomeStatus,
 )
 from src.core.environment_world_model_rollback_repair_retry_feedback import (
     EnvironmentWorldModelRollbackRepairRetryFeedback,
@@ -16,12 +19,14 @@ class EnvironmentWorldModelRollbackRepairRetryFeedbackTests(unittest.TestCase):
     def setUp(self) -> None:
         self.success = EnvironmentWorldModelRollbackRepairRetryOutcome(
             outcome_id="outcome1",
+            integrity_id="integrity1",
             execution_id="retry-exec1",
             preparation_id="preparation1",
             environment_id="env1",
             expected_model_id="expected",
             observed_model_id="observed",
-            outcome_status="SUCCESS",
+            attempt_status=EnvironmentWorldModelRollbackRepairRetryExecutionAttemptStatus.COMPLETED,
+            status=EnvironmentWorldModelRollbackRepairRetryOutcomeStatus.SUCCESS,
             result_fingerprint="fp123",
             failure_reason=None,
             worker_id="worker1",
@@ -30,12 +35,14 @@ class EnvironmentWorldModelRollbackRepairRetryFeedbackTests(unittest.TestCase):
         )
         self.failure = EnvironmentWorldModelRollbackRepairRetryOutcome(
             outcome_id="outcome2",
+            integrity_id="integrity2",
             execution_id="retry-exec2",
             preparation_id="preparation1",
             environment_id="env1",
             expected_model_id="expected",
             observed_model_id="observed",
-            outcome_status="FAILURE",
+            attempt_status=EnvironmentWorldModelRollbackRepairRetryExecutionAttemptStatus.FAILED,
+            status=EnvironmentWorldModelRollbackRepairRetryOutcomeStatus.FAILURE,
             result_fingerprint=None,
             failure_reason="repair provider unavailable",
             worker_id="worker1",
