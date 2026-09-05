@@ -7,10 +7,8 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 from src.core.environment_context_composition import EnvironmentCurrentContextBundle
-from src.core.environment_current_context_readiness import (
-    CurrentContextReadiness,
-    EnvironmentCurrentContextBundleValidity,
-)
+from src.core.environment_current_context_freshness import CurrentContextFreshness
+from src.core.environment_current_context_freshness import EnvironmentCurrentContextBundleValidity
 
 
 def _freeze(value: Any) -> Any:
@@ -94,9 +92,9 @@ class EnvironmentWorldModelService:
             raise EnvironmentWorldModelError("bundle and validity identity mismatch")
         if bundle.context_ids != validity.context_ids:
             raise EnvironmentWorldModelError("bundle and validity context identities mismatch")
-        if validity.freshness is not validity.freshness.__class__.CURRENT:
+        if validity.freshness is not CurrentContextFreshness.CURRENT:
             raise EnvironmentWorldModelError("bundle must have CURRENT temporal validity")
-        if any(item.freshness is not item.freshness.__class__.CURRENT for item in validity.current_context_validities):
+        if any(item.freshness is not CurrentContextFreshness.CURRENT for item in validity.current_context_validities):
             raise EnvironmentWorldModelError("all contained contexts must be CURRENT")
         represented = bundle.represented_domains
         return EnvironmentWorldModel(
