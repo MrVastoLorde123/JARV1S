@@ -80,10 +80,6 @@ class LearningWriteAdaptationExecutionTests(unittest.TestCase):
         self.assertEqual(len(applier.requests), 1)
 
     def test_non_admitted_proposal_is_blocked(self) -> None:
-        rejected = self.admission.__class__(
-            **{**self.admission.__dict__, "status": "rejected"}
-        )
-        # Build an explicit valid rejected admission through its enum value.
         from src.tools.learning_write_adaptation_admission import LearningWriteAdaptationAdmissionStatus
         rejected = self.admission.__class__(
             **{**self.admission.__dict__, "status": LearningWriteAdaptationAdmissionStatus.REJECTED}
