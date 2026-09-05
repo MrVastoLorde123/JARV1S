@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import unittest
 
+from src.plugins.sandbox import SandboxProfile, SandboxProfileRegistry
 from src.tools.authorization import AuthorizationDecision, AuthorizationStatus
 from src.tools.authorization_integrity import AuthorizationIntegrityResult
 from src.tools.errors import InvalidRequestError
 from src.tools.models import ToolRequest
+from src.tools.policy import PolicyDecision
 from src.tools.sandbox_admission import (
     SandboxAdmissionDecision,
     SandboxAdmissionIntegrationError,
     SandboxAdmissionService,
     SandboxAdmissionStatus,
 )
-
-from src.tools.tests.support import make_definition
-from src.plugins.sandbox import SandboxAdmissionEvaluator, SandboxAdmissionStatus as ProfileAdmissionStatus, SandboxProfile, SandboxProfileRegistry
 
 
 class SandboxAdmissionTests(unittest.TestCase):
@@ -27,7 +26,7 @@ class SandboxAdmissionTests(unittest.TestCase):
             authorization_id="auth-1",
             tool_name="echo",
             invocation_id="inv-1",
-            policy_decision=__import__("src.tools.policy", fromlist=["PolicyDecision"]).PolicyDecision.ALLOW,
+            policy_decision=PolicyDecision.ALLOW,
             confirmation_approved=None,
             status=AuthorizationStatus.GRANTED,
         )
@@ -60,7 +59,7 @@ class SandboxAdmissionTests(unittest.TestCase):
             authorization_id="auth-1",
             tool_name="echo",
             invocation_id="inv-1",
-            policy_decision=__import__("src.tools.policy", fromlist=["PolicyDecision"]).PolicyDecision.DENY,
+            policy_decision=PolicyDecision.DENY,
             confirmation_approved=None,
             status=AuthorizationStatus.DENIED,
             reason="blocked",
