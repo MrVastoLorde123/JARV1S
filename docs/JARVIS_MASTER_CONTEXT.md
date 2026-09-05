@@ -76,7 +76,7 @@ Adaptation Outcome / Result Integrity
 ↓
 Adaptation Feedback
 ↓
-Future Adaptation Evaluation
+Adaptation Evaluation
 ↓
 Learning State / Memory Mutation
 ```
@@ -142,7 +142,7 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.28-adaptation-outcome-feedback`
+`feature/m22.29-adaptation-feedback-evaluation`
 
 Latest verified local receipts:
 - **M22.28:** 13/13 focused + 502/502 core regression = **515/515**
@@ -227,15 +227,13 @@ These milestones establish inert candidate, decision, proposal, admission, execu
 `LearningWriteAdaptationExecutionService` executes only `ADMITTED` adaptation proposals through a replaceable `LearningWriteAdaptationApplier`. Requests/results are immutable and identity-bound. Applier failures become explicit `FAILED` results. Execution does not grant authorization, retry, revocation, learning-write, or memory-mutation authority.
 
 ### M22.27 — Adaptation Execution Outcome / Result Integrity
-`LearningWriteAdaptationOutcomeService` consumes an exact `LearningWriteAdaptationExecutionResult` + `LearningWriteAdaptationExecutionRequest` pair. It verifies execution/admission/proposal/decision/candidate/feedback/source-candidate/domain identity, normalizes `COMPLETED` → `SUCCEEDED` and `FAILED` → `FAILED`, and fingerprints successful adaptation results deterministically.
+`LearningWriteAdaptationOutcomeService` consumes an exact `LearningWriteAdaptationExecutionResult` + `LearningWriteAdaptationExecutionRequest` pair. It verifies execution/admission/proposal/decision/candidate/feedback/source-candidate/domain identity, normalizes `COMPLETED` → `SUCCEEDED` and `FAILED` → `FAILED`, and fingerprints successful adaptation results deterministically. M22.27 remains an evidence boundary, not a truth boundary.
 
 ### M22.28 — Adaptation Outcome → Feedback
-`LearningWriteAdaptationFeedbackService` converts an immutable adaptation outcome into an immutable feedback event. Success/failure become explicit adaptation-feedback kinds. Execution/admission/proposal/decision/adaptation-candidate/source-learning-feedback/source-learning-candidate/domain lineage is preserved; successful payload carries the adaptation result and existing result fingerprint, while failed payload carries the failure reason.
-
-Feedback is evidence for future evaluation. It does not authorize, mutate memory, retry, revoke, or execute.
+`LearningWriteAdaptationFeedbackService` converts an immutable adaptation outcome into an immutable feedback event. Success/failure become explicit adaptation-feedback kinds. Execution/admission/proposal/decision/adaptation-candidate/source-learning-feedback/source-learning-candidate/domain lineage is preserved; successful payload carries the adaptation result and existing result fingerprint, while failed payload carries the failure reason. Feedback is evidence for future evaluation; it does not authorize, mutate memory, retry, revoke, or execute.
 
 ### M22.29 — Adaptation Feedback → Evaluation
-M22.29 is the evaluation boundary after adaptation feedback. It must remain explicitly interpretive: convert feedback into a bounded adaptation-evaluation signal/candidate while preserving exact lineage and immutable evidence. Evaluation must not silently authorize adaptation, mutate memory, retry, revoke, or execute.
+`LearningWriteAdaptationFeedbackEvaluationService` converts immutable adaptation feedback into an immutable evaluation candidate. Success/failure become explicit evaluation signals. Exact feedback/source-feedback/adaptation-candidate/source-candidate/execution/admission/proposal/decision/domain lineage is preserved, with recursively frozen evidence/provenance and bounded confidence. Evaluation is interpretive evidence only and must not silently authorize adaptation, mutate memory, retry, revoke, or execute.
 
 Walls:
 - Adaptation Execution Result ≠ Adaptation Outcome
@@ -247,6 +245,7 @@ Walls:
 - Evaluation ≠ Authorization
 - Evaluation ≠ Retry Authorization
 - Evaluation ≠ Revocation
+- Evaluation ≠ Execution
 - Evaluation ≠ Memory Mutation
 - Completion ≠ Certainty
 - Evidence ≠ Truth
