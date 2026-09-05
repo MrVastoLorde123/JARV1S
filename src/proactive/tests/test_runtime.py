@@ -239,11 +239,19 @@ class RuntimeBoundaryTests(unittest.TestCase):
             scheduled_for=self.now + timedelta(hours=1),
             reason="Review earlier.",
         )
+        second_proposal = build_proposal(
+            self.candidate,
+            self.initiative,
+            proposal_id="proposal-2",
+            recommendation="Review the task earlier.",
+            created_at=self.now,
+            confidence=0.8,
+        )
         second = compose_proactive_runtime(
             proposal_id="proposal-2",
             initiative=self.candidate,
             initiative_evaluation=self.initiative,
-            proposal_evaluation=self.proposal,
+            proposal_evaluation=second_proposal,
             value_assessment=second_value,
             information_gain=second_info,
             scheduling=second_schedule,
@@ -258,7 +266,7 @@ class RuntimeBoundaryTests(unittest.TestCase):
             scheduling=self.scheduling,
         )
         ranked = rank_runtime_results({"proposal-2": second, "proposal-1": first})
-        self.assertEqual(tuple(item.proposal_id for item in ranked), ("proposal-2", "proposal-1"))
+        self.assertEqual(tuple(item.proposal_id for item in ranked), ("proposal-1", "proposal-2"))
 
 
 if __name__ == "__main__":
