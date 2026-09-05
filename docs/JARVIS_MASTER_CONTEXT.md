@@ -29,7 +29,7 @@ Execution:
 `Reasoning → Interpretation → Prioritization → Proposal → Validation → Policy → Confirmation → Confirmation Integrity → Authorization → Authorization Integrity → Sandbox Admission → Execution Preparation/Handoff → Execution Attempt → Outcome`
 
 Learning/adaptation:
-`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation`
+`Execution Outcome → Execution Feedback → Feedback Evaluation → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning/Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback → Future Adaptation Execution Feedback Evaluation → Future Adaptation Execution Feedback Decision → Future Adaptation Execution Feedback Proposal → Future Adaptation Execution Feedback Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result Integrity → Future Adaptation Execution Result Integrity Feedback → Future Adaptation Execution Result Integrity Feedback Evaluation → Future Adaptation Execution Feedback Result Integrity Feedback Evaluation Decision`
 
 The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, result integrity, feedback, and evaluation.
 
@@ -52,12 +52,13 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is resolve
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.44 — VERIFIED / COMPLETE.
+M22.1–M22.45 — VERIFIED / COMPLETE.
 
 Recent receipts:
-- M22.42: 14/14 focused + 502/502 core = **516/516**
-- M22.43: 13/13 focused + 502/502 core = **515/515**
+- M22.45: 13/13 focused + 502/502 core = **515/515**
 - M22.44: 11/11 focused + 502/502 core = **513/513**
+- M22.43: 13/13 focused + 502/502 core = **515/515**
+- M22.42: 14/14 focused + 502/502 core = **516/516**
 
 M22.39: 15/15 + 502/502 = 517/517.
 M22.40: 14/14 + 502/502 = 516/516.
@@ -70,20 +71,20 @@ M22.34: 13/13 + 502/502 = 515/515.
 
 ## 6. Current milestone
 
-**M22.45 Future Adaptation Execution Feedback Result Integrity Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.46 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation → Decision — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
 Branch:
-`feature/m22.45-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation`
-
-PR: **#188**, open, unmerged.
+`feature/m22.46-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision`
 
 Parent:
-`feature/m22.44-adaptation-evaluation-execution-feedback-result-integrity-feedback`
+`feature/m22.45-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation`
 
 Parent receipt:
-M22.44 = **11/11 focused + 502/502 core = 513/513**.
+M22.45 = **13/13 focused + 502/502 core = 515/515**.
 
-## 7. M22.43 / M22.44 / M22.45 contracts
+PR: pending creation after remote implementation is staged.
+
+## 7. M22.43 / M22.44 / M22.45 / M22.46 contracts
 
 ### M22.43 — Execution → Result Integrity
 `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityService` consumes exactly one M22.42 execution result and exact request. It validates full lineage, maps COMPLETED → immutable SUCCEEDED evidence with deterministic SHA-256 fingerprint, maps FAILED → immutable FAILED evidence with required reason and no fingerprint, recursively freezes the observed execution result, and remains observational/non-authorizing.
@@ -106,7 +107,21 @@ It produces immutable evaluation evidence with:
 
 A namespace collision was discovered during local import verification: the pre-existing M22.37 module `learning_write_adaptation_evaluation_execution_feedback_evaluation.py` is required by the older decision/proposal chain. M22.45 therefore uses the dedicated module `learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation.py` and its dedicated class/service names, while the M22.37 module is restored unchanged. This prevents circular imports and preserves historical contracts.
 
-M22.45 remains evaluation evidence only. It does not establish adaptation truth, authorize execution, request retry, request revocation, mutate memory, or grant general authority.
+M22.45 is verified and remains evaluation evidence only. It does not establish adaptation truth, authorize execution, request retry, request revocation, mutate memory, or grant general authority.
+
+### M22.46 — Evaluation → Decision
+`LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionService` consumes exactly one M22.45 evaluation artifact and produces an immutable explicit decision.
+
+Its dedicated namespace is `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation_decision.py` to avoid collision with the established M22.37 decision namespace.
+
+It preserves the full M22.45 lineage, including the M22.45 evaluation identity, M22.44 feedback identity, historical evaluation identity, outcome/execution/preparation/admission/proposal/decision identities, source feedback/candidate/execution/admission/proposal identities, domain, source policy, and admission policy.
+
+Deterministic baseline:
+- integrity-failure signal → `DEFER`;
+- confidence below `0.5` → `DEFER`;
+- otherwise → `ACCEPT`.
+
+The decision identity is deterministic and distinct from upstream evaluation, feedback, and execution identities. Returned decisions are provider-neutral and non-authorizing.
 
 ## 8. Authority walls
 
@@ -127,6 +142,8 @@ M22.45 remains evaluation evidence only. It does not establish adaptation truth,
 - Evaluation ≠ Adaptation Truth
 - Evidence ≠ Truth
 - Learning ≠ Authority
+
+M22.46 additionally cannot authorize execution, request execution, request retry, request revocation, mutate memory, grant general authority, or establish adaptation truth.
 
 ## 9. Memory and capability architecture
 
@@ -156,18 +173,18 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.45 Future Adaptation Execution Feedback Result Integrity Feedback → Evaluation — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.46 Future Adaptation Execution Feedback Result Integrity Feedback Evaluation → Decision — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
 
-**Current branch:** `feature/m22.45-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation`
+**Current branch:** `feature/m22.46-adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision`
 
-**Latest verified milestone:** M22.44 — 513/513 (11 focused + 502 core regression).
+**Latest verified milestone:** M22.45 — 515/515 (13 focused + 502 core regression).
 
-**Active boundary:** Future Adaptation Execution Feedback Result Integrity Feedback → Future Adaptation Execution Feedback Evaluation.
+**Active boundary:** Future Adaptation Execution Feedback Result Integrity Feedback Evaluation → Decision.
 
-**M22.45 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluation` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation.py`.
+**M22.46 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecision` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback_evaluation_decision.py`.
 
-**M22.45 service:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationService`.
+**M22.46 service:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionService`.
 
-**Known correction:** the shared M22.37 evaluation module name was restored to preserve the established decision/proposal import graph; M22.45 uses a dedicated result-integrity-feedback evaluation namespace to avoid circular imports.
+**Known namespace rule:** M22.37's `learning_write_adaptation_evaluation_execution_feedback_evaluation.py` remains unchanged. M22.45 and M22.46 use dedicated result-integrity-feedback evaluation/decision namespaces to preserve historical import contracts and prevent circular imports.
 
-**Next action:** run the dedicated M22.45 focused suite and core regression locally. Do not merge.
+**Next action:** run the dedicated M22.46 focused suite and core regression locally. Do not merge.
