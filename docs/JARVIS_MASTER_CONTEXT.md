@@ -105,15 +105,35 @@ Receipt:
 
 M23.3 direct snapshot composition still rejects duplicate domains. M23.5 is the explicit conflict/consistency seam required before a later aggregation contract can combine multiple observers without silently collapsing conflicts.
 
-Files:
-- `src/core/environment_observation_consistency.py`
-- `src/core/tests/test_environment_observation_consistency.py`
-- `docs/decisions/050-environment-observation-consistency-contract.md`
-
 Receipt:
 - Focused: `python -m unittest src.core.tests.test_environment_observation_consistency -v` → **14/14 OK**
 - Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **563/563 OK**
 - Combined: **577/577 OK**
+
+### M23.6 — Environment Observation Aggregation Contract
+**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+
+Branch:
+`feature/m23.6-environment-observation-aggregation-contract`
+
+M23.6 introduces `EnvironmentObservationAggregationService` and immutable `EnvironmentObservationAggregate`. Multiple observations can be aggregated only when matching validity artifacts classify every observation as `CURRENT`, all observations share one environment and domain, identities are unique, validity scope matches, and the complete pairwise M23.5 consistency set is `CONSISTENT`.
+
+The aggregate preserves the environment/domain, derived payload, every source observation identity, every source adapter identity, and each source observation timestamp. Source observations are not mutated. Conflicting, stale, future, unrelated, duplicate, incomplete, or incorrectly typed inputs are rejected fail-closed.
+
+Aggregation is derived evidence, not truth establishment. It does not choose an authoritative provider, merge conflicting evidence, authorize execution, grant permissions, imply capability executability, retry observers, mutate memory, rewrite/discard observations, or establish adaptation truth.
+
+Files:
+- `src/core/environment_observation_aggregation.py`
+- `src/core/tests/test_environment_observation_aggregation.py`
+- `docs/decisions/051-environment-observation-aggregation-contract.md`
+
+Focused:
+`python -m unittest src.core.tests.test_environment_observation_aggregation -v`
+
+Regression:
+`python -m unittest discover -s src\\core -p "test*.py"`
+
+Local verification is required before M23.6 can be marked VERIFIED / COMPLETE.
 
 ## 8. Namespace and lineage rules
 
@@ -151,6 +171,6 @@ No merge is performed unless explicitly requested.
 
 **Active milestone:** M23.6 — Environment Observation Aggregation Contract.
 
-**M23.6 status:** NOT YET IMPLEMENTED.
+**M23.6 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
 
-**Next engineering action:** define a deterministic aggregation boundary that can combine multiple observations for one environment/domain only after consistency/freshness evidence is available, while preserving source lineage and never silently selecting conflicting evidence as truth. No merge performed.
+**Next local action:** pull `feature/m23.6-environment-observation-aggregation-contract`, run the focused aggregation suite, then the `src\\core` regression. Do not mark M23.6 verified until those receipts are supplied.
