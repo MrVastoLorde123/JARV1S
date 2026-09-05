@@ -4,13 +4,7 @@
 
 M22.4 establishes a bounded declarative permission/policy binding layer for JARVIS capabilities.
 
-The boundary answers:
-
-- **Permission binding:** what named permission is allowed or denied for a capability identity?
-- **Policy binding:** under which policy identity does that binding apply?
-- **Version scope:** does the binding target a specific capability version or all versions?
-
-A binding describes policy metadata. It does not authorize an invocation.
+A binding answers which named permission is allowed or denied for a capability identity, under which policy identity, and optionally for which capability version. It is policy metadata, not authorization.
 
 ## Contract
 
@@ -55,6 +49,7 @@ M22.4 stops at declarative permission/policy binding.
 - An `ALLOW` binding is declarative policy metadata and is not an authorization decision.
 - A `DENY` binding does not itself cancel, revoke, or modify an existing authorization/execution record.
 - Binding context explicitly records `permission_bound=True` while authority and authorization remain false.
+- Policy-layer version validation converts lifecycle SemVer failures into the M22.4 `CapabilityPolicyError` boundary.
 
 ## Authority walls
 
@@ -71,20 +66,10 @@ Permission ≠ Execution
 
 ## Deliberate exclusions
 
-M22.4 does not:
-
-- authorize an invocation;
-- confirm user intent;
-- execute a plugin or capability;
-- select or assign a worker;
-- mutate policy through evaluation;
-- infer trust from permission;
-- convert an `ALLOW` binding into an execution request;
-- revoke or cancel an already-issued authorization;
-- bypass the existing validation, policy, confirmation, authorization, or execution chain.
+M22.4 does not authorize an invocation, confirm user intent, execute a plugin/capability, select or assign a worker, mutate policy through evaluation, infer trust from permission, convert `ALLOW` into an execution request, revoke an already-issued authorization, or bypass the existing validation/policy/confirmation/authorization/execution chain.
 
 ## Verification
 
-Remote implementation status: **IMPLEMENTED / AWAITING LOCAL RECEIPT**.
+Remote implementation status: **VERIFIED / COMPLETE**.
 
-The milestone becomes VERIFIED / COMPLETE only after the user's local focused and regression test receipt passes.
+Local receipt: **9/9 M22.4 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core tests passed locally.**
