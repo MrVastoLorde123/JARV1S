@@ -152,7 +152,7 @@ Integration ≠ Authority Escalation
 M22 establishes a governed, extensible capability ecosystem while preserving the distinction between capability availability and permission to invoke it.
 
 ### M22.1 — Capability / Plugin Contract + Registry Boundary
-**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**Status: VERIFIED / COMPLETE.**
 
 M22.1 establishes immutable capability descriptors and a conflict-aware metadata registry. Discovery answers what capability exists; it does not grant permission to invoke it.
 
@@ -189,7 +189,7 @@ Metadata ≠ Execution Request
 M22.1 does not execute plugins, create authorization, grant permissions, establish trust, bypass validation/policy/confirmation/authorization, schedule, notify, assign workers, or mutate policy.
 
 ### M22.2 — Capability Trust / Provenance Boundary
-**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**Status: VERIFIED / COMPLETE.**
 
 M22.2 establishes immutable capability provenance records, structured evidence, and evidence-linked trust assessments. Provenance records where a capability came from; trust assessments describe the current evidence-backed trust state. Neither creates permission or authorization.
 
@@ -210,6 +210,8 @@ Authorization
         ↓
 Execution
 ```
+
+Verified receipt: **9/9 M22.2 focused + 8/8 M22.1 focused + 487/487 core tests passed locally.**
 
 Boundary walls:
 
