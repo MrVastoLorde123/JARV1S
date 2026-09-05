@@ -1,7 +1,6 @@
 # JARVIS Master Context
 
 > Canonical cross-chat continuity document for the JARVIS project.
->
 > This is the single source-of-truth context document. Read it first at the start of every engineering session, then inspect the current branch/repository state. Repository code and tests override stale statements here when they conflict.
 
 ## 1. Identity
@@ -11,11 +10,9 @@ JARVIS is the user's **Third-Hand + Second-Brain**: a personal intelligence and 
 It is not defined by one LLM, model, provider, interface, worker, or plugin. It is not primarily a product to sell. Its purpose is to help the user create products and innovations, turn thoughts into words and words into the future, and eventually understand intent so well that explicit instructions become less necessary.
 
 Core long-term loop:
-
 `User → JARVIS understands → remembers → reasons → acts → observes → evaluates → improves → User becomes more capable`
 
-Two complementary halves from the original roadmap:
-
+Two complementary halves:
 - **Third Hand:** action, execution, automation, inspection, modification, verification.
 - **Second Brain:** memory, relationships, persistent projects, self-evaluation, initiative, and compounding knowledge/context.
 
@@ -35,7 +32,6 @@ Two complementary halves from the original roadmap:
 - Local-first remains a core architectural preference.
 
 Non-negotiable separations:
-
 - Intelligence ≠ Authority.
 - Learning ≠ Authority.
 - Adaptation ≠ Authorization.
@@ -47,44 +43,10 @@ Non-negotiable separations:
 - Confidence ≠ Certainty.
 - Prediction ≠ Permission.
 
-### Authority chain
+### Execution authority chain
+`Reasoning → Interpretation → Prioritization → Proposal → Validation → Policy → Confirmation → Confirmation Integrity → Authorization → Authorization Integrity → Sandbox Admission → Execution Preparation/Handoff → Execution Attempt → Outcome`
 
-```text
-Reasoning
-↓
-Interpretation
-↓
-Prioritization
-↓
-Proposal
-↓
-Validation
-↓
-Policy
-↓
-Confirmation
-↓
-Confirmation Integrity
-↓
-Authorization
-↓
-Authorization Integrity
-↓
-Sandbox Admission
-↓
-Execution Preparation / Handoff
-↓
-Execution Attempt
-↓
-Outcome
-```
-
-Identity chain:
-
-`proposal_id → validation_id → policy_decision_id → confirmation_id → authorization_id → execution_id`
-
-Learning/write authority chain:
-
+### Learning/adaptation chain
 ```text
 Execution Outcome
 ↓
@@ -106,10 +68,20 @@ Learning Write Outcome
 ↓
 Learning Write Feedback
 ↓
+Learning/Adaptation Evaluation
+↓
+Adaptation Candidate
+↓
+Adaptation Decision
+↓
+Adaptation Proposal
+↓
+Future Adaptation Policy / Admission / Execution
+↓
 Learning State / Memory Mutation
 ```
 
-The final write/mutation boundary is deliberately downstream from reasoning, evidence, and learning decisions.
+The final write/mutation boundary remains downstream from evidence, reasoning, decisions, proposals, and policy.
 
 ## 3. Cognitive architecture
 
@@ -161,11 +133,9 @@ Learning is multi-form: episodic, semantic, procedural, preference, failure/outc
 ## 4. Repository
 
 GitHub:
-
 `https://github.com/MrVastoLorde123/JARV1S.git`
 
-The real local project directory is:
-
+Real local project directory:
 `C:\Users\jeoop\PycharmProjects\JARV1S`
 
 Earlier duplicate/mock-directory confusion was a workflow mistake and is considered resolved. Do not resurrect that issue without new evidence.
@@ -173,48 +143,49 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-
-`feature/m22.21-learning-write-feedback-boundary`
+`feature/m22.24-adaptation-proposal-boundary`
 
 Latest verified local receipt:
+- **M22.23:** 11/11 focused + 502/502 core regression = **513/513**
 
-- **M22.20:** 15/15 focused + 502/502 core regression = **517/517**
+Previous verified checkpoints:
+- M22.22: 11/11 focused + 502/502 core = 513/513
+- M22.21: 10/10 focused + 502/502 core = 512/512
+- M22.20: 15/15 focused + 502/502 core = 517/517
+- M22.19: 12/12 focused + 502/502 core = 514/514
+- M22.18: 12/12 focused + 502/502 core = 514/514
+- M22.17: 13/13 focused + 502/502 core = 515/515
+- M22.16: 10/10 focused + 502/502 core = 512/512
+- M22.15: 9/9 focused + 502/502 core = 511/511
+- M22.14: 10/10 focused + 502/502 core = 512/512
+- M22.13: 12/12 focused + 502/502 core = 514/514
+- M22.12: 583/583 cumulative coverage
+- M22.11: 571/571
+- M22.10: 558/558
+- M22.9: 544/544
+- M22.8: focused authorization/gate/legacy coverage + 502/502 core
+- M22.7: 502/502 core regression with focused capability-request coverage
 
-Previously verified checkpoints:
-
-- **M22.19:** 12/12 focused + 502/502 core regression = 514/514
-- **M22.18:** 12/12 focused + 502/502 core = 514/514
-- **M22.17:** 13/13 focused + 502/502 core = 515/515
-- **M22.16:** 10/10 focused + 502/502 core = 512/512
-- **M22.15:** 9/9 focused + 502/502 core = 511/511
-- **M22.14:** 10/10 focused + 502/502 core = 512/512
-- **M22.13:** 12/12 focused + 502/502 core = 514/514
-- **M22.12:** 11/11 execution-attempt + 4/4 gate plus prior coverage = 583/583
-- **M22.11:** 571/571
-- **M22.10:** 558/558
-- **M22.9:** 544/544
-- **M22.8:** 9/9 authorization + 6/6 gate + 15/15 legacy + 502/502 core
-- **M22.7:** 502/502 core regression with focused capability-request coverage
-- Earlier M21 proactive milestones were locally verified according to the milestone ledger below.
+M19 and M20 are VERIFIED / COMPLETE. M21.1 through M21.6 are VERIFIED / COMPLETE according to the milestone history.
 
 ## 6. Milestone state
 
 - M19 Deep Personalization — VERIFIED / COMPLETE
 - M20 Long-Horizon Task Management — VERIFIED / COMPLETE
-- M21.1 Proactive Initiative Boundary — VERIFIED / COMPLETE (11/11 focused + 487/487 core)
-- M21.2 Proactive Proposal Boundary — VERIFIED / COMPLETE (8/8 focused + 11/11 initiative + 487/487 core)
-- M21.3 Proactive Value Assessment — VERIFIED / COMPLETE (7/7 focused + 8/8 proposal + 11/11 initiative + 487/487 core)
-- M21.4 Information Gain / Uncertainty Reduction — VERIFIED / COMPLETE (7/7 focused + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
-- M21.5 Bounded Proactive Scheduling / Notification — VERIFIED / COMPLETE (9/9 focused + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
-- M21.6 Proactive Runtime / Feedback Integration — VERIFIED / COMPLETE (10/10 runtime + 9/9 scheduling + 7/7 information gain + 7/7 value + 8/8 proposal + 11/11 initiative + 487/487 core)
+- M21.1 Proactive Initiative Boundary — VERIFIED / COMPLETE
+- M21.2 Proactive Proposal Boundary — VERIFIED / COMPLETE
+- M21.3 Proactive Value Assessment — VERIFIED / COMPLETE
+- M21.4 Information Gain / Uncertainty Reduction — VERIFIED / COMPLETE
+- M21.5 Bounded Proactive Scheduling / Notification — VERIFIED / COMPLETE
+- M21.6 Proactive Runtime / Feedback Integration — VERIFIED / COMPLETE
 - M22 Capability / Plugin Ecosystem — ACTIVE
 - M22.1 Capability / Plugin Contract + Registry Boundary — VERIFIED / COMPLETE
 - M22.2 Capability Trust / Provenance Boundary — VERIFIED / COMPLETE
 - M22.3 Capability Lifecycle / Versioning Boundary — VERIFIED / COMPLETE
 - M22.4 Capability Permission / Policy Binding — VERIFIED / COMPLETE
 - M22.5 Plugin Isolation / Execution Sandbox — VERIFIED / COMPLETE (538/538)
-- M22.6 Capability Discovery + Selection Integration — VERIFIED / COMPLETE (8/8 focused + 495/495 core regression)
-- M22.7 Capability Proposal → Validated ToolRequest Boundary — VERIFIED / COMPLETE (502/502 core regression)
+- M22.6 Capability Discovery + Selection Integration — VERIFIED / COMPLETE (8/8 focused + 495/495 core)
+- M22.7 Capability Proposal → Validated ToolRequest Boundary — VERIFIED / COMPLETE (502/502 core)
 - M22.8 Explicit Authorization Boundary — VERIFIED / COMPLETE
 - M22.9 Authorization Integrity — VERIFIED / COMPLETE (544/544)
 - M22.10 Sandbox Admission Integration — VERIFIED / COMPLETE (558/558)
@@ -228,288 +199,118 @@ Previously verified checkpoints:
 - M22.18 Learning Write Admission Boundary — VERIFIED / COMPLETE (514/514)
 - M22.19 Learning Write Execution Boundary — VERIFIED / COMPLETE (514/514)
 - M22.20 Learning Write Outcome / Result Integrity Boundary — VERIFIED / COMPLETE (517/517)
-- M22.21 Learning Write Outcome → Feedback Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+- M22.21 Learning Write Outcome → Feedback Boundary — VERIFIED / COMPLETE (512/512)
+- M22.22 Learning Write Feedback → Adaptation Evaluation Boundary — VERIFIED / COMPLETE (513/513)
+- M22.23 Learning Write Adaptation Decision Boundary — VERIFIED / COMPLETE (513/513)
+- M22.24 Adaptation Proposal Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-## 7. M22 learning architecture and authority walls
+## 7. M22 learning/adaptation architecture and authority walls
 
 ### M22.15 — Learning Candidate
-
 `FeedbackEvaluationService` converts inert execution feedback into an immutable `LearningCandidate` carrying signal classification, confidence, evidence, and provenance. It does not write learning, mutate memory, re-authorize, retry, revoke, or execute.
 
 ### M22.16 — Learning Decision
-
 `LearningDecisionService` consumes a `LearningCandidate` and produces an immutable `LearningDecision` with explicit `ACCEPT`, `DEFER`, or `REJECT` semantics. The decision remains non-writing and non-authorizing.
 
-Authority walls:
-
-- Learning Candidate ≠ Learning Decision
-- Learning Decision ≠ Learning Write
-- Learning Decision ≠ Memory Mutation
-- Learning ≠ Authority
-- Confidence ≠ Certainty
-- Evidence ≠ Truth
-- Learning Decision ≠ Retry Authorization
-- Learning Decision ≠ Execution
-
 ### M22.17 — Learning Write Proposal
-
-`LearningWriteProposalService` converts only an `ACCEPT` decision into an inert, immutable `LearningWriteProposal`. `DEFER` and `REJECT` produce no proposal.
-
-The proposal carries an explicit learning domain, payload, evidence, provenance, confidence, and exact decision/candidate lineage. It cannot authorize, execute, retry, revoke, or mutate memory.
+`LearningWriteProposalService` converts only an `ACCEPT` decision into an inert, immutable `LearningWriteProposal`. It carries explicit domain/payload/evidence/provenance and exact lineage but cannot authorize, execute, retry, revoke, or mutate memory.
 
 ### M22.18 — Learning Write Admission
-
-`LearningWriteAdmissionService` evaluates proposal structure and policy conditions before mutation. The deterministic baseline requires non-empty payload, evidence, provenance, and confidence of at least 0.5. It returns `ADMITTED` or `REJECTED` and remains non-writing/non-authorizing.
+`LearningWriteAdmissionService` evaluates proposal structure and policy conditions before mutation. Baseline requires non-empty payload, evidence, provenance, and confidence >= 0.5. It returns `ADMITTED` or `REJECTED` and remains non-writing/non-authorizing.
 
 ### M22.19 — Learning Write Execution
-
-`LearningWriteExecutionService` is the controlled execution boundary after admission. Only an `ADMITTED` proposal can produce a write request. The request is immutable and identity-bound; a replaceable `LearningWriter` performs the actual write; writer failures become explicit immutable results.
-
-M22.19 walls:
-
-- Learning Write Admission ≠ Learning Write Execution
-- Learning Write Execution ≠ Authorization
-- Learning Write Execution ≠ Tool Execution
-- Learning Write Execution Result ≠ Learning Truth
-- Learning ≠ Authority
-- Completion ≠ Certainty
-
-M22.19 does not grant authorization, bypass sandbox boundaries, invoke ordinary capability execution, retry failed writes, revoke permissions, or define concrete persistent learning stores.
+`LearningWriteExecutionService` is the controlled write-execution boundary after admission. Only an `ADMITTED` proposal can execute through a replaceable `LearningWriter`; failures become explicit immutable results. It does not grant execution authority, bypass sandbox, retry, revoke, or define concrete persistent stores.
 
 ### M22.20 — Learning Write Outcome / Result Integrity
-
-`LearningWriteOutcomeService` interprets a `LearningWriteExecutionResult` against the exact `LearningWriteExecutionRequest` that produced it. It verifies execution, admission, proposal, decision, candidate, and domain identity; normalizes success/failure; and fingerprints successful writer results deterministically.
-
-M22.20 remains an evidence boundary, not a truth boundary. A successful writer response is an observed result, not unquestionable proof that the learned information is correct.
-
-M22.20 walls:
-
-- Learning Write Execution Result ≠ Learning Write Outcome
-- Learning Write Outcome ≠ Learning Truth
-- Completion ≠ Certainty
-- Result Fingerprint ≠ Truth
-- Outcome ≠ Retry Authorization
-- Outcome ≠ Revocation
-- Outcome ≠ Memory Mutation
-- Learning ≠ Authority
+`LearningWriteOutcomeService` interprets a `LearningWriteExecutionResult` against the exact request that produced it, verifies identity lineage, normalizes success/failure, and fingerprints successful writer results. Outcome is evidence, not truth.
 
 ### M22.21 — Learning Write Outcome → Feedback
+`LearningWriteFeedbackService` converts a verified outcome into an immutable `LearningWriteFeedbackEvent`, preserving exact identity/provenance and recursively freezing snapshots. It is inert and does not evaluate correctness, mutate state, authorize, retry, revoke, or execute.
 
-`LearningWriteFeedbackService` converts a verified `LearningWriteOutcome` into an immutable `LearningWriteFeedbackEvent` for later learning/adaptation evaluation. Success and failure are explicit feedback kinds; identity and provenance are preserved; payload and provenance snapshots are recursively frozen; feedback identity is deterministic.
+### M22.22 — Learning Write Feedback → Adaptation Evaluation
+`LearningWriteFeedbackEvaluationService` converts learning-write feedback into an immutable `LearningWriteAdaptationCandidate`. Success and failure become explicit adaptation signals. Lineage, evidence, provenance, and deterministic identity are preserved. Evaluation is non-writing and non-authorizing.
 
-M22.21 is deliberately inert. It does not evaluate correctness, mutate memory or learning state, authorize, retry, revoke, or execute tools.
+### M22.23 — Learning Write Adaptation Decision
+`LearningWriteAdaptationDecisionService` converts an adaptation candidate into an immutable `LearningWriteAdaptationDecision` with explicit `ACCEPT`, `DEFER`, or `REJECT`. The deterministic baseline accepts successful write signals and defers failed write signals. The decision cannot grant adaptation-write, memory-mutation, authorization, retry, or revocation authority.
 
-M22.21 walls:
+### M22.24 — Adaptation Proposal
+`LearningWriteAdaptationProposalService` converts only an `ACCEPT` adaptation decision plus its exact source adaptation candidate into an immutable `LearningWriteAdaptationProposal`. It preserves feedback, execution, admission, learning-write proposal, decision, source-candidate, and domain lineage, recursively freezes adaptation/evidence/provenance, and derives deterministic proposal identity.
 
-- Learning Write Outcome ≠ Learning Write Feedback
-- Learning Write Feedback ≠ Learning Truth
-- Feedback ≠ Authorization
-- Feedback ≠ Retry Authorization
-- Feedback ≠ Revocation
-- Feedback ≠ Memory Mutation
+M22.24 is deliberately inert. It does not apply adaptations, mutate learning or memory, authorize execution, retry, revoke, or define adaptation persistence/execution infrastructure.
+
+M22.24 walls:
+- Adaptation Decision ≠ Adaptation Proposal
+- Adaptation Proposal ≠ Adaptation Write
+- Adaptation Proposal ≠ Memory Mutation
+- Adaptation Proposal ≠ Authorization
+- Adaptation Proposal ≠ Retry Authorization
+- Adaptation Proposal ≠ Revocation
+- Evaluation ≠ Authority
 - Completion ≠ Certainty
 - Evidence ≠ Truth
 - Learning ≠ Authority
 
 ## 8. Existing memory decision/write architecture
 
-The existing memory system already separates **decision** from **mutation**:
+The memory system already separates decision from mutation. `MemoryDecisionProvider` is provider-neutral and non-mutating; `MemoryDecisionService` selects and validates decisions; `MemoryDecisionExecutor` is the mutation boundary for CREATE, CONFIRM, UPDATE, CONTRADICT, or IGNORE.
 
-- `MemoryDecisionContext` describes the information available when deciding what should happen to a memory candidate.
-- `MemoryDecision` is the structured decision record.
-- `MemoryDecisionProvider` is provider-neutral and explicitly non-mutating.
-- `MemoryDecisionService` selects/validates a provider and does not persist anything.
-- `MemoryDecisionExecutor` is the mutation boundary that performs CREATE, CONFIRM, UPDATE, CONTRADICT, or IGNORE operations.
-
-This architecture must remain distinct from learning decision/admission/execution layers. Learning may eventually map to memory actions, but it must not bypass the memory decision/executor contract.
+Learning/adaptation must not bypass this architecture. Any future mapping from adaptation to memory must cross the established memory decision/executor contract.
 
 Memory taxonomy:
-
 `PERSONAL, SKILL, PREFERENCE, PROJECT, GOAL, FACT, WORKFLOW, RELATIONSHIP, EXPERIENCE, OTHER`
 
 ## 9. Capability/plugin ecosystem foundation
 
-### Capability contract and registry
+Capability contracts, registry, trust/provenance, lifecycle/versioning, permission/policy binding, sandbox, discovery/selection, proposal/invocation, authorization/integrity, execution preparation, execution attempt, outcome, and feedback are all explicit boundaries. Registration/discovery/trust/selection do not grant execution authority.
 
-`CapabilityDescriptor` is immutable, metadata-only capability identity. `CapabilityRegistry` performs deterministic registration, conflict handling, unregister, get, and discover. Registration is not authorization and discovery is not execution.
-
-### Capability trust / provenance
-
-Capability provenance and trust are separate concepts. Non-UNASSESSED trust requires evidence. Trust does not imply permission, authorization, or execution rights.
-
-### Capability lifecycle / versioning
-
-Capabilities use explicit semantic versioning and lifecycle state. ACTIVE, DEPRECATED, and RETIRED are distinct. Retirement is not reversible by accidental reactivation; latest-version discovery excludes retired versions by default.
-
-### Permission / policy binding
-
-Capability permission bindings are explicit and conflict-aware. Permission binding is not authorization; ALLOW is not equivalent to an authorized execution.
-
-### Sandbox
-
-Sandbox profiles are declarative containment/resource profiles. Admission is a distinct step from authorization and execution. Process isolation is not an authority boundary.
-
-### Discovery / selection
-
-`CapabilityCatalog` provides a read-only deterministic snapshot. `CapabilitySelector` and `CapabilitySelectionService` rank/select available capabilities. Discovery and selection remain advisory and non-executing.
-
-### Proposal / invocation
-
-`CapabilityRequestProposal`, argument planning, and invocation building establish a deterministic path from capability selection to a validated `ToolRequest`. Model-proposed arguments remain advisory until deterministic validation succeeds.
-
-### Authorization / integrity / execution
-
-The capability execution path now explicitly separates:
-
+Capability execution path:
 `proposal → validation → policy → confirmation → authorization → authorization integrity → sandbox admission → execution preparation → execution attempt → outcome → feedback`
-
-Each stage preserves exact identity and refuses to silently inherit authority from an earlier or adjacent concept.
 
 ## 10. Workspace capability — frozen
 
-The workspace subsystem is considered architecturally approved/frozen unless a real architectural need appears.
-
-Capabilities:
-
-- `read_file`
-- `list_directory`
-- `search_files`
-- `write_file`
-
-Shared workspace behavior covers path resolution, workspace confinement, workspace-relative POSIX reporting, traversal rules, hidden-entry behavior, symlink handling, filesystem-error normalization, and limits.
-
-Risk boundary:
-
-- read/list/search are low-risk and read-only
-- `write_file` is high-risk and confirmation-gated
-
-Workspace composition has been treated as one coherent capability surface:
-
-`discover → inspect → search → modify`
+Capabilities: `read_file`, `list_directory`, `search_files`, `write_file`.
+Read/list/search are low-risk and read-only. `write_file` is high-risk and confirmation-gated. Shared behavior covers confinement, relative reporting, traversal rules, hidden entries, symlinks, filesystem-error normalization, and limits.
 
 ## 11. Tool capability bridge — completed foundation
 
-Core defines the minimal abstraction needed to invoke tools safely:
-
-- `ToolInvoker`
-- `ToolCapabilityGateway`
-- `ToolPlanStepHandler`
-
-JARVIS receives the tool-facing capability boundary by dependency injection instead of constructing concrete tool infrastructure inside `jarvis.py`.
-
-Representative execution flow:
-
+Core defines `ToolInvoker`, `ToolCapabilityGateway`, and `ToolPlanStepHandler`.
+Representative flow:
 `JARVIS → TaskRequest → ExecutionPlanner → PlanValidator → ExecutionPolicy → PlanExecutor → ToolPlanStepHandler → ToolInvoker → PolicyGate → ToolService → ToolHandler`
 
-The core execution policy does not duplicate concrete tool risk. Capability-specific policy belongs at the tool/capability boundary.
+The model is advisory; capability-specific policy remains at the capability boundary.
 
-## 12. Natural-language routing groundwork — historical/current integration track
+## 12. Natural-language routing groundwork
 
-Original routing groundwork introduced:
+Routing groundwork includes `RequestIntent`, `RequestIntentClassifier`, `AIRequestIntentClassifier`, and `IntelligentRequestRouter`. Explicit command precedence remains intact and classification does not execute tools or grant authorization.
 
-- `RequestIntent`
-- `RequestIntentClassifier` protocol
-- `AIRequestIntentClassifier`
-- `IntelligentRequestRouter`
-
-The intended design preserves explicit command precedence and keeps classification advisory.
-
-Ordinary-language classifications include:
-
-- `conversation`
-- `question`
-- `task`
-- `tool`
-
-The classifier does not execute tools and does not grant authorization.
-
-The original integration target is:
-
+Target integration:
 `natural language → route → task/tool task → existing planner → validator → policy → executor → capability`
-
-without moving tool-specific knowledge into `jarvis.py`.
 
 ## 13. Original roadmap / preserved planning context
 
-The project originally organized its broader direction as M1–M16. The current M19–M22 verification ledger above is authoritative for the present repository state; the following roadmap is preserved as historical design intent and long-term product philosophy, not as a substitute for the current milestone ledger.
+The original long-term organization was M1–M16. The current M19–M22 verification ledger above is authoritative for repository state; this roadmap remains historical design intent and product philosophy.
 
 ### Goal 1 — Driveable JARVIS / Third Hand
+- **M1 — Capability Selection + Invocation:** catalog, selector, selection service, tool bridge, argument proposal, deterministic invocation validation.
+- **M2 — Natural-Language Task Routing:** `ask() → intelligent router → TaskRequest → planner → validator → policy → executor`.
+- **M3 — Multi-Step Agent Execution:** `goal → plan → step → observe → next step → ... → goal achieved`.
+- **M4 — Capability Discovery:** dynamically understand registered capabilities.
+- **M5 — Persistent Working Context:** combine memory, conversation, current task/goal, workspace state, observations, and recent history.
+- **M6 — Usable JARVIS Runtime:** CLI/runtime first, polished GUI later.
+- **M7 — Self-Inspection:** inspect source, tests, architecture, configuration, runtime state, and capabilities using the same capability system.
+- **M8 — Safe Self-Modification + Verification:** `inspect → identify change → plan modification → confirmation if required → modify → run tests → inspect results → correct/report`.
 
-#### M1 — Capability Selection + Invocation
-
-Catalog, selector, selection service, tool bridge, argument proposal, and deterministic invocation validation.
-
-#### M2 — Natural-Language Task Routing
-
-`ask() → intelligent router → TaskRequest → planner → validator → policy → executor`
-
-#### M3 — Multi-Step Agent Execution
-
-Move toward an observe/act loop:
-
-`goal → plan → step → observe → next step → ... → goal achieved`
-
-#### M4 — Capability Discovery
-
-JARVIS understands its currently registered capabilities dynamically rather than through hard-coded lists.
-
-#### M5 — Persistent Working Context
-
-Combine long-term memory, conversation state, current task/goal, workspace state, tool observations, and recent history into coherent working context.
-
-#### M6 — Usable JARVIS Runtime
-
-CLI/runtime first, polished GUI later. The runtime should expose conversation, tasks, execution, confirmation, memory, capability status, and useful logs.
-
-#### M7 — Self-Inspection
-
-JARVIS can inspect its own source, tests, architecture, configuration, runtime state, and capabilities using the same capability system rather than special bypasses.
-
-#### M8 — Safe Self-Modification + Verification
-
-Driveable threshold:
-
-`inspect → identify change → plan modification → confirmation if required → modify → run tests → inspect results → correct/report`
-
-### Goal 2 — “THIS IS JARVIS” / Second Brain
-
-#### M9 — Goal-Oriented Autonomy
-
-Shift from exact instructions toward outcome-oriented goals.
-
-#### M10 — Persistent Projects
-
-Track ongoing projects, tasks, goals, decisions, artifacts, dependencies, experiments, and history across time.
-
-#### M11 — Deep Second-Brain Memory
-
-Connect people, projects, ideas, skills, experiences, decisions, preferences, goals, failures, and lessons rather than acting as a simple fact store.
-
-#### M12 — Broad Plugin / Capability Ecosystem
-
-Expand across GitHub, browser, shell, documents, research, databases, Home Assistant, PCVUE, automation, and other integrations.
-
-#### M13 — Self-Evaluation
-
-Evaluate whether a goal was actually achieved, whether assumptions were wrong, what failed, and what should change.
-
-#### M14 — Self-Improvement
-
-Closed loop:
-
-`observe → identify weakness → propose improvement → modify → test → evaluate`
-
-#### M15 — Initiative
-
-Notice recurring manual work, bottlenecks, opportunities, and relevant context and bring useful suggestions without silently taking unauthorized actions.
-
-#### M16 — THIS IS JARVIS
-
-JARVIS genuinely feels like a personal intelligence system because it understands the user, remembers the user and work, understands projects, knows its capabilities, reasons about goals, acts, inspects itself, modifies itself safely, verifies its work, helps proactively, and improves over time.
+### Goal 2 — THIS IS JARVIS / Second Brain
+- **M9 — Goal-Oriented Autonomy:** shift toward outcome-oriented goals.
+- **M10 — Persistent Projects:** track tasks, goals, decisions, artifacts, dependencies, experiments, and history.
+- **M11 — Deep Second-Brain Memory:** connect people, projects, ideas, skills, experiences, decisions, preferences, goals, failures, and lessons.
+- **M12 — Broad Plugin / Capability Ecosystem:** expand across GitHub, browser, shell, documents, research, databases, Home Assistant, PCVUE, automation, and other integrations.
+- **M13 — Self-Evaluation:** evaluate goal achievement, assumptions, failure, and needed change.
+- **M14 — Self-Improvement:** `observe → identify weakness → propose improvement → modify → test → evaluate`.
+- **M15 — Initiative:** notice recurring work, bottlenecks, opportunities, and context without silently taking unauthorized actions.
+- **M16 — THIS IS JARVIS:** personal intelligence that understands, remembers, reasons, acts, inspects itself, modifies safely, verifies work, helps proactively, and improves.
 
 ## 14. Self-work target architecture
-
-The eventual self-development loop should look like:
 
 ```text
 User goal
@@ -539,50 +340,34 @@ Correct if needed
 Report
 ```
 
-The model is never the final authority over execution.
+The model is never final authority over execution.
 
 ## 15. Design rules for future development
 
-Before adding a feature, ask:
+Before adding a feature, ask: **Does this make JARVIS a better partner for the user?**
 
-**Does this make JARVIS a better partner for the user?**
-
-Avoid building things merely because they are technically interesting.
-
-Prefer existing reliable mechanisms over reinventing infrastructure.
-
-Prefer explicit contracts over magic behavior.
-
-Prefer composition over special cases.
-
-Prefer a small core with extensible capabilities over a monolithic agent.
-
-Never sacrifice safety boundaries for convenience.
-
-Do not optimize for flashy autonomy before the underlying system can explain, test, and verify what it is doing.
+Avoid building things merely because they are technically interesting. Prefer explicit contracts, composition, small deterministic boundaries, reliable existing mechanisms, and safety over convenience. Do not optimize for flashy autonomy before the system can explain, test, and verify what it is doing.
 
 ## 16. Cross-chat session protocol
 
 Every GitHub engineering session begins by reading this file from the current working branch/ref.
 
 Before moving to the next milestone:
-
 1. update this file with the newest verified receipt;
 2. record the implementation state of the next milestone;
 3. state the active architectural boundary;
 4. preserve unresolved issues and known constraints;
 5. derive the next milestone from the live repository rather than memory.
 
-A future chat should be able to begin with:
-
+Future chats should be able to begin with:
 1. Read `docs/JARVIS_MASTER_CONTEXT.md`.
 2. Inspect current branch and git status.
-3. Run/inspect the relevant tests.
+3. Run/inspect relevant tests.
 4. Continue from the stated next milestone.
 
 ## 17. Verification rule
 
-A milestone is not considered **GREEN / VERIFIED / COMPLETE** until the user provides the local test receipt.
+A milestone is not **GREEN / VERIFIED / COMPLETE** until the user provides the local test receipt.
 
 Remote implementation status and local verification status must remain distinct.
 
@@ -594,14 +379,13 @@ No merge is performed unless the user explicitly requests it.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.21 Learning Write Outcome → Feedback Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
+**Current milestone:** M22.24 Adaptation Proposal Boundary — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT
 
-**Current branch:** `feature/m22.21-learning-write-feedback-boundary`
+**Current branch:** `feature/m22.24-adaptation-proposal-boundary`
 
-**Latest verified milestone:** M22.20 — 517/517 (15 focused + 502 core regression)
+**Latest verified milestone:** M22.23 — 513/513 (11 focused + 502 core regression)
 
-**Learning pipeline:**
+**Learning/adaptation pipeline:**
+`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Future Adaptation Policy/Admission/Execution → Learning State / Memory`
 
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Learning / Memory Evaluation → Learning State / Memory`
-
-**Next milestone:** derive from the live repository after M22.21 verification; do not guess it from memory.
+**Next milestone:** derive from the live repository after M22.24 verification; do not guess it from memory.
