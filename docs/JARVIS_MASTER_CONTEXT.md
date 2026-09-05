@@ -88,6 +88,8 @@ Future Adaptation Execution
 ↓
 Future Adaptation Execution Result / Result Integrity
 ↓
+Future Adaptation Execution Feedback
+↓
 Learning State / Memory Mutation
 ```
 
@@ -152,7 +154,7 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.35-adaptation-evaluation-execution-result-integrity`
+`feature/m22.36-adaptation-evaluation-execution-feedback`
 
 Latest verified local receipts:
 - **M22.35:** 14/14 focused + 502/502 core regression = **516/516**
@@ -165,8 +167,6 @@ Latest verified local receipts:
 - **M22.27:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.26:** 11/11 focused + 502/502 core regression = **513/513**
 
-Previous verified checkpoints remain recorded below.
-
 ## 6. Milestone state
 
 M19 and M20 — VERIFIED / COMPLETE.
@@ -174,6 +174,8 @@ M21.1–M21.6 — VERIFIED / COMPLETE.
 M22.1–M22.35 — VERIFIED / COMPLETE.
 
 M22.35 Future Adaptation Execution Result Integrity — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
+
+**M22.36 Future Adaptation Execution → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
@@ -183,25 +185,23 @@ M22.22 converts learning-write feedback into an immutable adaptation candidate. 
 
 M22.31–M22.33 establish the downstream proposal, admission, and execution-preparation boundaries for evaluation-derived future adaptations.
 
-M22.34 executes exactly one M22.33 preparation artifact through a replaceable applier. It preserves exact lineage, normalizes applier failures, and does not grant retry, revocation, authorization, or memory mutation.
+M22.34 executes exactly one M22.33 preparation artifact through a replaceable applier. M22.35 validates the M22.34 execution request/result pair and produces immutable result-integrity evidence.
 
-M22.35 consumes the exact M22.34 execution request/result pair. It validates exact lineage, deterministically fingerprints successful execution output, normalizes success/failure into immutable outcome evidence, and preserves the authority wall. It does not establish adaptation truth, authorization, retry, revocation, or memory mutation.
+### M22.36 — Future Adaptation Execution → Feedback
+`LearningWriteAdaptationEvaluationExecutionFeedbackService` consumes exactly one M22.35 execution outcome and creates immutable feedback for downstream evaluation. Success and failure are normalized into distinct feedback kinds, exact M22.34/M22.35 lineage is preserved, payload and provenance are recursively frozen, and the feedback ID is deterministic.
+
+M22.36 is intentionally inert. Feedback does not authorize execution, grant retry, revoke anything, establish adaptation truth, or mutate memory. It is evidence for later evaluation.
 
 Walls:
-- Adaptation Evaluation Decision ≠ Adaptation Evaluation Proposal
-- Proposal ≠ Admission
-- Admission ≠ Preparation
-- Preparation ≠ Execution
 - Execution ≠ Result Integrity
-- Result Integrity ≠ Adaptation Truth
-- Result Fingerprint ≠ Truth
-- Completion ≠ Certainty
+- Result Integrity ≠ Feedback
+- Feedback ≠ Adaptation Truth
+- Feedback ≠ Authorization
+- Feedback ≠ Retry
+- Feedback ≠ Revocation
+- Feedback ≠ Memory Mutation
 - Evidence ≠ Truth
 - Learning ≠ Authority
-- Result Integrity ≠ Authorization
-- Result Integrity ≠ Retry
-- Result Integrity ≠ Revocation
-- Result Integrity ≠ Memory Mutation
 
 ## 8. Existing memory decision/write architecture
 
@@ -310,13 +310,12 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.36 — derive next boundary from the live repository after M22.35 result integrity.
+**Current milestone:** M22.36 Future Adaptation Execution → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
 
-**Current branch:** `feature/m22.35-adaptation-evaluation-execution-result-integrity`
+**Current branch:** `feature/m22.36-adaptation-evaluation-execution-feedback`
 
 **Latest verified milestone:** M22.35 — 516/516 (14 focused + 502 core regression)
 
-**Learning/adaptation pipeline:**
-`Execution Feedback → Learning Candidate → Learning Decision → Learning Write Proposal → Learning Write Admission → Learning Write Execution → Learning Write Outcome → Learning Write Feedback → Adaptation Evaluation → Adaptation Candidate → Adaptation Decision → Adaptation Proposal → Adaptation Admission → Adaptation Execution → Adaptation Outcome / Result Integrity → Adaptation Feedback → Adaptation Feedback Evaluation → Adaptation Evaluation Decision → Adaptation Evaluation Proposal → Adaptation Evaluation Proposal Admission → Future Adaptation Execution Preparation → Future Adaptation Execution → Future Adaptation Execution Result / Result Integrity → Learning State / Memory`
+**Active boundary:** Future Adaptation Execution Result / Result Integrity → Future Adaptation Execution Feedback.
 
-**Next milestone:** derive M22.36 from the live M22.35 result-integrity artifact and surrounding contracts; do not guess.
+**Next milestone:** derive M22.37 from the live M22.36 feedback artifact after local verification; do not guess.
