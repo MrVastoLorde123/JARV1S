@@ -40,6 +40,8 @@ Value Assessment
         ↓
 Information Gain / Uncertainty Reduction
         ↓
+Bounded Scheduling / Notification Proposal
+        ↓
 Prioritization
         ↓
 Validation / Policy
@@ -70,7 +72,7 @@ An eligible initiative candidate may become an immutable proposal preserving can
 A bounded deterministic advisory score uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version: `linear-v1`. Score is bounded to [0, 1], and ranking is deterministic by score descending then `proposal_id` ascending.
 
 ### M21.4 — Information Gain / Uncertainty Reduction
-**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**Status: VERIFIED / COMPLETE.**
 
 M21.4 estimates how much additional information could reduce uncertainty around a proactive proposal. Factors are current uncertainty, expected reduction, evidence quality, and relevance. Formula version: `multiplicative-v1`.
 
@@ -94,14 +96,40 @@ High Information Gain ≠ Authorization
 Ranking ≠ Scheduling
 ```
 
-### Future M21 boundaries
+### M21.5 — Bounded Proactive Scheduling / Notification
+**Status: IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+
+M21.5 represents when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry and does not deliver a notification.
+
+The bounded contract includes:
 
 ```text
-M21.5 Bounded Proactive Scheduling / Notification
+ProactiveScheduleProposal — immutable advisory timing metadata
+SchedulingEvaluation       — PROPOSED / NEEDS_REVIEW / NOT_SCHEDULABLE
+NotificationChannel        — explicit channel semantics
+```
+
+Timezone-aware timestamps are required. Notification messages are required when a channel is selected. Expiry cannot precede the proposed time. Identity must remain consistent between an evaluation and its schedule proposal. Ranking is deterministic by proposed time, then proposal identity.
+
+```text
+Scheduling Proposal ≠ Scheduling
+Notification Recommendation ≠ Notification Delivery
+Timing ≠ Authorization
+Reminder Need ≠ User Intent
+Scheduling ≠ Permission
+Notification ≠ Execution
+Initiative ≠ Authorization
+```
+
+The context surface explicitly reports `scheduled=False` and `notification_sent=False`.
+
+### Future M21 boundary
+
+```text
 M21.6 Proactive Runtime / Feedback Integration
 ```
 
-No M21 stage may grant authority merely because behavior is proactive, predictive, useful, or information-seeking.
+No M21 stage may grant authority merely because behavior is proactive, predictive, useful, information-seeking, scheduled-looking, or notification-oriented.
 
 ## Cross-cutting cognitive architecture
 
