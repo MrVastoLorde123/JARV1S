@@ -60,8 +60,10 @@ No merge is performed unless explicitly requested.
 - M22.54 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
 - M22.55 — VERIFIED / COMPLETE: 15/15 focused + 502/502 core = **517/517**
 - M22.56 — VERIFIED / COMPLETE: 16/16 focused + 502/502 core = **518/518**
+- M23.1 — VERIFIED / COMPLETE: 12/12 focused + 514/514 core = **526/526**
 
 Selected recent receipts:
+- M23.1: **526/526**
 - M22.56: **518/518**
 - M22.55: **517/517**
 - M22.54: **517/517**
@@ -110,6 +112,29 @@ Historical M22.48 admission namespace remains untouched.
 
 M22.56 receipt: **16/16 focused + 502/502 core = 518/518**.
 
+## 8. M23.1 — Boundary Composition Contract
+
+**Status: VERIFIED / COMPLETE.**
+
+Branch:
+`feature/m23.1-boundary-composition-contract`
+
+Contract:
+`Generic typed composition primitive for existing JARVIS boundaries`
+
+M23.1 establishes reusable composition of ordered, typed stages without creating new execution or authority. `BoundaryStageSpec` defines a named stage with exact input/output types and a callable handler. `BoundaryPipeline` validates type continuity at construction and exact runtime input/output types at execution. `BoundaryCompositionResult` records immutable stage observations and the final value. Stage failures are wrapped as `BoundaryCompositionError` with stage identity preserved.
+
+Composition is fail-closed: failed stages are not automatically retried, stages are not implicitly skipped, and the layer does not branch, authorize, execute, revoke, mutate memory, infer permission, or establish truth.
+
+M8.5 `ControlledAgency` remains the bounded multi-step execution coordinator. M23.1 is a generic composition primitive above individual boundaries rather than a replacement for agency orchestration.
+
+Files:
+- `src/core/boundary_composition.py`
+- `src/core/tests/test_boundary_composition.py`
+- `docs/decisions/046-boundary-composition-contract.md`
+
+M23.1 receipt: **12/12 focused + 514/514 core = 526/526**.
+
 ## 9. Namespace and lineage rules
 
 M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because class names are similar.
@@ -142,10 +167,10 @@ No merge is performed unless explicitly requested.
 
 ## 13. Current snapshot
 
-**Latest verified milestone:** M22.56 — 16/16 focused + 502/502 core = **518/518**.
+**Latest verified milestone:** M23.1 — 12/12 focused + 514/514 core = **526/526**.
 
-**Active milestone:** M22.56 is complete. The next milestone must be derived from the live repository rather than assumed from the milestone numbering.
+**Active milestone:** M23.1 is complete. The next milestone must be derived from the live repository rather than assumed from milestone numbering.
 
-**M22.56 status:** VERIFIED / COMPLETE.
+**M23.1 status:** VERIFIED / COMPLETE.
 
-**Next action:** inspect the live repository for the next explicit boundary or architectural milestone. Do not invent M22.57 without repository evidence.
+**Next architectural direction:** build upon the new boundary composition primitive rather than creating another repetitive one-off M22-style wrapper. Model routing, environment awareness, anomaly detection, asynchronous execution, interface, multimodality, and agent orchestration remain separate future concerns and should be introduced through explicit contracts.
