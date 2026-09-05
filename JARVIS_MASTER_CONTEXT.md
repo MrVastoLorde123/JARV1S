@@ -109,10 +109,11 @@ Outcome / Feedback
 - M22.6 Capability Discovery + Selection Integration — VERIFIED / COMPLETE (8/8 focused + 495/495 core regression)
 - M22.7 Capability Proposal → Validated ToolRequest Boundary — VERIFIED / COMPLETE (7/7 request service + 8/8 invocation + 7/7 argument planner + 8/8 M22.6 integration + 4/4 catalog + 9/9 selection + 3/3 selection service + 502/502 core regression)
 - M22.8 Explicit Authorization Boundary — VERIFIED / COMPLETE (9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression)
-- M22.9 Authorization Integrity — ACTIVE
+- M22.9 Authorization Integrity — VERIFIED / COMPLETE (9/9 integrity + 3/3 integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression = 544/544)
+- M22.10 Sandbox Admission Integration — ACTIVE
 
-## M22.9 direction
-M22.9 establishes the integrity boundary between an explicit `AuthorizationDecision` and execution. `AuthorizationIntegrityService` deterministically binds a granted authorization to the exact `ToolRequest` through request and decision fingerprints plus tool/invocation identity checks. `PolicyGate.invoke()` verifies that integrity before delegating to `ToolService`.
+## M22.10 direction
+M22.10 integrates the existing sandbox admission contract into the post-authorization path. A granted, integrity-verified request must resolve to an explicit sandbox profile and pass deterministic sandbox admission before execution can be delegated. Admission remains metadata-only: it does not grant authorization, activate containment, launch a worker, or execute a plugin.
 
 Directional boundary:
 ```text
@@ -120,7 +121,41 @@ Validated ToolRequest
 ↓
 Policy
 ↓
-Confirmation (when required)
+Confirmation
+↓
+AuthorizationDecision
+↓
+Authorization Integrity
+↓
+Sandbox Profile Resolution
+↓
+Sandbox Admission
+↓
+Execution Preparation / Handoff
+```
+
+M22.10 authority walls:
+- Authorization ≠ Sandbox Admission
+- Authorization Integrity ≠ Sandbox Admission
+- Sandbox Admission ≠ Execution
+- Sandbox Profile ≠ Permission
+- Sandbox Admission ≠ Worker Assignment
+- Sandbox Admission ≠ Containment Activation
+
+M22.10 does not launch processes, activate containment, execute plugins, assign workers, persist authorization, add revocation/expiration, or bypass `PolicyGate`.
+
+## M22.9 verified semantics
+M22.9 establishes the integrity boundary between an explicit `AuthorizationDecision` and execution. `AuthorizationIntegrityService` deterministically binds a granted authorization to the exact `ToolRequest` through request and decision fingerprints plus tool/invocation identity checks. `PolicyGate.invoke()` verifies that integrity before delegating to `ToolService`.
+
+M22.9 verification receipt: **9/9 integrity + 3/3 integrity gate + 9/9 authorization + 6/6 authorization gate + 15/15 legacy gate + 502/502 core regression tests passed locally.**
+
+Directional boundary:
+```text
+Validated ToolRequest
+↓
+Policy
+↓
+Confirmation
 ↓
 AuthorizationDecision
 ↓
@@ -173,6 +208,8 @@ M22.8 does not execute tools from `authorize()`, bypass `PolicyGate`, infer auth
 ## M22.7 verified semantics
 M22.7 binds M22.6 capability selection to the existing structural invocation boundary without granting execution authority. `CapabilityRequestProposalService` accepts an immutable `CapabilityDiscoverySelection`, requires any selected candidate to originate from that exact snapshot, asks a replaceable `CapabilityArgumentPlanner` for inert argument data, and uses `CapabilityInvocationBuilder` to structurally validate and materialize a `ToolRequest`.
 
+M22.7 verification receipt: **7/7 request service + 8/8 invocation + 7/7 argument planner + 8/8 M22.6 integration + 4/4 catalog + 9/9 selection + 3/3 selection service + 502/502 core regression tests passed locally.**
+
 Directional boundary:
 ```text
 CapabilityDiscoverySelection
@@ -206,8 +243,6 @@ M22.7 authority walls:
 - Sandbox ≠ Authorization
 
 M22.7 does not invoke tools or plugins, authorize a proposal, interpret argument generation as confirmation, bypass `PolicyGate`, grant permission, perform sandbox admission, assign workers, or create an execution request merely because a request was structurally validated.
-
-M22.7 verification receipt: **7/7 request service + 8/8 invocation + 7/7 argument planner + 8/8 M22.6 integration + 4/4 catalog + 9/9 selection + 3/3 selection service + 502/502 core regression tests passed locally.**
 
 ## M22.6 verified semantics
 M22.6 establishes the explicit provider-neutral capability discovery and selection integration boundary. `CapabilityCatalog` remains a read-only view over the existing `ToolCapabilityGateway`; `CapabilitySelectionService` composes discovery and selector ranking; `CapabilityDiscoverySelection` captures the exact discovered capabilities and the selection derived from that snapshot.
