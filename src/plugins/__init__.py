@@ -14,6 +14,15 @@ from .policy import (
     CapabilityPolicyError,
     PermissionEffect,
 )
+from .sandbox import (
+    IsolationMode,
+    PluginIsolationError,
+    SandboxAdmissionEvaluator,
+    SandboxAdmissionResult,
+    SandboxAdmissionStatus,
+    SandboxProfile,
+    SandboxProfileRegistry,
+)
 from .trust import (
     CapabilityProvenance,
     CapabilityTrustAssessment,
@@ -35,6 +44,13 @@ __all__ = [
     "CapabilityPolicyBindingRegistry",
     "CapabilityPolicyError",
     "PermissionEffect",
+    "IsolationMode",
+    "PluginIsolationError",
+    "SandboxAdmissionEvaluator",
+    "SandboxAdmissionResult",
+    "SandboxAdmissionStatus",
+    "SandboxProfile",
+    "SandboxProfileRegistry",
     "CapabilityProvenance",
     "CapabilityTrustAssessment",
     "CapabilityTrustError",

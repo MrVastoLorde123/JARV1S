@@ -105,7 +105,32 @@ Outcome / Feedback
 - M22.2 Capability Trust / Provenance Boundary — VERIFIED / COMPLETE (9/9 focused + 8/8 M22.1 + 487/487 core)
 - M22.3 Capability Lifecycle / Versioning Boundary — VERIFIED / COMPLETE (15/15 focused + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
 - M22.4 Capability Permission / Policy Binding — VERIFIED / COMPLETE (9/9 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
-- M22.5 Plugin Isolation / Execution Sandbox — ACTIVE
+- M22.5 Plugin Isolation / Execution Sandbox — IMPLEMENTED / AWAITING LOCAL RECEIPT
+
+## M22.5 boundary
+M22.5 establishes the execution-isolation boundary for plugins/capabilities. Sandbox profiles describe containment and resource constraints; admission evaluation determines whether the declared isolation contract is structurally admissible for the supported runtime. Neither creates permission, authorization, or execution.
+
+Current bounded contract:
+- `SandboxProfile` is immutable declarative containment/resource metadata.
+- `IsolationMode` is bounded to `PROCESS` in this initial contract.
+- `SandboxAdmissionEvaluator` performs deterministic contract admission only; it never launches or invokes a capability.
+- `SandboxAdmissionResult` is immutable and carries an explicit `ADMISSIBLE` or `REJECTED` status.
+- `SandboxProfileRegistry` provides explicit, conflict-aware registration and deterministic listing of sandbox profiles.
+- Read-only filesystem profiles cannot declare writable paths.
+- Resource constraints require positive timeout, memory, and CPU values; CPU is bounded to 100 percent.
+- Sandbox context explicitly reports no permission, authority, authorization, or execution state.
+
+M22.5 authority walls:
+- Sandbox ≠ Authorization
+- Isolation ≠ Trust
+- Admission ≠ Permission
+- Permission ≠ Execution
+- Process Boundary ≠ Authority Boundary
+- Containment ≠ Cancellation
+- Capability ≠ Worker
+- Plugin ≠ JARVIS
+
+M22.5 does not spawn plugin subprocesses, execute arbitrary plugin code, convert sandbox admission into authorization, infer trust from isolation checks, grant permission, replace confirmation/authorization, revoke authorization, select workers, mutate policy, or bypass the existing validation → policy → confirmation → authorization chain.
 
 ## M22.4 verified semantics
 M22.4 establishes bounded declarative permission/policy bindings for capabilities and specific capability versions. A binding describes whether a named permission is allowed or denied under a policy; it is not itself an authorization decision.
@@ -132,42 +157,6 @@ M22.4 authority walls:
 - Permission ≠ Execution
 
 M22.4 does not authorize an invocation, confirm user intent, execute capabilities, select workers, mutate policy, infer trust from permission, or convert an `ALLOW` binding into an execution request.
-
-## M22.5 direction
-M22.5 establishes the execution-isolation boundary for plugins/capabilities. The boundary separates a capability's ability to run from the host process while preserving the existing authority chain; sandbox admission or isolation must never become authorization. The implementation should begin with immutable, inspectable sandbox metadata and explicit admission/containment contracts before any real plugin execution is introduced.
-
-Directional M22.5 boundary:
-```text
-Capability Descriptor
-↓
-Provenance / Trust
-↓
-Version / Lifecycle
-↓
-Permission Binding
-↓
-Validation / Policy Decision
-↓
-Confirmation
-↓
-Authorization
-↓
-Sandbox Admission / Execution Isolation
-↓
-Execution
-↓
-Outcome / Feedback
-```
-
-M22.5 must preserve these walls:
-- Sandbox ≠ Authorization
-- Isolation ≠ Trust
-- Admission ≠ Permission
-- Permission ≠ Execution
-- Process Boundary ≠ Authority Boundary
-- Containment ≠ Cancellation
-- Capability ≠ Worker
-- Plugin ≠ JARVIS
 
 ## M22.3 verified semantics
 M22.3 establishes bounded capability version identity and lifecycle history. `SemanticVersion` enforces Semantic Versioning syntax and precedence; `CapabilityVersion` provides immutable version/lifecycle metadata; `CapabilityLifecycleRegistry` provides explicit version registration, lookup, forward-only lifecycle transitions, deterministic ordering, and retained history. Build metadata does not change SemVer precedence; a deterministic version-string tiebreaker is used when precedence is equal.
