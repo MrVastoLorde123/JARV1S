@@ -1,4 +1,4 @@
-"""Policy, confirmation, authorization, integrity, sandbox, and handoff gate."""
+"""Policy, confirmation, authorization, integrity, sandbox, handoff, and execution-attempt gate."""
 
 from __future__ import annotations
 
@@ -12,19 +12,33 @@ from .authorization import AuthorizationDecision, ExplicitAuthorizationService
 from .authorization_integrity import AuthorizationIntegrityService
 from .confirmation import AutoDenyConfirmationProvider, ConfirmationProvider
 from .errors import InvalidRequestError
+from .execution_attempt import ExecutionAttemptService, ExecutionAttemptStatus, ToolExecutor
 from .execution_preparation import ExecutionPreparationError, ExecutionPreparationService
 from .models import ToolDefinition, ToolError, ToolRequest, ToolResult
 from .policy import Policy, PolicyDecision
 from .registry import ToolRegistry
-from .sandbox_admission import (
-    SandboxAdmissionService,
-    build_default_sandbox_profiles,
-)
+from .sandbox_admission import SandboxAdmissionService, build_default_sandbox_profiles
 from .service import ToolService
 
 
+class _ToolServiceExecutor:
+    """Adapter that executes a prepared handoff through the existing ToolService."""
+
+    def __init__(self, service: ToolService) -> None:
+        self._service = service
+
+    def execute(self, handoff) -> ToolResult:
+        return self._service.invoke(
+            ToolRequest(
+                tool_name=handoff.tool_name,
+                arguments=dict(handoff.arguments),
+                invocation_id=handoff.invocation_id,
+            )
+        )
+
+
 class PolicyGate:
-    """Enforces policy, confirmation, authorization, integrity, sandbox admission, and handoff."""
+    """Enforces policy, confirmation, authorization, integrity, sandbox, handoff, and execution attempt."""
 
     def __init__(
         self,
@@ -33,6 +47,7 @@ class PolicyGate:
         policy: Policy,
         confirmation_provider: Optional[ConfirmationProvider] = None,
         sandbox_profile_registry: Optional[SandboxProfileRegistry] = None,
+        executor: Optional[ToolExecutor] = None,
     ) -> None:
         self._registry = registry
         self._service = service
@@ -46,6 +61,8 @@ class PolicyGate:
         self._sandbox_profiles = sandbox_profile_registry or build_default_sandbox_profiles()
         self._sandbox_admission = SandboxAdmissionService(self._sandbox_profiles)
         self._execution_preparation = ExecutionPreparationService()
+        self._executor = executor or _ToolServiceExecutor(service)
+        self._execution_attempt = ExecutionAttemptService(self._executor)
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
         """Return the immutable capability catalog visible to callers."""
@@ -73,7 +90,7 @@ class PolicyGate:
         )
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        """Run one request through authorization, integrity, sandbox, handoff, then service."""
+        """Run one request through all authority boundaries before the executor."""
         decision = self.authorize(request)
 
         if not decision.authorized:
@@ -116,7 +133,7 @@ class PolicyGate:
             )
 
         try:
-            self._execution_preparation.prepare(
+            handoff = self._execution_preparation.prepare(
                 decision,
                 integrity,
                 admission,
@@ -129,7 +146,21 @@ class PolicyGate:
                 message=str(exc) or "Execution preparation failed",
             )
 
-        return self._service.invoke(request)
+        outcome = self._execution_attempt.attempt(handoff)
+        if outcome.status is ExecutionAttemptStatus.COMPLETED:
+            if outcome.result is None:
+                return self._blocked_result(
+                    request,
+                    code="execution_attempt_failed",
+                    message="execution attempt reported completion without a result",
+                )
+            return outcome.result
+
+        return self._blocked_result(
+            request,
+            code="execution_attempt_failed",
+            message=outcome.reason or "execution attempt failed",
+        )
 
     @staticmethod
     def _default_authorization_id(request: ToolRequest) -> str:
