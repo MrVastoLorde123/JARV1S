@@ -1,15 +1,9 @@
-"""Result-integrity boundary after M22.50 execution attempt.
-
-M22.51 consumes the exact M22.50 execution result and request, validates their
-lineage, and normalizes the attempted execution into immutable evidence. A
-completed attempt receives a deterministic SHA-256 fingerprint of the observed
-result; a failed attempt remains failed with a required reason. Result
-integrity is observational and non-authorizing.
-"""
+"""Result-integrity boundary after M22.50 execution attempt."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 import hashlib
 import json
 from types import MappingProxyType
@@ -26,7 +20,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     """Raised when the M22.51 result-integrity contract is invalid."""
 
 
-class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus(str):
+class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
 
@@ -66,7 +60,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     domain: str
     source_policy_id: str
     policy_id: str
-    status: str
+    status: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus
     execution_result: Any = None
     result_fingerprint: str | None = None
     reason: str | None = None
@@ -82,12 +76,9 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityError(f"{name} must be a non-empty string")
-        if self.status not in (
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.SUCCEEDED,
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.FAILED,
-        ):
+        if not isinstance(self.status, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus):
             raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityError("invalid integrity status")
-        if self.status == LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.SUCCEEDED:
+        if self.status is LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.SUCCEEDED:
             if not isinstance(self.result_fingerprint, str) or not self.result_fingerprint.strip():
                 raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityError("successful integrity outcome requires a fingerprint")
             if self.reason is not None:
@@ -103,17 +94,12 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityService:
     """Normalize one exact M22.50 execution request/result pair into integrity evidence."""
 
-    def evaluate(
-        self,
-        execution_result: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResult,
-        execution_request: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionRequest,
-    ) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity:
+    def evaluate(self, execution_result, execution_request):
         if not isinstance(execution_result, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResult):
             raise TypeError("execution_result must be a LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResult")
         if not isinstance(execution_request, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionRequest):
             raise TypeError("execution_request must be a LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionRequest")
-
-        lineage = (
+        for label, actual, expected in (
             ("execution", execution_result.execution_id, execution_request.execution_id),
             ("preparation", execution_result.preparation_id, execution_request.preparation_id),
             ("admission", execution_result.admission_id, execution_request.admission_id),
@@ -134,76 +120,42 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
             ("domain", execution_result.domain, execution_request.domain),
             ("source policy", execution_result.source_policy_id, execution_request.source_policy_id),
             ("policy", execution_result.policy_id, execution_request.policy_id),
-        )
-        for label, actual, expected in lineage:
+        ):
             if actual != expected:
                 raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityError(f"execution result {label} identity does not match request")
-
         integrity_id = self._integrity_id(execution_result, execution_request)
+        base = dict(
+            integrity_id=integrity_id, execution_id=execution_result.execution_id,
+            preparation_id=execution_result.preparation_id, admission_id=execution_result.admission_id,
+            proposal_id=execution_result.proposal_id, decision_id=execution_result.decision_id,
+            evaluation_id=execution_result.evaluation_id, feedback_id=execution_result.feedback_id,
+            outcome_id=execution_result.outcome_id, source_admission_id=execution_result.source_admission_id,
+            source_proposal_id=execution_result.source_proposal_id,
+            decision_source_evaluation_id=execution_result.decision_source_evaluation_id,
+            evaluation_id_from_feedback=execution_result.evaluation_id_from_feedback,
+            source_feedback_id=execution_result.source_feedback_id, candidate_id=execution_result.candidate_id,
+            source_candidate_id=execution_result.source_candidate_id, execution_source_id=execution_result.execution_source_id,
+            source_execution_id=execution_result.source_execution_id, domain=execution_result.domain,
+            source_policy_id=execution_result.source_policy_id, policy_id=execution_result.policy_id,
+        )
         if execution_result.status is LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionStatus.COMPLETED:
             serialized = json.dumps(execution_result.execution_result, sort_keys=True, default=repr, separators=(",", ":")).encode("utf-8")
             return LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity(
-                integrity_id=integrity_id,
-                execution_id=execution_result.execution_id,
-                preparation_id=execution_result.preparation_id,
-                admission_id=execution_result.admission_id,
-                proposal_id=execution_result.proposal_id,
-                decision_id=execution_result.decision_id,
-                evaluation_id=execution_result.evaluation_id,
-                feedback_id=execution_result.feedback_id,
-                outcome_id=execution_result.outcome_id,
-                source_admission_id=execution_result.source_admission_id,
-                source_proposal_id=execution_result.source_proposal_id,
-                decision_source_evaluation_id=execution_result.decision_source_evaluation_id,
-                evaluation_id_from_feedback=execution_result.evaluation_id_from_feedback,
-                source_feedback_id=execution_result.source_feedback_id,
-                candidate_id=execution_result.candidate_id,
-                source_candidate_id=execution_result.source_candidate_id,
-                execution_source_id=execution_result.execution_source_id,
-                source_execution_id=execution_result.source_execution_id,
-                domain=execution_result.domain,
-                source_policy_id=execution_result.source_policy_id,
-                policy_id=execution_result.policy_id,
-                status=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.SUCCEEDED,
-                execution_result=execution_result.execution_result,
-                result_fingerprint=hashlib.sha256(serialized).hexdigest(),
+                **base, status=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.SUCCEEDED,
+                execution_result=execution_result.execution_result, result_fingerprint=hashlib.sha256(serialized).hexdigest()
             )
         if execution_result.reason is None or not execution_result.reason.strip():
             raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityError("failed execution result requires a non-empty reason")
         return LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrity(
-            integrity_id=integrity_id,
-            execution_id=execution_result.execution_id,
-            preparation_id=execution_result.preparation_id,
-            admission_id=execution_result.admission_id,
-            proposal_id=execution_result.proposal_id,
-            decision_id=execution_result.decision_id,
-            evaluation_id=execution_result.evaluation_id,
-            feedback_id=execution_result.feedback_id,
-            outcome_id=execution_result.outcome_id,
-            source_admission_id=execution_result.source_admission_id,
-            source_proposal_id=execution_result.source_proposal_id,
-            decision_source_evaluation_id=execution_result.decision_source_evaluation_id,
-            evaluation_id_from_feedback=execution_result.evaluation_id_from_feedback,
-            source_feedback_id=execution_result.source_feedback_id,
-            candidate_id=execution_result.candidate_id,
-            source_candidate_id=execution_result.source_candidate_id,
-            execution_source_id=execution_result.execution_source_id,
-            source_execution_id=execution_result.source_execution_id,
-            domain=execution_result.domain,
-            source_policy_id=execution_result.source_policy_id,
-            policy_id=execution_result.policy_id,
-            status=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.FAILED,
-            reason=execution_result.reason,
+            **base, status=LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionPreparationExecutionResultIntegrityStatus.FAILED,
+            reason=execution_result.reason
         )
 
     @staticmethod
-    def _integrity_id(execution_result: Any, execution_request: Any) -> str:
+    def _integrity_id(execution_result, execution_request) -> str:
         serialized = json.dumps({
-            "execution_id": execution_result.execution_id,
-            "preparation_id": execution_result.preparation_id,
-            "status": execution_result.status.value,
-            "result": execution_result.execution_result,
-            "reason": execution_result.reason,
-            "request_execution_id": execution_request.execution_id,
+            "execution_id": execution_result.execution_id, "preparation_id": execution_result.preparation_id,
+            "status": execution_result.status.value, "result": execution_result.execution_result,
+            "reason": execution_result.reason, "request_execution_id": execution_request.execution_id,
         }, sort_keys=True, default=repr, separators=(",", ":")).encode("utf-8")
         return "adaptation-evaluation-execution-feedback-result-integrity-preparation-execution-result-integrity-" + hashlib.sha256(serialized).hexdigest()[:24]
