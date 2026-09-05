@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from .lifecycle import SemanticVersion
+from .lifecycle import CapabilityLifecycleError, SemanticVersion
 
 
 class CapabilityPolicyError(ValueError):
@@ -21,6 +21,15 @@ class PermissionEffect(str, Enum):
 
     ALLOW = "ALLOW"
     DENY = "DENY"
+
+
+def _normalize_version(value: str) -> str:
+    """Normalize a policy version while preserving the M22.4 error boundary."""
+
+    try:
+        return str(SemanticVersion.parse(value))
+    except (CapabilityLifecycleError, TypeError) as exc:
+        raise CapabilityPolicyError(str(exc)) from exc
 
 
 @dataclass(frozen=True)
@@ -45,8 +54,7 @@ class CapabilityPermissionBinding:
         if not isinstance(self.policy_id, str) or not self.policy_id.strip():
             raise CapabilityPolicyError("policy_id must be a non-empty string")
         if self.version is not None:
-            parsed = SemanticVersion.parse(self.version)
-            object.__setattr__(self, "version", str(parsed))
+            object.__setattr__(self, "version", _normalize_version(self.version))
         if self.rationale is not None and (
             not isinstance(self.rationale, str) or not self.rationale.strip()
         ):
@@ -105,9 +113,13 @@ class CapabilityPolicyBindingRegistry:
         version: str | None = None,
         policy_id: str = "unspecified",
     ) -> CapabilityPermissionBinding | None:
+        if not isinstance(capability_id, str) or not capability_id.strip():
+            raise CapabilityPolicyError("capability_id must be a non-empty string")
         if not isinstance(permission, str) or not permission.strip():
             raise CapabilityPolicyError("permission must be a non-empty string")
-        normalized_version = None if version is None else str(SemanticVersion.parse(version))
+        if not isinstance(policy_id, str) or not policy_id.strip():
+            raise CapabilityPolicyError("policy_id must be a non-empty string")
+        normalized_version = None if version is None else _normalize_version(version)
         return self._bindings.get(
             (
                 capability_id.strip().lower(),
@@ -124,8 +136,14 @@ class CapabilityPolicyBindingRegistry:
         version: str | None = None,
         policy_id: str | None = None,
     ) -> tuple[CapabilityPermissionBinding, ...]:
+        if not isinstance(capability_id, str) or not capability_id.strip():
+            raise CapabilityPolicyError("capability_id must be a non-empty string")
+        if policy_id is not None and (
+            not isinstance(policy_id, str) or not policy_id.strip()
+        ):
+            raise CapabilityPolicyError("policy_id must be None or a non-empty string")
         normalized_capability = capability_id.strip().lower()
-        normalized_version = None if version is None else str(SemanticVersion.parse(version))
+        normalized_version = None if version is None else _normalize_version(version)
         normalized_policy = None if policy_id is None else policy_id.strip()
         bindings = [
             binding
