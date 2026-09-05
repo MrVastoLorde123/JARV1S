@@ -1,10 +1,8 @@
-"""Admission boundary after the dedicated M22.55 adaptation proposal.
+"""M22.56: adaptation evaluation decision proposal -> admission.
 
-M22.56 converts exactly one immutable M22.55 proposal into an explicit
-admission result. Admission is policy evidence only: it does not authorize
-execution, request execution, retry, revoke, mutate memory, grant authority,
-or establish adaptation truth. The historical M22.48 admission namespace
-remains untouched.
+Admission is policy evidence only. It does not authorize execution, request
+execution, retry, revoke, mutate memory, grant authority, or establish truth.
+The historical M22.48 namespace remains untouched.
 """
 
 from __future__ import annotations
@@ -27,8 +25,6 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
 
 
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus(str, Enum):
-    """Normalized admission status for one exact M22.55 proposal."""
-
     ADMITTED = "admitted"
     REJECTED = "rejected"
 
@@ -47,16 +43,11 @@ def _freeze(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext:
-    """Immutable context supplied to an M22.56 admission provider."""
-
     proposal: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal
     related_context: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not isinstance(
-            self.proposal,
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal,
-        ):
+        if not isinstance(self.proposal, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal):
             raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
                 "proposal must be a LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposal"
             )
@@ -69,8 +60,6 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
 
 @dataclass(frozen=True)
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
-    """Immutable admission result for one exact M22.55 proposal."""
-
     admission_id: str
     proposal_id: str
     decision_id: str
@@ -108,66 +97,38 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
     authority_granted: bool = False
 
     def __post_init__(self) -> None:
-        for field_name in (
-            "admission_id", "proposal_id", "decision_id", "evaluation_id", "feedback_id", "integrity_id",
-            "execution_id", "preparation_id", "proposal_source_id", "source_proposal_id",
-            "decision_source_evaluation_id", "evaluation_id_from_feedback", "source_feedback_id",
-            "candidate_id", "source_candidate_id", "execution_source_id", "source_execution_id",
-            "source_admission_id", "domain", "source_policy_id", "policy_id", "reason",
-        ):
+        string_fields = (
+            "admission_id", "proposal_id", "decision_id", "evaluation_id", "feedback_id",
+            "integrity_id", "execution_id", "preparation_id", "proposal_source_id",
+            "source_proposal_id", "decision_source_evaluation_id", "evaluation_id_from_feedback",
+            "source_feedback_id", "candidate_id", "source_candidate_id", "execution_source_id",
+            "source_execution_id", "source_admission_id", "domain", "source_policy_id",
+            "policy_id", "reason",
+        )
+        for field_name in string_fields:
             value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
                 raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
                     f"{field_name} must be a non-empty string"
                 )
-        if not isinstance(
-            self.status,
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus,
-        ):
-            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                "invalid admission status"
-            )
+        if not isinstance(self.status, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus):
+            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("invalid admission status")
         if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)):
-            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                "confidence must be numeric"
-            )
+            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("confidence must be numeric")
         if not 0.0 <= float(self.confidence) <= 1.0:
-            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                "confidence must be between 0.0 and 1.0"
-            )
+            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("confidence must be between 0.0 and 1.0")
         for field_name in ("proposal", "evidence", "provenance", "metadata"):
             if not isinstance(getattr(self, field_name), Mapping):
-                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                    f"{field_name} must be a mapping"
-                )
+                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(f"{field_name} must be a mapping")
         if self.status is LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus.ADMITTED:
             if not self.proposal:
-                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                    "admitted proposal payload cannot be empty"
-                )
+                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("admitted proposal payload cannot be empty")
             if not self.provenance:
-                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                    "admitted proposal provenance cannot be empty"
-                )
-        if not all(
-            isinstance(k, str) and k.strip() and isinstance(v, str) and v.strip()
-            for k, v in self.provenance.items()
-        ):
-            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                "provenance must contain non-empty string keys and values"
-            )
-        if (
-            self.execution_authorized
-            or self.authorization_granted
-            or self.execution_requested
-            or self.retry_requested
-            or self.revocation_requested
-            or self.memory_mutation_allowed
-            or self.authority_granted
-        ):
-            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                "admission cannot grant authorization, execution, retry, revocation, memory mutation, or general authority"
-            )
+                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("admitted proposal provenance cannot be empty")
+        if not all(isinstance(k, str) and k.strip() and isinstance(v, str) and v.strip() for k, v in self.provenance.items()):
+            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("provenance must contain non-empty string keys and values")
+        if any((self.execution_authorized, self.authorization_granted, self.execution_requested, self.retry_requested, self.revocation_requested, self.memory_mutation_allowed, self.authority_granted)):
+            raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError("admission cannot grant authorization, execution, retry, revocation, memory mutation, or general authority")
         object.__setattr__(self, "proposal", _freeze(self.proposal))
         object.__setattr__(self, "evidence", _freeze(self.evidence))
         object.__setattr__(self, "provenance", _freeze(self.provenance))
@@ -215,24 +176,14 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
 
 
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider(Protocol):
-    """Provider-neutral, non-mutating M22.56 admission interface."""
-
-    def admit(
-        self,
-        context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext,
-    ) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
+    def admit(self, context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
         ...
 
 
 class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider:
-    """Deterministic baseline provider for M22.56 proposal admission."""
-
     _POLICY_ID = "adaptation-evaluation-decision-proposal-admission-baseline-v1"
 
-    def admit(
-        self,
-        context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext,
-    ) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
+    def admit(self, context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
         proposal = context.proposal
         if proposal.kind is not LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalKind.ACCEPTED_EVALUATION_DECISION:
             status = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus.REJECTED
@@ -252,7 +203,6 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultInteg
         else:
             status = LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus.ADMITTED
             reason = "proposal satisfies deterministic admission requirements"
-
         admission_id = self._admission_id(proposal, status, reason)
         return LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission(
             admission_id=admission_id,
@@ -274,7 +224,7 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultInteg
             source_execution_id=proposal.source_execution_id,
             source_admission_id=proposal.admission_id,
             domain=proposal.domain,
-            source_policy_id=proposal.policy_id,
+            source_policy_id=proposal.source_policy_id,
             policy_id=self._POLICY_ID,
             status=status,
             reason=reason,
@@ -286,58 +236,29 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultInteg
         )
 
     @staticmethod
-    def _admission_id(
-        proposal: Any,
-        status: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus,
-        reason: str,
-    ) -> str:
-        serialized = json.dumps(
-            {
-                "proposal_id": proposal.proposal_id,
-                "decision_id": proposal.decision_id,
-                "evaluation_id": proposal.evaluation_id,
-                "feedback_id": proposal.feedback_id,
-                "integrity_id": proposal.integrity_id,
-                "status": status.value,
-                "reason": reason,
-            },
-            sort_keys=True,
-            default=repr,
-            separators=(",", ":"),
-        ).encode("utf-8")
-        return (
-            "adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission-"
-            + hashlib.sha256(serialized).hexdigest()[:24]
-        )
+    def _admission_id(proposal: Any, status: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionStatus, reason: str) -> str:
+        serialized = json.dumps({
+            "proposal_id": proposal.proposal_id,
+            "decision_id": proposal.decision_id,
+            "evaluation_id": proposal.evaluation_id,
+            "feedback_id": proposal.feedback_id,
+            "integrity_id": proposal.integrity_id,
+            "status": status.value,
+            "reason": reason,
+        }, sort_keys=True, default=repr, separators=(",", ":")).encode("utf-8")
+        return "adaptation-evaluation-execution-feedback-result-integrity-feedback-evaluation-decision-proposal-admission-" + hashlib.sha256(serialized).hexdigest()[:24]
 
 
 class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionService:
-    """Validate and obtain a non-authorizing M22.56 admission result."""
-
-    def __init__(
-        self,
-        provider: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider | None = None,
-    ) -> None:
+    def __init__(self, provider: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider | None = None) -> None:
         self._provider = provider or DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionProvider()
 
-    def admit(
-        self,
-        context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext,
-    ) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
-        if not isinstance(
-            context,
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext,
-        ):
-            raise TypeError(
-                "context must be a LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext"
-            )
+    def admit(self, context: LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext) -> LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission:
+        if not isinstance(context, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext):
+            raise TypeError("context must be a LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionContext")
         admission = self._provider.admit(context)
-        if not isinstance(
-            admission,
-            LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission,
-        ):
+        if not isinstance(admission, LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmission):
             raise TypeError("provider must return an M22.56 admission artifact")
-
         proposal = context.proposal
         expected = (
             ("proposal", admission.proposal_id, proposal.proposal_id),
@@ -362,7 +283,5 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackE
         )
         for label, actual, expected_value in expected:
             if actual != expected_value:
-                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(
-                    f"admission {label} identity mismatch"
-                )
+                raise LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackEvaluationDecisionProposalAdmissionError(f"admission {label} identity mismatch")
         return admission
