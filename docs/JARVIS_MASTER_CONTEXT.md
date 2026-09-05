@@ -65,8 +65,10 @@ No merge is performed unless explicitly requested.
 - M23.4 — VERIFIED / COMPLETE: 14/14 focused + 549/549 core = **563/563**
 - M23.5 — VERIFIED / COMPLETE: 14/14 focused + 563/563 core = **577/577**
 - M23.6 — VERIFIED / COMPLETE: 13/13 focused + 576/576 core = **589/589**
+- M23.7 — VERIFIED / COMPLETE: 12/12 focused + 588/588 core = **600/600**
 
 Selected recent receipts:
+- M23.7: **600/600**
 - M23.6: **589/589**
 - M23.5: **577/577**
 - M23.4: **563/563**
@@ -109,31 +111,34 @@ Receipt:
 - Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **576/576 OK**
 - Combined: **589/589 OK**
 
-## 8. M23.7 — Environment Observation Provenance Contract
+### M23.7 — Environment Observation Provenance Contract
+**Status: VERIFIED / COMPLETE.** Immutable provenance records source observation identities, adapter identities, environment/domain scope, observation timestamps, recording time, optional assessment identity, and explicit evidence lineage for individual observations and M23.6 aggregates. Timestamps are timezone-aware and normalized to UTC; source identities are unique and aligned; lineage is recursively immutable while preserving mapping semantics. Provenance describes where evidence came from and what it descends from; it does not establish truth or authority.
 
-**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+Verification receipt:
+- Focused: `python -m unittest src.core.tests.test_environment_observation_provenance -v` → **12/12 OK**
+- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **588/588 OK**
+- Combined: **600/600 OK**
 
-Branch:
-`feature/m23.7-environment-observation-provenance-contract`
+## 8. M23.8 — Environment Observation Evidence Qualification Contract
 
-M23.7 introduces immutable `EnvironmentObservationProvenance` and `EnvironmentObservationProvenanceService` to preserve source observation identities, adapter identities, environment/domain scope, observation timestamps, recording time, optional assessment identity, and explicit evidence lineage for individual observations and M23.6 aggregates.
+**Status: NOT STARTED.**
 
-Timestamps are timezone-aware and normalized to UTC. Source identities are unique and aligned. Lineage is recursively immutable. Provenance records where evidence came from and what evidence it descends from; provenance does not establish truth.
+Purpose: provide one immutable, deterministic evidence-qualification artifact that binds the M23.4 temporal validity, M23.5 consistency evidence, M23.6 aggregation evidence, and M23.7 provenance without converting evidence into truth or authority.
 
-The provenance boundary does not select an authoritative observer, establish truth, authorize execution, grant permissions, imply capability executability, retry providers, mutate observations or memory, revoke anything, or establish adaptation truth.
+Contract direction:
+- accept one observation or one M23.6 aggregate plus its required supporting validity/consistency/provenance evidence
+- validate identity and scope alignment across all supplied artifacts
+- explicitly classify qualification as usable, unusable, conflicting, or insufficient based only on deterministic evidence gates
+- preserve every upstream identity and classification used by the qualification
+- recursively freeze derived metadata
+- never mutate upstream observations or evidence artifacts
+- never select an authoritative source
+- never establish truth
+- never authorize execution or grant permissions
+- never infer executability, capability availability, or adaptation truth
+- never retry providers
 
-Files:
-- `src/core/environment_observation_provenance.py`
-- `src/core/tests/test_environment_observation_provenance.py`
-- `docs/decisions/052-environment-observation-provenance-contract.md`
-
-Focused:
-`python -m unittest src.core.tests.test_environment_observation_provenance -v`
-
-Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
-
-Local verification is required before M23.7 can be marked VERIFIED / COMPLETE.
+Architectural role: M23.8 is the seam between the observation/evidence subsystem and later world-model/current-context construction. It should answer **whether an evidence bundle satisfies the defined evidence gates for downstream reasoning**, not whether the underlying world is true.
 
 ## 9. Namespace and lineage rules
 
@@ -167,10 +172,10 @@ No merge is performed unless explicitly requested.
 
 ## 13. Current snapshot
 
-**Latest verified milestone:** M23.6 — 13/13 focused + 576/576 core = **589/589**.
+**Latest verified milestone:** M23.7 — 12/12 focused + 588/588 core = **600/600**.
 
-**Active milestone:** M23.7 — Environment Observation Provenance Contract.
+**Active milestone:** M23.8 — Environment Observation Evidence Qualification Contract.
 
-**M23.7 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
+**M23.8 status:** NOT STARTED.
 
-**Next local action:** pull `feature/m23.7-environment-observation-provenance-contract`, run the focused provenance suite, then the `src\\core` regression. Do not mark M23.7 verified until those receipts are supplied.
+**Next implementation action:** build the M23.8 qualification boundary on top of M23.4–M23.7 without establishing truth or authority.
