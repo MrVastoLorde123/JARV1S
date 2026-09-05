@@ -89,41 +89,53 @@ Receipt: **8/8 focused + 522/522 core = 530/530**.
 ### M23.3 — Environment Observation Adapter Contract
 **Status: VERIFIED / COMPLETE.** Provider-neutral replaceable observation layer composed into M23.2. `EnvironmentObservationAdapter` exposes adapter identity, one explicit environment domain, and `observe(environment_id)`. `EnvironmentObservation` is immutable descriptive evidence. `EnvironmentObservationService` validates adapter/domain/environment continuity and exact observation type; rejects duplicates; wraps failures without retry; composes through M23.2; keeps missing domains empty; and records observation-source identities as metadata. Observation remains non-authorizing and non-mutating.
 
-Receipt:
-- Focused: `python -m unittest src.core.tests.test_environment_observation -v` → **13/13 OK**
-- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **535/535 OK**
-- Combined: **548/548 OK**
+Receipt: **13/13 focused + 535/535 core = 548/548**.
 
 ### M23.4 — Environment Observation Freshness/Validity Contract
-**Status: VERIFIED / COMPLETE.** Deterministic temporal validity assessment for immutable observations. `EnvironmentObservationFreshnessService` evaluates observation time against assessment time and a non-negative maximum age. `EnvironmentObservationValidity` preserves observation identity, environment identity, domain, timestamps, age bound, and derived freshness. `CURRENT`, `STALE`, `FUTURE`, and `INVALID` are explicit classifications; only `CURRENT` is usable as current by this contract. Timezone-aware timestamps are required and normalized to UTC. Batch assessment preserves order and rejects duplicate observation identities. Raw observations remain unchanged.
+**Status: VERIFIED / COMPLETE.** Deterministic temporal validity assessment for immutable observations. `EnvironmentObservationFreshnessService` evaluates observation time against assessment time and a non-negative maximum age. `EnvironmentObservationValidity` preserves identity, environment, domain, timestamps, age bound, and freshness. `CURRENT`, `STALE`, `FUTURE`, and `INVALID` are explicit classifications; only `CURRENT` is usable as current. Timestamps must be timezone-aware and are normalized to UTC; batch assessment preserves order and rejects duplicate observation identities; raw observations remain unchanged.
 
-Receipt:
-- Focused: `python -m unittest src.core.tests.test_environment_observation_freshness -v` → **14/14 OK**
-- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **549/549 OK**
-- Combined: **563/563 OK**
+Receipt: **14/14 focused + 549/549 core = 563/563**.
 
 ### M23.5 — Environment Observation Consistency Contract
-**Status: VERIFIED / COMPLETE.** Deterministic comparison of independent observations without selecting authoritative truth. `EnvironmentObservationConsistencyService` compares observations from the same environment and domain; canonical payload comparison yields `CONSISTENT` or `CONFLICTING`. Immutable results preserve both observation identities and adapter identities. Batch comparison is deterministic and preserves pair order while skipping unrelated environments/domains. Duplicate observation identities and invalid input types are rejected. Raw observations are not merged, discarded, mutated, or selected as truth.
+**Status: VERIFIED / COMPLETE.** Deterministic comparison of independent observations without selecting authoritative truth. Same-environment/domain observations are canonically compared as `CONSISTENT` or `CONFLICTING`; pairwise batch comparison is deterministic and skips unrelated scopes. Duplicate identities and invalid types are rejected. Raw observations are not merged, discarded, mutated, or selected as truth.
 
-Receipt:
-- Focused: `python -m unittest src.core.tests.test_environment_observation_consistency -v` → **14/14 OK**
-- Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **563/563 OK**
-- Combined: **577/577 OK**
+Receipt: **14/14 focused + 563/563 core = 577/577**.
 
 ### M23.6 — Environment Observation Aggregation Contract
-**Status: VERIFIED / COMPLETE.** Deterministic derived-evidence aggregation of multiple independent observations for one environment/domain only after M23.4 freshness and M23.5 consistency gates pass. At least two observations are required; every validity artifact must be `CURRENT` and identity/scope matched; pairwise consistency must be complete and `CONSISTENT`; duplicate observation and adapter identities are rejected; aggregate source IDs, adapter IDs, and observed timestamps are preserved; aggregate payload is recursively immutable; and source observations are never mutated. Aggregation does not choose an authoritative provider, establish truth, authorize execution, grant permissions, imply capability executability, retry observers, mutate memory, rewrite/discard source observations, or establish adaptation truth.
-
-Files:
-- `src/core/environment_observation_aggregation.py`
-- `src/core/tests/test_environment_observation_aggregation.py`
-- `docs/decisions/051-environment-observation-aggregation-contract.md`
+**Status: VERIFIED / COMPLETE.** Deterministic derived-evidence aggregation of multiple independent observations for one environment/domain only after freshness and consistency gates pass. At least two observations are required; all validity artifacts must be `CURRENT` and identity/scope matched; pairwise consistency must be complete and `CONSISTENT`; duplicate observation/adapter identities are rejected; source IDs, adapter IDs, and timestamps are preserved; payload is recursively immutable; source observations are never mutated. Aggregation does not choose authoritative truth or grant authority.
 
 Receipt:
 - Focused: `python -m unittest src.core.tests.test_environment_observation_aggregation -v` → **13/13 OK**
 - Regression: `python -m unittest discover -s src\\core -p "test*.py"` → **576/576 OK**
 - Combined: **589/589 OK**
 
-## 8. Namespace and lineage rules
+## 8. M23.7 — Environment Observation Provenance Contract
+
+**Status: IMPLEMENTED / AWAITING LOCAL VERIFICATION.**
+
+Branch:
+`feature/m23.7-environment-observation-provenance-contract`
+
+M23.7 introduces immutable `EnvironmentObservationProvenance` and `EnvironmentObservationProvenanceService` to preserve source observation identities, adapter identities, environment/domain scope, observation timestamps, recording time, optional assessment identity, and explicit evidence lineage for individual observations and M23.6 aggregates.
+
+Timestamps are timezone-aware and normalized to UTC. Source identities are unique and aligned. Lineage is recursively immutable. Provenance records where evidence came from and what evidence it descends from; provenance does not establish truth.
+
+The provenance boundary does not select an authoritative observer, establish truth, authorize execution, grant permissions, imply capability executability, retry providers, mutate observations or memory, revoke anything, or establish adaptation truth.
+
+Files:
+- `src/core/environment_observation_provenance.py`
+- `src/core/tests/test_environment_observation_provenance.py`
+- `docs/decisions/052-environment-observation-provenance-contract.md`
+
+Focused:
+`python -m unittest src.core.tests.test_environment_observation_provenance -v`
+
+Regression:
+`python -m unittest discover -s src\\core -p "test*.py"`
+
+Local verification is required before M23.7 can be marked VERIFIED / COMPLETE.
+
+## 9. Namespace and lineage rules
 
 M22.45+ uses dedicated namespaces for the future adaptation/result-integrity feedback chain. Historical boundaries remain import-compatible and untouched. Do not collapse new milestones into older modules merely because class names are similar.
 
@@ -131,7 +143,7 @@ Canonical lineage naming uses `source_proposal_id` for inherited proposal lineag
 
 Do not introduce compatibility aliases unless the contract explicitly requires them.
 
-## 9. Memory and capability architecture
+## 10. Memory and capability architecture
 
 Memory separates decision from mutation: `MemoryDecisionProvider` is provider-neutral/non-mutating; `MemoryDecisionService` selects and validates; `MemoryDecisionExecutor` is the mutation boundary for CREATE, CONFIRM, UPDATE, CONTRADICT, or IGNORE. Adaptation must not bypass this architecture.
 
@@ -139,13 +151,13 @@ Capability ecosystem: contract/registry, trust/provenance, lifecycle/versioning,
 
 Workspace capabilities are `read_file`, `list_directory`, `search_files`, and `write_file`; `write_file` is confirmation-gated.
 
-## 10. Self-work target architecture
+## 11. Self-work target architecture
 
 `User goal → Understand → Discover capabilities → Inspect current state → Reason/plan → Propose actions → Validate → Policy/confirmation → Execute → Run tests/observe → Evaluate → Correct → Report`
 
 The model is never final authority over execution.
 
-## 11. Verification rule
+## 12. Verification rule
 
 A milestone is not GREEN / VERIFIED / COMPLETE until the user provides the local test receipt.
 
@@ -153,12 +165,12 @@ Remote implementation and local verification remain distinct.
 
 No merge is performed unless explicitly requested.
 
-## 12. Current snapshot
+## 13. Current snapshot
 
 **Latest verified milestone:** M23.6 — 13/13 focused + 576/576 core = **589/589**.
 
 **Active milestone:** M23.7 — Environment Observation Provenance Contract.
 
-**M23.7 status:** NOT YET IMPLEMENTED.
+**M23.7 status:** IMPLEMENTED / AWAITING LOCAL VERIFICATION.
 
-**Next engineering action:** define immutable provenance for environment observations and derived aggregates, including source adapter identity, observation identity, collection/assessment context, and evidence lineage, without treating provenance as truth or authority. No merge performed.
+**Next local action:** pull `feature/m23.7-environment-observation-provenance-contract`, run the focused provenance suite, then the `src\\core` regression. Do not mark M23.7 verified until those receipts are supplied.
