@@ -101,15 +101,15 @@ Ranking ≠ Scheduling
 
 M21.5 represents when a proactive proposal could be surfaced and whether an operator-facing notification may be appropriate. It does not create an active scheduler entry and does not deliver a notification.
 
-The bounded contract includes:
-
 ```text
 ProactiveScheduleProposal — immutable advisory timing metadata
 SchedulingEvaluation       — PROPOSED / NEEDS_REVIEW / NOT_SCHEDULABLE
 NotificationChannel        — explicit channel semantics
 ```
 
-Timezone-aware timestamps are required. Notification messages are required when a channel is selected. Expiry cannot precede the proposed time. Identity must remain consistent between an evaluation and its schedule proposal. Ranking is deterministic by proposed time, then proposal identity.
+Timezone-aware timestamps are required. Notification messages are required when a channel is selected. Expiry cannot precede the proposed schedule time. Evaluation identity must match the schedule proposal identity. Ranking is deterministic by proposed time, then proposal identity. Advisory context explicitly reports `scheduled=False` and `notification_sent=False`.
+
+Boundary walls:
 
 ```text
 Scheduling Proposal ≠ Scheduling
@@ -121,7 +121,7 @@ Notification ≠ Execution
 Initiative ≠ Authorization
 ```
 
-The context surface explicitly reports `scheduled=False` and `notification_sent=False`.
+M21.5 does not create persistent scheduler entries, enqueue delayed work, send notifications, invoke capabilities/plugins, assign workers, create authorization, or mutate policy.
 
 ### Future M21 boundary
 
