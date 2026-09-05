@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -31,12 +30,12 @@ def _restore(value: Any) -> Any:
 
 
 def _json_safe(value: Any) -> Any:
-    """Convert recursively frozen containers into JSON-compatible containers."""
-    if isinstance(value, Mapping):
+    """Convert recursively frozen model data into JSON-compatible containers."""
+    if isinstance(value, dict):
         return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return [_json_safe(item) for item in value]
-    if isinstance(value, (set, frozenset)):
+    if hasattr(value, "items"):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
         return [_json_safe(item) for item in value]
     return value
 
@@ -143,7 +142,7 @@ class FileEnvironmentWorldModelStore:
                 encoding="utf-8",
             )
             temporary.replace(path)
-        except (OSError, TypeError) as exc:
+        except (OSError, TypeError, ValueError) as exc:
             try:
                 temporary.unlink(missing_ok=True)
             except OSError:
