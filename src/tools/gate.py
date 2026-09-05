@@ -1,4 +1,4 @@
-"""Policy, confirmation, and explicit authorization boundary for tool invocation."""
+"""Policy, confirmation, authorization, and integrity boundary for invocation."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import json
 from typing import Optional
 
 from .authorization import AuthorizationDecision, ExplicitAuthorizationService
+from .authorization_integrity import AuthorizationIntegrityService
 from .confirmation import AutoDenyConfirmationProvider, ConfirmationProvider
 from .errors import InvalidRequestError
 from .models import ToolDefinition, ToolError, ToolRequest, ToolResult
@@ -16,11 +17,11 @@ from .service import ToolService
 
 
 class PolicyGate:
-    """Enforces policy and confirmation before delegating to ToolService.
+    """Enforces policy, confirmation, authorization, and integrity before execution.
 
     ``authorize()`` is the explicit non-executing authority boundary. ``invoke()``
-    consumes that decision and remains the only public path that crosses into
-    ``ToolService``.
+    consumes the resulting decision and verifies its binding to the exact request
+    before crossing into ``ToolService``.
     """
 
     def __init__(
@@ -38,6 +39,7 @@ class PolicyGate:
             policy,
             self._confirmation_provider,
         )
+        self._authorization_integrity = AuthorizationIntegrityService()
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
         """Return the immutable capability catalog visible to callers."""
@@ -65,7 +67,7 @@ class PolicyGate:
         )
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        """Run one request through explicit authorization, then ToolService."""
+        """Run one request through authorization + integrity, then ToolService."""
         decision = self.authorize(request)
 
         if not decision.authorized:
@@ -81,6 +83,14 @@ class PolicyGate:
                 code="confirmation_denied",
                 message=decision.reason
                 or f"Confirmation was not granted for tool '{request.tool_name}'",
+            )
+
+        integrity = self._authorization_integrity.attest(decision, request)
+        if not self._authorization_integrity.verify(integrity, decision, request):
+            return self._blocked_result(
+                request,
+                code="authorization_integrity_failed",
+                message=integrity.reason or "Authorization integrity verification failed",
             )
 
         return self._service.invoke(request)
