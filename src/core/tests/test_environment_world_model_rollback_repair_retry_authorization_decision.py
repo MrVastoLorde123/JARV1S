@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from types import MappingProxyType
 
 from src.core.environment_world_model_rollback_repair_retry_authorization_decision import (
@@ -13,6 +14,8 @@ from src.core.environment_world_model_rollback_repair_retry_authorization_propos
 
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionTests(unittest.TestCase):
     def setUp(self) -> None:
+        evaluated_at = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
+        next_eligible_at = datetime(2026, 9, 5, 20, 0, 20, tzinfo=timezone.utc)
         self.retry = EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal(
             proposal_id="auth-proposal1",
             environment_id="env1",
@@ -21,8 +24,9 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionTests(unittes
             expected_model_id="expected",
             observed_model_id="observed",
             requested_action="RETRY_REPAIR",
-            evaluated_at="2026-09-05T20:00:00+00:00",
-            next_eligible_at="2026-09-05T20:00:20+00:00",
+            eligible=True,
+            evaluated_at=evaluated_at,
+            next_eligible_at=next_eligible_at,
             reasons={"status": "eligible"},
             lineage={"source": "eligibility"},
         )
@@ -34,7 +38,8 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionTests(unittes
             expected_model_id="expected",
             observed_model_id="observed",
             requested_action="NO_AUTHORIZATION",
-            evaluated_at="2026-09-05T20:00:00+00:00",
+            eligible=False,
+            evaluated_at=evaluated_at,
             next_eligible_at=None,
             reasons={},
             lineage={},
@@ -62,6 +67,9 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionTests(unittes
             expected_model_id="expected",
             observed_model_id="observed",
             requested_action="RETRY_REPAIR",
+            eligible=True,
+            evaluated_at=datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc),
+            next_eligible_at=datetime(2026, 9, 5, 20, 0, 20, tzinfo=timezone.utc),
             decision="DEFER",
             reasons={},
             lineage={},
@@ -76,24 +84,24 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionTests(unittes
             object.__setattr__(invalid, "expected_model_id", "expected")
             object.__setattr__(invalid, "observed_model_id", "observed")
             object.__setattr__(invalid, "requested_action", "OTHER")
-            object.__setattr__(invalid, "evaluated_at", "2026-09-05T20:00:00+00:00")
+            object.__setattr__(invalid, "eligible", True)
+            object.__setattr__(invalid, "evaluated_at", datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc))
             object.__setattr__(invalid, "next_eligible_at", None)
             object.__setattr__(invalid, "reasons", MappingProxyType({}))
             object.__setattr__(invalid, "lineage", MappingProxyType({}))
             self.service.decide(invalid, decision_id="decision4")
 
     def test_identity_and_timing_are_preserved(self) -> None:
-        result = self.service.decide(
-            self.retry,
-            decision_id="decision5",
-            lineage={"source": "test"},
-        )
+        result = self.service.decide(self.retry, decision_id="decision5")
         self.assertEqual(result.proposal_id, "auth-proposal1")
         self.assertEqual(result.eligibility_id, "eligibility1")
         self.assertEqual(result.action_decision_id, "action-decision1")
         self.assertEqual(result.environment_id, "env1")
         self.assertEqual(result.expected_model_id, "expected")
         self.assertEqual(result.observed_model_id, "observed")
+        self.assertTrue(result.eligible)
+        self.assertEqual(result.evaluated_at, self.retry.evaluated_at)
+        self.assertEqual(result.next_eligible_at, self.retry.next_eligible_at)
 
     def test_reasons_and_lineage_are_preserved(self) -> None:
         result = self.service.decide(
@@ -121,6 +129,7 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationDecisionTests(unittes
     def test_source_proposal_is_not_mutated(self) -> None:
         result = self.service.decide(self.retry, decision_id="decision8")
         self.assertEqual(self.retry.requested_action, "RETRY_REPAIR")
+        self.assertTrue(self.retry.eligible)
         self.assertEqual(result.proposal_id, self.retry.proposal_id)
 
     def test_wrong_upstream_type_fails_closed(self) -> None:
