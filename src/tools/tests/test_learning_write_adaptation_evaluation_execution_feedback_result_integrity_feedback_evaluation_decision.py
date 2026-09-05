@@ -165,13 +165,13 @@ class M22_46_Tests(unittest.TestCase):
         )
         for field_name in (
             "evaluation_id", "feedback_id", "outcome_id", "execution_id", "preparation_id",
-            "admission_id", "proposal_id", "decision_id", "evaluation_id_from_feedback",
-            "source_feedback_id", "candidate_id", "source_candidate_id", "execution_source_id",
-            "source_execution_id", "source_admission_id", "proposal_source_id", "domain",
-            "source_policy_id", "policy_id",
+            "admission_id", "proposal_id", "evaluation_id_from_feedback", "source_feedback_id",
+            "candidate_id", "source_candidate_id", "execution_source_id", "source_execution_id",
+            "source_admission_id", "proposal_source_id", "domain", "source_policy_id", "policy_id",
         ):
             with self.subTest(field_name=field_name):
                 self.assertEqual(getattr(decision, field_name), getattr(self.evaluation, field_name))
+        self.assertNotEqual(decision.decision_id, self.evaluation.decision_id)
         self.assertEqual(decision.decision_source_evaluation_id, self.evaluation.evaluation_id)
 
     def test_decision_is_immutable(self) -> None:
