@@ -3,28 +3,33 @@ from __future__ import annotations
 import unittest
 from dataclasses import FrozenInstanceError
 
+from src.tools.execution_attempt import ExecutionAttemptResult, ExecutionAttemptService, ExecutionAttemptStatus
 from src.tools.execution_feedback import ExecutionFeedbackService
-from src.tools.execution_outcome import ExecutionOutcomeStatus
+from src.tools.execution_outcome import ExecutionOutcomeService, ExecutionOutcomeStatus
+from src.tools.execution_preparation import ExecutionHandoff
 from src.tools.feedback_evaluation import (
     FeedbackEvaluationError,
     FeedbackEvaluationService,
     LearningCandidate,
     LearningSignalKind,
 )
+from src.tools.models import ToolError, ToolResult
+
+
+class StubExecutor:
+    def __init__(self, result: ToolResult | None = None) -> None:
+        self.result = result
+
+    def execute(self, handoff: ExecutionHandoff) -> ToolResult:
+        assert self.result is not None
+        return self.result
 
 
 class FeedbackEvaluationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.feedback_service = ExecutionFeedbackService()
         self.evaluation = FeedbackEvaluationService()
-
-    def _feedback(self, status: ExecutionOutcomeStatus):
-        from src.tools.execution_attempt import ExecutionAttemptResult, ExecutionAttemptStatus
-        from src.tools.execution_preparation import ExecutionHandoff
-        from src.tools.models import ToolError, ToolResult
-        from src.tools.execution_outcome import ExecutionOutcomeService
-
-        handoff = ExecutionHandoff(
+        self.handoff = ExecutionHandoff(
             handoff_id="handoff-1",
             authorization_id="auth-1",
             request_fingerprint="request-fp",
@@ -34,39 +39,38 @@ class FeedbackEvaluationTests(unittest.TestCase):
             invocation_id="inv-1",
             arguments={"x": 1},
         )
-        from src.tools.execution_attempt import ExecutionAttemptService
 
+    def _feedback(self, status: ExecutionOutcomeStatus):
         if status is ExecutionOutcomeStatus.SUCCEEDED:
-            result = ToolResult(success=True, tool_name="echo", content={"x": 1}, invocation_id="inv-1")
-            attempt = ExecutionAttemptService(type("E", (), {"execute": lambda _, __: result})()).attempt(handoff)
+            tool_result = ToolResult(
+                success=True,
+                tool_name="echo",
+                content={"x": 1, "nested": {"value": 2}},
+                invocation_id="inv-1",
+            )
+            attempt = ExecutionAttemptService(StubExecutor(tool_result)).attempt(self.handoff)
         elif status is ExecutionOutcomeStatus.TOOL_FAILED:
-            result = ToolResult(
+            tool_result = ToolResult(
                 success=False,
                 tool_name="echo",
                 error=ToolError(code="tool_failure", message="bad input"),
                 invocation_id="inv-1",
             )
-            attempt = ExecutionAttemptService(type("E", (), {"execute": lambda _, __: result})()).attempt(handoff)
+            attempt = ExecutionAttemptService(StubExecutor(tool_result)).attempt(self.handoff)
         else:
+            execution_id = ExecutionAttemptService(
+                StubExecutor(ToolResult(success=True, tool_name="echo"))
+            )._execution_id(self.handoff)
             attempt = ExecutionAttemptResult(
-                execution_id="exec-test",
-                handoff_id=handoff.handoff_id,
-                tool_name=handoff.tool_name,
-                invocation_id=handoff.invocation_id,
+                execution_id=execution_id,
+                handoff_id=self.handoff.handoff_id,
+                tool_name=self.handoff.tool_name,
+                invocation_id=self.handoff.invocation_id,
                 status=ExecutionAttemptStatus.FAILED,
                 reason="worker unavailable",
             )
-            # Use the deterministic execution id for the handoff.
-            attempt = ExecutionAttemptResult(
-                execution_id=ExecutionAttemptService(type("E", (), {"execute": lambda _, __: result})())._execution_id(handoff)
-                if 'result' in locals() else ExecutionAttemptService(type("E", (), {"execute": lambda _, __: ToolResult(success=True, tool_name="echo")})())._execution_id(handoff),
-                handoff_id=handoff.handoff_id,
-                tool_name=handoff.tool_name,
-                invocation_id=handoff.invocation_id,
-                status=ExecutionAttemptStatus.FAILED,
-                reason="worker unavailable",
-            )
-        outcome = ExecutionOutcomeService().interpret(attempt, handoff)
+
+        outcome = ExecutionOutcomeService().interpret(attempt, self.handoff)
         return self.feedback_service.from_outcome(outcome)
 
     def test_success_feedback_becomes_positive_learning_signal(self) -> None:
@@ -123,6 +127,12 @@ class FeedbackEvaluationTests(unittest.TestCase):
 
         with self.assertRaises(FrozenInstanceError):
             candidate.confidence = 1.0  # type: ignore[misc]
+        with self.assertRaises(TypeError):
+            candidate.evidence["new"] = "value"  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            candidate.evidence["payload"]["new"] = "value"  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            candidate.provenance["new"] = "value"  # type: ignore[index]
 
     def test_invalid_feedback_type_is_rejected(self) -> None:
         with self.assertRaises(TypeError):
