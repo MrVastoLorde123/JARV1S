@@ -61,6 +61,8 @@ class ExecutionPreparationTests(unittest.TestCase):
 
         with self.assertRaises(FrozenInstanceError):
             handoff.arguments = {}  # type: ignore[misc]
+        with self.assertRaises(TypeError):
+            handoff.arguments["x"] = 2  # type: ignore[index]
 
     def test_handoff_context_is_non_executing(self) -> None:
         context = self.prepare().to_context()
