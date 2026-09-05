@@ -137,6 +137,10 @@ class CapabilityTrustAssessment:
             raise CapabilityTrustError(
                 "UNASSESSED trust must have zero confidence"
             )
+        if self.status is not TrustStatus.UNASSESSED and not self.evidence:
+            raise CapabilityTrustError(
+                "assessed trust status requires supporting evidence"
+            )
 
     def validate_for(self, provenance: CapabilityProvenance) -> None:
         """Ensure the assessment applies to the exact capability identity."""
