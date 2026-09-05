@@ -103,9 +103,11 @@ Future Adaptation Execution Preparation
 Future Adaptation Execution
 ↓
 Future Adaptation Execution Result Integrity
+↓
+Future Adaptation Execution Result Integrity Feedback
 ```
 
-The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, and result integrity.
+The final mutation boundary remains downstream from evidence, reasoning, decisions, proposals, policy, admission, preparation, execution, result integrity, and feedback/evaluation.
 
 ## 3. Cognitive architecture
 
@@ -166,9 +168,10 @@ Earlier duplicate/mock-directory confusion was a workflow mistake and is conside
 ## 5. Current verified state
 
 Current milestone branch:
-`feature/m22.43-adaptation-evaluation-execution-feedback-result-integrity`
+`feature/m22.44-adaptation-evaluation-execution-feedback-result-integrity-feedback`
 
 Latest verified local receipts:
+- **M22.43:** 13/13 focused + 502/502 core regression = **515/515**
 - **M22.42:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.41:** 14/14 focused + 502/502 core regression = **516/516**
 - **M22.40:** 14/14 focused + 502/502 core regression = **516/516**
@@ -185,18 +188,19 @@ Previous verified checkpoints remain recorded in repository history.
 
 M19 and M20 — VERIFIED / COMPLETE.
 M21.1–M21.6 — VERIFIED / COMPLETE.
-M22.1–M22.42 — VERIFIED / COMPLETE.
+M22.1–M22.43 — VERIFIED / COMPLETE.
 
 M22.39 Future Adaptation Execution Feedback → Proposal — VERIFIED / COMPLETE (15/15 focused + 502/502 core = 517/517).
 M22.40 Future Adaptation Execution Feedback Proposal → Admission — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 M22.41 Future Adaptation Execution Feedback Proposal Admission → Preparation — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
 M22.42 Future Adaptation Execution Feedback Preparation → Execution — VERIFIED / COMPLETE (14/14 focused + 502/502 core = 516/516).
+M22.43 Future Adaptation Execution Feedback Execution → Result Integrity — VERIFIED / COMPLETE (13/13 focused + 502/502 core = 515/515).
 
-**M22.43 Future Adaptation Execution Feedback Execution → Result Integrity — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
+**M22.44 Future Adaptation Execution Feedback Result Integrity → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.**
 
 ## 7. M22 learning/adaptation architecture and authority walls
 
-M22.34 executes exactly one preparation artifact through a replaceable applier. M22.35 validates execution results. M22.36 converts outcomes into feedback. M22.37 evaluates feedback. M22.38 creates an explicit non-authorizing decision. M22.39 creates an inert proposal. M22.40 admits or rejects that proposal under deterministic policy without granting execution authority. M22.41 converts the exact admitted proposal into immutable execution-preparation state without starting execution. M22.42 performs the future execution attempt through a replaceable applier.
+M22.34 executes exactly one preparation artifact through a replaceable applier. M22.35 validates execution results. M22.36 converts outcomes into feedback. M22.37 evaluates feedback. M22.38 creates an explicit non-authorizing decision. M22.39 creates an inert proposal. M22.40 admits or rejects that proposal under deterministic policy without granting execution authority. M22.41 converts the exact admitted proposal into immutable execution-preparation state without starting execution. M22.42 performs the future execution attempt through a replaceable applier. M22.43 validates the exact M22.42 result and produces immutable result-integrity evidence. M22.44 converts that integrity evidence into immutable feedback.
 
 ### M22.40 — Proposal → Admission
 `LearningWriteAdaptationEvaluationExecutionFeedbackProposalAdmissionService` consumes one exact M22.39 proposal and validates complete known lineage, bounded confidence, non-empty payload/evidence/provenance, and provider output identity. It produces immutable `ADMITTED` / `REJECTED` policy evidence with a deterministic admission identity. The result remains non-authorizing.
@@ -222,6 +226,13 @@ A `COMPLETED` result becomes immutable `SUCCEEDED` evidence with a deterministic
 
 The normalized outcome recursively freezes the observed execution-result payload. Result integrity is evidence about the observed execution result, not proof of adaptation truth, authorization, retry permission, revocation, or memory mutation.
 
+### M22.44 — Result Integrity → Feedback
+`LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackService` consumes exactly one M22.43 `LearningWriteAdaptationEvaluationExecutionFeedbackOutcome` and converts its `SUCCEEDED` / `FAILED` status into immutable feedback evidence.
+
+The feedback preserves the complete known M22.43 lineage and preserves the observed execution result, deterministic result fingerprint, or failure reason. Payload and provenance are recursively frozen, and the feedback identity is deterministic and distinct from the source outcome/execution identity.
+
+Feedback remains observational. It does not prove adaptation truth, authorize execution, request execution, request retry, request revocation, mutate memory, or grant general authority.
+
 Walls:
 - Execution ≠ Result Integrity
 - Result Integrity ≠ Feedback
@@ -237,6 +248,7 @@ Walls:
 - Result Integrity ≠ Retry
 - Result Integrity ≠ Revocation
 - Result Integrity ≠ Memory Mutation
+- Feedback ≠ Adaptation Truth
 - Evidence ≠ Truth
 - Learning ≠ Authority
 
@@ -336,16 +348,20 @@ No merge is performed unless explicitly requested.
 
 **Identity:** Third Hand + Second Brain
 
-**Current milestone:** M22.43 Future Adaptation Execution Feedback Execution → Result Integrity — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
+**Current milestone:** M22.44 Future Adaptation Execution Feedback Result Integrity → Feedback — ACTIVE / IMPLEMENTED / AWAITING LOCAL RECEIPT.
 
-**Current branch:** `feature/m22.43-adaptation-evaluation-execution-feedback-result-integrity`
+**Current branch:** `feature/m22.44-adaptation-evaluation-execution-feedback-result-integrity-feedback`
 
-**Latest verified milestone:** M22.42 — 516/516 (14 focused + 502 core regression)
+**Latest verified milestone:** M22.43 — 515/515 (13 focused + 502 core regression)
 
-**Active boundary:** Future Adaptation Execution Feedback Execution → Future Adaptation Execution Feedback Result Integrity.
+**Active boundary:** Future Adaptation Execution Feedback Result Integrity → Future Adaptation Execution Feedback.
 
-**M22.43 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackOutcome` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity.py`.
+**M22.44 source artifact:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback` from `src/tools/learning_write_adaptation_evaluation_execution_feedback_result_integrity_feedback.py`.
 
-**Known correction in this milestone:** M22.43 initially referenced the generic M22.34 execution request/result types. The live M22.42 contract uses the future-feedback-prefixed request/result/status types, and the production M22.43 contract has been corrected to import those exact types and preserve their full lineage.
+**M22.44 service:** `LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackService`.
 
-**Next action:** run the M22.43 focused suite and core regression locally. After verification, derive the next boundary from the live M22.43 result-integrity artifact. Do not merge.
+**M22.43 verified receipt:** 13/13 focused + 502/502 core = 515/515.
+
+**M22.44 implementation status:** implemented on PR #187; local verification pending. No merge performed.
+
+**Next action:** run the M22.44 focused suite and core regression locally. Do not merge.
