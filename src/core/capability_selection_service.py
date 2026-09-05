@@ -33,9 +33,8 @@ class CapabilityDiscoverySelection:
             raise TypeError("selection must be a CapabilitySelection")
         if self.selection.query != self.query:
             raise ValueError("selection query must match snapshot query")
-        discovered_set = set(self.discovered)
         if not all(
-            candidate.capability in discovered_set
+            any(candidate.capability is item for item in self.discovered)
             for candidate in self.selection.candidates
         ):
             raise ValueError("selection contains a capability not present in discovered")
