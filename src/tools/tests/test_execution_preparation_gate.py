@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from src.tools.authorization import ExplicitAuthorizationService
 from src.tools.authorization_integrity import AuthorizationIntegrityService
 from src.tools.confirmation import AutoApproveConfirmationProvider
-from src.tools.execution_preparation import ExecutionPreparationService
+from src.tools.execution_preparation import ExecutionPreparationError, ExecutionPreparationService
 from src.tools.gate import PolicyGate
 from src.tools.models import RiskLevel, ToolRequest
 from src.tools.policy import DefaultPolicy
@@ -23,6 +22,11 @@ class CountingToolService(ToolService):
     def invoke(self, request: ToolRequest):
         self.calls += 1
         return super().invoke(request)
+
+
+class RejectingPreparationService(ExecutionPreparationService):
+    def prepare(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        raise ExecutionPreparationError("preparation deliberately blocked")
 
 
 class ExecutionPreparationGateTests(unittest.TestCase):
@@ -44,6 +48,17 @@ class ExecutionPreparationGateTests(unittest.TestCase):
 
         self.assertTrue(result.success)
         self.assertEqual(self.service.calls, 1)
+
+    def test_preparation_failure_blocks_before_service(self) -> None:
+        self.gate._execution_preparation = RejectingPreparationService()
+        request = ToolRequest(tool_name="echo", arguments={"x": 1}, invocation_id="inv-1")
+
+        result = self.gate.invoke(request)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error.code, "execution_preparation_failed")
+        self.assertIn("preparation deliberately blocked", result.error.message)
+        self.assertEqual(self.service.calls, 0)
 
     def test_preparation_service_rejects_missing_upstream_evidence(self) -> None:
         request = ToolRequest(tool_name="echo")
