@@ -35,7 +35,7 @@ def _freeze(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class EnvironmentWorldModelRevisionApplication:
-    """Immutable record of one accepted world-model state transition."""
+    """Immutable record of one explicit world-model state transition."""
 
     application_id: str
     environment_id: str
@@ -98,7 +98,9 @@ class EnvironmentWorldModelRevisionApplicationService:
             raise TypeError("candidate must be EnvironmentWorldModel")
         if type(decision) is not EnvironmentWorldModelRevisionDecision:
             raise TypeError("decision must be EnvironmentWorldModelRevisionDecision")
-        if baseline.environment_id != candidate.environment_id != decision.environment_id:
+        if not (
+            baseline.environment_id == candidate.environment_id == decision.environment_id
+        ):
             raise EnvironmentWorldModelRevisionApplicationError(
                 "baseline, candidate, and decision must share an environment"
             )
