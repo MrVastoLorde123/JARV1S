@@ -53,6 +53,7 @@ class CapabilityTrustTests(unittest.TestCase):
                     capability_id="file.read",
                     status=TrustStatus.CONDITIONAL,
                     confidence=confidence,
+                    evidence=(self.evidence,),
                 )
 
     def test_unassessed_trust_has_zero_confidence(self) -> None:
@@ -62,6 +63,19 @@ class CapabilityTrustTests(unittest.TestCase):
             confidence=0.0,
         )
         self.assertEqual(assessment.status, TrustStatus.UNASSESSED)
+
+    def test_assessed_trust_requires_supporting_evidence(self) -> None:
+        for status in (
+            TrustStatus.CONDITIONAL,
+            TrustStatus.TRUSTED,
+            TrustStatus.UNTRUSTED,
+        ):
+            with self.assertRaises(CapabilityTrustError):
+                CapabilityTrustAssessment(
+                    capability_id="file.read",
+                    status=status,
+                    confidence=0.8,
+                )
 
     def test_assessment_requires_matching_capability_identity(self) -> None:
         assessment = CapabilityTrustAssessment(
