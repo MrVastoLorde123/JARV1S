@@ -4,6 +4,7 @@ import unittest
 from src.proactive.scheduling import (
     NotificationChannel,
     ProactiveScheduleProposal,
+    SchedulingError,
     SchedulingEvaluation,
     SchedulingStatus,
     propose_schedule,
