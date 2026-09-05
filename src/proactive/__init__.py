@@ -37,6 +37,15 @@ from .scheduling import (
     propose_schedule,
     rank_schedule_proposals,
 )
+from .runtime import (
+    FeedbackOutcome,
+    ProactiveFeedback,
+    ProactiveRuntimeResult,
+    RuntimeError,
+    RuntimeStatus,
+    compose_proactive_runtime,
+    rank_runtime_results,
+)
 
 __all__ = [
     "InitiativeCandidate",
@@ -66,4 +75,11 @@ __all__ = [
     "SchedulingStatus",
     "propose_schedule",
     "rank_schedule_proposals",
+    "FeedbackOutcome",
+    "ProactiveFeedback",
+    "ProactiveRuntimeResult",
+    "RuntimeError",
+    "RuntimeStatus",
+    "compose_proactive_runtime",
+    "rank_runtime_results",
 ]
