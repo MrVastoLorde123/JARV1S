@@ -62,7 +62,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback:
     execution_source_id: str
     source_execution_id: str
     source_admission_id: str
-    proposal_source_id: str
+    source_proposal_id: str
     domain: str
     source_policy_id: str
     policy_id: str
@@ -82,7 +82,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback:
             ("source_feedback_id", self.source_feedback_id), ("candidate_id", self.candidate_id),
             ("source_candidate_id", self.source_candidate_id), ("execution_source_id", self.execution_source_id),
             ("source_execution_id", self.source_execution_id), ("source_admission_id", self.source_admission_id),
-            ("proposal_source_id", self.proposal_source_id), ("domain", self.domain),
+            ("source_proposal_id", self.source_proposal_id), ("domain", self.domain),
             ("source_policy_id", self.source_policy_id), ("policy_id", self.policy_id),
             ("reason", self.reason),
         ):
@@ -126,12 +126,13 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedback:
             "learning_write_adaptation_evaluation_feedback_evaluation_id_from_feedback": self.evaluation_id_from_feedback,
             "learning_write_adaptation_evaluation_execution_feedback_id": self.feedback_id,
             "learning_write_adaptation_evaluation_execution_source_feedback_id": self.source_feedback_id,
+            "learning_write_adaptation_evaluation_feedback_source_feedback_id": self.source_feedback_id,
             "learning_write_adaptation_candidate_id": self.candidate_id,
             "learning_candidate_id": self.source_candidate_id,
             "learning_write_adaptation_evaluation_execution_source_id": self.execution_source_id,
             "learning_write_adaptation_source_execution_id": self.source_execution_id,
             "learning_write_adaptation_evaluation_execution_source_admission_id": self.source_admission_id,
-            "learning_write_adaptation_evaluation_proposal_id": self.proposal_source_id,
+            "learning_write_adaptation_evaluation_proposal_id": self.source_proposal_id,
             "learning_write_adaptation_domain": self.domain,
             "learning_write_adaptation_source_policy_id": self.source_policy_id,
             "learning_write_adaptation_evaluation_execution_policy_id": self.policy_id,
@@ -195,7 +196,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackS
             "execution_source_id": integrity.execution_source_id,
             "source_execution_id": integrity.source_execution_id,
             "source_admission_id": integrity.source_admission_id,
-            "proposal_source_id": integrity.source_proposal_id,
+            "source_proposal_id": integrity.source_proposal_id,
             "domain": integrity.domain,
             "source_policy_id": integrity.source_policy_id,
             "policy_id": integrity.policy_id,
@@ -218,7 +219,7 @@ class LearningWriteAdaptationEvaluationExecutionFeedbackResultIntegrityFeedbackS
             execution_source_id=integrity.execution_source_id,
             source_execution_id=integrity.source_execution_id,
             source_admission_id=integrity.source_admission_id,
-            proposal_source_id=integrity.source_proposal_id,
+            source_proposal_id=integrity.source_proposal_id,
             domain=integrity.domain,
             source_policy_id=integrity.source_policy_id,
             policy_id=integrity.policy_id,
