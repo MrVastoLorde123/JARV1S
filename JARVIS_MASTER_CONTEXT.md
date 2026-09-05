@@ -107,9 +107,38 @@ Outcome / Feedback
 - M22.4 Capability Permission / Policy Binding — VERIFIED / COMPLETE (9/9 focused + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core)
 - M22.5 Plugin Isolation / Execution Sandbox — VERIFIED / COMPLETE (10/10 focused + 9/9 M22.4 + 15/15 M22.3 + 9/9 M22.2 + 8/8 M22.1 + 487/487 core = 538/538)
 - M22.6 Capability Discovery + Selection Integration — VERIFIED / COMPLETE (8/8 focused + 495/495 core regression)
-- M22.7 Capability Proposal → Validated ToolRequest Boundary — ACTIVE
+- M22.7 Capability Proposal → Validated ToolRequest Boundary — VERIFIED / COMPLETE (7/7 request service + 8/8 invocation + 7/7 argument planner + 8/8 M22.6 integration + 4/4 catalog + 9/9 selection + 3/3 selection service + 502/502 core regression)
+- M22.8 Explicit Authorization Boundary — ACTIVE
 
-## M22.7 direction
+## M22.8 direction
+M22.8 makes the authority transition from a validated `ToolRequest` to an explicit immutable `AuthorizationDecision`. `ExplicitAuthorizationService` evaluates the existing policy contract and, when required, the existing confirmation contract. `PolicyGate.authorize()` exposes authorization without execution; `PolicyGate.invoke()` consumes that decision before delegating to `ToolService`.
+
+Directional boundary:
+```text
+Validated ToolRequest
+↓
+Policy
+↓
+Confirmation (when required)
+↓
+Explicit AuthorizationDecision
+↓
+Sandbox
+↓
+Execution
+```
+
+M22.8 authority walls:
+- Validated ToolRequest ≠ Authorized ToolRequest
+- Policy ALLOW ≠ Implicit Execution
+- Confirmation ≠ Execution
+- Authorization ≠ Execution
+- Permission ≠ Authorization
+- Sandbox ≠ Authorization
+
+M22.8 does not execute tools from `authorize()`, bypass `PolicyGate`, infer authorization from selection/argument generation/trust/lifecycle/permission/sandbox state, assign workers, or add authorization persistence/revocation.
+
+## M22.7 verified semantics
 M22.7 binds M22.6 capability selection to the existing structural invocation boundary without granting execution authority. `CapabilityRequestProposalService` accepts an immutable `CapabilityDiscoverySelection`, requires any selected candidate to originate from that exact snapshot, asks a replaceable `CapabilityArgumentPlanner` for inert argument data, and uses `CapabilityInvocationBuilder` to structurally validate and materialize a `ToolRequest`.
 
 Directional boundary:
@@ -145,6 +174,8 @@ M22.7 authority walls:
 - Sandbox ≠ Authorization
 
 M22.7 does not invoke tools or plugins, authorize a proposal, interpret argument generation as confirmation, bypass `PolicyGate`, grant permission, perform sandbox admission, assign workers, or create an execution request merely because a request was structurally validated.
+
+M22.7 verification receipt: **7/7 request service + 8/8 invocation + 7/7 argument planner + 8/8 M22.6 integration + 4/4 catalog + 9/9 selection + 3/3 selection service + 502/502 core regression tests passed locally.**
 
 ## M22.6 verified semantics
 M22.6 establishes the explicit provider-neutral capability discovery and selection integration boundary. `CapabilityCatalog` remains a read-only view over the existing `ToolCapabilityGateway`; `CapabilitySelectionService` composes discovery and selector ranking; `CapabilityDiscoverySelection` captures the exact discovered capabilities and the selection derived from that snapshot.
@@ -296,7 +327,7 @@ Learning is multi-form: episodic, semantic, procedural, preference, failure/outc
 `PERSONAL, SKILL, PREFERENCE, PROJECT, GOAL, FACT, WORKFLOW, RELATIONSHIP, EXPERIENCE, OTHER`
 
 ## GitHub session protocol
-Every GitHub engineering session begins by reading this file from the current working branch/ref. Before moving to the next milestone, update this file with the newest verified receipt, implementation state, architecture boundary, and next active milestone. Never assume a remembered milestone state is newer than this repository ledger.
+Every GitHub engineering session begins by reading this file from the current working branch/ref. Before moving to the next milestone, update this file with the newest verified receipt, implementation state, boundary, and next active milestone. Never assume a remembered milestone state is newer than this repository ledger.
 
 ## Verification rule
 A milestone is not considered GREEN / VERIFIED / COMPLETE until the user provides the local test receipt. Remote implementation status is kept distinct from local verification status.
