@@ -7,7 +7,7 @@ change authorization, retry, or revoke capabilities.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Optional
 
@@ -43,7 +43,7 @@ class LearningDecision:
     action: LearningAction
     reason: str
     confidence: float
-    metadata: Mapping[str, Any] = ()  # normalized in __post_init__
+    metadata: Mapping[str, Any] = field(default_factory=dict)
     learning_write_allowed: bool = False
     authority_granted: bool = False
 
