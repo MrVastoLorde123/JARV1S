@@ -143,9 +143,10 @@ class LearningWriteAdaptationEvaluationExecutionTests(unittest.TestCase):
             applier.requests[0].domain = "other"  # type: ignore[misc]
 
     def test_execution_rejects_authorized_preparation(self) -> None:
-        from dataclasses import replace
-
-        invalid = replace(self.preparation, execution_authorized=True)
+        invalid = object.__new__(self.preparation.__class__)
+        for field_name, value in self.preparation.__dict__.items():
+            object.__setattr__(invalid, field_name, value)
+        object.__setattr__(invalid, "execution_authorized", True)
         with self.assertRaises(LearningWriteAdaptationEvaluationExecutionError):
             LearningWriteAdaptationEvaluationExecutionService(_RecordingApplier()).execute(invalid)
 
