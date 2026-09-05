@@ -63,9 +63,10 @@ class M22_56_Tests(unittest.TestCase):
             "proposal_id", "decision_id", "evaluation_id", "feedback_id", "integrity_id", "execution_id", "preparation_id",
             "proposal_source_id", "source_proposal_id", "decision_source_evaluation_id", "evaluation_id_from_feedback",
             "source_feedback_id", "candidate_id", "source_candidate_id", "execution_source_id", "source_execution_id",
-            "domain", "source_policy_id",
+            "domain",
         ):
             self.assertEqual(getattr(out, field), getattr(source, field))
+        self.assertEqual(out.source_policy_id, source.policy_id)
         self.assertEqual(out.source_admission_id, source.admission_id)
 
     def test_policy_lineage_changes_at_admission(self):
