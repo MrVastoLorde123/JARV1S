@@ -9,6 +9,7 @@ from typing import Any, Mapping
 
 from src.core.environment_world_model_rollback_repair_retry_outcome import (
     EnvironmentWorldModelRollbackRepairRetryOutcome,
+    EnvironmentWorldModelRollbackRepairRetryOutcomeStatus,
 )
 
 
@@ -126,16 +127,22 @@ class EnvironmentWorldModelRollbackRepairRetryFeedbackService:
             )
         if not isinstance(feedback_id, str) or not feedback_id.strip():
             raise ValueError("feedback_id must be a non-empty string")
-        if outcome.outcome_status not in {"SUCCESS", "FAILURE"}:
+        if not isinstance(outcome.status, EnvironmentWorldModelRollbackRepairRetryOutcomeStatus):
             raise EnvironmentWorldModelRollbackRepairRetryFeedbackError(
                 "unsupported outcome status"
             )
-        if outcome.outcome_status == "SUCCESS":
+        if outcome.status is EnvironmentWorldModelRollbackRepairRetryOutcomeStatus.SUCCESS:
             feedback_status = EnvironmentWorldModelRollbackRepairRetryFeedbackStatus.SUCCESS_SIGNAL
+            outcome_status = "SUCCESS"
             default_reason = "verified retry success recorded as observational feedback"
-        else:
+        elif outcome.status is EnvironmentWorldModelRollbackRepairRetryOutcomeStatus.FAILURE:
             feedback_status = EnvironmentWorldModelRollbackRepairRetryFeedbackStatus.FAILURE_SIGNAL
+            outcome_status = "FAILURE"
             default_reason = "verified retry failure recorded as observational feedback"
+        else:
+            raise EnvironmentWorldModelRollbackRepairRetryFeedbackError(
+                "unsupported outcome status"
+            )
 
         return EnvironmentWorldModelRollbackRepairRetryFeedback(
             feedback_id=feedback_id,
@@ -145,7 +152,7 @@ class EnvironmentWorldModelRollbackRepairRetryFeedbackService:
             environment_id=outcome.environment_id,
             expected_model_id=outcome.expected_model_id,
             observed_model_id=outcome.observed_model_id,
-            outcome_status=outcome.outcome_status,
+            outcome_status=outcome_status,
             feedback_status=feedback_status,
             result_fingerprint=outcome.result_fingerprint,
             failure_reason=outcome.failure_reason,
