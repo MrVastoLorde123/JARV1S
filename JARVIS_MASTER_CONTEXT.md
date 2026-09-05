@@ -103,6 +103,7 @@ Outcome / Feedback
 - M22 Capability / Plugin Ecosystem — ACTIVE
 - M22.1 Capability / Plugin Contract + Registry Boundary — VERIFIED / COMPLETE (8/8 focused + 487/487 core)
 - M22.2 Capability Trust / Provenance Boundary — VERIFIED / COMPLETE (9/9 focused + 8/8 M22.1 + 487/487 core)
+- M22.3 Capability Lifecycle / Versioning Boundary — IMPLEMENTED / AWAITING LOCAL RECEIPT
 
 ## M21.3 verified semantics
 Bounded deterministic advisory scoring uses importance, urgency, expected benefit, confidence, effort cost, and risk. Formula version is `linear-v1`; score is bounded to [0, 1]; ranking is deterministic by score descending and proposal identity ascending. Value assessment grants no authority and performs no scheduling, notification, assignment, or execution.
@@ -206,6 +207,32 @@ M22.2 authority walls:
 - Registration ≠ Trust
 
 M22.2 does not execute capabilities, grant permission, create authorization, infer execution authority from trust, mutate policy, schedule, notify, assign workers, or treat provenance as proof of truth.
+
+## M22.3 boundary
+M22.3 establishes bounded capability version identity and lifecycle history. Versioning records which capability version exists and lifecycle records whether a version is active, deprecated, or retired. Lifecycle/version metadata remains separate from trust, permission, authorization, and execution.
+
+Current bounded contract:
+- `SemanticVersion` provides immutable Semantic Versioning precedence values.
+- `CapabilityVersion` provides immutable capability version/lifecycle metadata.
+- `LifecycleStatus` is bounded to `ACTIVE`, `DEPRECATED`, and `RETIRED`.
+- `CapabilityLifecycleRegistry` provides explicit version registration, lookup, lifecycle transition, deterministic version ordering, and historical retention.
+- Duplicate capability/version identities cannot silently replace an existing registration.
+- `supersedes`, when present, must reference an older semantic version.
+- Lifecycle transitions are explicit and forward-only: `ACTIVE → DEPRECATED → RETIRED` or `ACTIVE → RETIRED`.
+- `latest()` is a metadata query and is not an authorization or execution selection.
+- Retired versions remain queryable history unless explicitly excluded by the caller.
+
+M22.3 authority walls:
+- Version ≠ Identity Authority
+- Lifecycle ≠ Permission
+- Latest ≠ Authorized
+- Active ≠ Trusted
+- Deprecated ≠ Forbidden
+- Retired ≠ Deleted
+- Versioning ≠ Execution
+- Capability ≠ Permission
+
+M22.3 does not execute capabilities, grant permission, create authorization, infer trust from lifecycle state, infer authorization from `ACTIVE`, select workers, mutate policy, or delete retired history.
 
 ## Learning architecture
 Learning is multi-form: episodic, semantic, procedural, preference, failure/outcome, belief revision, predictive, and meta-learning. Mathematical mechanisms are selected by problem: probability/Bayesian reasoning, graphs, temporal reasoning, state machines, optimization, decision theory, information theory, and control/feedback.
