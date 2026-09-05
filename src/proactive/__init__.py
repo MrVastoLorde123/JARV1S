@@ -10,9 +10,9 @@ from .initiative import (
 )
 from .proposal import (
     InitiativeProposal,
-    ProposalDisposition,
     ProposalEvaluation,
-    form_proposal,
+    ProposalStatus,
+    build_proposal,
 )
 from .value import (
     ProposalValueAssessment,
@@ -30,9 +30,9 @@ __all__ = [
     "ProactiveTriggerSource",
     "evaluate_initiative",
     "InitiativeProposal",
-    "ProposalDisposition",
     "ProposalEvaluation",
-    "form_proposal",
+    "ProposalStatus",
+    "build_proposal",
     "ProposalValueAssessment",
     "ProposalValueFactors",
     "ValueAssessmentError",
