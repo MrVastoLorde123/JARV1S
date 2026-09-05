@@ -5,6 +5,7 @@ from dataclasses import FrozenInstanceError
 
 from src.tools.execution_attempt import (
     ExecutionAttemptError,
+    ExecutionAttemptResult,
     ExecutionAttemptService,
     ExecutionAttemptStatus,
 )
@@ -88,10 +89,26 @@ class ExecutionAttemptTests(unittest.TestCase):
         outcome = ExecutionAttemptService(BadExecutor()).attempt(self.handoff)
 
         self.assertFalse(outcome.completed)
-        self.assertIn("expected ToolResult", outcome.reason or "")
+        self.assertIn("invalid result type", outcome.reason or "")
+
+    def test_executor_result_tool_identity_must_match_handoff(self) -> None:
+        result = ToolResult(success=True, tool_name="other", invocation_id="inv-1")
+        outcome = ExecutionAttemptService(StubExecutor(result=result)).attempt(self.handoff)
+
+        self.assertFalse(outcome.completed)
+        self.assertIn("tool identity", outcome.reason or "")
+
+    def test_executor_result_invocation_identity_must_match_handoff(self) -> None:
+        result = ToolResult(success=True, tool_name="echo", invocation_id="other")
+        outcome = ExecutionAttemptService(StubExecutor(result=result)).attempt(self.handoff)
+
+        self.assertFalse(outcome.completed)
+        self.assertIn("invocation identity", outcome.reason or "")
 
     def test_attempt_requires_handoff(self) -> None:
-        service = ExecutionAttemptService(StubExecutor(result=ToolResult(success=True, tool_name="echo")))
+        service = ExecutionAttemptService(
+            StubExecutor(result=ToolResult(success=True, tool_name="echo", invocation_id="inv-1"))
+        )
         with self.assertRaises(TypeError):
             service.attempt({"handoff_id": "handoff-1"})  # type: ignore[arg-type]
 
@@ -100,14 +117,14 @@ class ExecutionAttemptTests(unittest.TestCase):
             ExecutionAttemptService(object())
 
     def test_attempt_result_is_immutable(self) -> None:
-        tool_result = ToolResult(success=True, tool_name="echo")
+        tool_result = ToolResult(success=True, tool_name="echo", invocation_id="inv-1")
         outcome = ExecutionAttemptService(StubExecutor(result=tool_result)).attempt(self.handoff)
 
         with self.assertRaises(FrozenInstanceError):
             outcome.execution_id = "tampered"  # type: ignore[misc]
 
     def test_attempt_context_distinguishes_attempt_from_authority(self) -> None:
-        tool_result = ToolResult(success=True, tool_name="echo")
+        tool_result = ToolResult(success=True, tool_name="echo", invocation_id="inv-1")
         context = ExecutionAttemptService(StubExecutor(result=tool_result)).attempt(
             self.handoff
         ).to_context()
@@ -120,8 +137,6 @@ class ExecutionAttemptTests(unittest.TestCase):
 
     def test_failed_attempt_requires_reason(self) -> None:
         with self.assertRaises(ExecutionAttemptError):
-            from src.tools.execution_attempt import ExecutionAttemptResult
-
             ExecutionAttemptResult(
                 execution_id="exec-1",
                 handoff_id="handoff-1",
