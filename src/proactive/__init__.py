@@ -28,6 +28,15 @@ from .information_gain import (
     assess_information_gain,
     rank_information_gain,
 )
+from .scheduling import (
+    NotificationChannel,
+    ProactiveScheduleProposal,
+    SchedulingError,
+    SchedulingEvaluation,
+    SchedulingStatus,
+    propose_schedule,
+    rank_schedule_proposals,
+)
 
 __all__ = [
     "InitiativeCandidate",
@@ -50,4 +59,11 @@ __all__ = [
     "InformationGainFactors",
     "assess_information_gain",
     "rank_information_gain",
+    "NotificationChannel",
+    "ProactiveScheduleProposal",
+    "SchedulingError",
+    "SchedulingEvaluation",
+    "SchedulingStatus",
+    "propose_schedule",
+    "rank_schedule_proposals",
 ]
