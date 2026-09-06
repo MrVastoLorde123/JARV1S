@@ -149,13 +149,14 @@ class M23_58LearningSignalV2Tests(unittest.TestCase):
 
     def test_constructor_rejects_confidence_out_of_bounds(self):
         evaluation = self._make_evaluation(success=True)
+        payload = {
+            key: value
+            for key, value in evaluation.__dict__.items()
+            if key not in {"feedback_status", "evaluation_status"}
+        }
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryLearningSignalV2(
-                **{
-                    key: value
-                    for key, value in evaluation.__dict__.items()
-                    if key != "feedback_status"
-                },
+                **payload,
                 signal_id="signal-1",
                 evaluation_status=evaluation.evaluation_status,
                 signal_status=EnvironmentWorldModelRollbackRepairRetryLearningSignalV2Status.POSITIVE_SIGNAL,
