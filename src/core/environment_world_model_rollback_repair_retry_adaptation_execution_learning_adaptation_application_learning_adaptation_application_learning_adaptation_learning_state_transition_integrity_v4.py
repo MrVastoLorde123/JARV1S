@@ -14,11 +14,11 @@ from src.core.environment_world_model_rollback_repair_retry_adaptation_execution
 )
 
 
-class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Error(RuntimeError):
+class LearningStateTransitionIntegrityError(RuntimeError):
     """Raised when transition integrity evidence cannot be formed safely."""
 
 
-class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status(str, Enum):
+class LearningStateTransitionIntegrityStatus(str, Enum):
     VALID = "VALID"
     INVALID = "INVALID"
 
@@ -57,7 +57,7 @@ def _transition_fingerprint(transition: LearningStateTransition) -> str:
 
 
 @dataclass(frozen=True)
-class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4:
+class LearningStateTransitionIntegrity:
     """Immutable integrity evidence over exactly one M23.98 transition artifact."""
 
     integrity_id: str
@@ -81,7 +81,7 @@ class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptat
     state_key: str
     transition_status: TransitionStatus
     computed_transition_fingerprint: str
-    integrity_status: EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status
+    integrity_status: LearningStateTransitionIntegrityStatus
     failure_reason: str | None
     reasons: Mapping[str, Any]
     lineage: Mapping[str, Any]
@@ -103,11 +103,11 @@ class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptat
             raise ValueError("transition integrity requires SHA-256 fingerprints")
         if not isinstance(self.transition_status, TransitionStatus):
             raise TypeError("transition_status must be a learning-state transition v4 status")
-        if not isinstance(self.integrity_status, EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status):
+        if not isinstance(self.integrity_status, LearningStateTransitionIntegrityStatus):
             raise TypeError("integrity_status must be a transition integrity v4 status")
-        if self.integrity_status is EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status.VALID and self.failure_reason is not None:
+        if self.integrity_status is LearningStateTransitionIntegrityStatus.VALID and self.failure_reason is not None:
             raise ValueError("VALID integrity cannot carry a failure reason")
-        if self.integrity_status is EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status.INVALID and (self.failure_reason is None or not self.failure_reason.strip()):
+        if self.integrity_status is LearningStateTransitionIntegrityStatus.INVALID and (self.failure_reason is None or not self.failure_reason.strip()):
             raise ValueError("INVALID integrity requires a failure reason")
         if not isinstance(self.reasons, Mapping) or not isinstance(self.lineage, Mapping):
             raise TypeError("reasons and lineage must be mappings")
@@ -151,7 +151,7 @@ class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptat
         return False
 
 
-class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Service:
+class LearningStateTransitionIntegrityService:
     """Fingerprint one transition artifact without retry, mutation, or correctness claims."""
 
     def assess(
@@ -161,14 +161,14 @@ class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptat
         integrity_id: str,
         reasons: Mapping[str, Any] | None = None,
         lineage: Mapping[str, Any] | None = None,
-    ) -> EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4:
+    ) -> LearningStateTransitionIntegrity:
         if type(transition) is not LearningStateTransition:
             raise TypeError("transition must be a learning-state transition v4 artifact")
         if not isinstance(integrity_id, str) or not integrity_id.strip():
             raise ValueError("integrity_id must be a non-empty string")
 
         computed = _transition_fingerprint(transition)
-        status = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status.VALID
+        status = LearningStateTransitionIntegrityStatus.VALID
         reason_payload = reasons if reasons is not None else {
             "integrity_status": status.value,
             "transition_status": transition.transition_status.value,
@@ -177,7 +177,7 @@ class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptat
             "integrity_id": integrity_id,
             "transition_id": transition.transition_id,
         }
-        return EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4(
+        return LearningStateTransitionIntegrity(
             integrity_id=integrity_id,
             transition_id=transition.transition_id,
             evidence_id=transition.evidence_id,
@@ -206,9 +206,17 @@ class EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptat
         )
 
 
+# Compatibility aliases for the M23.99 historical API names. These are temporary
+# migration shims; the concise names above are the canonical Python API.
+EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Error = LearningStateTransitionIntegrityError
+EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status = LearningStateTransitionIntegrityStatus
+EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4 = LearningStateTransitionIntegrity
+EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Service = LearningStateTransitionIntegrityService
+
+
 __all__ = [
-    "EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Error",
-    "EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status",
-    "EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4",
-    "EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Service",
+    "LearningStateTransitionIntegrityError",
+    "LearningStateTransitionIntegrityStatus",
+    "LearningStateTransitionIntegrity",
+    "LearningStateTransitionIntegrityService",
 ]
