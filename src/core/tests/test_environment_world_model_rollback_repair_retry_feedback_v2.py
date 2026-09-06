@@ -58,7 +58,7 @@ class M23_56FeedbackV2Tests(unittest.TestCase):
         )
         self.service = EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status
 
-    def _outcome(self, integrity, outcome_id):
+    def _make_outcome(self, integrity, outcome_id):
         from src.core.environment_world_model_rollback_repair_retry_outcome_v2 import (
             EnvironmentWorldModelRollbackRepairRetryOutcomeV2Service,
         )
@@ -67,7 +67,7 @@ class M23_56FeedbackV2Tests(unittest.TestCase):
         )
 
     def test_success_outcome_records_success_signal_and_preserves_v2_chain(self) -> None:
-        outcome = self._outcome(self.success_integrity, "outcome-success")
+        outcome = self._make_outcome(self.success_integrity, "outcome-success")
         feedback = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service().record(
             outcome, feedback_id="feedback1"
         )
@@ -79,7 +79,7 @@ class M23_56FeedbackV2Tests(unittest.TestCase):
         self.assertEqual(feedback.result_fingerprint, "abc123")
 
     def test_failure_outcome_records_failure_signal_and_preserves_reason(self) -> None:
-        outcome = self._outcome(self.failure_integrity, "outcome-failure")
+        outcome = self._make_outcome(self.failure_integrity, "outcome-failure")
         feedback = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service().record(
             outcome, feedback_id="feedback2"
         )
@@ -89,7 +89,7 @@ class M23_56FeedbackV2Tests(unittest.TestCase):
         self.assertIsNone(feedback.result_fingerprint)
 
     def test_feedback_is_immutable_and_advisory(self) -> None:
-        outcome = self._outcome(self.success_integrity, "outcome-immutable")
+        outcome = self._make_outcome(self.success_integrity, "outcome-immutable")
         feedback = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service().record(
             outcome, feedback_id="feedback3"
         )
@@ -103,7 +103,7 @@ class M23_56FeedbackV2Tests(unittest.TestCase):
         self.assertFalse(feedback.mutates_persistence)
 
     def test_source_outcome_is_not_mutated_and_feedback_id_is_required(self) -> None:
-        outcome = self._outcome(self.success_integrity, "outcome-source")
+        outcome = self._make_outcome(self.success_integrity, "outcome-source")
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service().record(outcome, feedback_id="")
         feedback = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service().record(
@@ -114,7 +114,7 @@ class M23_56FeedbackV2Tests(unittest.TestCase):
         self.assertEqual(feedback.outcome_id, "outcome-source")
 
     def test_nested_lineage_is_frozen_and_signal_cannot_mismatch_outcome(self) -> None:
-        outcome = self._outcome(self.success_integrity, "outcome-lineage")
+        outcome = self._make_outcome(self.success_integrity, "outcome-lineage")
         feedback = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service().record(
             outcome,
             feedback_id="feedback5",
