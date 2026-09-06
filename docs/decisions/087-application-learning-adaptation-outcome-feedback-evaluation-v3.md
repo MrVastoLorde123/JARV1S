@@ -35,23 +35,23 @@ Feedback Evaluation ≠ Persistence Mutation.
 Feedback Evaluation ≠ User Intent.
 
 ## Verification
-Pending local receipt.
+Pending local regression receipt.
 
 Focused:
 ```text
 python -m unittest src.core.tests.test_environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_adaptation_application_learning_adaptation_application_outcome_feedback_evaluation_v3
 ```
 
-Expected focused: **13/13**.
+Verified focused: **14/14**.
 
-Core regression baseline: **1400 tests** before M23.89; expected **1413/1413** after M23.89.
+Core regression baseline: **1400 tests** before M23.89; expected **1414/1414** after M23.89.
 
 ```text
 python -m unittest discover -s src.core.tests -p "test_*.py"
 ```
 
 ## Atomicity
-Exactly **1 commit / 3 intended files** from M23.88.
+M23.89 implementation + focused test were introduced from M23.88 as the intended production/test boundary; subsequent commits only correct verification/import defects discovered during local verification.
 
 The implementation and focused-test imports use the exact M23.88/M23.89 module paths, including all namespace segments.
 
