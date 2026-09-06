@@ -65,11 +65,11 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     next_eligible_at: datetime | None
     reasons: Mapping[str, str] = field(default_factory=dict)
     lineage: Mapping[str, Any] = field(default_factory=dict)
-    # Legacy compatibility metadata retained for downstream M23.40/M23.41
-    # artifacts that construct the proposal directly. M23.49 itself does not
-    # fabricate these values when the M23.48 assessment does not contain them.
+    # Compatibility metadata retained for downstream M23.40/M23.41 artifacts.
+    # M23.49 does not fabricate these identifiers from the M23.48 assessment.
     eligibility_id: str | None = None
     action_decision_id: str | None = None
+    eligible: bool | None = None
 
     def __post_init__(self) -> None:
         from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
@@ -94,6 +94,8 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
             value = getattr(self, name)
             if value is not None and (not isinstance(value, str) or not value.strip()):
                 raise ValueError(f"{name} must be None or a non-empty string")
+        if self.eligible is not None and not isinstance(self.eligible, bool):
+            raise TypeError("eligible must be a boolean or None")
         if not isinstance(
             self.assessment_status,
             EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
@@ -165,12 +167,14 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
 
         if assessment.status is EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.ELIGIBLE:
             requested_action = "RETRY_REPAIR"
+            derived_eligible = True
             default_reason = "eligible retry re-eligibility evidence requests a separate authorization decision"
         elif assessment.status in {
             EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.WAITING,
             EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.NOT_ELIGIBLE,
         }:
             requested_action = "NO_AUTHORIZATION"
+            derived_eligible = False
             default_reason = "retry re-eligibility evidence does not support requesting retry authorization"
         else:
             raise EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalError(
@@ -199,6 +203,7 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
                 "feedback_id": assessment.feedback_id,
                 "outcome_id": assessment.outcome_id,
             },
+            eligible=derived_eligible,
         )
 
 
