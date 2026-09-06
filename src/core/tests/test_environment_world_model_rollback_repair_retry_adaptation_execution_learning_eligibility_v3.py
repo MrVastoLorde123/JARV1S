@@ -141,9 +141,15 @@ class M23_72LearningEligibilityV3Tests(unittest.TestCase):
 
     def test_status_mapping_is_enforced(self):
         source = self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalIntegrityV3Status.VALID)
+        values = dict(source.__dict__)
+        values.pop("integrity_evaluation_id", None)
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningEligibilityV3(
-                **{**source.__dict__, "eligibility_id": "eligibility-72", "status": EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningEligibilityV3Status.INELIGIBLE}
+                **{
+                    **values,
+                    "eligibility_id": "eligibility-72",
+                    "status": EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningEligibilityV3Status.INELIGIBLE,
+                }
             )
 
 
