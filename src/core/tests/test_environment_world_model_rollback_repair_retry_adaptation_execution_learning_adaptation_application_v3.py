@@ -170,8 +170,9 @@ class M23_75AdaptationApplicationV3Tests(unittest.TestCase):
         result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationV3Service().apply(
             d, p, application_id="application-1", applier=_Applier()
         )
-        for name in ("decision_id", "proposal_id", "source_proposal_id", "eligibility_id", "integrity_id", "signal_id", "environment_id", "expected_model_id", "observed_model_id", "signal_fingerprint", "upstream_proposal_fingerprint", "handoff_fingerprint", "result_fingerprint"):
-            self.assertEqual(getattr(result, name), getattr(p, name) if hasattr(p, name) else getattr(d, name))
+        self.assertEqual(result.decision_id, d.decision_id)
+        for name in ("proposal_id", "source_proposal_id", "eligibility_id", "integrity_id", "signal_id", "environment_id", "expected_model_id", "observed_model_id", "signal_fingerprint", "upstream_proposal_fingerprint", "handoff_fingerprint", "result_fingerprint"):
+            self.assertEqual(getattr(result, name), getattr(p, name))
 
     def test_application_does_not_authorize_or_execute_capabilities(self):
         p = proposal()
@@ -188,7 +189,6 @@ class M23_75AdaptationApplicationV3Tests(unittest.TestCase):
     def test_constructor_rejects_applied_without_payload_or_result(self):
         p = proposal()
         d = decision(p, True)
-        values = dict(p.__dict__)
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationV3(
                 application_id="application-1", decision_id=d.decision_id, proposal_id=p.proposal_id,
