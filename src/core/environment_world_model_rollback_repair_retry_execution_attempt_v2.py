@@ -42,8 +42,8 @@ class EnvironmentWorldModelRollbackRepairRetryExecutionAttemptV2Result:
     execution_id: str
     preparation_id: str
     environment_id: str
-    authorization_decision_id: str
-    authorization_integrity_id: str
+    decision_id: str
+    integrity_id: str
     proposal_id: str
     assessment_id: str | None
     evaluation_id: str | None
@@ -63,7 +63,7 @@ class EnvironmentWorldModelRollbackRepairRetryExecutionAttemptV2Result:
     def __post_init__(self) -> None:
         for name in (
             "execution_id", "preparation_id", "environment_id",
-            "authorization_decision_id", "authorization_integrity_id", "proposal_id",
+            "decision_id", "integrity_id", "proposal_id",
             "expected_model_id", "observed_model_id", "requested_action", "decision",
         ):
             value = getattr(self, name)
@@ -154,8 +154,8 @@ class EnvironmentWorldModelRollbackRepairRetryExecutionAttemptV2Service:
             execution_id=execution_id,
             preparation_id=preparation.preparation_id,
             environment_id=preparation.environment_id,
-            authorization_decision_id=preparation.decision_id,
-            authorization_integrity_id=preparation.integrity_id,
+            decision_id=preparation.decision_id,
+            integrity_id=preparation.integrity_id,
             proposal_id=preparation.proposal_id,
             assessment_id=preparation.assessment_id,
             evaluation_id=preparation.evaluation_id,
@@ -171,8 +171,8 @@ class EnvironmentWorldModelRollbackRepairRetryExecutionAttemptV2Service:
             worker_id=worker_id,
             lineage=lineage or {
                 "preparation_id": preparation.preparation_id,
-                "authorization_decision_id": preparation.decision_id,
-                "authorization_integrity_id": preparation.integrity_id,
+                "decision_id": preparation.decision_id,
+                "integrity_id": preparation.integrity_id,
                 "proposal_id": preparation.proposal_id,
                 "assessment_id": preparation.assessment_id,
                 "evaluation_id": preparation.evaluation_id,
@@ -187,8 +187,8 @@ class EnvironmentWorldModelRollbackRepairRetryExecutionAttemptV2Service:
             execution_id=execution_id,
             preparation_id=preparation.preparation_id,
             environment_id=preparation.environment_id,
-            authorization_decision_id=preparation.decision_id,
-            authorization_integrity_id=preparation.integrity_id,
+            decision_id=preparation.decision_id,
+            integrity_id=preparation.integrity_id,
             proposal_id=preparation.proposal_id,
             assessment_id=preparation.assessment_id,
             evaluation_id=preparation.evaluation_id,
