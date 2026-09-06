@@ -1,7 +1,7 @@
-# Decision 103 — Application Learning Signal Integrity V4
+﻿# Decision 103 â€” Application Learning Signal Integrity V4
 
 ## Status
-IMPLEMENTED / AWAITING LOCAL VERIFICATION
+IMPLEMENTED / VERIFIED / COMPLETE
 
 ## Purpose
 M23.91 establishes an explicit integrity boundary over the M23.90 application learning signal v4 artifact.
@@ -60,7 +60,7 @@ The M23.91 artifact is:
 
 The architecture remains:
 
-`Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → (future learning/update boundary)`
+`Outcome â†’ Feedback â†’ Evaluation â†’ Learning Signal â†’ Learning Signal Integrity â†’ (future learning/update boundary)`
 
 M23.91 does not cross the downstream learning/update boundary.
 
@@ -69,8 +69,9 @@ Focused test target:
 
 `src.core.tests.test_environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_adaptation_application_learning_signal_integrity_v4`
 
-Expected focused verification: **12/12**.
+Verified focused verification: **12/12**.
 
-Expected regression baseline after M23.90: **1429 core tests**, with M23.91 expected to produce **1441/1441** after the focused suite is added.
+Core regression verification: **1441/1441** after M23.91.
 
-No merge is implied by this decision. Local verification must be completed before this record is marked VERIFIED / COMPLETE.
+No merge is implied by this decision. M23.91 local verification is complete.
+
