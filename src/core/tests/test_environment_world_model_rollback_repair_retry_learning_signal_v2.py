@@ -151,9 +151,15 @@ class M23_58LearningSignalV2Tests(unittest.TestCase):
         evaluation = self._make_evaluation(success=True)
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryLearningSignalV2(
-                **{**evaluation.__dict__, "signal_id": "signal-1", "evaluation_status": evaluation.evaluation_status,
-                   "signal_status": EnvironmentWorldModelRollbackRepairRetryLearningSignalV2Status.POSITIVE_SIGNAL,
-                   "confidence": 1.1}
+                **{
+                    key: value
+                    for key, value in evaluation.__dict__.items()
+                    if key != "feedback_status"
+                },
+                signal_id="signal-1",
+                evaluation_status=evaluation.evaluation_status,
+                signal_status=EnvironmentWorldModelRollbackRepairRetryLearningSignalV2Status.POSITIVE_SIGNAL,
+                confidence=1.1,
             )
 
     def test_source_evaluation_remains_unchanged(self):
