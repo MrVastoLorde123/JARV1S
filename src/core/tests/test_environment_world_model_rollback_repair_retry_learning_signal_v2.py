@@ -31,6 +31,7 @@ class M23_58LearningSignalV2Tests(unittest.TestCase):
             integrity_decision_id="integrity-decision-1",
             proposal_id="proposal-1",
             assessment_id="assessment-1",
+            evaluation_id="evaluation-1",
             environment_id="env-1",
             expected_model_id="model-expected",
             observed_model_id="model-observed",
