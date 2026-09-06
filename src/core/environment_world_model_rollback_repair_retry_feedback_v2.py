@@ -75,19 +75,26 @@ class EnvironmentWorldModelRollbackRepairRetryFeedbackV2:
             raise TypeError("outcome_status must be an outcome v2 status")
         if not isinstance(self.feedback_status, EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status):
             raise TypeError("feedback_status must be a retry feedback v2 status")
-        if self.feedback_status is EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.SUCCESS_SIGNAL:
-            if self.outcome_status is not EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.SUCCESS:
+
+        # Compare by enum value rather than identity so the contract remains stable
+        # across test/import reload boundaries while retaining the concrete enum type.
+        outcome_status = self.outcome_status.value
+        feedback_status = self.feedback_status.value
+        if feedback_status == EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.SUCCESS_SIGNAL.value:
+            if outcome_status != EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.SUCCESS.value:
                 raise ValueError("SUCCESS_SIGNAL requires SUCCESS outcome")
             if not self.result_fingerprint or self.failure_reason is not None:
                 raise ValueError("SUCCESS_SIGNAL requires fingerprint and no failure reason")
-        else:
-            if self.outcome_status is not EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.FAILURE:
-                if self.failure_reason is None or not self.failure_reason.strip():
-                    raise ValueError("FAILURE_SIGNAL requires failure reason")
-                if self.result_fingerprint is not None:
-                    raise ValueError("FAILURE_SIGNAL cannot contain result fingerprint")
-            else:
+        elif feedback_status == EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.FAILURE_SIGNAL.value:
+            if outcome_status != EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.FAILURE.value:
                 raise ValueError("FAILURE_SIGNAL requires FAILURE outcome")
+            if self.failure_reason is None or not self.failure_reason.strip():
+                raise ValueError("FAILURE_SIGNAL requires failure reason")
+            if self.result_fingerprint is not None:
+                raise ValueError("FAILURE_SIGNAL cannot contain result fingerprint")
+        else:
+            raise ValueError("unsupported feedback status")
+
         if not isinstance(self.reasons, Mapping):
             raise TypeError("reasons must be a mapping")
         if not isinstance(self.lineage, Mapping):
@@ -135,10 +142,10 @@ class EnvironmentWorldModelRollbackRepairRetryFeedbackV2Service:
             raise TypeError("outcome must be EnvironmentWorldModelRollbackRepairRetryOutcomeV2")
         if not isinstance(feedback_id, str) or not feedback_id.strip():
             raise ValueError("feedback_id must be a non-empty string")
-        if outcome.status is EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.SUCCESS:
+        if outcome.status == EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.SUCCESS:
             feedback_status = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.SUCCESS_SIGNAL
             default_reason = "verified retry success recorded as observational v2 feedback"
-        elif outcome.status is EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.FAILURE:
+        elif outcome.status == EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.FAILURE:
             feedback_status = EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.FAILURE_SIGNAL
             default_reason = "verified retry failure recorded as observational v2 feedback"
         else:
