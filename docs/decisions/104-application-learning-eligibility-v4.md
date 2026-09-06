@@ -66,11 +66,12 @@ Focused test target:
 
 `src.core.tests.test_environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_eligibility_v4`
 
-Expected focused verification: **12/12**.
+Verified focused verification: **14/14**.
 
-Expected regression baseline after M23.91: **1441 core tests**, with M23.92 expected to produce **1453/1453** after the focused suite is added.
+Regression baseline after M23.91: **1441 core tests**.
+Verified M23.92 core regression: **1455/1455**.
 
-No merge is implied by this decision. Local verification must be completed before this record is marked VERIFIED / COMPLETE.
+No merge is implied by this decision. Local verification must be completed before this record is marked IMPLEMENTED / VERIFIED / COMPLETE
 
 ## Atomicity
 Exactly **1 commit / 3 intended files** from M23.91.
