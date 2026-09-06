@@ -5,6 +5,7 @@ from src.core.environment_world_model_rollback_repair_retry_adaptation_execution
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationIntegrityV3Service,
 )
 from src.core.environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_outcome_classification_v3 import (
+    EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationOutcomeClassificationV3,
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationOutcomeClassificationV3Service,
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationOutcomeClassificationV3Status,
 )
@@ -38,7 +39,7 @@ BASE = dict(
     assessment_id=None, environment_id="environment-1", expected_model_id="expected-1", observed_model_id="observed-1",
     confidence=0.9, signal_fingerprint="signal-fp", upstream_proposal_fingerprint="proposal-fp",
     handoff_fingerprint="handoff-fp", result_fingerprint="result-fp", authority_principal_id=None, executor_id=None,
-    proposal_kind="ADAPTATION_CANDIDATE",
+    proposal_kind="ADAPTATION_CANDIDATE", decision_id="decision-source-1", failure_reason=None,
     execution_status="SUCCESS", feedback_status="SUCCESS", evaluation_status="SUCCESS",
     integrity_status=EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalIntegrityV3Status.VALID,
     eligibility_status=EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningEligibilityV3Status.ELIGIBLE,
