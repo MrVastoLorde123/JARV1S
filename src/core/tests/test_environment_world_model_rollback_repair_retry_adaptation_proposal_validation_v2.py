@@ -22,11 +22,10 @@ _UNSET = object()
 
 class M23_62AdaptationProposalValidationV2Tests(unittest.TestCase):
     def _make_proposal(self, *, proposed: bool = True, payload=_UNSET):
-        proposal_payload = (
-            {"operation": "adjust_threshold", "value": 0.7}
-            if payload is _UNSET and proposed
-            else payload
-        )
+        if payload is _UNSET:
+            proposal_payload = {"operation": "adjust_threshold", "value": 0.7} if proposed else None
+        else:
+            proposal_payload = payload
         return EnvironmentWorldModelRollbackRepairRetryAdaptationProposalV2(
             proposal_id="proposal-1",
             eligibility_id="eligibility-1",
