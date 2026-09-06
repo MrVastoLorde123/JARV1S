@@ -152,7 +152,7 @@ class M23_58LearningSignalV2Tests(unittest.TestCase):
         payload = {
             key: value
             for key, value in evaluation.__dict__.items()
-            if key not in {"feedback_status", "evaluation_status"}
+            if key not in {"feedback_status", "confidence", "evaluation_status"}
         }
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryLearningSignalV2(
