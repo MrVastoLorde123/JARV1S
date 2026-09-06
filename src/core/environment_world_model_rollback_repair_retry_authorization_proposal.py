@@ -45,13 +45,13 @@ def _validate_aware_datetime(value: datetime, name: str) -> None:
         raise ValueError(f"{name} must be timezone-aware")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     """Immutable advisory evidence proposing a separate retry authorization decision.
 
-    The leading fields preserve the established M23.39/M23.40 construction
-    contract. M23.49 adds assessment lineage and retry-bound metadata as
-    optional fields so existing downstream artifacts remain source-compatible.
+    The explicit constructor preserves the established M23.39/M23.40 keyword
+    and positional contract while allowing M23.49 assessment lineage to be
+    additive. New fields are optional for legacy downstream consumers.
     """
 
     proposal_id: str
@@ -73,6 +73,49 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     eligibility_id: str | None = None
     action_decision_id: str | None = None
     eligible: bool | None = None
+
+    def __init__(
+        self,
+        proposal_id: str,
+        environment_id: str,
+        expected_model_id: str,
+        observed_model_id: str,
+        requested_action: str,
+        evaluated_at: datetime,
+        next_eligible_at: datetime | None,
+        reasons: Mapping[str, str] | None = None,
+        lineage: Mapping[str, Any] | None = None,
+        eligibility_id: str | None = None,
+        action_decision_id: str | None = None,
+        eligible: bool | None = None,
+        assessment_id: str | None = None,
+        evaluation_id: str | None = None,
+        feedback_id: str | None = None,
+        outcome_id: str | None = None,
+        assessment_status: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus | None" = None,
+        retry_count: int | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        object.__setattr__(self, "proposal_id", proposal_id)
+        object.__setattr__(self, "environment_id", environment_id)
+        object.__setattr__(self, "expected_model_id", expected_model_id)
+        object.__setattr__(self, "observed_model_id", observed_model_id)
+        object.__setattr__(self, "requested_action", requested_action)
+        object.__setattr__(self, "evaluated_at", evaluated_at)
+        object.__setattr__(self, "next_eligible_at", next_eligible_at)
+        object.__setattr__(self, "reasons", {} if reasons is None else reasons)
+        object.__setattr__(self, "lineage", {} if lineage is None else lineage)
+        object.__setattr__(self, "assessment_id", assessment_id)
+        object.__setattr__(self, "evaluation_id", evaluation_id)
+        object.__setattr__(self, "feedback_id", feedback_id)
+        object.__setattr__(self, "outcome_id", outcome_id)
+        object.__setattr__(self, "assessment_status", assessment_status)
+        object.__setattr__(self, "retry_count", retry_count)
+        object.__setattr__(self, "max_retries", max_retries)
+        object.__setattr__(self, "eligibility_id", eligibility_id)
+        object.__setattr__(self, "action_decision_id", action_decision_id)
+        object.__setattr__(self, "eligible", eligible)
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
@@ -209,6 +252,9 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
                 "feedback_id": assessment.feedback_id,
                 "outcome_id": assessment.outcome_id,
             },
+            eligibility_id=None,
+            action_decision_id=None,
+            eligible=derived_eligible,
             assessment_id=assessment.assessment_id,
             evaluation_id=assessment.evaluation_id,
             feedback_id=assessment.feedback_id,
@@ -216,7 +262,6 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
             assessment_status=assessment.status,
             retry_count=assessment.retry_count,
             max_retries=assessment.max_retries,
-            eligible=derived_eligible,
         )
 
 
