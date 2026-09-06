@@ -1,7 +1,7 @@
 # M23.90 — Application Learning Adaptation Learning Signal v4
 
 ## Status
-IMPLEMENTED / AWAITING LOCAL VERIFICATION
+IMPLEMENTED / VERIFIED / COMPLETE
 
 ## Parent
 `fdb487dd2dd24dea4addbc253d085d4b42f23c49` — M23.89 VERIFIED / COMPLETE.
@@ -46,9 +46,9 @@ Focused:
 python -m unittest src.core.tests.test_environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_signal_v4
 ```
 
-Expected focused: **14/14**.
+Verified focused: **15/15**.
 
-Core regression baseline: **1414 tests** after M23.89; expected **1428/1428** after M23.90.
+Core regression: **1429/1429** after M23.90.
 
 ```text
 python -m unittest discover -s src.core.tests -p "test_*.py"
