@@ -17,8 +17,16 @@ from src.core.environment_world_model_rollback_repair_retry_adaptation_proposal_
 )
 
 
+_UNSET = object()
+
+
 class M23_62AdaptationProposalValidationV2Tests(unittest.TestCase):
-    def _make_proposal(self, *, proposed: bool = True, payload=None):
+    def _make_proposal(self, *, proposed: bool = True, payload=_UNSET):
+        proposal_payload = (
+            {"operation": "adjust_threshold", "value": 0.7}
+            if payload is _UNSET and proposed
+            else payload
+        )
         return EnvironmentWorldModelRollbackRepairRetryAdaptationProposalV2(
             proposal_id="proposal-1",
             eligibility_id="eligibility-1",
@@ -49,11 +57,7 @@ class M23_62AdaptationProposalValidationV2Tests(unittest.TestCase):
                 if proposed
                 else EnvironmentWorldModelRollbackRepairRetryAdaptationProposalV2Status.BLOCKED
             ),
-            proposal_payload=(
-                {"operation": "adjust_threshold", "value": 0.7}
-                if payload is None and proposed
-                else payload
-            ),
+            proposal_payload=proposal_payload,
             reasons={"origin": "test"},
             lineage={"chain": {"proposal": "proposal-1"}},
         )
@@ -150,7 +154,7 @@ class M23_62AdaptationProposalValidationV2Tests(unittest.TestCase):
         result = EnvironmentWorldModelRollbackRepairRetryAdaptationProposalValidationV2Service().validate(
             proposal, validation_id="validation-1"
         )
-        self.assertIs(result.proposal_payload.__class__.__name__ != "dict", True)
+        self.assertTrue(result.proposal_payload.__class__.__name__ != "dict")
         self.assertTrue(result.is_advisory_only)
         self.assertTrue(result.validates_representation_only)
         self.assertFalse(result.authorizes_adaptation)
