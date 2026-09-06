@@ -47,26 +47,29 @@ def _validate_aware_datetime(value: datetime, name: str) -> None:
 
 @dataclass(frozen=True)
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
-    """Immutable advisory evidence proposing a separate retry authorization decision."""
+    """Immutable advisory evidence proposing a separate retry authorization decision.
+
+    The leading fields preserve the established M23.39/M23.40 construction
+    contract. M23.49 adds assessment lineage and retry-bound metadata as
+    optional fields so existing downstream artifacts remain source-compatible.
+    """
 
     proposal_id: str
-    assessment_id: str
-    evaluation_id: str
-    feedback_id: str
-    outcome_id: str
     environment_id: str
     expected_model_id: str
     observed_model_id: str
-    assessment_status: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus"
     requested_action: str
-    retry_count: int
-    max_retries: int
     evaluated_at: datetime
     next_eligible_at: datetime | None
     reasons: Mapping[str, str] = field(default_factory=dict)
     lineage: Mapping[str, Any] = field(default_factory=dict)
-    # Compatibility metadata retained for downstream M23.40/M23.41 artifacts.
-    # M23.49 does not fabricate these identifiers from the M23.48 assessment.
+    assessment_id: str | None = None
+    evaluation_id: str | None = None
+    feedback_id: str | None = None
+    outcome_id: str | None = None
+    assessment_status: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus | None" = None
+    retry_count: int | None = None
+    max_retries: int | None = None
     eligibility_id: str | None = None
     action_decision_id: str | None = None
     eligible: bool | None = None
@@ -78,10 +81,6 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
 
         for name in (
             "proposal_id",
-            "assessment_id",
-            "evaluation_id",
-            "feedback_id",
-            "outcome_id",
             "environment_id",
             "expected_model_id",
             "observed_model_id",
@@ -90,27 +89,41 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
+
+        for name in ("assessment_id", "evaluation_id", "feedback_id", "outcome_id"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be None or a non-empty string")
+
         for name in ("eligibility_id", "action_decision_id"):
             value = getattr(self, name)
             if value is not None and (not isinstance(value, str) or not value.strip()):
                 raise ValueError(f"{name} must be None or a non-empty string")
-        if self.eligible is not None and not isinstance(self.eligible, bool):
-            raise TypeError("eligible must be a boolean or None")
-        if not isinstance(
+
+        if self.assessment_status is not None and not isinstance(
             self.assessment_status,
             EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
         ):
-            raise TypeError("assessment_status must be a re-eligibility assessment status")
+            raise TypeError("assessment_status must be a re-eligibility assessment status or None")
+
         if self.requested_action not in {"RETRY_REPAIR", "NO_AUTHORIZATION"}:
             raise ValueError("requested_action must be RETRY_REPAIR or NO_AUTHORIZATION")
-        if isinstance(self.retry_count, bool) or not isinstance(self.retry_count, int):
-            raise TypeError("retry_count must be an integer")
-        if self.retry_count < 0:
-            raise ValueError("retry_count must be >= 0")
-        if isinstance(self.max_retries, bool) or not isinstance(self.max_retries, int):
-            raise TypeError("max_retries must be an integer")
-        if self.max_retries < 0:
-            raise ValueError("max_retries must be >= 0")
+
+        if self.retry_count is not None:
+            if isinstance(self.retry_count, bool) or not isinstance(self.retry_count, int):
+                raise TypeError("retry_count must be an integer or None")
+            if self.retry_count < 0:
+                raise ValueError("retry_count must be >= 0")
+
+        if self.max_retries is not None:
+            if isinstance(self.max_retries, bool) or not isinstance(self.max_retries, int):
+                raise TypeError("max_retries must be an integer or None")
+            if self.max_retries < 0:
+                raise ValueError("max_retries must be >= 0")
+
+        if self.eligible is not None and not isinstance(self.eligible, bool):
+            raise TypeError("eligible must be a boolean or None")
+
         _validate_aware_datetime(self.evaluated_at, "evaluated_at")
         if self.next_eligible_at is not None:
             _validate_aware_datetime(self.next_eligible_at, "next_eligible_at")
@@ -183,17 +196,10 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
 
         return EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal(
             proposal_id=proposal_id,
-            assessment_id=assessment.assessment_id,
-            evaluation_id=assessment.evaluation_id,
-            feedback_id=assessment.feedback_id,
-            outcome_id=assessment.outcome_id,
             environment_id=assessment.environment_id,
             expected_model_id=assessment.expected_model_id,
             observed_model_id=assessment.observed_model_id,
-            assessment_status=assessment.status,
             requested_action=requested_action,
-            retry_count=assessment.retry_count,
-            max_retries=assessment.max_retries,
             evaluated_at=assessment.evaluated_at,
             next_eligible_at=assessment.next_eligible_at,
             reasons=reasons or {"status": default_reason},
@@ -203,6 +209,13 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
                 "feedback_id": assessment.feedback_id,
                 "outcome_id": assessment.outcome_id,
             },
+            assessment_id=assessment.assessment_id,
+            evaluation_id=assessment.evaluation_id,
+            feedback_id=assessment.feedback_id,
+            outcome_id=assessment.outcome_id,
+            assessment_status=assessment.status,
+            retry_count=assessment.retry_count,
+            max_retries=assessment.max_retries,
             eligible=derived_eligible,
         )
 
