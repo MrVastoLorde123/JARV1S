@@ -65,6 +65,11 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     next_eligible_at: datetime | None
     reasons: Mapping[str, str] = field(default_factory=dict)
     lineage: Mapping[str, Any] = field(default_factory=dict)
+    # Legacy compatibility metadata retained for downstream M23.40/M23.41
+    # artifacts that construct the proposal directly. M23.49 itself does not
+    # fabricate these values when the M23.48 assessment does not contain them.
+    eligibility_id: str | None = None
+    action_decision_id: str | None = None
 
     def __post_init__(self) -> None:
         from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
@@ -85,6 +90,10 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
+        for name in ("eligibility_id", "action_decision_id"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be None or a non-empty string")
         if not isinstance(
             self.assessment_status,
             EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
