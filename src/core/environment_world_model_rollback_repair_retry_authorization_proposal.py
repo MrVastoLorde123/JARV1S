@@ -3,6 +3,9 @@
 The proposal converts one bounded M23.48 assessment into non-authorizing
 proposal evidence for a separate authorization decision. It never grants
 permission, schedules retry, executes retry, or mutates state.
+
+The upstream assessment type is imported lazily inside runtime validation so
+this module remains a leaf dependency from the authorization-decision layer.
 """
 
 from __future__ import annotations
@@ -10,12 +13,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
-from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
-    EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment,
-    EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
-)
+if TYPE_CHECKING:
+    from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
+        EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment,
+        EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+    )
 
 
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalError(RuntimeError):
@@ -53,7 +57,7 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     environment_id: str
     expected_model_id: str
     observed_model_id: str
-    assessment_status: EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus
+    assessment_status: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus"
     requested_action: str
     retry_count: int
     max_retries: int
@@ -63,6 +67,10 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     lineage: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+        )
+
         for name in (
             "proposal_id",
             "assessment_id",
@@ -128,12 +136,17 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
 
     def propose(
         self,
-        assessment: EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment,
+        assessment: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment",
         *,
         proposal_id: str,
         reasons: Mapping[str, str] | None = None,
         lineage: Mapping[str, Any] | None = None,
     ) -> EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
+        from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment,
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+        )
+
         if type(assessment) is not EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment:
             raise TypeError(
                 "assessment must be EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment"
@@ -144,9 +157,16 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
         if assessment.status is EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.ELIGIBLE:
             requested_action = "RETRY_REPAIR"
             default_reason = "eligible retry re-eligibility evidence requests a separate authorization decision"
-        else:
+        elif assessment.status in {
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.WAITING,
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.NOT_ELIGIBLE,
+        }:
             requested_action = "NO_AUTHORIZATION"
             default_reason = "retry re-eligibility evidence does not support requesting retry authorization"
+        else:
+            raise EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalError(
+                "unsupported re-eligibility assessment status"
+            )
 
         return EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal(
             proposal_id=proposal_id,
