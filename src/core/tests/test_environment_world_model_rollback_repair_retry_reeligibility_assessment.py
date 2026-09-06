@@ -7,7 +7,6 @@ from src.core.environment_world_model_rollback_repair_retry_feedback import (
 )
 from src.core.environment_world_model_rollback_repair_retry_feedback_evaluation import (
     EnvironmentWorldModelRollbackRepairRetryFeedbackEvaluation,
-    EnvironmentWorldModelRollbackRepairRetryFeedbackEvaluationService,
     EnvironmentWorldModelRollbackRepairRetryFeedbackEvaluationStatus,
 )
 from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
@@ -142,7 +141,7 @@ class EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentTests(unitt
             evaluated_at=self.now,
         )
         with self.assertRaises(AttributeError):
-            result.status = EnvironmentWorldModelRollbackRepairReeligibilityAssessmentStatus.NOT_ELIGIBLE
+            result.status = EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.NOT_ELIGIBLE
 
     def test_assessment_cannot_authorize_or_schedule(self) -> None:
         result = self.service.assess(
