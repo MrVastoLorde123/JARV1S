@@ -1,10 +1,10 @@
 # M23.46 — World Model Rollback Repair Retry Feedback
 
 ## Status
-IMPLEMENTED / AWAITING LOCAL VERIFICATION
+VERIFIED / COMPLETE
 
 ## Decision
-JARVIS must establish a separate feedback boundary after verified rollback-repair retry outcome classification. Feedback is an observational learning signal derived from one immutable M23.45 outcome; it does not become a retry command or authority grant.
+JARVIS establishes a separate feedback boundary after verified rollback-repair retry outcome classification. Feedback is an observational learning signal derived from one immutable M23.45 outcome; it does not become a retry command or authority grant.
 
 `EnvironmentWorldModelRollbackRepairRetryFeedbackService.record()` consumes exactly one immutable `EnvironmentWorldModelRollbackRepairRetryOutcome` and produces one immutable feedback artifact.
 
@@ -30,16 +30,19 @@ Learning Signal ≠ Policy Change
 
 Feedback is evidence for downstream evaluation or learning only. It cannot authorize retry, request retry, schedule work, mutate persistence, or execute corrective action.
 
+## Branch repair
+The initial M23.46 branch was accidentally created from the M23.44 side of the graph while naming M23.45 as its base. This caused the focused suite to fail because the M23.45 outcome module was absent from the branch tree.
+
+The branch was reconciled with the exact M23.45 parent, restoring the verified upstream outcome module and regression test. The feedback service was then corrected to consume the live M23.45 `status` field rather than the nonexistent `outcome_status` field.
+
 ## Explicitly deferred
 Retry re-eligibility, retry-policy mutation, persistence/history coordination, distributed synchronization, conflict resolution, audit/event publication, and automated corrective execution remain separate boundaries.
 
 ## Verification
-Local verification is required before marking VERIFIED / COMPLETE.
+Local verification is complete.
 
-Focused:
-`python -m unittest src.core.tests.test_environment_world_model_rollback_repair_retry_feedback -v`
-
-Regression:
-`python -m unittest discover -s src\\core -p "test*.py"`
+Focused: **11/11 OK**
+Core regression: **975/975 OK**
+HEAD at verification: `2e6a79e`
 
 No merge performed.
