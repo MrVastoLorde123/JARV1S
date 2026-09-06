@@ -143,6 +143,7 @@ class M23_72LearningEligibilityV3Tests(unittest.TestCase):
         source = self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalIntegrityV3Status.VALID)
         values = dict(source.__dict__)
         values.pop("integrity_evaluation_id", None)
+        values["integrity_status"] = source.status
         with self.assertRaises(ValueError):
             EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningEligibilityV3(
                 **{
