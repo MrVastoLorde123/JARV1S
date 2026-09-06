@@ -79,3 +79,107 @@ class M23_67AdaptationExecutionOutcomeClassificationV2Tests(unittest.TestCase):
             lineage={"nested": {"id": "67"}},
         )
 
+    def test_completed_becomes_success(self):
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED),
+            classification_id="classification-67",
+        )
+        self.assertEqual(result.classification_status, EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Status.SUCCESS)
+
+    def test_failed_becomes_failure(self):
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.FAILED),
+            classification_id="classification-67",
+        )
+        self.assertEqual(result.classification_status, EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Status.FAILURE)
+
+    def test_rejected_stays_rejected(self):
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.REJECTED),
+            classification_id="classification-67",
+        )
+        self.assertEqual(result.classification_status, EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Status.REJECTED)
+        self.assertIsNone(result.authority_principal_id)
+
+    def test_invalid_integrity_cannot_be_classified(self):
+        integrity = self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED)
+        object.__setattr__(integrity, "integrity_status", EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionResultIntegrityV2Status.INVALID)
+        with self.assertRaises(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Error):
+            EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+                integrity,
+                classification_id="classification-67",
+            )
+
+    def test_blank_classification_id_is_rejected(self):
+        with self.assertRaises(ValueError):
+            EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+                self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED),
+                classification_id=" ",
+            )
+
+    def test_wrong_source_type_fails_closed(self):
+        with self.assertRaises(TypeError):
+            EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+                object(),
+                classification_id="classification-67",
+            )
+
+    def test_full_provenance_and_fingerprints_are_preserved(self):
+        source = self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED)
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            source,
+            classification_id="classification-67",
+        )
+        self.assertEqual(result.integrity_id, source.integrity_id)
+        self.assertEqual(result.execution_id, source.execution_id)
+        self.assertEqual(result.proposal_fingerprint, source.proposal_fingerprint)
+        self.assertEqual(result.handoff_fingerprint, source.handoff_fingerprint)
+        self.assertEqual(result.result_fingerprint, source.result_fingerprint)
+
+    def test_source_is_unchanged(self):
+        source = self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED)
+        before = dict(source.lineage)
+        EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            source,
+            classification_id="classification-67",
+        )
+        self.assertEqual(dict(source.lineage), before)
+        self.assertEqual(source.integrity_status, EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionResultIntegrityV2Status.VALID)
+
+    def test_reasons_and_lineage_are_immutable(self):
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED),
+            classification_id="classification-67",
+            reasons={"outer": "reason"},
+            lineage={"nested": {"x": [1, 2]}},
+        )
+        self.assertIsInstance(result.reasons, MappingProxyType)
+        self.assertIsInstance(result.lineage, MappingProxyType)
+        with self.assertRaises(TypeError):
+            result.reasons["new"] = "blocked"
+        with self.assertRaises(TypeError):
+            result.lineage["new"] = "blocked"
+
+    def test_classification_does_not_create_learning_signal(self):
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED),
+            classification_id="classification-67",
+        )
+        self.assertTrue(result.is_advisory_only)
+        self.assertFalse(result.creates_learning_signal)
+        self.assertFalse(result.authorizes_retry)
+
+    def test_classification_does_not_grant_authority_or_schedule(self):
+        result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionOutcomeClassificationV2Service().classify(
+            self._make_integrity(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionV2Status.COMPLETED),
+            classification_id="classification-67",
+        )
+        self.assertFalse(result.grants_authority)
+        self.assertFalse(result.schedules_work)
+        self.assertFalse(result.mutates_policy)
+        self.assertFalse(result.mutates_persistence)
+        self.assertFalse(result.mutates_memory)
+
+
+if __name__ == "__main__":
+    unittest.main()
