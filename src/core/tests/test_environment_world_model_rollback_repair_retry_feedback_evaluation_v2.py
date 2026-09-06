@@ -5,6 +5,9 @@ from src.core.environment_world_model_rollback_repair_retry_feedback_v2 import (
     EnvironmentWorldModelRollbackRepairRetryFeedbackV2,
     EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status,
 )
+from src.core.environment_world_model_rollback_repair_retry_outcome_v2 import (
+    EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status,
+)
 from src.core.environment_world_model_rollback_repair_retry_feedback_evaluation_v2 import (
     EnvironmentWorldModelRollbackRepairRetryFeedbackEvaluationV2,
     EnvironmentWorldModelRollbackRepairRetryFeedbackEvaluationV2Service,
@@ -28,7 +31,7 @@ class M23_57FeedbackEvaluationV2Tests(unittest.TestCase):
             environment_id="env1",
             expected_model_id="expected",
             observed_model_id="observed",
-            outcome_status="SUCCESS",
+            outcome_status=EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.SUCCESS,
             feedback_status=EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.SUCCESS_SIGNAL,
             result_fingerprint="fp123",
             failure_reason=None,
@@ -50,7 +53,7 @@ class M23_57FeedbackEvaluationV2Tests(unittest.TestCase):
             environment_id="env1",
             expected_model_id="expected",
             observed_model_id="observed",
-            outcome_status="FAILURE",
+            outcome_status=EnvironmentWorldModelRollbackRepairRetryOutcomeV2Status.FAILURE,
             feedback_status=EnvironmentWorldModelRollbackRepairRetryFeedbackV2Status.FAILURE_SIGNAL,
             result_fingerprint=None,
             failure_reason="provider unavailable",
