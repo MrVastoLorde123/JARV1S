@@ -11,7 +11,7 @@ from src.core.environment_world_model_rollback_repair_retry_adaptation_execution
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionV4Service as TS,
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionV4Status as TSStatus,
 )
-from src.core.environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_adaptation_learning_state_transition_integrity_v4 import (
+from src.core.learning_state_transition_integrity import (
     LearningStateTransitionIntegrity as I,
     LearningStateTransitionIntegrityService as IS,
     LearningStateTransitionIntegrityStatus as ISS,
@@ -122,7 +122,7 @@ class LearningStateTransitionIntegrityTests(unittest.TestCase):
                 application_id="application-96", transition_source_id="integrity-96", decision_id="decision-95",
                 proposal_id="proposal-95", eligibility_id="eligibility-95", signal_id="signal-95",
                 evaluation_id="evaluation-95", feedback_id="feedback-95", classification_id="classification-95",
-                source_integrity_id="source-integrity-95", source_decision_id="source-decision-95", outcome_id="outcome-95",
+                source_integrity_id="source-integrity-95", source_decision_id="decision-95", outcome_id="outcome-95",
                 confidence=0.91, state_key="skill.demo", transition_status=TSStatus.PERSISTED,
                 source_application_fingerprint="a" * 64, computed_application_fingerprint="b" * 64,
                 computed_transition_fingerprint="a" * 64, integrity_status="VALID", failure_reason=None, reasons={}, lineage={},
