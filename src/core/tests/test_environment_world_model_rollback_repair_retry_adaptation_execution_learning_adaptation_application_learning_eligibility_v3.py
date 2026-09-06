@@ -78,8 +78,8 @@ class M23_82ApplicationLearningEligibilityV3Tests(unittest.TestCase):
 
     def test_status_mapping_is_enforced(self):
         source=self._eligible_integrity(); values=dict(source.__dict__)
-        values["eligibility_id"]="eligibility-82"; values["integrity_status"]=I.VALID; values["status"]=E.INELIGIBLE
         values.pop("integrity_evaluation_id", None)
+        values["eligibility_id"]="eligibility-82"; values["eligibility_source_id"]=source.integrity_id; values["integrity_status"]=I.VALID; values["status"]=E.INELIGIBLE
         with self.assertRaises(ValueError): EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningEligibilityV3(**values)
 
     def test_confidence_is_preserved(self):
