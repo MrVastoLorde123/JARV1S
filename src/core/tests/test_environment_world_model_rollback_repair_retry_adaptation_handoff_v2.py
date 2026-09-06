@@ -138,7 +138,7 @@ class M23_64AdaptationHandoffV2Tests(unittest.TestCase):
             )
 
     def test_wrong_payload_shape_is_rejected(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             EnvironmentWorldModelRollbackRepairRetryAdaptationHandoffV2Service().prepare(
                 self._make_authorization(), handoff_id="handoff-1", lineage=["bad"]
             )
