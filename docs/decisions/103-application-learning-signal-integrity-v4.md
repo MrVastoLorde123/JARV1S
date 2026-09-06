@@ -1,4 +1,4 @@
-﻿# Decision 103 â€” Application Learning Signal Integrity V4
+# Decision 103 — Application Learning Signal Integrity V4
 
 ## Status
 IMPLEMENTED / VERIFIED / COMPLETE
@@ -60,7 +60,7 @@ The M23.91 artifact is:
 
 The architecture remains:
 
-`Outcome â†’ Feedback â†’ Evaluation â†’ Learning Signal â†’ Learning Signal Integrity â†’ (future learning/update boundary)`
+`Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → (future learning/update boundary)`
 
 M23.91 does not cross the downstream learning/update boundary.
 
@@ -74,4 +74,3 @@ Verified focused verification: **12/12**.
 Core regression verification: **1441/1441** after M23.91.
 
 No merge is implied by this decision. M23.91 local verification is complete.
-
