@@ -47,11 +47,12 @@ Focused tests cover:
 No model update, memory mutation, policy mutation, persistence mutation, retry, scheduling, authorization, or execution is introduced.
 
 ## Atomicity target
-Parent: `2ec56a8763ba064a7a2f7b80c26e029a04edfed7` (M23.71 verified HEAD).
+M23.72 implementation delta from its corrected M23.71 prerequisite:
 
-Exactly three intended files:
-- `src/core/environment_world_model_rollback_repair_retry_adaptation_execution_learning_eligibility_v3.py`
-- `src/core/tests/test_environment_world_model_rollback_repair_retry_adaptation_execution_learning_eligibility_v3.py`
-- `docs/decisions/070-learning-eligibility-v3.md`
+- Parent: `33ea4ec3b1fe7847ef1f54d76f3f16846cfc1477`
+- HEAD: `acd16da094e20dfd68914d694558e36929f0f970`
+- Exactly 1 M23.72 commit / 3 intended files.
+
+The prerequisite M23.71 fixture repair is isolated in commit `33ea4ec3b1fe7847ef1f54d76f3f16846cfc1477`.
 
 No merge unless explicitly requested.
