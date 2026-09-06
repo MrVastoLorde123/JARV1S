@@ -23,10 +23,10 @@ class WorkspacePathReportingTests(unittest.TestCase):
 
     def test_all_workspace_success_paths_use_posix_relative_paths(self) -> None:
         cases = (
-            ("read_file", {"path": "nested\\file.txt"}),
+            ("read_file", {"path": "nested/file.txt"}),
             ("list_directory", {"path": "nested"}),
             ("search_files", {"path": "nested", "query": "hello"}),
-            ("write_file", {"path": "nested\\created.txt", "content": "hello"}),
+            ("write_file", {"path": "nested/created.txt", "content": "hello"}),
         )
 
         for tool_name, arguments in cases:

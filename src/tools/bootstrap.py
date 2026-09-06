@@ -17,9 +17,19 @@ from typing import Iterable, Optional, Union
 
 from .confirmation import ConfirmationProvider
 from .gate import PolicyGate
+from .handlers.check_path import CheckPathHandler
+from .handlers.copy_file import CopyFileHandler
+from .handlers.delete_file import DeleteFileHandler
+from .handlers.extract_pdf_images import ExtractPdfImagesHandler
+from .handlers.fetch_web import FetchWebHandler
 from .handlers.list_directory import ListDirectoryHandler
+from .handlers.move_file import MoveFileHandler
+from .handlers.read_code import ReadCodeHandler
 from .handlers.read_file import ReadFileHandler
+from .handlers.read_pdf import ReadPdfHandler
+from .handlers.search_code import SearchCodeHandler
 from .handlers.search_files import SearchFilesHandler
+from .handlers.search_web import SearchWebHandler
 from .handlers.write_file import WriteFileHandler
 from .policy import DefaultPolicy, Policy
 from .protocol import ToolHandler
@@ -107,6 +117,16 @@ def build_workspace_tool_stack(
         ListDirectoryHandler(base_dir),
         SearchFilesHandler(base_dir),
         WriteFileHandler(base_dir),
+        CopyFileHandler(base_dir),
+        MoveFileHandler(base_dir),
+        DeleteFileHandler(base_dir),
+        CheckPathHandler(base_dir),
+        ReadPdfHandler(base_dir),
+        ExtractPdfImagesHandler(base_dir),
+        FetchWebHandler(base_dir),
+        SearchWebHandler(base_dir),
+        ReadCodeHandler(base_dir),
+        SearchCodeHandler(base_dir),
     ]
     return build_tool_stack(
         handlers,

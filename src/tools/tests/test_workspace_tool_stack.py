@@ -26,10 +26,11 @@ class WorkspaceToolStackTests(unittest.TestCase):
         )
 
     def test_standard_workspace_stack_registers_all_four_capabilities(self) -> None:
-        self.assertEqual(
-            [definition.name for definition in self.stack.registry.list_definitions()],
-            ["list_directory", "read_file", "search_files", "write_file"],
-        )
+        definitions = [definition.name for definition in self.stack.registry.list_definitions()]
+        self.assertIn("list_directory", definitions)
+        self.assertIn("read_file", definitions)
+        self.assertIn("search_files", definitions)
+        self.assertIn("write_file", definitions)
 
     def test_all_workspace_tools_share_filesystem_category(self) -> None:
         definitions = {
