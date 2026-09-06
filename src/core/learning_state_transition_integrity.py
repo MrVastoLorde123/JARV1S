@@ -1,4 +1,8 @@
-"""Canonical import surface for learning-state transition integrity."""
+"""Canonical import surface for learning-state transition integrity.
+
+This module intentionally re-exports the historical implementation objects by
+identity. The import path is a compatibility boundary, not a new capability.
+"""
 
 from src.core.environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_adaptation_learning_state_transition_integrity_v4 import (
     LearningStateTransitionIntegrity,

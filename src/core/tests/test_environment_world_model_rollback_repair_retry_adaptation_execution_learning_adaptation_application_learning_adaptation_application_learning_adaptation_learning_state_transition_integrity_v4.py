@@ -11,8 +11,15 @@ from src.core.environment_world_model_rollback_repair_retry_adaptation_execution
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionV4Service as TS,
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionV4Status as TSStatus,
 )
+from src.core.environment_world_model_rollback_repair_retry_adaptation_execution_learning_adaptation_application_learning_adaptation_application_learning_adaptation_learning_state_transition_integrity_v4 import (
+    EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4 as LegacyIntegrity,
+    EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Error as LegacyError,
+    EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Service as LegacyService,
+    EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningAdaptationApplicationLearningAdaptationApplicationLearningAdaptationLearningStateTransitionIntegrityV4Status as LegacyStatus,
+)
 from src.core.learning_state_transition_integrity import (
     LearningStateTransitionIntegrity as I,
+    LearningStateTransitionIntegrityError as IE,
     LearningStateTransitionIntegrityService as IS,
     LearningStateTransitionIntegrityStatus as ISS,
 )
@@ -42,6 +49,12 @@ class LearningStateTransitionIntegrityTests(unittest.TestCase):
         }
         args.update(kwargs)
         return TS().transition(self._evidence(), **args)
+
+    def test_import_surface_preserves_object_identity(self):
+        self.assertIs(I, LegacyIntegrity)
+        self.assertIs(IS, LegacyService)
+        self.assertIs(ISS, LegacyStatus)
+        self.assertIs(IE, LegacyError)
 
     def test_valid_integrity_is_emitted(self):
         result = IS().assess(self._transition(), integrity_id="integrity-99")
