@@ -1,7 +1,11 @@
-"""M23.39: advisory authorization proposal for rollback-repair retry eligibility.
+"""M23.49: advisory authorization proposal from retry re-eligibility assessment.
 
-This boundary converts retry-eligibility evidence into a bounded proposal for a
-separate authorization decision. It does not grant authorization or execute retry.
+The proposal converts one bounded M23.48 assessment into non-authorizing
+proposal evidence for a separate authorization decision. It never grants
+permission, schedules retry, executes retry, or mutates state.
+
+The upstream assessment type is imported lazily inside runtime validation so
+this module remains a leaf dependency from the authorization-decision layer.
 """
 
 from __future__ import annotations
@@ -9,11 +13,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
-from src.core.environment_world_model_rollback_repair_retry_eligibility import (
-    EnvironmentWorldModelRollbackRepairRetryEligibility,
-)
+if TYPE_CHECKING:
+    from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
+        EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment,
+        EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+    )
 
 
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalError(RuntimeError):
@@ -39,29 +45,86 @@ def _validate_aware_datetime(value: datetime, name: str) -> None:
         raise ValueError(f"{name} must be timezone-aware")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
-    """Immutable advisory evidence proposing a separate retry authorization decision."""
+    """Immutable advisory evidence proposing a separate retry authorization decision.
+
+    The explicit constructor preserves the established M23.39/M23.40 keyword
+    and positional contract while allowing M23.49 assessment lineage to be
+    additive. New fields are optional for legacy downstream consumers.
+    """
 
     proposal_id: str
     environment_id: str
-    eligibility_id: str
-    action_decision_id: str
     expected_model_id: str
     observed_model_id: str
     requested_action: str
-    eligible: bool
     evaluated_at: datetime
     next_eligible_at: datetime | None
     reasons: Mapping[str, str] = field(default_factory=dict)
     lineage: Mapping[str, Any] = field(default_factory=dict)
+    assessment_id: str | None = None
+    evaluation_id: str | None = None
+    feedback_id: str | None = None
+    outcome_id: str | None = None
+    assessment_status: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus | None" = None
+    retry_count: int | None = None
+    max_retries: int | None = None
+    eligibility_id: str | None = None
+    action_decision_id: str | None = None
+    eligible: bool | None = None
+
+    def __init__(
+        self,
+        proposal_id: str,
+        environment_id: str,
+        expected_model_id: str,
+        observed_model_id: str,
+        requested_action: str,
+        evaluated_at: datetime,
+        next_eligible_at: datetime | None,
+        reasons: Mapping[str, str] | None = None,
+        lineage: Mapping[str, Any] | None = None,
+        eligibility_id: str | None = None,
+        action_decision_id: str | None = None,
+        eligible: bool | None = None,
+        assessment_id: str | None = None,
+        evaluation_id: str | None = None,
+        feedback_id: str | None = None,
+        outcome_id: str | None = None,
+        assessment_status: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus | None" = None,
+        retry_count: int | None = None,
+        max_retries: int | None = None,
+    ) -> None:
+        object.__setattr__(self, "proposal_id", proposal_id)
+        object.__setattr__(self, "environment_id", environment_id)
+        object.__setattr__(self, "expected_model_id", expected_model_id)
+        object.__setattr__(self, "observed_model_id", observed_model_id)
+        object.__setattr__(self, "requested_action", requested_action)
+        object.__setattr__(self, "evaluated_at", evaluated_at)
+        object.__setattr__(self, "next_eligible_at", next_eligible_at)
+        object.__setattr__(self, "reasons", {} if reasons is None else reasons)
+        object.__setattr__(self, "lineage", {} if lineage is None else lineage)
+        object.__setattr__(self, "assessment_id", assessment_id)
+        object.__setattr__(self, "evaluation_id", evaluation_id)
+        object.__setattr__(self, "feedback_id", feedback_id)
+        object.__setattr__(self, "outcome_id", outcome_id)
+        object.__setattr__(self, "assessment_status", assessment_status)
+        object.__setattr__(self, "retry_count", retry_count)
+        object.__setattr__(self, "max_retries", max_retries)
+        object.__setattr__(self, "eligibility_id", eligibility_id)
+        object.__setattr__(self, "action_decision_id", action_decision_id)
+        object.__setattr__(self, "eligible", eligible)
+        self.__post_init__()
 
     def __post_init__(self) -> None:
+        from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+        )
+
         for name in (
             "proposal_id",
             "environment_id",
-            "eligibility_id",
-            "action_decision_id",
             "expected_model_id",
             "observed_model_id",
             "requested_action",
@@ -69,10 +132,41 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
+
+        for name in ("assessment_id", "evaluation_id", "feedback_id", "outcome_id"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be None or a non-empty string")
+
+        for name in ("eligibility_id", "action_decision_id"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be None or a non-empty string")
+
+        if self.assessment_status is not None and not isinstance(
+            self.assessment_status,
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+        ):
+            raise TypeError("assessment_status must be a re-eligibility assessment status or None")
+
         if self.requested_action not in {"RETRY_REPAIR", "NO_AUTHORIZATION"}:
             raise ValueError("requested_action must be RETRY_REPAIR or NO_AUTHORIZATION")
-        if not isinstance(self.eligible, bool):
-            raise TypeError("eligible must be a boolean")
+
+        if self.retry_count is not None:
+            if isinstance(self.retry_count, bool) or not isinstance(self.retry_count, int):
+                raise TypeError("retry_count must be an integer or None")
+            if self.retry_count < 0:
+                raise ValueError("retry_count must be >= 0")
+
+        if self.max_retries is not None:
+            if isinstance(self.max_retries, bool) or not isinstance(self.max_retries, int):
+                raise TypeError("max_retries must be an integer or None")
+            if self.max_retries < 0:
+                raise ValueError("max_retries must be >= 0")
+
+        if self.eligible is not None and not isinstance(self.eligible, bool):
+            raise TypeError("eligible must be a boolean or None")
+
         _validate_aware_datetime(self.evaluated_at, "evaluated_at")
         if self.next_eligible_at is not None:
             _validate_aware_datetime(self.next_eligible_at, "next_eligible_at")
@@ -95,56 +189,84 @@ class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
     def executes_retry(self) -> bool:
         return False
 
+    @property
+    def schedules_retry(self) -> bool:
+        return False
+
+    @property
+    def mutates_persistence(self) -> bool:
+        return False
+
 
 class EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService:
-    """Convert retry eligibility evidence into non-authorizing proposal evidence."""
+    """Convert M23.48 assessment evidence into non-authorizing proposal evidence."""
 
     def propose(
         self,
-        eligibility: EnvironmentWorldModelRollbackRepairRetryEligibility,
+        assessment: "EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment",
         *,
         proposal_id: str,
         reasons: Mapping[str, str] | None = None,
         lineage: Mapping[str, Any] | None = None,
     ) -> EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal:
-        if type(eligibility) is not EnvironmentWorldModelRollbackRepairRetryEligibility:
+        from src.core.environment_world_model_rollback_repair_retry_reeligibility_assessment import (
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment,
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus,
+        )
+
+        if type(assessment) is not EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment:
             raise TypeError(
-                "eligibility must be EnvironmentWorldModelRollbackRepairRetryEligibility"
+                "assessment must be EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessment"
             )
         if not isinstance(proposal_id, str) or not proposal_id.strip():
             raise ValueError("proposal_id must be a non-empty string")
 
-        if eligibility.eligible:
+        if assessment.status is EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.ELIGIBLE:
             requested_action = "RETRY_REPAIR"
-            default_reason = "eligible retry evidence requests a separate authorization decision"
-        else:
+            derived_eligible = True
+            default_reason = "eligible retry re-eligibility evidence requests a separate authorization decision"
+        elif assessment.status in {
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.WAITING,
+            EnvironmentWorldModelRollbackRepairRetryReeligibilityAssessmentStatus.NOT_ELIGIBLE,
+        }:
             requested_action = "NO_AUTHORIZATION"
-            default_reason = "retry eligibility evidence does not support requesting authorization"
+            derived_eligible = False
+            default_reason = "retry re-eligibility evidence does not support requesting retry authorization"
+        else:
+            raise EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalError(
+                "unsupported re-eligibility assessment status"
+            )
 
         return EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal(
             proposal_id=proposal_id,
-            environment_id=eligibility.environment_id,
-            eligibility_id=eligibility.eligibility_id,
-            action_decision_id=eligibility.action_decision_id,
-            expected_model_id=eligibility.expected_model_id,
-            observed_model_id=eligibility.observed_model_id,
+            environment_id=assessment.environment_id,
+            expected_model_id=assessment.expected_model_id,
+            observed_model_id=assessment.observed_model_id,
             requested_action=requested_action,
-            eligible=eligibility.eligible,
-            evaluated_at=eligibility.evaluated_at,
-            next_eligible_at=eligibility.next_eligible_at,
+            evaluated_at=assessment.evaluated_at,
+            next_eligible_at=assessment.next_eligible_at,
             reasons=reasons or {"status": default_reason},
-            lineage=lineage
-            or {
-                "eligibility_id": eligibility.eligibility_id,
-                "action_decision_id": eligibility.action_decision_id,
-                "expected_model_id": eligibility.expected_model_id,
-                "observed_model_id": eligibility.observed_model_id,
+            lineage=lineage or {
+                "assessment_id": assessment.assessment_id,
+                "evaluation_id": assessment.evaluation_id,
+                "feedback_id": assessment.feedback_id,
+                "outcome_id": assessment.outcome_id,
             },
+            eligibility_id=None,
+            action_decision_id=None,
+            eligible=derived_eligible,
+            assessment_id=assessment.assessment_id,
+            evaluation_id=assessment.evaluation_id,
+            feedback_id=assessment.feedback_id,
+            outcome_id=assessment.outcome_id,
+            assessment_status=assessment.status,
+            retry_count=assessment.retry_count,
+            max_retries=assessment.max_retries,
         )
 
 
 __all__ = [
-    "EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal",
     "EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalError",
+    "EnvironmentWorldModelRollbackRepairRetryAuthorizationProposal",
     "EnvironmentWorldModelRollbackRepairRetryAuthorizationProposalService",
 ]
