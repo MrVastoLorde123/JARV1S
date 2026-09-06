@@ -1,6 +1,9 @@
 import unittest
 from types import MappingProxyType
 
+from src.core.environment_world_model_rollback_repair_retry_adaptation_execution_feedback_evaluation_v2 import (
+    EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionFeedbackEvaluationV2Status,
+)
 from src.core.environment_world_model_rollback_repair_retry_adaptation_execution_learning_signal_v3 import (
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3,
     EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status,
@@ -15,6 +18,14 @@ from src.core.environment_world_model_rollback_repair_retry_adaptation_execution
 class M23_71AdaptationExecutionLearningSignalIntegrityV3Tests(unittest.TestCase):
     def _make_signal(self, status):
         rejected = status == EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.REJECTION_SIGNAL
+        evaluation_status = {
+            EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.POSITIVE_SIGNAL:
+                EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionFeedbackEvaluationV2Status.SUCCESS_EVALUATION,
+            EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.NEGATIVE_SIGNAL:
+                EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionFeedbackEvaluationV2Status.FAILURE_EVALUATION,
+            EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.REJECTION_SIGNAL:
+                EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionFeedbackEvaluationV2Status.REJECTION_EVALUATION,
+        }[status]
         return EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3(
             signal_id="signal-71",
             evaluation_id="evaluation-71",
@@ -39,7 +50,7 @@ class M23_71AdaptationExecutionLearningSignalIntegrityV3Tests(unittest.TestCase)
             observed_model_id="observed-71",
             execution_status="REJECTED" if rejected else ("FAILURE" if status == EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.NEGATIVE_SIGNAL else "SUCCESS"),
             feedback_status="REJECTION_SIGNAL" if rejected else ("FAILURE_SIGNAL" if status == EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.NEGATIVE_SIGNAL else "SUCCESS_SIGNAL"),
-            evaluation_status="REJECTION_EVALUATION" if rejected else ("FAILURE_EVALUATION" if status == EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.NEGATIVE_SIGNAL else "SUCCESS_EVALUATION"),
+            evaluation_status=evaluation_status,
             signal_status=status,
             confidence=0.81,
             signal_fingerprint="a" * 64,
@@ -98,7 +109,7 @@ class M23_71AdaptationExecutionLearningSignalIntegrityV3Tests(unittest.TestCase)
             )
 
     def test_full_provenance_is_preserved(self):
-        source = self._make_signal(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.SUCCESS if False else EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.POSITIVE_SIGNAL)
+        source = self._make_signal(EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalV3Status.POSITIVE_SIGNAL)
         result = EnvironmentWorldModelRollbackRepairRetryAdaptationExecutionLearningSignalIntegrityV3Service().verify(source, integrity_id="integrity-71")
         self.assertEqual(result.signal_id, source.signal_id)
         self.assertEqual(result.evaluation_id, source.evaluation_id)
