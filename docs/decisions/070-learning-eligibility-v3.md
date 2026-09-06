@@ -50,7 +50,6 @@ No model update, memory mutation, policy mutation, persistence mutation, retry, 
 M23.72 implementation delta from its corrected M23.71 prerequisite:
 
 - Parent: `33ea4ec3b1fe7847ef1f54d76f3f16846cfc1477`
-- HEAD: `acd16da094e20dfd68914d694558e36929f0f970`
 - Exactly 1 M23.72 commit / 3 intended files.
 
 The prerequisite M23.71 fixture repair is isolated in commit `33ea4ec3b1fe7847ef1f54d76f3f16846cfc1477`.
