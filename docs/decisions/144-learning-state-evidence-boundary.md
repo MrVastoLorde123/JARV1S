@@ -1,0 +1,53 @@
+# Decision 144 — Learning-State Evidence Boundary
+
+## Status
+IMPLEMENTED / PENDING LOCAL VERIFICATION
+
+## Parent
+`bd086463bd28a942716111cf6a86851c253b3a2d` — M23.131 Learning Proposal Application Integrity (sealed VERIFIED LOCALLY).
+
+## Purpose
+M23.132 establishes the bounded learning-state evidence boundary after application-integrity validation.
+
+The mechanism accepts one canonical `LearningStateExecutionLearningProposalApplicationIntegrity` artifact and records immutable evidence describing the candidate learning-state effect represented by that application. Evidence is a record of what was presented for state evaluation; it is not a state transition, truth claim, execution result, authorization, or memory mutation.
+
+## Contract
+- Accepts exactly one canonical `LearningStateExecutionLearningProposalApplicationIntegrity` artifact.
+- Requires explicit evidence identity, collector identity, evidence purpose, and evidence rationale.
+- Requires source integrity to be `VALID` before evidence may be recorded as `RECORDED`; invalid integrity fails closed into explicit `REJECTED` evidence.
+- Preserves application, decision, proposal, eligibility, integrity, signal, evaluation, feedback, outcome, execution, and fingerprint provenance.
+- Preserves application status as evidence.
+- Records caller-supplied evidence payload, reasons, and lineage without mutating source integrity or application artifacts.
+- Emits recursively immutable evidence.
+- Does not transition learning state, persist state, execute work, authorize execution or retry, schedule, plan, invoke an executor or learner, repair invalid evidence, or mutate model, memory, or policy.
+
+## Authority Walls
+`Learning-State Evidence ≠ Learning-State Transition`
+`Learning-State Evidence ≠ Learning`
+`Learning-State Evidence ≠ Truth`
+`Learning-State Evidence ≠ Correctness`
+`Learning-State Evidence ≠ Certainty`
+`Learning-State Evidence ≠ Usefulness`
+`Learning-State Evidence ≠ Authorization`
+`Learning-State Evidence ≠ Execution`
+`Learning-State Evidence ≠ Retry Authorization`
+`Learning-State Evidence ≠ Persistence Mutation`
+`RECORDED ≠ Applied`
+`RECORDED ≠ Transitioned`
+`RECORDED ≠ Executed`
+`REJECTED ≠ Automatically Repaired`
+
+M23.132 makes the state-evidence checkpoint explicit: application integrity can be converted into bounded evidence describing a candidate state effect, while evidence remains observational and non-mutating until a later transition boundary.
+
+## Architecture
+`Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Learning Eligibility → Learning Proposal → Learning Proposal Decision → Proposal Application → Application Integrity → Learning-State Evidence → Learning-State Transition → Transition Integrity → Learning-State Validation → Consumption Request → Durable-State Read Consumption → Consumption Read Validation → Interpretation Request → Learning-State Interpretation → Interpretation Validation → Interpretation Validation Integrity → Semantic Use Request → Semantic Use → Semantic Use Validation → Semantic Use Integrity → Semantic Use Handoff → Semantic Use Receipt → Semantic Use Consumption → Downstream Semantic Handling → Execution Eligibility → Execution Admission / Authorization → Execution Attempt → Execution Outcome → Execution Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Learning Eligibility → Learning Proposal → Learning Proposal Decision → Proposal Application → Application Integrity → Learning-State Evidence`
+
+## Verification Plan
+Focused tests cover exact source type, required metadata, valid/invalid integrity handling, fail-closed rejection, provenance and fingerprint preservation, application status preservation, recursive evidence/lineage freezing, source non-mutation, deterministic construction, immutable evidence, explicit state-evidence semantics, and absence of transition, persistence, execution, retry, scheduling, planning, learner, executor, model, memory, policy, truth, correctness, certainty, and usefulness powers.
+
+Local verification will be recorded here after focused and regression suites pass.
+
+No merge is implied by this decision.
+
+## Atomicity
+Exactly **1 commit / 3 intended files** from M23.131.
