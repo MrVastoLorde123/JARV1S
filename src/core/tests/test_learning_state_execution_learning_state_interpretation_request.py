@@ -6,18 +6,16 @@ from src.core.learning_state_execution_learning_state_consumption_read_validatio
     LearningStateExecutionLearningStateConsumptionReadValidationService,
     LearningStateExecutionLearningStateConsumptionReadValidationStatus,
 )
+import src.core.tests.test_learning_state_execution_learning_state_consumption_read_validation as m23_138
 from src.core.learning_state_execution_learning_state_interpretation_request import (
     LearningStateExecutionLearningStateInterpretationRequestService,
     LearningStateExecutionLearningStateInterpretationRequestStatus,
-)
-from src.core.tests.test_learning_state_execution_learning_state_consumption_read_validation import (
-    M23_138LearningStateConsumptionReadValidationTests,
 )
 
 
 class M23_139LearningStateInterpretationRequestTests(unittest.TestCase):
     def _make_validation(self, **kwargs):
-        read = M23_138LearningStateConsumptionReadValidationTests()._make_read()
+        read = m23_138.M23_138LearningStateConsumptionReadValidationTests()._make_read()
         defaults = {
             "validation_id": "read-validation-138",
             "validator_id": "validator-A",
