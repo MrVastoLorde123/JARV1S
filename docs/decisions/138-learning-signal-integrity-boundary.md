@@ -1,7 +1,7 @@
 # Decision 138 — Learning Signal Integrity Boundary
 
 ## Status
-IMPLEMENTED / PENDING LOCAL VERIFICATION
+IMPLEMENTED / VERIFIED LOCALLY
 
 ## Parent
 `260cc57e483bd2cf30aceded0689da94a3547f24` — M23.125 Evaluation → Learning Signal Boundary.
@@ -46,10 +46,13 @@ M23.126 protects the handoff into learning by ensuring downstream consumers can 
 ## Architecture
 `Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Eligibility → Proposal → Decision → Application → Application Integrity → Learning-State Evidence → Learning-State Transition → Transition Integrity → Learning-State Validation → Consumption Request → Durable-State Read Consumption → Consumption Read Validation → Interpretation Request → Learning-State Interpretation → Interpretation Validation → Interpretation Validation Integrity → Semantic Use Request → Semantic Use → Semantic Use Validation → Semantic Use Integrity → Semantic Use Handoff → Semantic Use Receipt → Semantic Use Consumption → Downstream Semantic Handling → Execution Eligibility → Execution Admission / Authorization → Execution Attempt → Execution Outcome → Execution Feedback → Evaluation → Learning Signal → Learning Signal Integrity → (future learning eligibility boundary)`
 
-## Verification Plan
-Focused tests cover exact source type, explicit VALID/INVALID status, structural identity requirements, provenance and cross-lineage consistency, fingerprint validation, recursive immutability, source non-mutation, deterministic construction, fail-closed invalid evidence, and absence of learning, adaptation, truth, authority, retry, execution, scheduling, planning, model, memory, or policy powers.
+## Verification
+- M23.126 focused: 15/15 passed
+- M23.125 focused: 13/13 passed
+- M23.124 focused: 12/12 passed
+- Core regression: 1930/1930 passed
 
-Local verification will be recorded here after the focused and core regression suites pass.
+Focused coverage includes exact source type, explicit VALID/INVALID status, structural identity requirements, provenance and cross-lineage consistency, fingerprint validation, recursive immutability, source non-mutation, deterministic construction, fail-closed invalid evidence, and absence of learning, adaptation, truth, authority, retry, execution, scheduling, planning, model, memory, or policy powers.
 
 No merge is implied by this decision.
 
