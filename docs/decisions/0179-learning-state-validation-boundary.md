@@ -1,7 +1,7 @@
 # Decision 179 — Learning-State Validation Boundary
 
 ## Status
-IMPLEMENTED / NOT YET VERIFIED LOCALLY
+IMPLEMENTED / VERIFIED LOCALLY
 
 ## Parent
 `e4e0e03f74e5edb1e2c14544d275aa2274341f89` — M23.166 Learning-State Transition Integrity.
@@ -38,10 +38,12 @@ This boundary validates whether transition-integrity evidence is acceptable for 
 `Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Learning Eligibility → Learning Proposal → Learning Proposal Decision → Proposal Application → Application Integrity → Learning-State Evidence → Learning-State Transition → Transition Integrity → Learning-State Validation`
 
 ## Verification
-Focused local verification is required before sealing the canonical milestone commit:
+Focused local verification:
 `python -m unittest src.core.tests.test_learning_state_execution_learning_state_validation -v`
 
-Focused contract: 20 tests.
+Result:
+`Ran 20 tests in 0.005s`
+`OK`
 
 ## Atomicity
 Exactly **1 commit / 3 intended files** from M23.166. No merge is implied by this decision.
