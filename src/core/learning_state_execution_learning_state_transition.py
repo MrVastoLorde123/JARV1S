@@ -1,4 +1,4 @@
-"""M23.133: form explicit learning-state transition records without mutating durable state."""
+"""M23.165: formulate bounded learning-state transition records without mutating durable state."""
 from __future__ import annotations
 
 import hashlib
@@ -6,12 +6,10 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Mapping, TYPE_CHECKING
 
-from src.core.learning_state_execution_learning_state_evidence import (
-    LearningStateExecutionLearningStateEvidence,
-    LearningStateExecutionLearningStateEvidenceStatus,
-)
+if TYPE_CHECKING:
+    from src.core.learning_state_execution_learning_state_evidence import LearningStateExecutionLearningStateEvidence
 
 
 class LearningStateExecutionLearningStateTransitionError(RuntimeError):
@@ -47,7 +45,10 @@ def _canonical(value: Any) -> Any:
     return value
 
 
-def _transition_fingerprint(*, transition_id: str, state_key: str, state_before: Any, state_after: Any, evidence_id: str, integrity_id: str, proposed_change: Any) -> str:
+def _transition_fingerprint(
+    *, transition_id: str, state_key: str, state_before: Any, state_after: Any,
+    evidence_id: str, integrity_id: str, proposed_change: Any,
+) -> str:
     payload = {
         "transition_id": transition_id,
         "state_key": state_key,
@@ -79,35 +80,38 @@ class LearningStateExecutionLearningStateTransition:
     outcome_id: str
     attempt_id: str
     admission_id: str
+    eligibility_source_id: str
+    handling_id: str
+    consumption_id: str
+    receipt_id: str
+    handoff_id: str
+    inherited_integrity_id: str
     validation_id: str
-    use_id: str
-    request_id: str
-    interpretation_id: str
+    semantic_use_id: str
     source_request_id: str
-    read_validation_id: str
+    source_request_lineage_id: str
+    source_validation_id: str
+    source_validation_lineage_id: str
+    interpretation_id: str
     read_id: str
     consumption_request_id: str
-    source_validation_id: str
-    state_key: str
-    state_before: Any
-    state_after: Any
-    proposed_change: Any
-    source_application_fingerprint: str
-    computed_application_fingerprint: str
-    transition_fingerprint: str
-    confidence: float
+    requester_id: str
     consumer_id: str
+    handoff_target_id: str
+    recipient_id: str
+    handling_target_id: str
     execution_target_id: str
-    execution_purpose: str
-    objective: str
-    evaluator_id: str
-    evaluation_purpose: str
     signal_kind: Any
     signal_purpose: str
+    signal_context: Any
+    signal_status: Any
+    source_signal_fingerprint: str
+    computed_signal_fingerprint: str
     learner_id: str
     eligibility_purpose: str
     proposer_id: str
     proposal_purpose: str
+    proposed_change: Any
     proposal_rationale: Any
     decision_maker_id: str
     decision_purpose: str
@@ -121,9 +125,13 @@ class LearningStateExecutionLearningStateTransition:
     evidence_purpose: str
     evidence_rationale: Any
     evidence_payload: Any
+    state_key: str
+    state_before: Any
+    state_after: Any
     transition_actor_id: str
     transition_purpose: str
     transition_rationale: Any
+    transition_fingerprint: str
     status: LearningStateExecutionLearningStateTransitionStatus
     reasons: tuple[str, ...]
     lineage: Mapping[str, Any]
@@ -132,29 +140,28 @@ class LearningStateExecutionLearningStateTransition:
         required_strings = (
             "transition_id", "evidence_id", "integrity_id", "application_id", "decision_id", "proposal_id", "eligibility_id",
             "source_integrity_id", "signal_id", "evaluation_id", "feedback_id", "outcome_id", "attempt_id", "admission_id",
-            "validation_id", "use_id", "request_id", "interpretation_id", "source_request_id", "read_validation_id", "read_id",
-            "consumption_request_id", "source_validation_id", "state_key", "transition_fingerprint", "source_application_fingerprint",
-            "computed_application_fingerprint", "consumer_id", "execution_target_id", "execution_purpose", "objective", "evaluator_id",
-            "evaluation_purpose", "signal_purpose", "learner_id", "eligibility_purpose", "proposer_id", "proposal_purpose",
-            "decision_maker_id", "decision_purpose", "applier_id", "application_purpose", "evidence_collector_id", "evidence_purpose",
-            "transition_actor_id", "transition_purpose",
+            "eligibility_source_id", "handling_id", "consumption_id", "receipt_id", "handoff_id", "inherited_integrity_id",
+            "validation_id", "semantic_use_id", "source_request_id", "source_request_lineage_id", "source_validation_id",
+            "source_validation_lineage_id", "interpretation_id", "read_id", "consumption_request_id", "requester_id", "consumer_id",
+            "handoff_target_id", "recipient_id", "handling_target_id", "execution_target_id", "signal_purpose", "source_signal_fingerprint",
+            "computed_signal_fingerprint", "learner_id", "eligibility_purpose", "proposer_id", "proposal_purpose", "decision_maker_id",
+            "decision_purpose", "applier_id", "application_purpose", "evidence_collector_id", "evidence_purpose", "state_key",
+            "transition_actor_id", "transition_purpose", "transition_fingerprint",
         )
         for name in required_strings:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)) or not 0.0 <= float(self.confidence) <= 1.0:
-            raise ValueError("confidence must be numeric and between 0.0 and 1.0")
+        for name in ("source_signal_fingerprint", "computed_signal_fingerprint", "transition_fingerprint"):
+            if len(getattr(self, name)) != 64:
+                raise ValueError("learning-state transition requires SHA-256 fingerprints")
         if not isinstance(self.status, LearningStateExecutionLearningStateTransitionStatus):
             raise TypeError("status must be a learning-state transition status")
         if not isinstance(self.reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in self.reasons):
             raise TypeError("reasons must be a tuple of non-empty strings")
         if not isinstance(self.lineage, Mapping):
             raise TypeError("lineage must be a mapping")
-        if len(self.transition_fingerprint) != 64:
-            raise ValueError("transition_fingerprint must be a SHA-256 fingerprint")
-        object.__setattr__(self, "state_before", _freeze(self.state_before))
-        object.__setattr__(self, "state_after", _freeze(self.state_after))
+        object.__setattr__(self, "signal_context", _freeze(self.signal_context))
         object.__setattr__(self, "proposed_change", _freeze(self.proposed_change))
         object.__setattr__(self, "proposal_rationale", _freeze(self.proposal_rationale))
         object.__setattr__(self, "decision_rationale", _freeze(self.decision_rationale))
@@ -162,6 +169,8 @@ class LearningStateExecutionLearningStateTransition:
         object.__setattr__(self, "application_evidence", _freeze(self.application_evidence))
         object.__setattr__(self, "evidence_rationale", _freeze(self.evidence_rationale))
         object.__setattr__(self, "evidence_payload", _freeze(self.evidence_payload))
+        object.__setattr__(self, "state_before", _freeze(self.state_before))
+        object.__setattr__(self, "state_after", _freeze(self.state_after))
         object.__setattr__(self, "transition_rationale", _freeze(self.transition_rationale))
         object.__setattr__(self, "lineage", _freeze(self.lineage))
 
@@ -259,9 +268,10 @@ class LearningStateExecutionLearningStateTransitionService:
 
     def formulate(
         self,
-        evidence: LearningStateExecutionLearningStateEvidence,
+        evidence: "LearningStateExecutionLearningStateEvidence",
         *,
         transition_id: str,
+        state_key: str,
         state_before: Any,
         state_after: Any,
         transition_actor_id: str,
@@ -270,31 +280,46 @@ class LearningStateExecutionLearningStateTransitionService:
         reasons: tuple[str, ...] | None = None,
         lineage: Mapping[str, Any] | None = None,
     ) -> LearningStateExecutionLearningStateTransition:
+        from src.core.learning_state_execution_learning_state_evidence import (
+            LearningStateExecutionLearningStateEvidence,
+            LearningStateExecutionLearningStateEvidenceStatus,
+        )
+
         if type(evidence) is not LearningStateExecutionLearningStateEvidence:
             raise TypeError("evidence must be a learning-state evidence artifact")
-        for name, value in (
-            ("transition_id", transition_id),
-            ("transition_actor_id", transition_actor_id),
-            ("transition_purpose", transition_purpose),
-        ):
+        for name, value in (("transition_id", transition_id), ("state_key", state_key), ("transition_actor_id", transition_actor_id), ("transition_purpose", transition_purpose)):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
         if transition_rationale is None:
             raise ValueError("transition_rationale must be provided")
         if reasons is not None and (not isinstance(reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in reasons)):
             raise TypeError("reasons must be a tuple of non-empty strings")
+        if transition_id == evidence.evidence_id or transition_id == evidence.integrity_id:
+            raise ValueError("transition identity must be distinct")
 
-        valid = evidence.status is LearningStateExecutionLearningStateEvidenceStatus.RECORDED and evidence.records_state_evidence
+        anchored_evidence_id = evidence.lineage.get("evidence_id", evidence.evidence_id)
+        anchored_integrity_id = evidence.lineage.get("integrity_id", evidence.integrity_id)
+        anchored_application_id = evidence.lineage.get("application_id", evidence.application_id)
+        anchored_source_integrity_id = evidence.lineage.get("source_integrity_id", evidence.source_integrity_id)
+        lineage_consistent = (
+            anchored_evidence_id == evidence.evidence_id
+            and anchored_integrity_id == evidence.integrity_id
+            and anchored_application_id == evidence.application_id
+            and anchored_source_integrity_id == evidence.source_integrity_id
+        )
+        valid = evidence.status is LearningStateExecutionLearningStateEvidenceStatus.RECORDED and evidence.records_state_evidence and lineage_consistent
         if reasons is not None:
             final_reasons = reasons
-        elif valid:
-            final_reasons = ("learning-state evidence is RECORDED",)
+        elif evidence.status is not LearningStateExecutionLearningStateEvidenceStatus.RECORDED or not evidence.records_state_evidence:
+            final_reasons = ("learning-state evidence is not recorded",)
+        elif not lineage_consistent:
+            final_reasons = ("learning-state evidence lineage is not valid",)
         else:
-            final_reasons = ("learning-state evidence is not RECORDED",)
+            final_reasons = ("learning-state evidence is RECORDED",)
         status = LearningStateExecutionLearningStateTransitionStatus.FORMULATED if valid else LearningStateExecutionLearningStateTransitionStatus.REJECTED
         fingerprint = _transition_fingerprint(
             transition_id=transition_id,
-            state_key=evidence.state_key,
+            state_key=state_key,
             state_before=state_before,
             state_after=state_after,
             evidence_id=evidence.evidence_id,
@@ -316,35 +341,38 @@ class LearningStateExecutionLearningStateTransitionService:
             outcome_id=evidence.outcome_id,
             attempt_id=evidence.attempt_id,
             admission_id=evidence.admission_id,
+            eligibility_source_id=evidence.eligibility_source_id,
+            handling_id=evidence.handling_id,
+            consumption_id=evidence.consumption_id,
+            receipt_id=evidence.receipt_id,
+            handoff_id=evidence.handoff_id,
+            inherited_integrity_id=evidence.inherited_integrity_id,
             validation_id=evidence.validation_id,
-            use_id=evidence.use_id,
-            request_id=evidence.request_id,
-            interpretation_id=evidence.interpretation_id,
+            semantic_use_id=evidence.semantic_use_id,
             source_request_id=evidence.source_request_id,
-            read_validation_id=evidence.read_validation_id,
+            source_request_lineage_id=evidence.source_request_lineage_id,
+            source_validation_id=evidence.source_validation_id,
+            source_validation_lineage_id=evidence.source_validation_lineage_id,
+            interpretation_id=evidence.interpretation_id,
             read_id=evidence.read_id,
             consumption_request_id=evidence.consumption_request_id,
-            source_validation_id=evidence.source_validation_id,
-            state_key=evidence.state_key,
-            state_before=state_before,
-            state_after=state_after,
-            proposed_change=evidence.proposed_change,
-            source_application_fingerprint=evidence.source_application_fingerprint,
-            computed_application_fingerprint=evidence.computed_application_fingerprint,
-            transition_fingerprint=fingerprint,
-            confidence=evidence.confidence,
+            requester_id=evidence.requester_id,
             consumer_id=evidence.consumer_id,
+            handoff_target_id=evidence.handoff_target_id,
+            recipient_id=evidence.recipient_id,
+            handling_target_id=evidence.handling_target_id,
             execution_target_id=evidence.execution_target_id,
-            execution_purpose=evidence.execution_purpose,
-            objective=evidence.objective,
-            evaluator_id=evidence.evaluator_id,
-            evaluation_purpose=evidence.evaluation_purpose,
             signal_kind=evidence.signal_kind,
             signal_purpose=evidence.signal_purpose,
+            signal_context=evidence.signal_context,
+            signal_status=evidence.signal_status,
+            source_signal_fingerprint=evidence.source_signal_fingerprint,
+            computed_signal_fingerprint=evidence.computed_signal_fingerprint,
             learner_id=evidence.learner_id,
             eligibility_purpose=evidence.eligibility_purpose,
             proposer_id=evidence.proposer_id,
             proposal_purpose=evidence.proposal_purpose,
+            proposed_change=evidence.proposed_change,
             proposal_rationale=evidence.proposal_rationale,
             decision_maker_id=evidence.decision_maker_id,
             decision_purpose=evidence.decision_purpose,
@@ -358,12 +386,22 @@ class LearningStateExecutionLearningStateTransitionService:
             evidence_purpose=evidence.evidence_purpose,
             evidence_rationale=evidence.evidence_rationale,
             evidence_payload=evidence.evidence_payload,
+            state_key=state_key,
+            state_before=state_before,
+            state_after=state_after,
             transition_actor_id=transition_actor_id,
             transition_purpose=transition_purpose,
             transition_rationale=transition_rationale,
+            transition_fingerprint=fingerprint,
             status=status,
             reasons=tuple(final_reasons),
-            lineage=lineage if lineage is not None else {"transition_id": transition_id, "evidence_id": evidence.evidence_id},
+            lineage=lineage if lineage is not None else {
+                "transition_id": transition_id,
+                "evidence_id": evidence.evidence_id,
+                "integrity_id": evidence.integrity_id,
+                "application_id": evidence.application_id,
+                "source_integrity_id": evidence.source_integrity_id,
+            },
         )
 
 
