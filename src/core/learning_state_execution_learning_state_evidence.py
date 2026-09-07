@@ -1,15 +1,13 @@
-"""M23.132: record bounded learning-state evidence without transitioning state."""
+"""M23.164: record bounded learning-state evidence without transitioning or mutating state."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Mapping, TYPE_CHECKING
 
-from src.core.learning_state_execution_learning_proposal_application_integrity import (
-    LearningStateExecutionLearningProposalApplicationIntegrity,
-    LearningStateExecutionLearningProposalApplicationIntegrityStatus,
-)
+if TYPE_CHECKING:
+    from src.core.learning_state_execution_learning_proposal_application_integrity import LearningStateExecutionLearningProposalApplicationIntegrity
 
 
 class LearningStateExecutionLearningStateEvidenceError(RuntimeError):
@@ -50,29 +48,33 @@ class LearningStateExecutionLearningStateEvidence:
     outcome_id: str
     attempt_id: str
     admission_id: str
+    eligibility_source_id: str
+    handling_id: str
+    consumption_id: str
+    receipt_id: str
+    handoff_id: str
+    inherited_integrity_id: str
     validation_id: str
-    use_id: str
-    request_id: str
-    interpretation_id: str
+    semantic_use_id: str
     source_request_id: str
-    read_validation_id: str
+    source_request_lineage_id: str
+    source_validation_id: str
+    source_validation_lineage_id: str
+    interpretation_id: str
     read_id: str
     consumption_request_id: str
-    source_validation_id: str
-    transition_id: str
-    state_key: str
-    transition_fingerprint: str
-    source_application_fingerprint: str
-    computed_application_fingerprint: str
-    confidence: float
+    requester_id: str
     consumer_id: str
+    handoff_target_id: str
+    recipient_id: str
+    handling_target_id: str
     execution_target_id: str
-    execution_purpose: str
-    objective: str
-    evaluator_id: str
-    evaluation_purpose: str
     signal_kind: Any
     signal_purpose: str
+    signal_context: Any
+    signal_status: Any
+    source_signal_fingerprint: str
+    computed_signal_fingerprint: str
     learner_id: str
     eligibility_purpose: str
     proposer_id: str
@@ -96,32 +98,30 @@ class LearningStateExecutionLearningStateEvidence:
     lineage: Mapping[str, Any]
 
     def __post_init__(self) -> None:
-        for name in (
+        required_strings = (
             "evidence_id", "integrity_id", "application_id", "decision_id", "proposal_id", "eligibility_id",
             "source_integrity_id", "signal_id", "evaluation_id", "feedback_id", "outcome_id", "attempt_id",
-            "admission_id", "validation_id", "use_id", "request_id", "interpretation_id", "source_request_id",
-            "read_validation_id", "read_id", "consumption_request_id", "source_validation_id", "transition_id",
-            "state_key", "transition_fingerprint", "source_application_fingerprint", "computed_application_fingerprint",
-            "consumer_id", "execution_target_id", "execution_purpose", "objective", "evaluator_id", "evaluation_purpose",
+            "admission_id", "eligibility_source_id", "handling_id", "consumption_id", "receipt_id", "handoff_id",
+            "inherited_integrity_id", "validation_id", "semantic_use_id", "source_request_id", "source_request_lineage_id",
+            "source_validation_id", "source_validation_lineage_id", "interpretation_id", "read_id", "consumption_request_id",
+            "requester_id", "consumer_id", "handoff_target_id", "recipient_id", "handling_target_id", "execution_target_id",
             "signal_purpose", "learner_id", "eligibility_purpose", "proposer_id", "proposal_purpose", "decision_maker_id",
             "decision_purpose", "applier_id", "application_purpose", "evidence_collector_id", "evidence_purpose",
-        ):
+        )
+        for name in required_strings:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)) or not 0.0 <= float(self.confidence) <= 1.0:
-            raise ValueError("confidence must be numeric and between 0.0 and 1.0")
+        for name in ("source_signal_fingerprint", "computed_signal_fingerprint"):
+            if len(getattr(self, name)) != 64:
+                raise ValueError("learning-state evidence requires SHA-256 signal fingerprints")
         if not isinstance(self.status, LearningStateExecutionLearningStateEvidenceStatus):
             raise TypeError("status must be a learning-state evidence status")
         if not isinstance(self.reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in self.reasons):
             raise TypeError("reasons must be a tuple of non-empty strings")
         if not isinstance(self.lineage, Mapping):
             raise TypeError("lineage must be a mapping")
-        if self.status is LearningStateExecutionLearningStateEvidenceStatus.RECORDED:
-            for name in ("transition_fingerprint", "source_application_fingerprint", "computed_application_fingerprint"):
-                value = getattr(self, name)
-                if len(value) != 64:
-                    raise ValueError("learning-state evidence requires SHA-256 fingerprints")
+        object.__setattr__(self, "signal_context", _freeze(self.signal_context))
         object.__setattr__(self, "proposed_change", _freeze(self.proposed_change))
         object.__setattr__(self, "proposal_rationale", _freeze(self.proposal_rationale))
         object.__setattr__(self, "decision_rationale", _freeze(self.decision_rationale))
@@ -225,11 +225,11 @@ class LearningStateExecutionLearningStateEvidence:
 
 
 class LearningStateExecutionLearningStateEvidenceService:
-    """Record learning-state evidence without applying or transitioning state."""
+    """Record state-effect evidence without applying, transitioning, or persisting state."""
 
     def record(
         self,
-        integrity: LearningStateExecutionLearningProposalApplicationIntegrity,
+        integrity: "LearningStateExecutionLearningProposalApplicationIntegrity",
         *,
         evidence_id: str,
         evidence_collector_id: str,
@@ -239,13 +239,14 @@ class LearningStateExecutionLearningStateEvidenceService:
         reasons: tuple[str, ...] | None = None,
         lineage: Mapping[str, Any] | None = None,
     ) -> LearningStateExecutionLearningStateEvidence:
+        from src.core.learning_state_execution_learning_proposal_application_integrity import (
+            LearningStateExecutionLearningProposalApplicationIntegrity,
+            LearningStateExecutionLearningProposalApplicationIntegrityStatus,
+        )
+
         if type(integrity) is not LearningStateExecutionLearningProposalApplicationIntegrity:
             raise TypeError("integrity must be a learning-proposal application integrity artifact")
-        for name, value in (
-            ("evidence_id", evidence_id),
-            ("evidence_collector_id", evidence_collector_id),
-            ("evidence_purpose", evidence_purpose),
-        ):
+        for name, value in (("evidence_id", evidence_id), ("evidence_collector_id", evidence_collector_id), ("evidence_purpose", evidence_purpose)):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
         if evidence_rationale is None:
@@ -253,24 +254,27 @@ class LearningStateExecutionLearningStateEvidenceService:
         if reasons is not None and (not isinstance(reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in reasons)):
             raise TypeError("reasons must be a tuple of non-empty strings")
 
-        lineage_application_id = integrity.lineage.get("application_id", integrity.application_id)
-        lineage_decision_id = integrity.lineage.get("decision_id", integrity.decision_id)
-        internally_consistent = (
-            integrity.application_id == lineage_application_id
-            and integrity.decision_id == lineage_decision_id
+        anchored_integrity_id = integrity.lineage.get("integrity_id", integrity.integrity_id)
+        anchored_application_id = integrity.lineage.get("application_id", integrity.application_id)
+        anchored_source_integrity_id = integrity.lineage.get("source_integrity_id", integrity.source_integrity_id)
+        lineage_consistent = (
+            anchored_integrity_id == integrity.integrity_id
+            and anchored_application_id == integrity.application_id
+            and anchored_source_integrity_id == integrity.source_integrity_id
         )
         recorded = (
             integrity.status is LearningStateExecutionLearningProposalApplicationIntegrityStatus.VALID
             and integrity.is_valid
-            and internally_consistent
+            and lineage_consistent
         )
         if reasons is not None:
             final_reasons = reasons
         elif recorded:
             final_reasons = ("application integrity is VALID",)
         else:
-            final_reasons = ("application integrity is not VALID",)
+            final_reasons = ("application integrity lineage is not valid",)
         status = LearningStateExecutionLearningStateEvidenceStatus.RECORDED if recorded else LearningStateExecutionLearningStateEvidenceStatus.REJECTED
+
         return LearningStateExecutionLearningStateEvidence(
             evidence_id=evidence_id,
             integrity_id=integrity.integrity_id,
@@ -285,29 +289,33 @@ class LearningStateExecutionLearningStateEvidenceService:
             outcome_id=integrity.outcome_id,
             attempt_id=integrity.attempt_id,
             admission_id=integrity.admission_id,
+            eligibility_source_id=integrity.eligibility_source_id,
+            handling_id=integrity.handling_id,
+            consumption_id=integrity.consumption_id,
+            receipt_id=integrity.receipt_id,
+            handoff_id=integrity.handoff_id,
+            inherited_integrity_id=integrity.inherited_integrity_id,
             validation_id=integrity.validation_id,
-            use_id=integrity.use_id,
-            request_id=integrity.request_id,
-            interpretation_id=integrity.interpretation_id,
+            semantic_use_id=integrity.semantic_use_id,
             source_request_id=integrity.source_request_id,
-            read_validation_id=integrity.read_validation_id,
+            source_request_lineage_id=integrity.source_request_lineage_id,
+            source_validation_id=integrity.source_validation_id,
+            source_validation_lineage_id=integrity.source_validation_lineage_id,
+            interpretation_id=integrity.interpretation_id,
             read_id=integrity.read_id,
             consumption_request_id=integrity.consumption_request_id,
-            source_validation_id=integrity.source_validation_id,
-            transition_id=integrity.transition_id,
-            state_key=integrity.state_key,
-            transition_fingerprint=integrity.transition_fingerprint,
-            source_application_fingerprint=integrity.source_application_fingerprint,
-            computed_application_fingerprint=integrity.computed_application_fingerprint,
-            confidence=integrity.confidence,
+            requester_id=integrity.requester_id,
             consumer_id=integrity.consumer_id,
+            handoff_target_id=integrity.handoff_target_id,
+            recipient_id=integrity.recipient_id,
+            handling_target_id=integrity.handling_target_id,
             execution_target_id=integrity.execution_target_id,
-            execution_purpose=integrity.execution_purpose,
-            objective=integrity.objective,
-            evaluator_id=integrity.evaluator_id,
-            evaluation_purpose=integrity.evaluation_purpose,
             signal_kind=integrity.signal_kind,
             signal_purpose=integrity.signal_purpose,
+            signal_context=integrity.signal_context,
+            signal_status=integrity.signal_status,
+            source_signal_fingerprint=integrity.source_signal_fingerprint,
+            computed_signal_fingerprint=integrity.computed_signal_fingerprint,
             learner_id=integrity.learner_id,
             eligibility_purpose=integrity.eligibility_purpose,
             proposer_id=integrity.proposer_id,
@@ -328,7 +336,7 @@ class LearningStateExecutionLearningStateEvidenceService:
             evidence_payload=evidence_payload,
             status=status,
             reasons=tuple(final_reasons),
-            lineage=lineage if lineage is not None else {"evidence_id": evidence_id, "integrity_id": integrity.integrity_id},
+            lineage=lineage if lineage is not None else {"evidence_id": evidence_id, "integrity_id": integrity.integrity_id, "application_id": integrity.application_id, "source_integrity_id": integrity.source_integrity_id},
         )
 
 

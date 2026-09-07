@@ -1,7 +1,7 @@
 # Decision 176 — Learning-State Evidence Boundary
 
 ## Status
-IMPLEMENTED / NOT YET VERIFIED LOCALLY
+IMPLEMENTED / VERIFIED LOCALLY
 
 ## Parent
 `ea3a6a42f82f2c7fa7cac2625233bdc1b24c17d7` — M23.163 Learning Proposal Application Integrity.
@@ -38,10 +38,10 @@ This boundary records structured evidence about a candidate learning-state effec
 `Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Learning Eligibility → Learning Proposal → Learning Proposal Decision → Proposal Application → Application Integrity → Learning-State Evidence → Learning-State Transition → Transition Integrity → Learning-State Validation`
 
 ## Verification
-Focused local verification is required before sealing the canonical milestone commit:
+Focused local verification completed:
 `python -m unittest src.core.tests.test_learning_state_execution_learning_state_evidence -v`
 
-Expected focused contract: 14 tests.
+Result: `Ran 15 tests in 0.006s — OK`
 
 ## Atomicity
 Exactly **1 commit / 3 intended files** from M23.163. No merge is implied by this decision.
