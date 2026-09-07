@@ -2,16 +2,8 @@ import unittest
 from dataclasses import FrozenInstanceError
 from types import MappingProxyType
 
-from src.core.learning_state_execution_learning_signal import (
-    LearningStateExecutionLearningSignalKind,
-    LearningStateExecutionLearningSignalService,
-)
-from src.core.learning_state_execution_learning_signal_integrity import (
-    LearningStateExecutionLearningSignalIntegrityService,
-    LearningStateExecutionLearningSignalIntegrityStatus,
-)
 from src.core.learning_state_execution_learning_eligibility import (
-    LearningStateExecutionLearningEligibilityService,
+    LearningStateExecutionLearningEligibility,
     LearningStateExecutionLearningEligibilityStatus,
 )
 from src.core.learning_state_execution_learning_proposal import (
@@ -20,160 +12,147 @@ from src.core.learning_state_execution_learning_proposal import (
 )
 
 
-class M23_128LearningProposalTests(unittest.TestCase):
-    def _make_eligibility(self, *, status=None):
-        evaluation = __import__(
-            "src.core.learning_state_execution_evaluation", fromlist=["LearningStateExecutionEvaluation"]
-        ).LearningStateExecutionEvaluation(
-            evaluation_id="evaluation-124", feedback_id="feedback-123", outcome_id="outcome-122",
-            attempt_id="attempt-121", admission_id="admission-120", eligibility_id="eligibility-119",
-            handling_id="handling-118", consumption_id="consumption-117", receipt_id="receipt-116",
-            handoff_id="handoff-115", integrity_id="integrity-114", validation_id="validation-113",
-            use_id="use-112", request_id="semantic-use-111", interpretation_id="interpretation-108",
-            source_request_id="request-107", read_validation_id="read-validation-106", read_id="read-105",
-            consumption_request_id="consumption-104", source_validation_id="source-validation-103",
-            source_integrity_id="source-integrity-102", transition_id="transition-98", evidence_id="evidence-97",
-            application_id="application-96", state_key="demo.state", transition_fingerprint="a" * 64,
-            source_application_fingerprint="b" * 64, computed_application_fingerprint="c" * 64, confidence=0.91,
-            consumer_id="consumer-A", use_purpose="semantic-use", downstream_recipient_id="receiver-X",
-            downstream_handler_id="handler-X", handling_purpose="route", execution_target_id="executor-X",
-            execution_purpose="perform", outcome_status=__import__(
-                "src.core.learning_state_execution_outcome", fromlist=["LearningStateExecutionOutcomeStatus"]
-            ).LearningStateExecutionOutcomeStatus.SUCCESS,
-            feedback_kind=__import__(
-                "src.core.learning_state_execution_feedback", fromlist=["LearningStateExecutionFeedbackKind"]
-            ).LearningStateExecutionFeedbackKind.SUCCESS_FEEDBACK,
-            observed_consequence={"state": "changed"}, executor_output={"raw": "result"},
-            failure_type=None, failure_message=None, objective="reach-target", evaluator_id="evaluator-A",
-            evaluation_purpose="assess", evaluation_judgment={"score": 0.8},
-            evaluation_context={"objective": "reach-target"}, reasons={"source": "m23.124"},
-            lineage={"evaluation_id": "evaluation-124"},
-        )
-        signal = LearningStateExecutionLearningSignalService().create(
-            evaluation, signal_id="signal-125", signal_kind=LearningStateExecutionLearningSignalKind.POSITIVE,
+class M23_160LearningProposalTests(unittest.TestCase):
+    def _make_eligibility(self, *, status=LearningStateExecutionLearningEligibilityStatus.ELIGIBLE):
+        return LearningStateExecutionLearningEligibility(
+            eligibility_id="learning-eligibility-159",
+            integrity_id="integrity-158",
+            signal_id="signal-157",
+            evaluation_id="evaluation-156",
+            feedback_id="feedback-155",
+            outcome_id="outcome-154",
+            attempt_id="attempt-153",
+            admission_id="admission-152",
+            eligibility_source_id="integrity-158",
+            handling_id="handling-150",
+            consumption_id="consumption-149",
+            receipt_id="receipt-148",
+            handoff_id="handoff-147",
+            inherited_integrity_id="integrity-previous",
+            validation_id="validation-145",
+            semantic_use_id="semantic-use-144",
+            source_request_id="request-143",
+            source_request_lineage_id="request-lineage-143",
+            source_validation_id="source-validation-142",
+            source_validation_lineage_id="source-validation-lineage-142",
+            interpretation_id="interpretation-141",
+            read_id="read-140",
+            consumption_request_id="consumption-139",
+            requester_id="requester-A",
+            consumer_id="consumer-A",
+            handoff_target_id="handoff-target-A",
+            recipient_id="recipient-A",
+            handling_target_id="handler-A",
+            execution_target_id="executor-A",
+            signal_kind="POSITIVE",
             signal_purpose="feed-learning",
+            signal_context={"source": "execution-feedback", "features": ["stable"]},
+            signal_status="RECORDED",
+            source_signal_fingerprint="a" * 64,
+            computed_signal_fingerprint="a" * 64,
+            learner_id="learner-A",
+            eligibility_purpose="enter-future-learning",
+            status=status,
+            reasons=("learning signal integrity is VALID",),
+            lineage={"eligibility_id": "learning-eligibility-159", "integrity_id": "integrity-158"},
         )
-        integrity = LearningStateExecutionLearningSignalIntegrityService().validate(signal, integrity_id="integrity-126")
-        eligibility = LearningStateExecutionLearningEligibilityService().evaluate(
-            integrity, eligibility_id="learning-eligibility-127", learner_id="learner-A", eligibility_purpose="future-learning"
+
+    def _propose(self, eligibility=None, **kwargs):
+        params = {
+            "proposal_id": "proposal-160",
+            "proposer_id": "proposer-A",
+            "proposal_purpose": "candidate-learning",
+            "proposed_change": {"threshold": 0.95},
+        }
+        params.update(kwargs)
+        return LearningStateExecutionLearningProposalService().propose(
+            eligibility or self._make_eligibility(), **params
         )
-        if status is LearningStateExecutionLearningEligibilityStatus.REJECTED:
-            object.__setattr__(eligibility, "status", LearningStateExecutionLearningEligibilityStatus.REJECTED)
-        return eligibility
 
     def test_eligible_input_produces_proposal(self):
-        result = LearningStateExecutionLearningProposalService().propose(
-            self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-        )
+        result = self._propose()
         self.assertIs(result.status, LearningStateExecutionLearningProposalStatus.PROPOSED)
         self.assertTrue(result.is_proposed)
         self.assertFalse(result.is_rejected)
 
     def test_rejected_eligibility_fails_closed(self):
-        result = LearningStateExecutionLearningProposalService().propose(
-            self._make_eligibility(status=LearningStateExecutionLearningEligibilityStatus.REJECTED),
-            proposal_id="proposal-128", proposer_id="proposer-A", proposal_purpose="candidate-learning",
-            proposed_change={"threshold": 0.95},
-        )
+        result = self._propose(self._make_eligibility(status=LearningStateExecutionLearningEligibilityStatus.REJECTED))
         self.assertIs(result.status, LearningStateExecutionLearningProposalStatus.REJECTED)
-        self.assertTrue(result.is_rejected)
         self.assertFalse(result.is_proposed)
+        self.assertTrue(result.is_rejected)
 
     def test_exact_eligibility_type_is_required(self):
         with self.assertRaises(TypeError):
-            LearningStateExecutionLearningProposalService().propose(
-                object(), proposal_id="proposal-128", proposer_id="proposer-A",
-                proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-            )
+            self._propose(object())
+
+    def test_proposal_identity_must_be_distinct(self):
+        with self.assertRaises(ValueError):
+            self._propose(proposal_id="learning-eligibility-159")
 
     def test_required_proposal_metadata_is_enforced(self):
-        service = LearningStateExecutionLearningProposalService()
-        eligibility = self._make_eligibility()
-        cases = (
-            ("proposal_id", " "), ("proposer_id", " "), ("proposal_purpose", " "),
-        )
-        for field, value in cases:
-            kwargs = dict(proposal_id="proposal-128", proposer_id="proposer-A", proposal_purpose="candidate-learning", proposed_change={"x": 1})
-            kwargs[field] = value
-            with self.subTest(field=field), self.assertRaises(ValueError):
-                service.propose(eligibility, **kwargs)
+        for kwargs in (
+            {"proposal_id": " ", "proposer_id": "proposer-A", "proposal_purpose": "candidate-learning"},
+            {"proposal_id": "proposal-160", "proposer_id": " ", "proposal_purpose": "candidate-learning"},
+            {"proposal_id": "proposal-160", "proposer_id": "proposer-A", "proposal_purpose": " "},
+        ):
+            params = {"proposed_change": {"threshold": 0.95}}
+            params.update(kwargs)
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                self._propose(**params)
         with self.assertRaises(ValueError):
-            service.propose(
-                eligibility, proposal_id="proposal-128", proposer_id="proposer-A",
-                proposal_purpose="candidate-learning", proposed_change=None,
-            )
+            self._propose(proposed_change=None)
 
     def test_upstream_provenance_is_preserved(self):
         eligibility = self._make_eligibility()
-        result = LearningStateExecutionLearningProposalService().propose(
-            eligibility, proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-        )
+        result = self._propose(eligibility)
         for field in (
             "eligibility_id", "integrity_id", "signal_id", "evaluation_id", "feedback_id", "outcome_id",
-            "attempt_id", "admission_id", "source_integrity_id", "validation_id", "use_id", "request_id",
-            "interpretation_id", "source_request_id", "read_validation_id", "read_id", "consumption_request_id",
-            "source_validation_id", "transition_id", "evidence_id", "application_id", "state_key",
-            "transition_fingerprint", "source_application_fingerprint", "computed_application_fingerprint",
-            "confidence", "consumer_id", "execution_target_id", "execution_purpose", "objective",
-            "evaluator_id", "evaluation_purpose", "signal_kind", "signal_purpose", "learner_id", "eligibility_purpose",
+            "attempt_id", "admission_id", "eligibility_source_id", "handling_id", "consumption_id",
+            "receipt_id", "handoff_id", "inherited_integrity_id", "validation_id", "semantic_use_id",
+            "source_request_id", "source_request_lineage_id", "source_validation_id", "source_validation_lineage_id",
+            "interpretation_id", "read_id", "consumption_request_id", "requester_id", "consumer_id",
+            "handoff_target_id", "recipient_id", "handling_target_id", "execution_target_id", "signal_kind",
+            "signal_purpose", "signal_context", "signal_status", "source_signal_fingerprint",
+            "computed_signal_fingerprint", "learner_id", "eligibility_purpose",
         ):
             self.assertEqual(getattr(result, field), getattr(eligibility, field))
 
-    def test_rationale_and_lineage_are_recursively_frozen(self):
-        result = LearningStateExecutionLearningProposalService().propose(
-            self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"nested": ["x"]},
-            rationale={"why": {"score": 0.8}}, lineage={"chain": ["eligibility-127", {"source": "signal-125"}]},
+    def test_proposed_change_rationale_and_lineage_are_recursively_frozen(self):
+        result = self._propose(
+            proposed_change={"nested": ["x", {"limit": 1}]},
+            rationale={"why": {"score": 0.8}},
+            lineage={"chain": ["eligibility-159", {"source": "integrity-158"}]},
         )
         self.assertIsInstance(result.proposed_change, MappingProxyType)
-        self.assertEqual(result.proposed_change["nested"], ("x",))
+        self.assertEqual(result.proposed_change["nested"][1]["limit"], 1)
         self.assertIsInstance(result.rationale, MappingProxyType)
         self.assertIsInstance(result.lineage, MappingProxyType)
-        self.assertEqual(result.lineage["chain"][1]["source"], "signal-125")
+        self.assertIsInstance(result.lineage["chain"], tuple)
+        self.assertIsInstance(result.lineage["chain"][1], MappingProxyType)
 
     def test_source_is_not_mutated_and_artifact_is_immutable(self):
         eligibility = self._make_eligibility()
         before = eligibility.status
-        result = LearningStateExecutionLearningProposalService().propose(
-            eligibility, proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-        )
+        result = self._propose(eligibility)
         self.assertIs(eligibility.status, before)
         with self.assertRaises((AttributeError, FrozenInstanceError)):
             result.status = LearningStateExecutionLearningProposalStatus.REJECTED
+        with self.assertRaises(TypeError):
+            result.lineage["x"] = "y"
 
     def test_proposal_is_deterministic_for_same_inputs(self):
-        service = LearningStateExecutionLearningProposalService()
-        first = service.propose(
-            self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-        )
-        second = service.propose(
-            self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-        )
+        first = self._propose()
+        second = self._propose()
         self.assertEqual(first, second)
 
     def test_reasons_are_validated_and_preserved(self):
-        result = LearningStateExecutionLearningProposalService().propose(
-            self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-            reasons=("bounded-candidate",),
-        )
+        result = self._propose(reasons=("bounded-candidate",))
         self.assertEqual(result.reasons, ("bounded-candidate",))
         with self.assertRaises(TypeError):
-            LearningStateExecutionLearningProposalService().propose(
-                self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-                proposal_purpose="candidate-learning", proposed_change={"x": 1}, reasons=("ok", " "),
-            )
+            self._propose(reasons=("ok", " "))
 
     def test_proposal_has_no_decision_learning_or_authority_powers(self):
-        result = LearningStateExecutionLearningProposalService().propose(
-            self._make_eligibility(), proposal_id="proposal-128", proposer_id="proposer-A",
-            proposal_purpose="candidate-learning", proposed_change={"threshold": 0.95},
-        )
+        result = self._propose()
         for name in (
             "is_learning", "decides_learning", "authorizes_learning", "applies_learning", "proposes_adaptation",
             "establishes_truth", "establishes_correctness", "establishes_certainty", "establishes_usefulness",
