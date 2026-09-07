@@ -1,24 +1,21 @@
-"""M23.130: record a bounded application attempt from an approved learning decision."""
+"""M23.162: apply one approved learning-proposal decision without granting execution or authority."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Mapping, TYPE_CHECKING
 
-from src.core.learning_state_execution_learning_signal import LearningStateExecutionLearningSignalKind
-from src.core.learning_state_execution_learning_proposal_decision import (
-    LearningStateExecutionLearningProposalDecision,
-    LearningStateExecutionLearningProposalDecisionStatus,
-)
+if TYPE_CHECKING:
+    from src.core.learning_state_execution_learning_proposal_decision import LearningStateExecutionLearningProposalDecision
 
 
 class LearningStateExecutionLearningProposalApplicationError(RuntimeError):
-    """Raised when a learning-proposal application attempt cannot be formed safely."""
+    """Raised when bounded learning-proposal application evidence cannot be formed safely."""
 
 
 class LearningStateExecutionLearningProposalApplicationStatus(str, Enum):
-    ATTEMPTED = "ATTEMPTED"
+    APPLIED = "APPLIED"
     REJECTED = "REJECTED"
 
 
@@ -36,7 +33,7 @@ def _freeze(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class LearningStateExecutionLearningProposalApplication:
-    """Immutable evidence that an approved learning decision entered an application attempt."""
+    """Immutable evidence that an approved learning decision crossed the application boundary."""
 
     application_id: str
     decision_id: str
@@ -50,31 +47,32 @@ class LearningStateExecutionLearningProposalApplication:
     attempt_id: str
     admission_id: str
     eligibility_source_id: str
-    source_integrity_id: str
+    handling_id: str
+    consumption_id: str
+    receipt_id: str
+    handoff_id: str
+    inherited_integrity_id: str
     validation_id: str
-    use_id: str
-    request_id: str
-    interpretation_id: str
+    semantic_use_id: str
     source_request_id: str
-    read_validation_id: str
+    source_request_lineage_id: str
+    source_validation_id: str
+    source_validation_lineage_id: str
+    interpretation_id: str
     read_id: str
     consumption_request_id: str
-    source_validation_id: str
-    transition_id: str
-    evidence_id: str
-    state_key: str
-    transition_fingerprint: str
-    source_application_fingerprint: str
-    computed_application_fingerprint: str
-    confidence: float
+    requester_id: str
     consumer_id: str
+    handoff_target_id: str
+    recipient_id: str
+    handling_target_id: str
     execution_target_id: str
-    execution_purpose: str
-    objective: str
-    evaluator_id: str
-    evaluation_purpose: str
-    signal_kind: LearningStateExecutionLearningSignalKind
+    signal_kind: Any
     signal_purpose: str
+    signal_context: Any
+    signal_status: Any
+    source_signal_fingerprint: str
+    computed_signal_fingerprint: str
     learner_id: str
     eligibility_purpose: str
     proposer_id: str
@@ -96,24 +94,21 @@ class LearningStateExecutionLearningProposalApplication:
         for name in (
             "application_id", "decision_id", "proposal_id", "eligibility_id", "integrity_id", "signal_id",
             "evaluation_id", "feedback_id", "outcome_id", "attempt_id", "admission_id", "eligibility_source_id",
-            "source_integrity_id", "validation_id", "use_id", "request_id", "interpretation_id", "source_request_id",
-            "read_validation_id", "read_id", "consumption_request_id", "source_validation_id", "transition_id",
-            "evidence_id", "state_key", "transition_fingerprint", "source_application_fingerprint",
-            "computed_application_fingerprint", "consumer_id", "execution_target_id", "execution_purpose", "objective",
-            "evaluator_id", "evaluation_purpose", "signal_purpose", "learner_id", "eligibility_purpose", "proposer_id",
-            "proposal_purpose", "decision_maker_id", "decision_purpose", "applier_id", "application_purpose",
+            "handling_id", "consumption_id", "receipt_id", "handoff_id", "inherited_integrity_id", "validation_id",
+            "semantic_use_id", "source_request_id", "source_request_lineage_id", "source_validation_id",
+            "source_validation_lineage_id", "interpretation_id", "read_id", "consumption_request_id", "requester_id",
+            "consumer_id", "handoff_target_id", "recipient_id", "handling_target_id", "execution_target_id",
+            "signal_purpose", "source_signal_fingerprint", "computed_signal_fingerprint", "learner_id",
+            "eligibility_purpose", "proposer_id", "proposal_purpose", "decision_maker_id", "decision_purpose",
+            "applier_id", "application_purpose",
         ):
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)) or not 0.0 <= float(self.confidence) <= 1.0:
-            raise ValueError("confidence must be numeric and between 0.0 and 1.0")
-        for name in ("transition_fingerprint", "source_application_fingerprint", "computed_application_fingerprint"):
+        for name in ("source_signal_fingerprint", "computed_signal_fingerprint"):
             value = getattr(self, name)
             if len(value) != 64:
-                raise ValueError("learning proposal application requires SHA-256 fingerprints")
-        if not isinstance(self.signal_kind, LearningStateExecutionLearningSignalKind):
-            raise TypeError("signal_kind must be a learning-signal kind")
+                raise ValueError("learning proposal application requires SHA-256 signal fingerprints")
         if not isinstance(self.status, LearningStateExecutionLearningProposalApplicationStatus):
             raise TypeError("status must be a learning-proposal application status")
         if not isinstance(self.reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in self.reasons):
@@ -122,6 +117,7 @@ class LearningStateExecutionLearningProposalApplication:
             raise TypeError("lineage must be a mapping")
         if self.application_rationale is None:
             raise ValueError("application_rationale must be provided")
+        object.__setattr__(self, "signal_context", _freeze(self.signal_context))
         object.__setattr__(self, "proposed_change", _freeze(self.proposed_change))
         object.__setattr__(self, "proposal_rationale", _freeze(self.proposal_rationale))
         object.__setattr__(self, "decision_rationale", _freeze(self.decision_rationale))
@@ -130,8 +126,8 @@ class LearningStateExecutionLearningProposalApplication:
         object.__setattr__(self, "lineage", _freeze(self.lineage))
 
     @property
-    def is_attempted(self) -> bool:
-        return self.status is LearningStateExecutionLearningProposalApplicationStatus.ATTEMPTED
+    def is_applied(self) -> bool:
+        return self.status is LearningStateExecutionLearningProposalApplicationStatus.APPLIED
 
     @property
     def is_rejected(self) -> bool:
@@ -143,7 +139,7 @@ class LearningStateExecutionLearningProposalApplication:
 
     @property
     def applies_learning(self) -> bool:
-        return self.is_attempted
+        return False
 
     @property
     def authorizes_learning(self) -> bool:
@@ -207,11 +203,11 @@ class LearningStateExecutionLearningProposalApplication:
 
 
 class LearningStateExecutionLearningProposalApplicationService:
-    """Record an application attempt only from an explicitly approved decision."""
+    """Record application-boundary evidence only from an explicitly approved decision."""
 
     def apply(
         self,
-        decision: LearningStateExecutionLearningProposalDecision,
+        decision: "LearningStateExecutionLearningProposalDecision",
         *,
         application_id: str,
         applier_id: str,
@@ -221,31 +217,27 @@ class LearningStateExecutionLearningProposalApplicationService:
         reasons: tuple[str, ...] | None = None,
         lineage: Mapping[str, Any] | None = None,
     ) -> LearningStateExecutionLearningProposalApplication:
+        from src.core.learning_state_execution_learning_proposal_decision import (
+            LearningStateExecutionLearningProposalDecision,
+            LearningStateExecutionLearningProposalDecisionStatus,
+        )
+
         if type(decision) is not LearningStateExecutionLearningProposalDecision:
             raise TypeError("decision must be a learning-proposal decision artifact")
-        for name, value in (
-            ("application_id", application_id),
-            ("applier_id", applier_id),
-            ("application_purpose", application_purpose),
-        ):
+        for name, value in (("application_id", application_id), ("applier_id", applier_id), ("application_purpose", application_purpose)):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
         if application_rationale is None:
             raise ValueError("application_rationale must be provided")
         if reasons is not None and (not isinstance(reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in reasons)):
             raise TypeError("reasons must be a tuple of non-empty strings")
+        if application_id == decision.decision_id:
+            raise ValueError("application identity must be distinct")
 
-        attempted = decision.status is LearningStateExecutionLearningProposalDecisionStatus.APPROVED and decision.is_approved
-        final_reasons = (
-            reasons
-            if reasons is not None
-            else (("learning proposal decision is APPROVED",) if attempted else ("learning proposal decision is not APPROVED",))
-        )
-        status = (
-            LearningStateExecutionLearningProposalApplicationStatus.ATTEMPTED
-            if attempted
-            else LearningStateExecutionLearningProposalApplicationStatus.REJECTED
-        )
+        applied = decision.status is LearningStateExecutionLearningProposalDecisionStatus.APPROVED and decision.is_approved
+        final_reasons = reasons if reasons is not None else (("learning proposal decision is APPROVED",) if applied else ("learning proposal decision is not APPROVED",))
+        status = LearningStateExecutionLearningProposalApplicationStatus.APPLIED if applied else LearningStateExecutionLearningProposalApplicationStatus.REJECTED
+
         return LearningStateExecutionLearningProposalApplication(
             application_id=application_id,
             decision_id=decision.decision_id,
@@ -259,31 +251,32 @@ class LearningStateExecutionLearningProposalApplicationService:
             attempt_id=decision.attempt_id,
             admission_id=decision.admission_id,
             eligibility_source_id=decision.eligibility_source_id,
-            source_integrity_id=decision.source_integrity_id,
+            handling_id=decision.handling_id,
+            consumption_id=decision.consumption_id,
+            receipt_id=decision.receipt_id,
+            handoff_id=decision.handoff_id,
+            inherited_integrity_id=decision.inherited_integrity_id,
             validation_id=decision.validation_id,
-            use_id=decision.use_id,
-            request_id=decision.request_id,
-            interpretation_id=decision.interpretation_id,
+            semantic_use_id=decision.semantic_use_id,
             source_request_id=decision.source_request_id,
-            read_validation_id=decision.read_validation_id,
+            source_request_lineage_id=decision.source_request_lineage_id,
+            source_validation_id=decision.source_validation_id,
+            source_validation_lineage_id=decision.source_validation_lineage_id,
+            interpretation_id=decision.interpretation_id,
             read_id=decision.read_id,
             consumption_request_id=decision.consumption_request_id,
-            source_validation_id=decision.source_validation_id,
-            transition_id=decision.transition_id,
-            evidence_id=decision.evidence_id,
-            state_key=decision.state_key,
-            transition_fingerprint=decision.transition_fingerprint,
-            source_application_fingerprint=decision.source_application_fingerprint,
-            computed_application_fingerprint=decision.computed_application_fingerprint,
-            confidence=decision.confidence,
+            requester_id=decision.requester_id,
             consumer_id=decision.consumer_id,
+            handoff_target_id=decision.handoff_target_id,
+            recipient_id=decision.recipient_id,
+            handling_target_id=decision.handling_target_id,
             execution_target_id=decision.execution_target_id,
-            execution_purpose=decision.execution_purpose,
-            objective=decision.objective,
-            evaluator_id=decision.evaluator_id,
-            evaluation_purpose=decision.evaluation_purpose,
             signal_kind=decision.signal_kind,
             signal_purpose=decision.signal_purpose,
+            signal_context=decision.signal_context,
+            signal_status=decision.signal_status,
+            source_signal_fingerprint=decision.source_signal_fingerprint,
+            computed_signal_fingerprint=decision.computed_signal_fingerprint,
             learner_id=decision.learner_id,
             eligibility_purpose=decision.eligibility_purpose,
             proposer_id=decision.proposer_id,

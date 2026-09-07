@@ -2,19 +2,6 @@ import unittest
 from dataclasses import FrozenInstanceError
 from types import MappingProxyType
 
-from src.core.learning_state_execution_learning_signal import (
-    LearningStateExecutionLearningSignalKind,
-    LearningStateExecutionLearningSignalService,
-)
-from src.core.learning_state_execution_learning_signal_integrity import (
-    LearningStateExecutionLearningSignalIntegrityService,
-)
-from src.core.learning_state_execution_learning_eligibility import (
-    LearningStateExecutionLearningEligibilityService,
-)
-from src.core.learning_state_execution_learning_proposal import (
-    LearningStateExecutionLearningProposalService,
-)
 from src.core.learning_state_execution_learning_proposal_decision import (
     LearningStateExecutionLearningProposalDecisionService,
     LearningStateExecutionLearningProposalDecisionStatus,
@@ -23,175 +10,125 @@ from src.core.learning_state_execution_learning_proposal_application import (
     LearningStateExecutionLearningProposalApplicationService,
     LearningStateExecutionLearningProposalApplicationStatus,
 )
+from src.core.learning_state_execution_learning_proposal import (
+    LearningStateExecutionLearningProposal,
+    LearningStateExecutionLearningProposalStatus,
+)
 
 
-class M23_130LearningProposalApplicationTests(unittest.TestCase):
-    def _make_decision(self, *, rejected=False):
-        from src.core.learning_state_execution_evaluation import LearningStateExecutionEvaluation
-        from src.core.learning_state_execution_outcome import LearningStateExecutionOutcomeStatus
-        from src.core.learning_state_execution_feedback import LearningStateExecutionFeedbackKind
-        from src.core.learning_state_execution_learning_proposal import LearningStateExecutionLearningProposalStatus
+class M23_162LearningProposalApplicationTests(unittest.TestCase):
+    def _make_proposal(self, *, status=LearningStateExecutionLearningProposalStatus.PROPOSED):
+        return LearningStateExecutionLearningProposal(
+            proposal_id="proposal-160", eligibility_id="learning-eligibility-159", integrity_id="integrity-158",
+            signal_id="signal-157", evaluation_id="evaluation-156", feedback_id="feedback-155", outcome_id="outcome-154",
+            attempt_id="attempt-153", admission_id="admission-152", eligibility_source_id="integrity-158",
+            handling_id="handling-150", consumption_id="consumption-149", receipt_id="receipt-148", handoff_id="handoff-147",
+            inherited_integrity_id="integrity-previous", validation_id="validation-145", semantic_use_id="semantic-use-144",
+            source_request_id="request-143", source_request_lineage_id="request-lineage-143", source_validation_id="source-validation-142",
+            source_validation_lineage_id="source-validation-lineage-142", interpretation_id="interpretation-141", read_id="read-140",
+            consumption_request_id="consumption-139", requester_id="requester-A", consumer_id="consumer-A",
+            handoff_target_id="handoff-target-A", recipient_id="recipient-A", handling_target_id="handler-A", execution_target_id="executor-A",
+            signal_kind="POSITIVE", signal_purpose="feed-learning",
+            signal_context={"source": "execution-feedback", "features": ["stable", {"score": 0.9}]}, signal_status="RECORDED",
+            source_signal_fingerprint="a" * 64, computed_signal_fingerprint="a" * 64, learner_id="learner-A",
+            eligibility_purpose="enter-future-learning", proposer_id="proposer-A", proposal_purpose="candidate-learning",
+            proposed_change={"threshold": 0.95, "nested": ["stable"]}, rationale={"why": {"score": 0.8}}, status=status,
+            reasons=("learning eligibility is ELIGIBLE",), lineage={"proposal_id": "proposal-160", "eligibility_id": "learning-eligibility-159"},
+        )
 
-        evaluation = LearningStateExecutionEvaluation(
-            evaluation_id="evaluation-124", feedback_id="feedback-123", outcome_id="outcome-122",
-            attempt_id="attempt-121", admission_id="admission-120", eligibility_id="eligibility-119",
-            handling_id="handling-118", consumption_id="consumption-117", receipt_id="receipt-116",
-            handoff_id="handoff-115", integrity_id="integrity-114", validation_id="validation-113",
-            use_id="use-112", request_id="semantic-use-111", interpretation_id="interpretation-108",
-            source_request_id="request-107", read_validation_id="read-validation-106", read_id="read-105",
-            consumption_request_id="consumption-104", source_validation_id="source-validation-103",
-            source_integrity_id="source-integrity-102", transition_id="transition-98", evidence_id="evidence-97",
-            application_id="application-96", state_key="demo.state", transition_fingerprint="a" * 64,
-            source_application_fingerprint="b" * 64, computed_application_fingerprint="c" * 64, confidence=0.91,
-            consumer_id="consumer-A", use_purpose="semantic-use", downstream_recipient_id="receiver-X",
-            downstream_handler_id="handler-X", handling_purpose="route", execution_target_id="executor-X",
-            execution_purpose="perform", outcome_status=LearningStateExecutionOutcomeStatus.SUCCESS,
-            feedback_kind=LearningStateExecutionFeedbackKind.SUCCESS_FEEDBACK,
-            observed_consequence={"state": "changed"}, executor_output={"raw": "result"},
-            failure_type=None, failure_message=None, objective="reach-target", evaluator_id="evaluator-A",
-            evaluation_purpose="assess", evaluation_judgment={"score": 0.8},
-            evaluation_context={"objective": "reach-target"}, reasons={"source": "m23.124"},
-            lineage={"evaluation_id": "evaluation-124"},
-        )
-        signal = LearningStateExecutionLearningSignalService().create(
-            evaluation, signal_id="signal-125", signal_kind=LearningStateExecutionLearningSignalKind.POSITIVE,
-            signal_purpose="feed-learning",
-        )
-        integrity = LearningStateExecutionLearningSignalIntegrityService().validate(signal, integrity_id="integrity-126")
-        eligibility = LearningStateExecutionLearningEligibilityService().evaluate(
-            integrity, eligibility_id="learning-eligibility-127", learner_id="learner-A", eligibility_purpose="future-learning",
-        )
-        proposal = LearningStateExecutionLearningProposalService().propose(
-            eligibility, proposal_id="proposal-128", proposer_id="proposer-A", proposal_purpose="candidate-learning",
-            proposed_change={"threshold": 0.95}, rationale={"why": {"score": 0.8}},
-        )
-        if rejected:
-            object.__setattr__(proposal, "status", LearningStateExecutionLearningProposalStatus.REJECTED)
+    def _make_decision(self, *, proposal=None, status=None, decision_id="decision-161"):
+        proposal = proposal or self._make_proposal()
+        if status is not None:
+            proposal = self._make_proposal(status=status)
         return LearningStateExecutionLearningProposalDecisionService().decide(
-            proposal, decision_id="decision-129", decision_maker_id="decision-maker-A",
+            proposal, decision_id=decision_id, decision_maker_id="decision-maker-A",
             decision_purpose="review-candidate", decision_rationale={"basis": "bounded-review"},
         )
 
-    def test_approved_decision_enters_application_attempt(self):
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            self._make_decision(), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved-decision"},
+    def _apply(self, decision=None, **kwargs):
+        return LearningStateExecutionLearningProposalApplicationService().apply(
+            decision or self._make_decision(), application_id=kwargs.pop("application_id", "application-162"),
+            applier_id=kwargs.pop("applier_id", "applier-A"), application_purpose=kwargs.pop("application_purpose", "apply-candidate"),
+            application_rationale=kwargs.pop("application_rationale", {"basis": "approved-decision"}), **kwargs,
         )
-        self.assertIs(result.status, LearningStateExecutionLearningProposalApplicationStatus.ATTEMPTED)
-        self.assertTrue(result.is_attempted)
-        self.assertTrue(result.applies_learning)
+
+    def test_approved_decision_is_applied(self):
+        result = self._apply()
+        self.assertIs(result.status, LearningStateExecutionLearningProposalApplicationStatus.APPLIED)
+        self.assertTrue(result.is_applied)
+        self.assertFalse(result.is_learning)
+        self.assertFalse(result.authorizes_learning)
 
     def test_rejected_decision_fails_closed(self):
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            self._make_decision(rejected=True), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "rejected-decision"},
-        )
+        decision = self._make_decision(status=LearningStateExecutionLearningProposalStatus.REJECTED)
+        result = self._apply(decision)
+        self.assertIs(decision.status, LearningStateExecutionLearningProposalDecisionStatus.REJECTED)
         self.assertIs(result.status, LearningStateExecutionLearningProposalApplicationStatus.REJECTED)
         self.assertTrue(result.is_rejected)
-        self.assertFalse(result.applies_learning)
 
     def test_exact_decision_type_is_required(self):
         with self.assertRaises(TypeError):
-            LearningStateExecutionLearningProposalApplicationService().apply(
-                object(), application_id="application-130", applier_id="applier-A",
-                application_purpose="apply-approved-learning", application_rationale={"basis": "bounded"},
-            )
+            self._apply(object())
+
+    def test_application_identity_must_be_distinct(self):
+        with self.assertRaises(ValueError):
+            self._apply(application_id="decision-161")
 
     def test_required_application_metadata_is_enforced(self):
         service = LearningStateExecutionLearningProposalApplicationService()
         decision = self._make_decision()
-        for field, value in (("application_id", " "), ("applier_id", " "), ("application_purpose", " ")):
-            kwargs = dict(
-                application_id="application-130", applier_id="applier-A", application_purpose="apply-approved-learning",
-                application_rationale={"basis": "bounded"},
-            )
-            kwargs[field] = value
+        for field in ("application_id", "applier_id", "application_purpose"):
+            kwargs = {"application_id": "application-162", "applier_id": "applier-A", "application_purpose": "apply-candidate", "application_rationale": {"basis": "approved"}}
+            kwargs[field] = " "
             with self.subTest(field=field), self.assertRaises(ValueError):
                 service.apply(decision, **kwargs)
         with self.assertRaises(ValueError):
-            service.apply(
-                decision, application_id="application-130", applier_id="applier-A",
-                application_purpose="apply-approved-learning", application_rationale=None,
-            )
+            service.apply(decision, application_id="application-162", applier_id="applier-A", application_purpose="apply-candidate", application_rationale=None)
 
-    def test_provenance_and_fingerprints_are_preserved(self):
+    def test_upstream_provenance_is_preserved(self):
         decision = self._make_decision()
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            decision, application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-        )
+        result = self._apply(decision)
         for field in (
-            "decision_id", "proposal_id", "eligibility_id", "integrity_id", "signal_id", "evaluation_id", "feedback_id",
-            "outcome_id", "attempt_id", "admission_id", "eligibility_source_id", "source_integrity_id", "validation_id",
-            "use_id", "request_id", "interpretation_id", "source_request_id", "read_validation_id", "read_id",
-            "consumption_request_id", "source_validation_id", "transition_id", "evidence_id", "state_key",
-            "transition_fingerprint", "source_application_fingerprint", "computed_application_fingerprint", "confidence",
-            "consumer_id", "execution_target_id", "execution_purpose", "objective", "evaluator_id", "evaluation_purpose",
-            "signal_kind", "signal_purpose", "learner_id", "eligibility_purpose", "proposer_id", "proposal_purpose",
-            "decision_maker_id", "decision_purpose", "decision_rationale", "proposed_change", "proposal_rationale",
+            "decision_id", "proposal_id", "eligibility_id", "integrity_id", "signal_id", "evaluation_id", "feedback_id", "outcome_id",
+            "attempt_id", "admission_id", "eligibility_source_id", "handling_id", "consumption_id", "receipt_id", "handoff_id",
+            "inherited_integrity_id", "validation_id", "semantic_use_id", "source_request_id", "source_request_lineage_id",
+            "source_validation_id", "source_validation_lineage_id", "interpretation_id", "read_id", "consumption_request_id",
+            "requester_id", "consumer_id", "handoff_target_id", "recipient_id", "handling_target_id", "execution_target_id",
+            "signal_kind", "signal_purpose", "signal_context", "signal_status", "source_signal_fingerprint", "computed_signal_fingerprint",
+            "learner_id", "eligibility_purpose", "proposer_id", "proposal_purpose", "proposed_change", "proposal_rationale",
+            "decision_maker_id", "decision_purpose", "decision_rationale",
         ):
             self.assertEqual(getattr(result, field), getattr(decision, field))
 
-    def test_application_evidence_and_lineage_are_recursively_frozen(self):
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            self._make_decision(), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": ["approved", {"score": 0.9}]},
-            application_evidence={"result": [{"state": "candidate"}]},
-            lineage={"chain": ["decision-129", {"source": "proposal-128"}]},
-        )
+    def test_application_rationale_evidence_and_lineage_are_recursively_frozen(self):
+        result = self._apply(application_rationale={"basis": ["approved", {"score": 0.9}]}, application_evidence={"checks": [{"name": "decision"}]}, lineage={"chain": ["decision-161", {"source": "proposal-160"}]})
         self.assertIsInstance(result.application_rationale, MappingProxyType)
-        self.assertEqual(result.application_rationale["basis"][1]["score"], 0.9)
         self.assertIsInstance(result.application_evidence, MappingProxyType)
+        self.assertEqual(result.application_rationale["basis"], ("approved", MappingProxyType({"score": 0.9})))
         self.assertIsInstance(result.lineage, MappingProxyType)
         self.assertIsInstance(result.lineage["chain"], tuple)
 
-    def test_source_decision_is_not_mutated_and_artifact_is_immutable(self):
+    def test_source_is_not_mutated_and_artifact_is_immutable(self):
         decision = self._make_decision()
         before = decision.status
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            decision, application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-        )
+        result = self._apply(decision)
         self.assertIs(decision.status, before)
         with self.assertRaises((AttributeError, FrozenInstanceError)):
             result.status = LearningStateExecutionLearningProposalApplicationStatus.REJECTED
+        with self.assertRaises(TypeError):
+            result.lineage["x"] = "y"
 
     def test_application_is_deterministic_for_same_inputs(self):
-        service = LearningStateExecutionLearningProposalApplicationService()
-        first = service.apply(
-            self._make_decision(), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-        )
-        second = service.apply(
-            self._make_decision(), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-        )
+        first = self._apply()
+        second = self._apply()
         self.assertEqual(first, second)
 
-    def test_reasons_are_validated_and_preserved(self):
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            self._make_decision(), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-            reasons=("approval-present",),
-        )
-        self.assertEqual(result.reasons, ("approval-present",))
-        with self.assertRaises(TypeError):
-            LearningStateExecutionLearningProposalApplicationService().apply(
-                self._make_decision(), application_id="application-130", applier_id="applier-A",
-                application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-                reasons=("ok", " "),
-            )
-
-    def test_application_has_no_execution_or_external_authority_powers(self):
-        result = LearningStateExecutionLearningProposalApplicationService().apply(
-            self._make_decision(), application_id="application-130", applier_id="applier-A",
-            application_purpose="apply-approved-learning", application_rationale={"basis": "approved"},
-        )
+    def test_application_has_no_learning_or_authority_powers(self):
+        result = self._apply()
         for name in (
-            "authorizes_execution", "authorizes_retry", "invokes_executor", "schedules_work", "plans_work",
-            "authorizes_learning", "invokes_learner", "updates_model", "mutates_memory", "mutates_policy",
-            "establishes_truth", "establishes_correctness", "establishes_certainty", "establishes_usefulness",
-            "proposes_adaptation",
+            "is_learning", "applies_learning", "authorizes_learning", "proposes_adaptation", "authorizes_execution",
+            "authorizes_retry", "invokes_learner", "updates_model", "mutates_memory", "mutates_policy", "invokes_executor",
+            "schedules_work", "plans_work", "establishes_truth", "establishes_correctness", "establishes_certainty", "establishes_usefulness",
         ):
             self.assertFalse(getattr(result, name))
 
