@@ -1,7 +1,7 @@
 # Decision 139 — Learning Eligibility Boundary
 
 ## Status
-IMPLEMENTED / PENDING LOCAL VERIFICATION
+IMPLEMENTED / VERIFIED LOCALLY
 
 ## Parent
 `a660b9645046044dd4b9bd95f9b8dbce7d5de8cb` — M23.126 Learning Signal Integrity Boundary (sealed VERIFIED LOCALLY).
@@ -46,10 +46,15 @@ M23.127 makes the learning entry condition explicit: a structurally valid learni
 ## Architecture
 `Outcome → Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Learning Eligibility → Proposal → Decision → Application → Application Integrity → Learning-State Evidence → Learning-State Transition → Transition Integrity → Learning-State Validation → Consumption Request → Durable-State Read Consumption → Consumption Read Validation → Interpretation Request → Learning-State Interpretation → Interpretation Validation → Interpretation Validation Integrity → Semantic Use Request → Semantic Use → Semantic Use Validation → Semantic Use Integrity → Semantic Use Handoff → Semantic Use Receipt → Semantic Use Consumption → Downstream Semantic Handling → Execution Eligibility → Execution Admission / Authorization → Execution Attempt → Execution Outcome → Execution Feedback → Evaluation → Learning Signal → Learning Signal Integrity → Learning Eligibility`
 
-## Verification Plan
-Focused tests cover exact source type, required identifiers, explicit learner metadata, VALID/INVALID integrity handling, fail-closed rejection, provenance and fingerprint preservation, caller reason preservation, recursive immutability, source non-mutation, deterministic construction, eligibility semantics, and absence of learning, adaptation, truth, authority, retry, execution, scheduling, planning, model, memory, or policy powers.
+## Verification
+- M23.127 focused: 11/11 passed
+- M23.126 focused: 15/15 passed
+- M23.125 focused: 13/13 passed
+- M23.124 focused: 12/12 passed
 
-Local verification will be recorded here after the focused and core regression suites pass.
+Focused coverage includes exact source type, required identifiers, explicit learner metadata, VALID/INVALID integrity handling, fail-closed rejection, provenance and fingerprint preservation, caller reason preservation, recursive immutability, source non-mutation, deterministic construction, eligibility semantics, and absence of learning, adaptation, truth, authority, retry, execution, scheduling, planning, model, memory, or policy powers.
+
+The full repository discovery run currently has unrelated pre-existing failures outside this milestone's three files, including database bootstrap/environment errors and legacy filesystem error-code expectations.
 
 No merge is implied by this decision.
 
