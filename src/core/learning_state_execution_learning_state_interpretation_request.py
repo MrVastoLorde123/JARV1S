@@ -239,7 +239,7 @@ class LearningStateExecutionLearningStateInterpretationRequestService:
         )
         return LearningStateExecutionLearningStateInterpretationRequest(
             request_id=request_id,
-            source_validation_id=validation.validation_id,
+            source_validation_id=validation.source_validation_id,
             read_id=validation.read_id,
             consumption_request_id=validation.consumption_request_id,
             integrity_id=validation.integrity_id,
