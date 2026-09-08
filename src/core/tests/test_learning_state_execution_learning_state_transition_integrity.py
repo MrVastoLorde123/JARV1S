@@ -33,7 +33,7 @@ class M23_166LearningStateTransitionIntegrityTests(unittest.TestCase):
         return LearningStateExecutionLearningStateTransition(
             transition_id=transition_id, evidence_id="evidence-164", integrity_id="application-integrity-163",
             application_id="application-162", decision_id="decision-161", proposal_id="proposal-160", eligibility_id="eligibility-159",
-            source_integrity_id="integrity-158", signal_id="signal-157", evaluation_id="evaluation-156", feedback_id="feedback-155",
+            source_integrity_id="integrity-158", source_application_fingerprint="b" * 64, computed_application_fingerprint="c" * 64, signal_id="signal-157", evaluation_id="evaluation-156", feedback_id="feedback-155",
             outcome_id="outcome-154", attempt_id="attempt-153", admission_id="admission-152", eligibility_source_id="integrity-151",
             handling_id="handling-150", consumption_id="consumption-149", receipt_id="receipt-148", handoff_id="handoff-147",
             inherited_integrity_id="integrity-146", validation_id="validation-145", semantic_use_id="semantic-use-144",

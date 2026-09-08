@@ -215,7 +215,7 @@ class LearningStateExecutionLearningStateSemanticUseService:
         if request.status is not LearningStateExecutionLearningStateSemanticUseRequestStatus.REQUESTED:
             checks.append("semantic-use request is not REQUESTED")
         if semantic_use_id == request.request_id:
-            checks.append("semantic-use identity must be distinct from request")
+            checks.append("semantic-use identity must be distinct")
         lineage_request_id = request.lineage.get("request_id", request.request_id)
         lineage_integrity_id = request.lineage.get("integrity_id", request.integrity_id)
         lineage_validation_id = request.lineage.get("validation_id", request.validation_id)

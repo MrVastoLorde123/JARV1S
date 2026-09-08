@@ -244,7 +244,7 @@ class LearningStateExecutionLearningStateInterpretationService:
         lineage_consumption_request_id = request.lineage.get("consumption_request_id", request.consumption_request_id)
         if lineage_request_id != request.request_id:
             checks.append("interpretation request lineage mismatch")
-        if not isinstance(lineage_validation_id, str) or not lineage_validation_id.strip():
+        if lineage_validation_id != request.validation_id:
             checks.append("source validation lineage mismatch")
         if lineage_read_id != request.read_id:
             checks.append("read lineage mismatch")

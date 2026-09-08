@@ -60,6 +60,7 @@ class LearningStateExecutionLearningStateDurableReadConsumption:
     integrity_id: str
     transition_id: str
     evidence_id: str
+    source_validation_id: str
     state_key: str
     requested_scope: Any
     read_payload: Any
@@ -277,6 +278,7 @@ class LearningStateExecutionLearningStateDurableReadConsumptionService:
             integrity_id=request.integrity_id,
             transition_id=request.transition_id,
             evidence_id=request.evidence_id,
+            source_validation_id=request.source_validation_id,
             state_key=request.state_key,
             requested_scope=request.requested_scope,
             read_payload=payload,

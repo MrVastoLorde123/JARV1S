@@ -74,6 +74,8 @@ class LearningStateExecutionLearningStateTransition:
     proposal_id: str
     eligibility_id: str
     source_integrity_id: str
+    source_application_fingerprint: str
+    computed_application_fingerprint: str
     signal_id: str
     evaluation_id: str
     feedback_id: str
@@ -139,7 +141,8 @@ class LearningStateExecutionLearningStateTransition:
     def __post_init__(self) -> None:
         required_strings = (
             "transition_id", "evidence_id", "integrity_id", "application_id", "decision_id", "proposal_id", "eligibility_id",
-            "source_integrity_id", "signal_id", "evaluation_id", "feedback_id", "outcome_id", "attempt_id", "admission_id",
+            "source_integrity_id", "source_application_fingerprint", "computed_application_fingerprint",
+            "signal_id", "evaluation_id", "feedback_id", "outcome_id", "attempt_id", "admission_id",
             "eligibility_source_id", "handling_id", "consumption_id", "receipt_id", "handoff_id", "inherited_integrity_id",
             "validation_id", "semantic_use_id", "source_request_id", "source_request_lineage_id", "source_validation_id",
             "source_validation_lineage_id", "interpretation_id", "read_id", "consumption_request_id", "requester_id", "consumer_id",
@@ -152,7 +155,13 @@ class LearningStateExecutionLearningStateTransition:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        for name in ("source_signal_fingerprint", "computed_signal_fingerprint", "transition_fingerprint"):
+        for name in (
+            "source_signal_fingerprint",
+            "computed_signal_fingerprint",
+            "source_application_fingerprint",
+            "computed_application_fingerprint",
+            "transition_fingerprint",
+        ):
             if len(getattr(self, name)) != 64:
                 raise ValueError("learning-state transition requires SHA-256 fingerprints")
         if not isinstance(self.status, LearningStateExecutionLearningStateTransitionStatus):
@@ -335,6 +344,8 @@ class LearningStateExecutionLearningStateTransitionService:
             proposal_id=evidence.proposal_id,
             eligibility_id=evidence.eligibility_id,
             source_integrity_id=evidence.source_integrity_id,
+            source_application_fingerprint=evidence.source_application_fingerprint,
+            computed_application_fingerprint=evidence.computed_application_fingerprint,
             signal_id=evidence.signal_id,
             evaluation_id=evidence.evaluation_id,
             feedback_id=evidence.feedback_id,

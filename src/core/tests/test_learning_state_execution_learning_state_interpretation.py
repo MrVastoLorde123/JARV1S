@@ -99,18 +99,18 @@ class M23_140LearningStateInterpretationTests(unittest.TestCase):
         self.assertIn("interpretation identity must be distinct from source validation identity", result.reasons)
 
     def test_request_lineage_is_checked_fail_closed(self):
-        request = self._make_request(lineage={"request_id": "tampered", "validation_id": "read-validation-138", "read_id": "read-137", "consumption_request_id": "consume-136"})
+        request = self._make_request(lineage={"request_id": "tampered", "validation_id": "read-validation-138", "read_id": "read-137", "consumption_request_id": "consumption-request-136"})
         result = self._interpret(request)
         self.assertIs(result.status, LearningStateExecutionLearningStateInterpretationStatus.REJECTED)
         self.assertIn("interpretation request lineage mismatch", result.reasons)
 
     def test_validation_lineage_is_checked_fail_closed(self):
-        request = self._make_request(lineage={"request_id": "interpretation-request-139", "validation_id": "tampered", "read_id": "read-137", "consumption_request_id": "consume-136"})
+        request = self._make_request(lineage={"request_id": "interpretation-request-139", "validation_id": "tampered", "read_id": "read-137", "consumption_request_id": "consumption-request-136"})
         result = self._interpret(request)
         self.assertIn("source validation lineage mismatch", result.reasons)
 
     def test_read_lineage_is_checked_fail_closed(self):
-        request = self._make_request(lineage={"request_id": "interpretation-request-139", "validation_id": "read-validation-138", "read_id": "tampered", "consumption_request_id": "consume-136"})
+        request = self._make_request(lineage={"request_id": "interpretation-request-139", "validation_id": "read-validation-138", "read_id": "tampered", "consumption_request_id": "consumption-request-136"})
         result = self._interpret(request)
         self.assertIn("read lineage mismatch", result.reasons)
 

@@ -91,6 +91,52 @@ class LearningStateExecutionLearningStateTransitionIntegrity:
     reasons: tuple[str, ...]
     lineage: Mapping[str, Any]
     status: LearningStateExecutionLearningStateTransitionIntegrityStatus
+    validation_id: Any = None
+    validator_id: Any = None
+    validation_purpose: Any = None
+    validation_rationale: Any = None
+    signal_id: Any = None
+    evaluation_id: Any = None
+    feedback_id: Any = None
+    outcome_id: Any = None
+    attempt_id: Any = None
+    admission_id: Any = None
+    use_id: Any = None
+    request_id: Any = None
+    interpretation_id: Any = None
+    source_request_id: Any = None
+    read_validation_id: Any = None
+    read_id: Any = None
+    consumption_request_id: Any = None
+    source_validation_id: Any = None
+    source_application_fingerprint: Any = None
+    computed_application_fingerprint: Any = None
+    confidence: Any = None
+    consumer_id: Any = None
+    execution_target_id: Any = None
+    execution_purpose: Any = None
+    objective: Any = None
+    evaluator_id: Any = None
+    evaluation_purpose: Any = None
+    signal_kind: Any = None
+    signal_purpose: Any = None
+    learner_id: Any = None
+    eligibility_purpose: Any = None
+    proposer_id: Any = None
+    proposal_purpose: Any = None
+    proposal_rationale: Any = None
+    decision_maker_id: Any = None
+    decision_purpose: Any = None
+    decision_rationale: Any = None
+    applier_id: Any = None
+    application_purpose: Any = None
+    application_rationale: Any = None
+    application_evidence: Any = None
+    application_status: Any = None
+    evidence_collector_id: Any = None
+    evidence_purpose: Any = None
+    evidence_rationale: Any = None
+    evidence_payload: Any = None
 
     def __post_init__(self) -> None:
         for name in (

@@ -294,7 +294,7 @@ class LearningStateExecutionLearningStateConsumptionReadValidationService:
             validation_id=validation_id,
             read_id=read.read_id,
             consumption_request_id=read.consumption_request_id,
-            source_validation_id=read.validation_id,
+            source_validation_id=read.source_validation_id,
             integrity_id=read.integrity_id,
             transition_id=read.transition_id,
             evidence_id=read.evidence_id,

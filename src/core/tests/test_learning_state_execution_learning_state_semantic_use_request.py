@@ -21,7 +21,7 @@ class M23_143LearningStateSemanticUseRequestTests(unittest.TestCase):
             "integrity_id": "interpretation-validation-integrity-142",
             "validation_id": "interpretation-validation-141",
             "interpretation_id": "interpretation-140",
-            "request_id": "interpretation-request-139",
+            "request_id": "consumption-request-136",
             "source_request_id": "consumption-request-136",
             "source_validation_id": "consumption-validation-138",
             "read_id": "durable-read-137",

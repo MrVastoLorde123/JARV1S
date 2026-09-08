@@ -1,4 +1,4 @@
-"""M23.164: record bounded learning-state evidence without transitioning or mutating state."""
+﻿"""M23.164: record bounded learning-state evidence without transitioning or mutating state."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -42,6 +42,8 @@ class LearningStateExecutionLearningStateEvidence:
     proposal_id: str
     eligibility_id: str
     source_integrity_id: str
+    source_application_fingerprint: str
+    computed_application_fingerprint: str
     signal_id: str
     evaluation_id: str
     feedback_id: str
@@ -100,7 +102,8 @@ class LearningStateExecutionLearningStateEvidence:
     def __post_init__(self) -> None:
         required_strings = (
             "evidence_id", "integrity_id", "application_id", "decision_id", "proposal_id", "eligibility_id",
-            "source_integrity_id", "signal_id", "evaluation_id", "feedback_id", "outcome_id", "attempt_id",
+            "source_integrity_id", "source_application_fingerprint", "computed_application_fingerprint",
+            "signal_id", "evaluation_id", "feedback_id", "outcome_id", "attempt_id",
             "admission_id", "eligibility_source_id", "handling_id", "consumption_id", "receipt_id", "handoff_id",
             "inherited_integrity_id", "validation_id", "semantic_use_id", "source_request_id", "source_request_lineage_id",
             "source_validation_id", "source_validation_lineage_id", "interpretation_id", "read_id", "consumption_request_id",
@@ -112,9 +115,14 @@ class LearningStateExecutionLearningStateEvidence:
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be a non-empty string")
-        for name in ("source_signal_fingerprint", "computed_signal_fingerprint"):
+        for name in (
+            "source_signal_fingerprint",
+            "computed_signal_fingerprint",
+            "source_application_fingerprint",
+            "computed_application_fingerprint",
+        ):
             if len(getattr(self, name)) != 64:
-                raise ValueError("learning-state evidence requires SHA-256 signal fingerprints")
+                raise ValueError("learning-state evidence requires SHA-256 fingerprints")
         if not isinstance(self.status, LearningStateExecutionLearningStateEvidenceStatus):
             raise TypeError("status must be a learning-state evidence status")
         if not isinstance(self.reasons, tuple) or not all(isinstance(reason, str) and reason.strip() for reason in self.reasons):
@@ -283,6 +291,8 @@ class LearningStateExecutionLearningStateEvidenceService:
             proposal_id=integrity.proposal_id,
             eligibility_id=integrity.eligibility_id,
             source_integrity_id=integrity.source_integrity_id,
+            source_application_fingerprint=integrity.source_application_fingerprint,
+            computed_application_fingerprint=integrity.computed_application_fingerprint,
             signal_id=integrity.signal_id,
             evaluation_id=integrity.evaluation_id,
             feedback_id=integrity.feedback_id,

@@ -38,6 +38,7 @@ class LearningStateExecutionLearningStateInterpretationRequest:
     """Immutable evidence that interpretation was explicitly requested for validated read evidence."""
 
     request_id: str
+    validation_id: str
     source_validation_id: str
     read_id: str
     consumption_request_id: str
@@ -62,7 +63,7 @@ class LearningStateExecutionLearningStateInterpretationRequest:
 
     def __post_init__(self) -> None:
         for name in (
-            "request_id", "source_validation_id", "read_id", "consumption_request_id", "integrity_id",
+            "request_id", "validation_id", "source_validation_id", "read_id", "consumption_request_id", "integrity_id",
             "transition_id", "evidence_id", "state_key", "read_fingerprint", "computed_read_fingerprint",
             "reader_id", "read_purpose", "requester_id", "interpretation_purpose",
         ):
@@ -239,6 +240,7 @@ class LearningStateExecutionLearningStateInterpretationRequestService:
         )
         return LearningStateExecutionLearningStateInterpretationRequest(
             request_id=request_id,
+            validation_id=validation.validation_id,
             source_validation_id=validation.source_validation_id,
             read_id=validation.read_id,
             consumption_request_id=validation.consumption_request_id,
