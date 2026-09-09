@@ -24,19 +24,12 @@ function emit(title: string, detail: string, kind = 'system'): JarvisActivityEve
 }
 function refresh() {
   tick += 1;
-  const phases: Array<{
-    mode: JarvisSnapshot['mode'];
-    activity: JarvisSnapshot['cognitiveActivity'];
-    focus: string;
-    caps: number;
-    sources: number;
-    attention: boolean;
-  }> = [
-    { mode: 'Monitoring', activity: 'MEDIUM', focus: 'Repository state and runtime signals', caps: 3, sources: 2, attention: false },
-    { mode: 'Thinking', activity: 'HIGH', focus: 'Interface architecture and system model', caps: 3, sources: 4, attention: false },
-    { mode: 'Working', activity: 'HIGH', focus: 'M27 interface evolution', caps: 4, sources: 5, attention: true },
-    { mode: 'Learning', activity: 'MEDIUM', focus: 'Understanding user workflow patterns', caps: 4, sources: 3, attention: false },
-    { mode: 'Waiting', activity: 'LOW', focus: 'Standing by for direction', caps: 3, sources: 1, attention: false },
+  const phases = [
+    { mode: 'Monitoring' as const, activity: 'MEDIUM' as const, focus: 'Repository state and runtime signals', caps: 3, sources: 2, attention: false },
+    { mode: 'Thinking' as const, activity: 'HIGH' as const, focus: 'Interface architecture and system model', caps: 3, sources: 4, attention: false },
+    { mode: 'Working' as const, activity: 'HIGH' as const, focus: 'M27 interface evolution', caps: 4, sources: 5, attention: true },
+    { mode: 'Learning' as const, activity: 'MEDIUM' as const, focus: 'Understanding user workflow patterns', caps: 4, sources: 3, attention: false },
+    { mode: 'Waiting' as const, activity: 'LOW' as const, focus: 'Standing by for direction', caps: 3, sources: 1, attention: false },
   ];
   const phase = phases[tick % phases.length];
   snapshot = {
@@ -63,9 +56,19 @@ export const demoGateway: JarvisGateway & { snapshotSync: () => JarvisSnapshot }
   async snapshot() { snapshot.uptime = uptimeLabel(); return structuredClone(snapshot); },
   snapshotSync() { snapshot.uptime = uptimeLabel(); return structuredClone(snapshot); },
   async submit(command: JarvisCommand) {
+    const lower = command.text.toLowerCase();
+    const control = lower.includes('pause current work') ? 'PAUSED' : lower.includes('resume current work') ? 'RUNNING' : snapshot.workRuntime.state;
     const event = emit('Command received', `JARVIS recorded: “${command.text}”`, 'command');
-    snapshot = { ...snapshot, currentFocus: command.text.slice(0, 72), mode: 'Thinking', cognitiveActivity: 'HIGH', attentionRequired: false, attentionReason: 'JARVIS is processing the current request.' };
-    window.setTimeout(() => emit('Response cycle complete', 'Command returned to the conversational workspace.', 'response'), 900);
+    snapshot = {
+      ...snapshot,
+      currentFocus: command.text.slice(0, 72),
+      mode: control === 'PAUSED' ? 'Waiting' : 'Thinking',
+      cognitiveActivity: control === 'PAUSED' ? 'LOW' : 'HIGH',
+      attentionRequired: false,
+      attentionReason: control === 'PAUSED' ? 'Work execution is paused for additional user guidance.' : 'JARVIS is processing the current request.',
+      workRuntime: { state: control, detail: control === 'PAUSED' ? 'Execution is held until the user resumes.' : 'Execution may continue under the current guidance.', lastCommand: command.text },
+    };
+    if (control !== 'PAUSED') window.setTimeout(() => emit('Response cycle complete', 'Command returned to the conversational workspace.', 'response'), 900);
     return event;
   },
   subscribe(_sessionId, onEvent) { listeners.add(onEvent); return () => listeners.delete(onEvent); },
