@@ -1,0 +1,65 @@
+/* Functional surface layer for M27.9. Existing visual language remains intact. */
+.chat-toolbox { margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.06); }
+.history-box { flex: 1; min-height: 120px; overflow: auto; }
+.history-item,.workspace-item,.research-topic,.plan-item,.project-select { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; color: inherit; }
+.history-item { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 9px 7px; border-radius: 9px; }
+.history-item:hover,.workspace-item:hover,.research-topic:hover,.plan-item:hover,.project-select:hover { background: rgba(255,255,255,.035); }
+.history-item b,.workspace-item b,.research-topic b,.plan-item b { font-size: 11px; font-weight: 500; }
+.history-item small,.workspace-item small,.research-topic small,.plan-item small { color: #667791; font: 8px 'Space Mono',monospace; }
+.history-item span { grid-column: 1 / -1; color: #71819a; font-size: 10px; line-height: 1.4; }
+.history-empty { padding: 10px 7px; color:#596981; font:9px 'Space Mono',monospace; }
+.workspace-item { display:block; padding: 9px 7px; border-radius: 9px; }
+.workspace-item.selected,.research-topic.selected { background: rgba(111,157,246,.075); box-shadow: inset 0 0 0 1px rgba(115,161,244,.1); }
+.workspace-project-link { margin-top: 10px; padding: 10px 7px; border-top: 1px solid rgba(255,255,255,.05); }
+.workspace-project-link span { display:block; color:#596b84; font:8px 'Space Mono',monospace; letter-spacing:.11em; }
+.workspace-project-link button { border:0; background:none; padding:5px 0 0; color:#b7c7df; cursor:pointer; font-size:11px; }
+.research-topic { display:block; padding:9px 7px; border-radius:9px; }
+.research-topic small { display:block; margin-top:4px; }
+.plan-item { display:block; padding:10px 7px; border-radius:9px; }
+.plan-item small { display:block; margin-top:4px; }
+.soft-action,.primary-action,.control-toggle { border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.045); border-radius:10px; color:#b8cae5; cursor:pointer; }
+.soft-action { margin-top:9px; padding:8px 10px; width:100%; font:9px 'Space Mono',monospace; }
+.primary-action { padding:9px 12px; font:9px 'Space Mono',monospace; }
+.special-surface { flex:1; padding:20px; overflow:auto; }
+.workspace-banner,.research-command,.planning-command { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; padding-bottom:18px; border-bottom:1px solid rgba(255,255,255,.06); }
+.surface-label { color:#5f7089; font:8px 'Space Mono',monospace; letter-spacing:.15em; }
+.workspace-banner h2,.research-command h2,.planning-command h2 { margin:7px 0 5px; font-size:23px; font-weight:500; }
+.workspace-banner p,.research-command p,.planning-command p { margin:0; color:#71819a; font-size:11px; line-height:1.5; }
+.surface-state { flex:none; padding:7px 9px; border:1px solid rgba(116,168,255,.12); border-radius:999px; color:#8fb0e8; font:8px 'Space Mono',monospace; letter-spacing:.08em; }
+.workspace-grid,.research-board,.plan-board,.project-detail-grid,.device-grid,.mind-thinking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:16px; }
+.surface-card,.research-card,.plan-card { border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.022); border-radius:15px; padding:15px; }
+.surface-card > span,.research-card-top > span,.plan-card-top > span,.automation-label { color:#667791; font:8px 'Space Mono',monospace; letter-spacing:.13em; }
+.surface-card b,.research-card h3,.plan-card h3 { display:block; margin:8px 0 6px; font-size:14px; font-weight:500; }
+.surface-card p,.research-card p { margin:0; color:#73849d; font-size:11px; line-height:1.5; }
+.research-card-top,.plan-card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.research-card-top button { border:0; background:none; color:#a3bce8; cursor:pointer; font:8px 'Space Mono',monospace; }
+.research-footer { margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,.05); display:grid; gap:5px; }
+.research-footer span { color:#5f7089; font:8px 'Space Mono',monospace; }
+.research-footer b { color:#b0bfd5; font-size:10px; font-weight:400; line-height:1.4; }
+.thinking-lane { margin-top:14px; padding:13px 15px; border-left:2px solid rgba(115,166,255,.18); background:rgba(96,142,233,.035); }
+.thinking-lane span { color:#7183a0; font:8px 'Space Mono',monospace; letter-spacing:.13em; }
+.thinking-lane b { display:block; margin-top:6px; color:#aebed5; font-size:11px; font-weight:400; line-height:1.5; }
+.automation-label { margin:8px 0 6px; color:#7d9fd4; }
+.plan-step { display:flex; gap:9px; align-items:center; padding:8px 0; border-top:1px solid rgba(255,255,255,.04); color:#7788a0; font-size:10px; }
+.plan-step span { width:18px; height:18px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.08); border-radius:50%; color:#6e7f98; font:8px 'Space Mono',monospace; }
+.plan-step.current { color:#d4e1f4; }.plan-step.current span{border-color:rgba(115,165,255,.25);color:#99baf0}
+.work-control-head { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+.control-toggle { padding:10px 13px; min-width:104px; font:9px 'Space Mono',monospace; letter-spacing:.08em; }
+.control-toggle span { display:inline-block; width:6px; height:6px; margin-right:7px; border-radius:50%; background:#72d6a1; box-shadow:0 0 10px rgba(114,214,161,.45); }
+.control-toggle.paused span { background:#e5ad57; box-shadow:0 0 10px rgba(229,173,87,.45); }
+.project-control-layout { display:grid; grid-template-columns:260px 1fr; gap:14px; margin-top:18px; }
+.project-list { display:flex; flex-direction:column; gap:7px; }
+.project-select { padding:12px; border:1px solid rgba(255,255,255,.05); border-radius:12px; background:rgba(255,255,255,.018); }
+.project-select.active { border-color:rgba(115,165,255,.16); background:rgba(98,145,236,.055); }
+.project-select span { display:block; color:#657791; font:8px 'Space Mono',monospace; }
+.project-select b { display:block; margin:6px 0; font-size:12px; font-weight:500; }
+.project-select small { color:#73839b; font:8px 'Space Mono',monospace; line-height:1.4; }
+.project-detail { min-width:0; }
+.work-runtime { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:17px; margin-bottom:14px; border:1px solid rgba(255,255,255,.06); border-radius:15px; background:rgba(255,255,255,.02); }
+.work-runtime strong { display:block; margin:6px 0 4px; font-size:19px; font-weight:500; }.work-runtime p { margin:0; color:#71819b; font-size:10px; line-height:1.4; }
+.device-overview,.model-overview { min-height:175px; }
+.device-grid { margin:0; padding:0 20px 18px; }.device-grid div { padding:11px 0; border-top:1px solid rgba(255,255,255,.05); }.device-grid span { display:block; color:#5d6f88; font:8px 'Space Mono',monospace; }.device-grid b { display:block; margin-top:5px; color:#b9c8dc; font-size:11px; font-weight:400; }
+.model-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:11px 20px; border-top:1px solid rgba(255,255,255,.05); }.model-row b{display:block;font-size:11px;font-weight:500}.model-row span{display:block;margin-top:4px;color:#687a93;font:8px 'Space Mono',monospace}.model-row strong{color:#718fbf;font:8px 'Space Mono',monospace}
+.expansion-rail,.self-expansion { margin-top:14px; padding:15px; border:1px dashed rgba(255,255,255,.08); border-radius:14px; background:rgba(255,255,255,.018); }.expansion-rail span,.self-expansion span{display:block;color:#60718b;font:8px 'Space Mono',monospace;letter-spacing:.14em}.expansion-rail b,.self-expansion b{display:block;margin-top:8px;font-size:12px;font-weight:500}.expansion-rail p,.self-expansion p{margin:7px 0 0;color:#71819a;font-size:10px;line-height:1.5}
+@media (max-width:1050px){.project-control-layout{grid-template-columns:1fr}.project-list{display:grid;grid-template-columns:repeat(2,1fr)}.device-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:760px){.workspace-grid,.research-board,.plan-board,.project-detail-grid,.device-grid,.mind-thinking-grid{grid-template-columns:1fr}.workspace-banner,.research-command,.planning-command,.work-control-head{flex-direction:column}.project-list{grid-template-columns:1fr}.special-surface{padding:15px}.work-runtime{align-items:flex-start;flex-direction:column}}
