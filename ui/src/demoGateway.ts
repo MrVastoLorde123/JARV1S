@@ -24,15 +24,34 @@ function emit(title: string, detail: string, kind = 'system'): JarvisActivityEve
 }
 function refresh() {
   tick += 1;
-  const phases = [
-    { mode: 'Monitoring' as const, activity: 'MEDIUM' as const, focus: 'Repository state and runtime signals', caps: 3, sources: 2, attention: 0 },
-    { mode: 'Thinking' as const, activity: 'HIGH' as const, focus: 'Interface architecture and system model', caps: 3, sources: 4, attention: 0 },
-    { mode: 'Working' as const, activity: 'HIGH' as const, focus: 'M27 interface evolution', caps: 4, sources: 5, attention: 1 },
-    { mode: 'Learning' as const, activity: 'MEDIUM' as const, focus: 'Understanding user workflow patterns', caps: 4, sources: 3, attention: 0 },
-    { mode: 'Waiting' as const, activity: 'LOW' as const, focus: 'Standing by for direction', caps: 3, sources: 1, attention: 0 },
+  const phases: Array<{
+    mode: JarvisSnapshot['mode'];
+    activity: JarvisSnapshot['cognitiveActivity'];
+    focus: string;
+    caps: number;
+    sources: number;
+    attention: boolean;
+  }> = [
+    { mode: 'Monitoring', activity: 'MEDIUM', focus: 'Repository state and runtime signals', caps: 3, sources: 2, attention: false },
+    { mode: 'Thinking', activity: 'HIGH', focus: 'Interface architecture and system model', caps: 3, sources: 4, attention: false },
+    { mode: 'Working', activity: 'HIGH', focus: 'M27 interface evolution', caps: 4, sources: 5, attention: true },
+    { mode: 'Learning', activity: 'MEDIUM', focus: 'Understanding user workflow patterns', caps: 4, sources: 3, attention: false },
+    { mode: 'Waiting', activity: 'LOW', focus: 'Standing by for direction', caps: 3, sources: 1, attention: false },
   ];
   const phase = phases[tick % phases.length];
-  snapshot = { ...snapshot, ...phase, uptime: uptimeLabel(), lastStateChange: nowLabel(), activeWork: snapshot.projects.filter((p) => p.state === 'ACTIVE').length };
+  snapshot = {
+    ...snapshot,
+    mode: phase.mode,
+    cognitiveActivity: phase.activity,
+    currentFocus: phase.focus,
+    activeCapabilities: phase.caps,
+    monitoredSources: phase.sources,
+    attentionRequired: phase.attention,
+    attentionReason: phase.attention ? 'A demo workflow is waiting for user intervention.' : 'JARVIS is progressing without requiring intervention.',
+    uptime: uptimeLabel(),
+    lastStateChange: nowLabel(),
+    activeWork: snapshot.projects.filter((p) => p.state === 'ACTIVE').length,
+  };
   emit(`System mode → ${phase.mode}`, `Cognitive activity ${phase.activity.toLowerCase()}; focus: ${phase.focus}.`, 'state');
 }
 
@@ -45,7 +64,7 @@ export const demoGateway: JarvisGateway & { snapshotSync: () => JarvisSnapshot }
   snapshotSync() { snapshot.uptime = uptimeLabel(); return structuredClone(snapshot); },
   async submit(command: JarvisCommand) {
     const event = emit('Command received', `JARVIS recorded: “${command.text}”`, 'command');
-    snapshot = { ...snapshot, currentFocus: command.text.slice(0, 72), mode: 'Thinking', cognitiveActivity: 'HIGH', attentionRequired: 0 };
+    snapshot = { ...snapshot, currentFocus: command.text.slice(0, 72), mode: 'Thinking', cognitiveActivity: 'HIGH', attentionRequired: false, attentionReason: 'JARVIS is processing the current request.' };
     window.setTimeout(() => emit('Response cycle complete', 'Command returned to the conversational workspace.', 'response'), 900);
     return event;
   },
