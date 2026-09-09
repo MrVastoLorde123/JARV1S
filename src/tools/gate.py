@@ -147,13 +147,7 @@ class PolicyGate:
             )
 
         outcome = self._execution_attempt.attempt(handoff)
-        if outcome.status is ExecutionAttemptStatus.COMPLETED:
-            if outcome.result is None:
-                return self._blocked_result(
-                    request,
-                    code="execution_attempt_failed",
-                    message="execution attempt reported completion without a result",
-                )
+        if outcome.result is not None:
             return outcome.result
 
         return self._blocked_result(
