@@ -11,7 +11,7 @@ export interface JarvisSnapshot {
   activeCapabilities: number;
   monitoredSources: number;
   activeWork: number;
-  attentionRequired: number;
+  attentionRequired: boolean;
   uptime: string;
   lastStateChange: string;
   projects: ProjectContract[];
@@ -20,7 +20,7 @@ export interface JarvisSnapshot {
 }
 export const initialSnapshot: JarvisSnapshot = {
   mode: 'Waiting', online: true, cognitiveActivity: 'LOW', currentFocus: 'JARVIS Interface',
-  activeCapabilities: 3, monitoredSources: 0, activeWork: 1, attentionRequired: 0,
+  activeCapabilities: 3, monitoredSources: 0, activeWork: 1, attentionRequired: false,
   uptime: '00:00:00', lastStateChange: 'Now',
   projects: [
     { id: 'jarvis', name: 'JARVIS Interface', progress: 48, state: 'ACTIVE' },
