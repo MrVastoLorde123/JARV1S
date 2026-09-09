@@ -94,7 +94,11 @@ class M26_5GuardedToolGatewayTests(unittest.TestCase):
         self.assertIsInstance(result, ToolResult)
         self.assertTrue(result.success)
         self.assertEqual(handler.requests, [request])
-        self.assertIs(handler.requests[0], request)
+        forwarded = handler.requests[0]
+        self.assertIsNot(forwarded, request)
+        self.assertEqual(forwarded.tool_name, request.tool_name)
+        self.assertEqual(forwarded.arguments, request.arguments)
+        self.assertEqual(forwarded.invocation_id, request.invocation_id)
 
     def test_policy_denial_never_reaches_executor(self):
         gate, handler = self.make_gate(DenyPolicy())
@@ -122,6 +126,10 @@ class M26_5GuardedToolGatewayTests(unittest.TestCase):
         result = gateway.invoke(request)
         self.assertTrue(result.success)
         self.assertEqual(handler.requests, [request])
+        forwarded = handler.requests[0]
+        self.assertIsNot(forwarded, request)
+        self.assertEqual(forwarded.tool_name, request.tool_name)
+        self.assertEqual(forwarded.invocation_id, request.invocation_id)
 
     def test_result_identity_is_preserved_as_data(self):
         class RecordingExecutor:
