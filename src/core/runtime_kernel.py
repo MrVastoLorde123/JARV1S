@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Callable, Mapping, TextIO
 
+from src.core.capability_registry import CapabilityRegistry
 from src.core.interface_adapter import InterfaceAdapter
 from src.core.interface_backend import (
     InterfaceOperation,
@@ -23,7 +24,7 @@ class JarvisRuntimeError(RuntimeError):
 
 
 class JarvisRuntime:
-    """Composition root for the verified M25 interface, activity, and session stack."""
+    """Composition root for the verified M25 stack plus the M26 capability registry."""
 
     def __init__(
         self,
@@ -32,6 +33,7 @@ class JarvisRuntime:
         session_id: str,
         actor_id: str,
         request_id_factory: Callable[[], str] | None = None,
+        capability_registry: CapabilityRegistry | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
             raise TypeError("orchestration must provide callable dispatch")
@@ -41,8 +43,13 @@ class JarvisRuntime:
             raise ValueError("actor_id must be a non-empty string")
         if request_id_factory is not None and not callable(request_id_factory):
             raise TypeError("request_id_factory must be callable")
+        if capability_registry is not None and type(capability_registry) is not CapabilityRegistry:
+            raise TypeError("capability_registry must be a capability registry")
 
         self._orchestration = orchestration
+        self._capability_registry = (
+            capability_registry if capability_registry is not None else CapabilityRegistry()
+        )
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -110,6 +117,10 @@ class JarvisRuntime:
     @property
     def interface_backend(self) -> SelfImprovementInterfaceBackend:
         return self._backend
+
+    @property
+    def capability_registry(self) -> CapabilityRegistry:
+        return self._capability_registry
 
     @property
     def authorizes_execution(self) -> bool:
