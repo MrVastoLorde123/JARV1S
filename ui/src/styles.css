@@ -165,3 +165,34 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
 }
+
+/* M27.10 Mind Core — explorer-first cognitive environment. */
+.mind-core-panel { min-height:720px; }
+.mind-explorer-layout { display:grid; grid-template-columns:310px 1fr; gap:14px; margin-top:8px; min-height:510px; }
+.mind-root-list { display:flex; flex-direction:column; gap:5px; padding:9px; border:1px solid rgba(255,255,255,.06); border-radius:17px; background:rgba(2,6,12,.24); }
+.mind-root { display:grid; grid-template-columns:28px 1fr; gap:10px; align-items:center; width:100%; padding:10px; border:1px solid transparent; border-radius:11px; background:transparent; color:#8d9db4; text-align:left; cursor:pointer; transition:.18s ease; }
+.mind-root:hover { background:rgba(255,255,255,.03); color:#d7e3f2; }
+.mind-root.active { border-color:rgba(133,175,247,.14); background:rgba(107,153,239,.065); color:#edf4fd; box-shadow:inset 2px 0 0 rgba(145,182,248,.65); }
+.mind-root > span { display:grid; place-items:center; width:28px; height:28px; border:1px solid rgba(133,175,247,.09); border-radius:8px; color:#87a9e1; background:rgba(108,154,238,.035); }
+.mind-root b { display:block; font-size:11px; font-weight:500; }
+.mind-root small { display:block; margin-top:4px; color:#687a93; font:8px 'Space Mono',monospace; line-height:1.35; }
+.mind-root-detail { min-width:0; display:flex; flex-direction:column; gap:12px; }
+.mind-context-banner { padding:22px; border:1px solid rgba(126,169,242,.12); border-radius:17px; background:radial-gradient(circle at 85% 50%,rgba(109,157,244,.09),transparent 34%),rgba(255,255,255,.022); }
+.mind-context-banner span,.mind-stat-grid span { display:block; color:#72849e; font:8px 'Space Mono',monospace; letter-spacing:.14em; }
+.mind-context-banner strong { display:block; margin-top:8px; color:#edf4fc; font-size:25px; font-weight:500; }
+.mind-context-banner p { margin:7px 0 0; max-width:720px; color:#91a1b7; font-size:11px; line-height:1.55; }
+.mind-stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.mind-stat-grid > div { min-height:92px; padding:14px; border:1px solid rgba(255,255,255,.06); border-radius:13px; background:rgba(255,255,255,.018); }
+.mind-stat-grid b { display:block; margin-top:9px; color:#dce7f5; font-size:13px; font-weight:500; line-height:1.35; overflow:hidden; text-overflow:ellipsis; }
+.mind-detail-card { flex:1; min-height:150px; display:flex; flex-direction:column; justify-content:center; }
+.mind-graph { min-height:500px; }
+.mind-active-thought { grid-column:span 2; background:radial-gradient(circle at 82% 50%,rgba(113,160,245,.07),transparent 32%),rgba(255,255,255,.025); }
+@media (max-width:1050px) {
+  .mind-explorer-layout { grid-template-columns:1fr; }
+  .mind-root-list { display:grid; grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width:760px) {
+  .mind-root-list { grid-template-columns:1fr; }
+  .mind-stat-grid { grid-template-columns:repeat(2,1fr); }
+  .mind-active-thought { grid-column:auto; }
+}
