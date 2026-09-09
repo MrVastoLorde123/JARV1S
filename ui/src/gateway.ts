@@ -1,8 +1,10 @@
-import type { JarvisSnapshot } from './contracts';
+import type { ChatSurface, JarvisSnapshot } from './contracts';
 
 export interface JarvisCommand {
   text: string;
   sessionId: string;
+  surface?: ChatSurface | 'PROJECTS';
+  projectId?: string;
 }
 
 export interface JarvisActivityEvent {
@@ -23,4 +25,7 @@ export const gatewayContract = {
   transport: 'HTTP + event stream',
   implementation: 'replaceable',
   knowsPythonInternals: false,
+  surfaceAware: true,
+  supportsProjectControl: true,
+  supportsWorkspaceCommands: true,
 } as const;
