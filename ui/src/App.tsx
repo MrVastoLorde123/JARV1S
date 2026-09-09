@@ -39,7 +39,7 @@ function App() {
   };
 
   return (
-    <div className={`shell mode-${snapshot.mode.toLowerCase().replace(/\\s+/g, '-').replace('you', 'you')}`}>
+    <div className={`shell mode-${snapshot.mode.toLowerCase().replace(/\s+/g, '-').replace('you', 'you')}`}>
       <div className="ambient ambient-a" />
       <div className="ambient ambient-b" />
       <div className="ambient-core" aria-hidden="true"><span /></div>
@@ -61,7 +61,7 @@ function App() {
             <Metric label="CAPABILITIES" value={snapshot.activeCapabilities} />
             <Metric label="SOURCES" value={snapshot.monitoredSources} />
             <Metric label="ACTIVE WORK" value={snapshot.activeWork} />
-            <Metric label="ATTENTION" value={snapshot.attentionRequired} />
+            <Metric label="ATTENTION" value={snapshot.attentionRequired ? 'YES' : 'CLEAR'} />
           </div>
           <div className="live-strip"><span className="live-dot" /> LIVE · {lastEvent}</div>
         </section>
@@ -100,10 +100,10 @@ function Home({ snapshot, onNavigate }: { snapshot: JarvisSnapshot; onNavigate: 
       <div className="cockpit-footer"><span>Last state change</span><b>{snapshot.lastStateChange}</b></div>
     </div>
 
-    <div className={`panel attention ${snapshot.attentionRequired > 0 ? 'attention-hot' : ''}`}>
+    <div className={`panel attention ${snapshot.attentionRequired ? 'attention-hot' : ''}`}>
       <div className="panel-kicker">ATTENTION</div>
-      <div className="attention-number">{snapshot.attentionRequired}</div>
-      <div className="attention-copy">{snapshot.attentionRequired ? 'Items require your presence.' : 'Nothing currently requires you.'}</div>
+      <div className="attention-number">{snapshot.attentionRequired ? 'YES' : 'CLEAR'}</div>
+      <div className="attention-copy">{snapshot.attentionReason}</div>
       <button className="text-action" onClick={() => onNavigate('WORK')}>Review work →</button>
     </div>
 
