@@ -1,0 +1,295 @@
+/* M27.15 visual system: readable dark glass + first-class light mode. */
+:root {
+  color-scheme: dark;
+  --jarvis-bg: #05070a;
+  --jarvis-surface: rgba(11, 15, 21, 0.78);
+  --jarvis-surface-strong: rgba(14, 19, 27, 0.90);
+  --jarvis-surface-soft: rgba(255, 255, 255, 0.035);
+  --jarvis-line: rgba(255, 255, 255, 0.085);
+  --jarvis-text: #dce7f5;
+  --jarvis-text-strong: #f5f8fd;
+  --jarvis-text-soft: #9eafc4;
+  --jarvis-text-muted: #7e90a8;
+  --jarvis-accent: #8fb7ff;
+}
+
+html,
+body,
+#root { min-height: 100%; }
+
+body {
+  background: var(--jarvis-bg);
+  color: var(--jarvis-text);
+}
+
+/* Dark mode: deliberately raise informational text above the glass surfaces. */
+html[data-jarvis-theme="dark"] .panel,
+html[data-jarvis-theme="dark"] .topbar,
+html[data-jarvis-theme="dark"] .sidebar,
+html[data-jarvis-theme="dark"] .hero { color: var(--jarvis-text); }
+
+html[data-jarvis-theme="dark"] .panel-kicker,
+html[data-jarvis-theme="dark"] .surface-label,
+html[data-jarvis-theme="dark"] .signal-label,
+html[data-jarvis-theme="dark"] .sidebar-group-label,
+html[data-jarvis-theme="dark"] .panel-heading,
+html[data-jarvis-theme="dark"] .panel-heading small,
+html[data-jarvis-theme="dark"] .top-meta,
+html[data-jarvis-theme="dark"] .top-focus,
+html[data-jarvis-theme="dark"] .top-context,
+html[data-jarvis-theme="dark"] .space-subtitle,
+html[data-jarvis-theme="dark"] .attention-copy,
+html[data-jarvis-theme="dark"] .activity-item p,
+html[data-jarvis-theme="dark"] .activity-item time,
+html[data-jarvis-theme="dark"] .project span,
+html[data-jarvis-theme="dark"] .cap-row > span:last-child,
+html[data-jarvis-theme="dark"] .self-card > span,
+html[data-jarvis-theme="dark"] .self-card p,
+html[data-jarvis-theme="dark"] .mind-root small,
+html[data-jarvis-theme="dark"] .mind-context-banner p,
+html[data-jarvis-theme="dark"] .reasoning-preview p,
+html[data-jarvis-theme="dark"] .mission-note p,
+html[data-jarvis-theme="dark"] .chat-header p,
+html[data-jarvis-theme="dark"] .chat-mode small,
+html[data-jarvis-theme="dark"] .workspace-item small,
+html[data-jarvis-theme="dark"] .history-item small,
+html[data-jarvis-theme="dark"] .history-item span {
+  color: var(--jarvis-text-soft) !important;
+}
+
+html[data-jarvis-theme="dark"] .hero-title,
+html[data-jarvis-theme="dark"] .cockpit-body strong,
+html[data-jarvis-theme="dark"] .space-panel h1,
+html[data-jarvis-theme="dark"] .chat-header h1,
+html[data-jarvis-theme="dark"] .research-card h3,
+html[data-jarvis-theme="dark"] .plan-card h3,
+html[data-jarvis-theme="dark"] .work-runtime strong,
+html[data-jarvis-theme="dark"] .activity-item b,
+html[data-jarvis-theme="dark"] .project b,
+html[data-jarvis-theme="dark"] .model-row b,
+html[data-jarvis-theme="dark"] .cap-row b {
+  color: var(--jarvis-text-strong) !important;
+}
+
+html[data-jarvis-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, rgba(2, 4, 7, .95), rgba(1, 2, 4, .90));
+  border-right-color: var(--jarvis-line);
+}
+
+html[data-jarvis-theme="dark"] .panel {
+  background: linear-gradient(145deg, rgba(11, 16, 23, .82), rgba(4, 7, 11, .73));
+  border-color: var(--jarvis-line);
+}
+
+html[data-jarvis-theme="dark"] .topbar {
+  background: rgba(2, 4, 7, .78);
+  border-bottom-color: var(--jarvis-line);
+}
+
+html[data-jarvis-theme="dark"] .chat-composer textarea {
+  color: #eef4ff;
+  background: rgba(1, 4, 8, .78);
+}
+
+/* Light mode is a separate material language, not a raw inversion. */
+html[data-jarvis-theme="light"] {
+  color-scheme: light;
+  --jarvis-bg: #e9eef5;
+  --jarvis-surface: rgba(250, 252, 255, .76);
+  --jarvis-surface-strong: rgba(255, 255, 255, .93);
+  --jarvis-surface-soft: rgba(36, 67, 104, .045);
+  --jarvis-line: rgba(31, 53, 79, .12);
+  --jarvis-text: #243449;
+  --jarvis-text-strong: #0f1b2b;
+  --jarvis-text-soft: #5e6e84;
+  --jarvis-text-muted: #708096;
+  --jarvis-accent: #4b7fc8;
+}
+
+html[data-jarvis-theme="light"] body {
+  background: radial-gradient(circle at 50% -22%, #dbe5f1 0, #edf1f6 43%, #e5eaf1 100%);
+  color: var(--jarvis-text);
+}
+
+html[data-jarvis-theme="light"] .shell,
+html[data-jarvis-theme="light"] .panel,
+html[data-jarvis-theme="light"] .topbar,
+html[data-jarvis-theme="light"] .sidebar,
+html[data-jarvis-theme="light"] .hero { color: var(--jarvis-text); }
+
+html[data-jarvis-theme="light"] .ambient { opacity: .06; }
+html[data-jarvis-theme="light"] .ambient-core { opacity: .12; }
+
+html[data-jarvis-theme="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(246, 249, 253, .94), rgba(231, 237, 245, .86));
+  border-right-color: var(--jarvis-line);
+  box-shadow: 18px 0 60px rgba(31, 53, 80, .10);
+}
+
+html[data-jarvis-theme="light"] .sidebar-status,
+html[data-jarvis-theme="light"] .sidebar-foot,
+html[data-jarvis-theme="light"] .sidebar-group-label { color: #637389; }
+html[data-jarvis-theme="light"] .nav-item { color: #66778d; }
+html[data-jarvis-theme="light"] .nav-item:hover { color: #203148; background: rgba(72, 117, 184, .065); }
+html[data-jarvis-theme="light"] .nav-item.active {
+  color: #162840;
+  background: linear-gradient(90deg, rgba(82, 129, 198, .14), rgba(255, 255, 255, .30));
+  border-color: rgba(82, 129, 198, .18);
+}
+
+html[data-jarvis-theme="light"] .topbar {
+  background: rgba(249, 251, 254, .72);
+  border-bottom-color: var(--jarvis-line);
+  box-shadow: 0 10px 38px rgba(32, 53, 79, .08);
+}
+html[data-jarvis-theme="light"] .top-context,
+html[data-jarvis-theme="light"] .top-focus { color: #34475f !important; }
+html[data-jarvis-theme="light"] .top-meta { color: #6c7b8f !important; }
+
+html[data-jarvis-theme="light"] .panel {
+  background: linear-gradient(145deg, rgba(253, 254, 255, .82), rgba(240, 245, 250, .70));
+  border-color: var(--jarvis-line);
+  box-shadow: inset 0 1px rgba(255,255,255,.85), 0 18px 55px rgba(33,55,80,.10);
+}
+
+html[data-jarvis-theme="light"] .panel-kicker,
+html[data-jarvis-theme="light"] .surface-label,
+html[data-jarvis-theme="light"] .signal-label,
+html[data-jarvis-theme="light"] .sidebar-group-label,
+html[data-jarvis-theme="light"] .panel-heading,
+html[data-jarvis-theme="light"] .panel-heading small {
+  color: #66778b !important;
+}
+
+html[data-jarvis-theme="light"] .hero-title,
+html[data-jarvis-theme="light"] .cockpit-body strong,
+html[data-jarvis-theme="light"] .space-panel h1,
+html[data-jarvis-theme="light"] .chat-header h1,
+html[data-jarvis-theme="light"] .research-card h3,
+html[data-jarvis-theme="light"] .plan-card h3,
+html[data-jarvis-theme="light"] .work-runtime strong,
+html[data-jarvis-theme="light"] .activity-item b,
+html[data-jarvis-theme="light"] .project b,
+html[data-jarvis-theme="light"] .model-row b,
+html[data-jarvis-theme="light"] .cap-row b {
+  color: var(--jarvis-text-strong) !important;
+}
+
+html[data-jarvis-theme="light"] .space-subtitle,
+html[data-jarvis-theme="light"] .attention-copy,
+html[data-jarvis-theme="light"] .activity-item p,
+html[data-jarvis-theme="light"] .activity-item time,
+html[data-jarvis-theme="light"] .project span,
+html[data-jarvis-theme="light"] .cap-row > span:last-child,
+html[data-jarvis-theme="light"] .self-card > span,
+html[data-jarvis-theme="light"] .self-card p,
+html[data-jarvis-theme="light"] .mind-root small,
+html[data-jarvis-theme="light"] .mind-context-banner p,
+html[data-jarvis-theme="light"] .reasoning-preview p,
+html[data-jarvis-theme="light"] .mission-note p,
+html[data-jarvis-theme="light"] .chat-header p,
+html[data-jarvis-theme="light"] .chat-mode small,
+html[data-jarvis-theme="light"] .workspace-item small,
+html[data-jarvis-theme="light"] .history-item small,
+html[data-jarvis-theme="light"] .history-item span {
+  color: var(--jarvis-text-soft) !important;
+}
+
+html[data-jarvis-theme="light"] .brand-mark {
+  border-color: rgba(25, 46, 70, .15);
+  background: rgba(255,255,255,.48);
+  color: #1d3048;
+  box-shadow: none;
+}
+
+html[data-jarvis-theme="light"] .cockpit {
+  background: radial-gradient(circle at 82% 48%, rgba(83,132,203,.10), transparent 28%), linear-gradient(145deg, rgba(252,254,255,.92), rgba(238,243,249,.77));
+}
+html[data-jarvis-theme="light"] .signal-ring {
+  border-color: rgba(65,112,177,.20);
+  box-shadow: 0 0 50px rgba(70,118,186,.10), inset 0 0 45px rgba(70,118,186,.05);
+}
+html[data-jarvis-theme="light"] .hero-focus { color: #536780 !important; }
+
+html[data-jarvis-theme="light"] .chat-new,
+html[data-jarvis-theme="light"] .chat-mode.active,
+html[data-jarvis-theme="light"] .segmented,
+html[data-jarvis-theme="light"] .surface-card,
+html[data-jarvis-theme="light"] .folder,
+html[data-jarvis-theme="light"] .research-card,
+html[data-jarvis-theme="light"] .plan-card,
+html[data-jarvis-theme="light"] .project-select,
+html[data-jarvis-theme="light"] .agent-lane,
+html[data-jarvis-theme="light"] .reasoning-preview,
+html[data-jarvis-theme="light"] .mission-note {
+  background: rgba(255,255,255,.50);
+  border-color: rgba(31,53,79,.10);
+  color: #22344c;
+}
+
+html[data-jarvis-theme="light"] .chat-composer {
+  background: rgba(238,243,248,.48);
+  border-top-color: var(--jarvis-line);
+}
+html[data-jarvis-theme="light"] .chat-composer textarea {
+  color: #16273d;
+  background: rgba(255,255,255,.90);
+  border-color: rgba(31,53,79,.15);
+}
+html[data-jarvis-theme="light"] .chat-composer textarea::placeholder { color: #748398; }
+html[data-jarvis-theme="light"] .chat-message { background: rgba(255,255,255,.64); border-left-color: rgba(73,120,188,.35); }
+html[data-jarvis-theme="light"] .chat-message p { color: #263a53; }
+
+/* Theme control lives outside the app shell so it remains available in every space. */
+.global-theme-toggle {
+  position: fixed;
+  top: 16px;
+  right: 18px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 9px;
+  background: rgba(7,10,15,.72);
+  color: #b2c0d3;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.18);
+  cursor: pointer;
+  font: 8px 'Space Mono', monospace;
+  letter-spacing: .10em;
+  transition: .18s ease;
+}
+.global-theme-toggle:hover {
+  color: #edf3fb;
+  border-color: rgba(143,183,255,.27);
+  transform: translateY(-1px);
+}
+.theme-glyph { font-size: 12px; line-height: 1; }
+html[data-jarvis-theme="light"] .global-theme-toggle {
+  color: #40536b;
+  background: rgba(255,255,255,.65);
+  border-color: rgba(31,53,79,.12);
+  box-shadow: 0 8px 28px rgba(31,53,79,.11);
+}
+html[data-jarvis-theme="light"] .global-theme-toggle:hover {
+  color: #18304e;
+  background: rgba(255,255,255,.88);
+  border-color: rgba(71,123,193,.22);
+}
+
+/* Persistent desktop chrome stays readable in both modes. */
+.desktop-statusbar {
+  min-height: 25px;
+}
+html[data-jarvis-theme="light"] .desktop-statusbar {
+  background: rgba(246,249,253,.88);
+  border-color: rgba(31,53,79,.09);
+  color: #68798e;
+}
+html[data-jarvis-theme="light"] .desktop-statusbar span:first-child { color: #566981; }
+
+@media (max-width: 760px) {
+  .global-theme-toggle { top: 11px; right: 10px; }
+}
