@@ -29,7 +29,7 @@ class _Orchestration:
             operation=request.operation,
             status=InterfaceResponseStatus.ACCEPTED,
             payload={"result": {"operation": request.operation.value}},
-            metadata={"stage": "TEST_STAGE"},
+            metadata={"artifact_type": "TEST_STAGE"},
         )
 
 
