@@ -11,6 +11,7 @@ from src.core.interface_backend import (
     SelfImprovementInterfaceBackend,
 )
 from src.core.interface_session_state import InterfaceSessionStateProjector
+from src.core.model_provider_boundary import ModelProviderBoundary
 from src.core.runtime_activity_stream import (
     InterfaceRuntimeActivityRecorder,
     ObservableInterfaceOrchestration,
@@ -24,7 +25,7 @@ class JarvisRuntimeError(RuntimeError):
 
 
 class JarvisRuntime:
-    """Composition root for the verified M25 stack plus the M26 capability registry."""
+    """Composition root for the verified M25 stack plus M26 capability/model seams."""
 
     def __init__(
         self,
@@ -34,6 +35,7 @@ class JarvisRuntime:
         actor_id: str,
         request_id_factory: Callable[[], str] | None = None,
         capability_registry: CapabilityRegistry | None = None,
+        model_provider: ModelProviderBoundary | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
             raise TypeError("orchestration must provide callable dispatch")
@@ -45,11 +47,14 @@ class JarvisRuntime:
             raise TypeError("request_id_factory must be callable")
         if capability_registry is not None and type(capability_registry) is not CapabilityRegistry:
             raise TypeError("capability_registry must be a capability registry")
+        if model_provider is not None and type(model_provider) is not ModelProviderBoundary:
+            raise TypeError("model_provider must be a model provider boundary")
 
         self._orchestration = orchestration
         self._capability_registry = (
             capability_registry if capability_registry is not None else CapabilityRegistry()
         )
+        self._model_provider = model_provider
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -121,6 +126,10 @@ class JarvisRuntime:
     @property
     def capability_registry(self) -> CapabilityRegistry:
         return self._capability_registry
+
+    @property
+    def model_provider(self) -> ModelProviderBoundary | None:
+        return self._model_provider
 
     @property
     def authorizes_execution(self) -> bool:
