@@ -68,11 +68,10 @@ class M26_6RealReadFileCapabilityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
             outside_file = Path(outside) / "secret.txt"
             outside_file.write_text("SECRET", encoding="utf-8")
-            relative_escape = str(outside_file)
             capability = RealReadFileCapability(directory)
-            result = capability.read(relative_escape, invocation_id="escape-1")
+            result = capability.read(str(outside_file), invocation_id="escape-1")
             self.assertFalse(result.success)
-            self.assertIn(result.error.code, {"path_escape", "absolute_path_not_allowed"})
+            self.assertEqual(result.error.code, "path_outside_base_dir")
             self.assertEqual(result.invocation_id, "escape-1")
 
     def test_policy_denial_prevents_real_handler_execution(self):
@@ -88,7 +87,6 @@ class M26_6RealReadFileCapabilityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             Path(directory, "explicit.txt").write_text("EXPLICIT", encoding="utf-8")
             capability = RealReadFileCapability(directory)
-            self.assertTrue(hasattr(capability, "invoke"))
             result = capability.read("explicit.txt", invocation_id="explicit-2")
             self.assertTrue(result.success)
             self.assertEqual(result.content["content"], "EXPLICIT")

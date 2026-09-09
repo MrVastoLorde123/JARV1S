@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Mapping
 
 from src.core.capability_registry import CapabilityDefinition, CapabilityRegistry
 from src.core.guarded_tool_gateway import GuardedToolCapabilityGateway
@@ -43,8 +42,6 @@ class RealReadFileCapability:
         if len(registered) != 1:
             raise RuntimeError("read_file capability registration did not produce exactly one capability")
 
-        self._base_dir = Path(base_dir).resolve()
-        self._gateway = gateway
         self._integration = integration
         self._registry = registry
         self._capability = registered[0]
