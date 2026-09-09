@@ -1,0 +1,71 @@
+/* M27.11 visual identity pass: readable typography, quiet chrome, icon-only collapsed navigation, Self-scoped runtime telemetry. */
+:root { font-family: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif; color: #e7eef8; }
+body { color: #e7eef8; }
+button, textarea, input { font-family: inherit; }
+.panel, .surface-card, .research-card, .plan-card, .work-card, .capability-card, .self-card { color: #e7eef8; }
+.panel-kicker, .surface-label, .hero-eyebrow, .hero-focus, .hero-metrics, .top-meta, .sidebar-foot b, .sidebar-foot small { font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", monospace; }
+.panel-kicker, .surface-label, .hero-eyebrow, .hero-focus { color: #8798ae; }
+.space, .nav-item, .top-context, .top-focus { font-family: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif; }
+.nav-expanded .nav-item .nav-icon { display: none; }
+.nav-expanded .nav-item { gap: 0; }
+.nav-collapsed .nav-item .nav-icon { display: block; }
+.nav-collapsed .nav-item span { display: none; }
+.nav-collapsed .nav-item { gap: 0; justify-content: center; }
+.nav-item { font-size: 11px; font-weight: 560; letter-spacing: .04em; color: #a6b4c6; }
+.nav-item.active { color: #f2f6fb; }
+.brand-word { font-family: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif; letter-spacing: .28em; }
+.top-focus { color: #a5b3c5; font-size: 12px; font-weight: 500; }
+.top-context { font-size: 10px; font-weight: 650; letter-spacing: .1em; }
+.top-device { color: #8293aa; font: 10px ui-monospace, "Cascadia Code", monospace; letter-spacing: .06em; }
+
+/* The global hero telemetry belongs to Self now. Keep the shell quiet on every other surface. */
+.app-shell-hero-removed { display: none; }
+
+.self-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 22px; }
+.self-runtime { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; margin: 18px 0; }
+.self-runtime-copy, .self-runtime-stats, .self-scheduling { border: 1px solid rgba(255,255,255,.075); border-radius: 16px; background: rgba(255,255,255,.024); }
+.self-runtime-copy { padding: 20px; }
+.self-runtime-copy strong { display:block; margin-top: 8px; font-size: 24px; font-weight: 560; color: #f0f5fb; }
+.self-runtime-copy p { margin: 8px 0 10px; color: #a9b6c6; font-size: 12px; line-height: 1.55; }
+.self-runtime-copy small { color: #8192a9; font: 9px ui-monospace, "Cascadia Code", monospace; }
+.runtime-bar { height: 5px; margin: 13px 0 8px; border-radius: 99px; background: rgba(255,255,255,.055); overflow:hidden; }
+.runtime-bar span { display:block; height:100%; background:#8aaee8; box-shadow:0 0 14px rgba(138,174,232,.4); transition:width .6s ease; }
+.self-runtime-stats { display:grid; grid-template-columns: repeat(2, 1fr); padding: 8px; }
+.self-runtime-stats div { padding: 15px; border: 1px solid rgba(255,255,255,.045); border-radius: 12px; }
+.self-runtime-stats span { display:block; color:#8292a8; font:8px ui-monospace, "Cascadia Code", monospace; letter-spacing:.1em; }
+.self-runtime-stats b { display:block; margin-top:7px; color:#e4ebf4; font-size:16px; font-weight:520; }
+.self-filters { display:flex; flex-wrap:wrap; gap:7px; margin: 14px 0; }
+.self-filters button { border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.025); border-radius:999px; padding:7px 10px; color:#8394aa; cursor:pointer; font-size:10px; }
+.self-filters button:hover { color:#d9e2ed; background:rgba(255,255,255,.045); }
+.self-filters button.active { color:#f1f5fa; border-color:rgba(148,180,232,.22); background:rgba(117,158,224,.08); }
+.self-activity-list { display:grid; gap:9px; }
+.self-activity { display:grid; grid-template-columns:36px 1fr; gap:12px; padding:14px; border:1px solid rgba(255,255,255,.065); border-radius:15px; background:rgba(255,255,255,.018); }
+.self-icon { width:34px; height:34px; display:grid; place-items:center; border-radius:11px; border:1px solid rgba(255,255,255,.08); color:#aabbd1; background:rgba(255,255,255,.03); }
+.self-icon.kind-thinking { color:#adc6ef; }
+.self-icon.kind-delegating { color:#c0b1eb; }
+.self-icon.kind-communicating { color:#8fd2c1; }
+.self-icon.kind-waiting { color:#91a0b5; }
+.self-icon.kind-resource_guard { color:#e0c180; }
+.self-activity-heading { display:flex; justify-content:space-between; gap:15px; }
+.self-activity-heading b { color:#e3ebf5; font-size:12px; font-weight:550; }
+.self-activity-heading span { color:#73839a; font:8px ui-monospace, "Cascadia Code", monospace; }
+.self-activity p { margin:5px 0 0; color:#a0aec0; font-size:11px; line-height:1.5; }
+.self-activity small { display:block; margin-top:7px; color:#7d8ea5; font:8px ui-monospace, "Cascadia Code", monospace; letter-spacing:.08em; }
+.self-scheduling { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; padding:18px; margin-top:14px; }
+.self-scheduling b { display:block; margin-top:8px; color:#e3ebf5; font-size:13px; font-weight:540; }
+.self-scheduling p { margin:8px 0 0; color:#99a8bc; font-size:11px; line-height:1.55; }
+.model-queue { display:grid; gap:6px; }
+.queue-row { display:grid; grid-template-columns:auto 1fr; gap:7px 10px; padding:10px; border:1px solid rgba(255,255,255,.055); border-radius:11px; background:rgba(255,255,255,.02); }
+.queue-row span { color:#7f92aa; font:8px ui-monospace, "Cascadia Code", monospace; }
+.queue-row b { color:#dce6f1; font-size:10px; font-weight:520; }
+.queue-row small { grid-column:2; color:#75869e; font-size:9px; }
+.pressure-state-normal { color:#99d1ae; }
+.pressure-state-elevated { color:#dec17b; }
+.pressure-state-high { color:#eb9c92; }
+
+/* No decorative global state beacon on other surfaces. */
+.state-pulse { display:none !important; }
+.live-strip { display:none !important; }
+
+@media (max-width: 1050px) { .self-runtime, .self-scheduling { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .nav-expanded .sidebar { width:74px; padding-left:9px; padding-right:9px; } .nav-expanded .brand-word, .nav-expanded .sidebar-status-text, .nav-expanded .sidebar-status small, .nav-expanded .sidebar-foot div { display:none; } .nav-expanded .sidebar-status { justify-content:center; margin-left:0; margin-right:0; } .nav-expanded .nav-item .nav-icon { display:block; } .nav-expanded .nav-item span { display:none; } .nav-expanded .nav-item { justify-content:center; gap:0; } .self-runtime-stats { grid-template-columns:1fr 1fr; } }
