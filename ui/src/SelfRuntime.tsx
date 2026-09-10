@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { JarvisSnapshot } from './contracts';
 
 interface SelfRuntimeProps {
@@ -11,6 +12,7 @@ function SelfRuntime({ snapshot, onOpenControl }: SelfRuntimeProps) {
   const observed = snapshot.selfActivity.slice(0, 4);
   const pressure = snapshot.resources.pressure;
   const capacity = snapshot.resources.concurrencyLimit;
+  const metricStyle = (load: number): CSSProperties => ({ '--load': `${load}%` } as CSSProperties);
 
   return (
     <div className="self-runtime-live">
@@ -31,9 +33,9 @@ function SelfRuntime({ snapshot, onOpenControl }: SelfRuntimeProps) {
           <div className="self-lane-head"><span>RESOURCE FIELD</span><small>{pressure} · {snapshot.resources.strategy}</small></div>
           <div className="self-resource-orbit">
             <div className={`resource-core pressure-${pressure.toLowerCase()}`}><b>{snapshot.resources.activeModelTasks}/{capacity}</b><span>MODEL TASKS</span></div>
-            <div className="resource-metric metric-cpu"><span>CPU</span><b>{snapshot.resources.cpuLoad}%</b><i style={{ '--load': `${snapshot.resources.cpuLoad}%` } as React.CSSProperties} /></div>
-            <div className="resource-metric metric-memory"><span>MEM</span><b>{snapshot.resources.memoryLoad}%</b><i style={{ '--load': `${snapshot.resources.memoryLoad}%` } as React.CSSProperties} /></div>
-            <div className="resource-metric metric-gpu"><span>GPU</span><b>{snapshot.resources.gpuLoad}%</b><i style={{ '--load': `${snapshot.resources.gpuLoad}%` } as React.CSSProperties} /></div>
+            <div className="resource-metric metric-cpu"><span>CPU</span><b>{snapshot.resources.cpuLoad}%</b><i style={metricStyle(snapshot.resources.cpuLoad)} /></div>
+            <div className="resource-metric metric-memory"><span>MEM</span><b>{snapshot.resources.memoryLoad}%</b><i style={metricStyle(snapshot.resources.memoryLoad)} /></div>
+            <div className="resource-metric metric-gpu"><span>GPU</span><b>{snapshot.resources.gpuLoad}%</b><i style={metricStyle(snapshot.resources.gpuLoad)} /></div>
           </div>
           <p className="self-lane-note">JARVIS adjusts model concurrency from observed resource pressure rather than assuming unlimited parallel work.</p>
         </section>
