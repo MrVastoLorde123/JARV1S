@@ -1,0 +1,49 @@
+/* M27.33 — Each major space gets an operational visual grammar without becoming a separate product. */
+.space-panel{position:relative;overflow:hidden}
+.space-panel::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;opacity:.45;background:linear-gradient(120deg,transparent 0 62%,rgba(122,166,232,.025) 80%,transparent 100%)}
+
+/* CHAT = intent/input surface: open, directional, composition-led. */
+.chat-shell{position:relative}
+.chat-main{background:linear-gradient(145deg,rgba(13,21,33,.88),rgba(6,11,18,.78))}
+.chat-composer{box-shadow:inset 0 1px rgba(255,255,255,.025),0 -14px 35px rgba(0,0,0,.08)}
+.chat-main:focus-within{border-color:rgba(143,183,255,.19);box-shadow:0 0 0 1px rgba(120,165,240,.035),inset 0 1px rgba(255,255,255,.03),0 18px 60px rgba(0,0,0,.22)}
+.chat-orchestrate{transition:.18s ease}
+.chat-main:focus-within .chat-orchestrate{color:#c7dcfb;border-color:rgba(143,183,255,.24);background:rgba(113,158,235,.065)}
+
+/* CONTROL = execution/authority surface: rigid lanes, stronger boundaries, fewer decorative gradients. */
+.mission-control{background:linear-gradient(145deg,rgba(12,18,27,.92),rgba(5,9,14,.84))}
+.mission-control .pipeline-card{box-shadow:inset 0 1px rgba(255,255,255,.025),0 12px 32px rgba(0,0,0,.12)}
+.mission-control .mission-inspector{border-left-color:rgba(143,183,255,.14)}
+.mission-control .boundary-row{transition:.16s ease}
+.mission-control .boundary-row:hover{background:rgba(112,157,231,.035)}
+.mission-control .live-chip{letter-spacing:.12em}
+
+/* MIND = context/relationships: quieter, wider, connective. */
+.mind-core-panel{background:linear-gradient(145deg,rgba(12,18,28,.84),rgba(6,10,16,.73))}
+.mind-core-panel .mind-root-list{background:rgba(255,255,255,.008);border-right-color:rgba(255,255,255,.05)}
+.mind-core-panel .mind-root.active{box-shadow:inset 2px 0 rgba(145,182,248,.58),inset 0 0 0 1px rgba(115,161,244,.06);background:rgba(108,153,221,.055)}
+.mind-core-panel .mind-context-banner{background:linear-gradient(110deg,rgba(110,157,232,.045),transparent 68%)}
+.mind-core-panel .relationship-map::before{opacity:.35}
+.mind-core-panel .node{backdrop-filter:blur(8px)}
+
+/* CAPABILITIES = inventory/fabric: denser than MIND, more actionable than CHAT. */
+.capability-grid{position:relative}
+.capability-card{transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.capability-card:hover{transform:translateY(-1px);border-color:rgba(143,183,255,.18);background:rgba(112,158,233,.045)}
+.capability-card:has(.state-dot.offline){opacity:.72}
+.capability-card:has(.state-dot.online),.capability-card:has(.state-dot.connected){background:linear-gradient(145deg,rgba(107,157,228,.045),rgba(255,255,255,.018))}
+.expansion-rail{position:relative;overflow:hidden}
+.expansion-rail::before{content:"";position:absolute;top:0;left:0;width:28%;height:1px;background:rgba(143,183,255,.28)}
+
+/* Light mode is material-aware rather than simply recolored. */
+html[data-jarvis-theme="light"] .chat-main{background:linear-gradient(145deg,rgba(255,255,255,.93),rgba(239,244,249,.86));box-shadow:inset 0 1px rgba(255,255,255,.9),0 18px 55px rgba(33,55,80,.09)}
+html[data-jarvis-theme="light"] .mission-control{background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(239,244,249,.88))}
+html[data-jarvis-theme="light"] .mind-core-panel{background:linear-gradient(145deg,rgba(255,255,255,.91),rgba(240,245,250,.84))}
+html[data-jarvis-theme="light"] .mind-core-panel .mind-root-list{background:rgba(41,75,112,.018)}
+html[data-jarvis-theme="light"] .expansion-rail::before{background:rgba(71,123,193,.3)}
+html[data-jarvis-theme="light"] .capability-card:hover{border-color:rgba(71,123,193,.22);background:rgba(71,123,193,.04)}
+
+@media(max-width:900px){
+  .space-panel::after{display:none}
+  .mission-control .mission-inspector{border-left:0;border-top-color:rgba(143,183,255,.14)}
+}
