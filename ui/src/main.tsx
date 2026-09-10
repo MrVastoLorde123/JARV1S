@@ -4,6 +4,7 @@ import App from './App';
 import { installThemeController } from './themeController';
 import { installDesktopPresence } from './desktopPresenceController';
 import { installProjectLanguage } from './projectLanguageController';
+import { installSelfRuntime } from './self-runtime-controller-m27.30';
 import './styles.css';
 import './mission.css';
 import './identity.css';
@@ -19,6 +20,7 @@ import './runtime-state-expression-m27.30.css';
 import './self-runtime-m27.30.css';
 import './self-runtime-legacy-m27.30.css';
 import './sidebar-refinement-m27.30.css';
+import './self-runtime-host-m27.30.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
@@ -27,3 +29,4 @@ createRoot(document.getElementById('root')!).render(
 installThemeController();
 installDesktopPresence();
 installProjectLanguage();
+installSelfRuntime();
