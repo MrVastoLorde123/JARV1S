@@ -53,7 +53,6 @@ export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Dat
 
   const topFingerprint = fingerprint(top);
   const current = state.current;
-
   if (current?.fingerprint === topFingerprint && now - current.shownAt < DWELL_MS) return top;
 
   const eligible = candidates.find((candidate) => {
@@ -63,10 +62,8 @@ export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Dat
 
   const selected = eligible ?? top;
   const selectedFingerprint = fingerprint(selected);
-  const seen = lastShown(state, selectedFingerprint);
-  const severityChanged = current && current.fingerprint !== selectedFingerprint && selected.score > top.score;
 
-  if (seen === undefined || now - seen >= SUPPRESSION_MS[selected.kind] || severityChanged || current?.fingerprint !== selectedFingerprint) {
+  if (current?.fingerprint !== selectedFingerprint || lastShown(state, selectedFingerprint) === undefined) {
     const entry = { fingerprint: selectedFingerprint, shownAt: now };
     const nextHistory = state.history.filter((item) => item.fingerprint !== selectedFingerprint).concat(entry).slice(-MAX_HISTORY);
     write({ current: entry, history: nextHistory });
