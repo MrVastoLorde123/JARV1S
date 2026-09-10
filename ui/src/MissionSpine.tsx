@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { JarvisSnapshot } from './contracts';
 import MissionFlow from './MissionFlow';
@@ -24,6 +24,9 @@ function MissionSpine({
   onSelectProject,
   onSelectWorkspace: _onSelectWorkspace,
 }: MissionSpineProps) {
+  const [flowHost, setFlowHost] = useState<HTMLElement | null>(null);
+  const [pipelineHost, setPipelineHost] = useState<HTMLElement | null>(null);
+
   useEffect(() => {
     const state = document.body;
     state.dataset.jarvisState = snapshot.online ? 'ONLINE' : 'OFFLINE';
@@ -50,15 +53,6 @@ function MissionSpine({
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
-
-  const [flowHost, setFlowHost] = (() => {
-    let value: HTMLElement | null = null;
-    return [value, (next: HTMLElement | null) => { value = next; }] as const;
-  })();
-  const [pipelineHost, setPipelineHost] = (() => {
-    let value: HTMLElement | null = null;
-    return [value, (next: HTMLElement | null) => { value = next; }] as const;
-  })();
 
   return (
     <>
