@@ -21,6 +21,7 @@ import './self-runtime-m27.30.css';
 import './sidebar-refinement-m27.30.css';
 import './self-runtime-host-m27.30.css';
 import './mission-surface-pruning-m27.31.css';
+import './self-execution-thread-m27.31.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
