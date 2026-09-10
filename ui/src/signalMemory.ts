@@ -1,6 +1,6 @@
 import { JarvisSignal } from './signalPrioritizer';
 
-const STORAGE_KEY = 'jarvis.signal-history.v1';
+const STORAGE_KEY = 'jarvis.signal-history.v2';
 const MAX_HISTORY = 24;
 const DWELL_MS = 10_000;
 const SUPPRESSION_MS: Record<JarvisSignal['kind'], number> = {
@@ -12,7 +12,16 @@ const SUPPRESSION_MS: Record<JarvisSignal['kind'], number> = {
   QUIET: 15_000,
 };
 
-interface SignalMemoryEntry { fingerprint: string; shownAt: number; }
+export type SignalInteractionState = 'SURFACED' | 'ACKNOWLEDGED' | 'RESOLVED';
+
+export interface SignalMemoryEntry {
+  fingerprint: string;
+  shownAt: number;
+  state: SignalInteractionState;
+  acknowledgedAt?: number;
+  resolvedAt?: number;
+}
+
 interface SignalMemoryState { current?: SignalMemoryEntry; history: SignalMemoryEntry[]; }
 
 function fingerprint(signal: JarvisSignal): string {
@@ -26,20 +35,28 @@ function read(): SignalMemoryState {
     const parsed = JSON.parse(raw) as Partial<SignalMemoryState>;
     const history = Array.isArray(parsed.history)
       ? parsed.history.filter((entry): entry is SignalMemoryEntry =>
-        !!entry && typeof entry.fingerprint === 'string' && typeof entry.shownAt === 'number')
+        !!entry && typeof entry.fingerprint === 'string' && typeof entry.shownAt === 'number'
+        && (entry.state === 'SURFACED' || entry.state === 'ACKNOWLEDGED' || entry.state === 'RESOLVED'))
       : [];
-    return { current: parsed.current, history: history.slice(-MAX_HISTORY) };
+    const current = parsed.current && typeof parsed.current.fingerprint === 'string' && typeof parsed.current.shownAt === 'number'
+      && (parsed.current.state === 'SURFACED' || parsed.current.state === 'ACKNOWLEDGED' || parsed.current.state === 'RESOLVED')
+      ? parsed.current
+      : undefined;
+    return { current, history: history.slice(-MAX_HISTORY) };
   } catch {
     return { history: [] };
   }
 }
 
 function write(state: SignalMemoryState) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Signal memory is advisory; a storage failure must not affect the interface.
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {
+    // Signal interaction memory is advisory; storage failure must not affect the interface.
   }
+}
+
+function saveEntry(state: SignalMemoryState, entry: SignalMemoryEntry) {
+  const history = state.history.filter((item) => item.fingerprint !== entry.fingerprint).concat(entry).slice(-MAX_HISTORY);
+  write({ current: entry, history });
 }
 
 function lastShown(state: SignalMemoryState, fingerprintValue: string): number | undefined {
@@ -57,17 +74,47 @@ export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Dat
 
   const eligible = candidates.find((candidate) => {
     const seen = lastShown(state, fingerprint(candidate));
+    const entry = state.history.findLast((item) => item.fingerprint === fingerprint(candidate));
+    if (entry?.state === 'RESOLVED' && seen !== undefined && now - seen < SUPPRESSION_MS[candidate.kind] * 2) return false;
     return seen === undefined || now - seen >= SUPPRESSION_MS[candidate.kind];
   });
 
   const selected = eligible ?? top;
   const selectedFingerprint = fingerprint(selected);
-
-  if (current?.fingerprint !== selectedFingerprint || lastShown(state, selectedFingerprint) === undefined) {
-    const entry = { fingerprint: selectedFingerprint, shownAt: now };
-    const nextHistory = state.history.filter((item) => item.fingerprint !== selectedFingerprint).concat(entry).slice(-MAX_HISTORY);
-    write({ current: entry, history: nextHistory });
+  if (current?.fingerprint !== selectedFingerprint) {
+    const entry = { fingerprint: selectedFingerprint, shownAt: now, state: 'SURFACED' as const };
+    saveEntry(state, entry);
   }
 
   return selected;
+}
+
+export function getSignalInteraction(signal: JarvisSignal): SignalInteractionState {
+  const entry = read().history.findLast((item) => item.fingerprint === fingerprint(signal));
+  return entry?.state ?? 'SURFACED';
+}
+
+export function acknowledgeSignal(signal: JarvisSignal, now = Date.now()): void {
+  const state = read();
+  const id = fingerprint(signal);
+  const previous = state.history.findLast((item) => item.fingerprint === id);
+  const entry: SignalMemoryEntry = {
+    ...(previous ?? { fingerprint: id, shownAt: now }),
+    state: 'ACKNOWLEDGED',
+    acknowledgedAt: now,
+  };
+  saveEntry(state, entry);
+}
+
+export function resolveSignal(signal: JarvisSignal, now = Date.now()): void {
+  const state = read();
+  const id = fingerprint(signal);
+  const previous = state.history.findLast((item) => item.fingerprint === id);
+  const entry: SignalMemoryEntry = {
+    ...(previous ?? { fingerprint: id, shownAt: now }),
+    state: 'RESOLVED',
+    acknowledgedAt: previous?.acknowledgedAt ?? now,
+    resolvedAt: now,
+  };
+  saveEntry(state, entry);
 }
