@@ -1,4 +1,4 @@
-/* M27.21 — quiet structural polish: one-step secondary text lift, stronger containment, and a real light-material correction. */
+/* M27.21 — structural polish: secondary readability, containment, and light-material correction. */
 .nav-icon{width:17px;height:17px;flex:0 0 17px;display:block;overflow:visible}
 .nav-item{min-width:0;overflow:hidden}
 .nav-item span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -9,18 +9,33 @@
 .hero-focus,.top-focus{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .command-trigger{max-width:150px;overflow:hidden;white-space:nowrap}
 .command-trigger span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* The existing viewport uses a 3-column shell; keep dense text inside its cells. */
 .work-overview,.model-overview,.capability-overview,.device-overview,.attention{overflow:hidden}
-/* Light mode: correct the older glass vocabulary instead of simply brightening it. */
-html[data-jarvis-theme="light"] body{background:linear-gradient(180deg,#eef3f8 0%,#e7edf4 56%,#dfe7ef 100%)}
-html[data-jarvis-theme="light"] .shell{background:radial-gradient(circle at 70% 8%,rgba(86,129,190,.08),transparent 28%),linear-gradient(180deg,rgba(255,255,255,.18),rgba(218,227,236,.12))}
-html[data-jarvis-theme="light"] .panel{background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(239,245,250,.86));border-color:rgba(35,58,85,.11);box-shadow:inset 0 1px rgba(255,255,255,.95),0 18px 48px rgba(45,68,94,.09)}
-html[data-jarvis-theme="light"] .panel-heading{color:#40556d!important}
-html[data-jarvis-theme="light"] .panel-heading small{color:#738399!important}
-html[data-jarvis-theme="light"] .activity-item,.html[data-jarvis-theme="light"] .project,.html[data-jarvis-theme="light"] .cap-row{border-top-color:rgba(38,62,89,.09)}
-html[data-jarvis-theme="light"] .activity-item p,html[data-jarvis-theme="light"] .project span,html[data-jarvis-theme="light"] .model-row span,html[data-jarvis-theme="light"] .cap-row>span:last-child{color:#64758a!important}
-html[data-jarvis-theme="light"] .signal-ring{background:radial-gradient(circle,rgba(232,239,247,.76),rgba(255,255,255,.20));}
-html[data-jarvis-theme="light"] .ambient-core span{border-color:rgba(72,111,153,.11);box-shadow:0 0 120px rgba(72,111,153,.05),inset 0 0 80px rgba(72,111,153,.03)}
-html[data-jarvis-theme="light"] .chat-shell .panel,html[data-jarvis-theme="light"] .chat-main{box-shadow:0 16px 42px rgba(46,67,91,.08)}
-html[data-jarvis-theme="light"] .nav-icon{color:currentColor}
-@media(max-width:760px){.nav-icon{width:16px;height:16px;flex-basis:16px}.panel p,.panel small{line-height:1.45}.hero-focus,.top-focus{white-space:normal}}
+/* The persistent signal is informative, not decorative: it gets room to speak without pushing core state around. */
+.jarvis-desktop-presence{grid-template-columns:auto minmax(170px,1.2fr) auto minmax(180px,1.35fr) auto;min-height:54px;height:auto;padding-top:7px;padding-bottom:7px}
+.desktop-presence-signal{min-width:0;padding-left:12px;border-left:1px solid rgba(255,255,255,.045);overflow:hidden}
+.desktop-presence-signal span{display:block;color:#566a83;font:6px 'Space Mono',monospace;letter-spacing:.16em}
+.desktop-presence-signal b{display:block;margin-top:4px;color:#cbd8e8;font-size:8px;font-weight:500;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-jarvis-theme="light"] .desktop-presence-signal{border-left-color:rgba(25,50,78,.08)}
+html[data-jarvis-theme="light"] .desktop-presence-signal span{color:#6b7c90}
+html[data-jarvis-theme="light"] .desktop-presence-signal b{color:#27415e}
+/* Correct light-mode rules that were previously scoped to a literal .html class. */
+html[data-jarvis-theme="light"] .mission-spine{background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(243,247,251,.96));border-color:rgba(22,43,69,.09);box-shadow:0 16px 46px rgba(32,56,88,.08);color:#0f1b2b}
+html[data-jarvis-theme="light"] .spine-objective b,html[data-jarvis-theme="light"] .spine-route b,html[data-jarvis-theme="light"] .spine-status b,html[data-jarvis-theme="light"] .spine-trace-trigger b,html[data-jarvis-theme="light"] .spine-context b{color:#0f1b2b}
+html[data-jarvis-theme="light"] .spine-objective small,html[data-jarvis-theme="light"] .spine-status small,html[data-jarvis-theme="light"] .spine-context small,html[data-jarvis-theme="light"] .trace-drawer-event p{color:#5e6e84}
+html[data-jarvis-theme="light"] .mission-spine-context{background:rgba(236,242,248,.62)}
+html[data-jarvis-theme="light"] .mission-trace-drawer{background:linear-gradient(180deg,rgba(248,251,254,.94),rgba(237,243,249,.96))}
+html[data-jarvis-theme="light"] .trace-drawer-event{background:rgba(255,255,255,.74);border-color:rgba(25,50,78,.08)}
+html[data-jarvis-theme="light"] .trace-drawer-event b{color:#18314e}
+html[data-jarvis-theme="light"] .jarvis-desktop-presence{background:linear-gradient(90deg,rgba(255,255,255,.96),rgba(245,248,252,.95));border-color:rgba(26,49,76,.08);box-shadow:0 14px 40px rgba(42,65,93,.10);color:#1a3048}
+html[data-jarvis-theme="light"] .desktop-presence-brand strong{color:#102238}
+html[data-jarvis-theme="light"] .desktop-presence-brand small{color:#64768a}
+html[data-jarvis-theme="light"] .desktop-presence-context span:first-child{color:#315477}
+html[data-jarvis-theme="light"] .desktop-presence-context span:last-child{color:#607389}
+html[data-jarvis-theme="light"] .desktop-presence-state{border-left-color:rgba(25,50,78,.08)}
+html[data-jarvis-theme="light"] .desktop-presence-state b{color:#1a3048}
+html[data-jarvis-theme="light"] .desktop-presence-state small{color:#64768a}
+html[data-jarvis-theme="light"] .desktop-presence-clock{border-left-color:rgba(25,50,78,.08)}
+html[data-jarvis-theme="light"] .desktop-presence-clock span{color:#1b3551}
+html[data-jarvis-theme="light"] .desktop-presence-clock small{color:#6a7b8e}
+@media(max-width:1100px){.jarvis-desktop-presence{grid-template-columns:auto minmax(120px,1fr) minmax(170px,1.2fr) auto}.desktop-presence-signal{display:block}.desktop-presence-state{display:none}}
+@media(max-width:720px){.jarvis-desktop-presence{grid-template-columns:auto 1fr auto;min-height:46px}.desktop-presence-signal{display:none}.nav-icon{width:16px;height:16px;flex-basis:16px}.panel p,.panel small{line-height:1.45}.hero-focus,.top-focus{white-space:normal}}
