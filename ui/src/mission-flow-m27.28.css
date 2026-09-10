@@ -2,7 +2,7 @@
 .mission-flow > .flow-step,.mission-flow > .flow-line{display:none}
 .mission-flow-live{display:grid;gap:16px;width:100%}
 .mission-flow-state{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:16px;align-items:stretch;padding-bottom:4px}
-.mission-flow-kicker,.mission-flow-guard>span{display:block;font-size:9px;letter-spacing:.15em;color:var(--muted,#6f8098);font-weight:700}
+.mission-flow-kicker,.mission-flow-guard>span,.mission-flow-transition>span{display:block;font-size:9px;letter-spacing:.15em;color:var(--muted,#6f8098);font-weight:700}
 .mission-flow-state strong{display:block;margin-top:5px;font-size:15px;line-height:1.25;color:var(--text,#e8eef7)}
 .mission-flow-state small{display:block;margin-top:5px;color:var(--muted,#8090a6);line-height:1.35;overflow-wrap:anywhere}
 .mission-flow-guard{align-self:stretch;padding:10px 12px;border:1px solid rgba(120,150,195,.14);border-radius:10px;background:rgba(90,120,165,.05)}
@@ -22,6 +22,8 @@
 .mission-flow-step.attention b,.mission-flow-step.guarded b{color:#e5ebf5}
 .mission-flow-live[data-mission-status="OFFLINE"] .mission-flow-step{opacity:.58}
 .mission-flow-live[data-mission-status="OFFLINE"] .mission-flow-step.active{border-color:rgba(188,198,214,.28);box-shadow:none}
+.mission-flow-transition{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:baseline;padding-top:2px}
+.mission-flow-transition b{font-size:10px;line-height:1.4;color:var(--text,#dfe7f2);font-weight:600;overflow-wrap:anywhere}
 
 /* CONTROL consumes the same state model; the legacy pipeline children remain inert presentation hosts. */
 .pipeline > .pipeline-stage,.pipeline > .pipeline-arrow{display:none}
