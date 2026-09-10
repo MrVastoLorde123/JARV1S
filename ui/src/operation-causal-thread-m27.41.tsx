@@ -114,7 +114,9 @@ export function installCausalThread() {
       root?.unmount(); mount?.remove(); mount = document.createElement('div'); mount.className = 'causal-thread-mount'; host.parentElement.insertBefore(mount, host.nextSibling); root = createRoot(mount);
     }
     recordTransition(current);
-    root.render(<CausalThread snapshot={snapshot} />);
+    const renderRoot = root;
+    if (!renderRoot) return;
+    renderRoot.render(<CausalThread snapshot={snapshot} />);
   };
 
   const start = () => {
