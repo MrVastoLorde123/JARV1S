@@ -1,0 +1,18 @@
+/* M27.33 — spaces are instruments on one runtime, not isolated pages. */
+.topbar-left,.topbar-right,.hero,.home-grid,.chat-shell,.space-panel{transition:opacity .18s ease,transform .22s ease}
+.shell[data-space="CHAT"] .hero-focus,.shell[data-space="CONTROL"] .hero-focus,.shell[data-space="MIND"] .hero-focus,.shell[data-space="CAPABILITIES"] .hero-focus{font-size:11px}
+.shell[data-space="CHAT"] .chat-main{box-shadow:inset 0 1px rgba(255,255,255,.025),0 20px 68px rgba(77,126,211,.10)}
+.shell[data-space="CONTROL"] .mission-control{box-shadow:inset 0 1px rgba(255,255,255,.025),0 20px 68px rgba(91,137,214,.12)}
+.shell[data-space="MIND"] .mind-core-panel{box-shadow:inset 0 1px rgba(255,255,255,.025),0 20px 68px rgba(119,102,189,.10)}
+.shell[data-space="CAPABILITIES"] .space-panel{box-shadow:inset 0 1px rgba(255,255,255,.025),0 20px 68px rgba(88,143,135,.10)}
+.space-continuity-rail{display:flex;align-items:center;gap:0;margin:0 0 14px;min-width:0;border-bottom:1px solid rgba(255,255,255,.06)}
+.space-continuity-link{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;align-items:center;min-width:0;padding:8px 14px 9px;border:0;background:transparent;color:#708097;cursor:pointer;text-align:left}
+.space-continuity-link:hover{color:#dbe6f4;background:rgba(255,255,255,.018)}
+.space-continuity-link.active{color:#e8f0fb}.space-continuity-link.active:after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:1px;background:#91b6ef}
+.space-continuity-index{font:7px 'Space Mono',monospace;color:#4d5e74}.space-continuity-link.active .space-continuity-index{color:#91b6ef}
+.space-continuity-copy{min-width:0}.space-continuity-copy b{display:block;font:8px 'Space Mono',monospace;letter-spacing:.11em;white-space:nowrap}.space-continuity-copy small{display:block;margin-top:2px;color:#55667d;font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-jarvis-theme="light"] .space-continuity-rail{border-bottom-color:rgba(31,53,79,.10)}
+html[data-jarvis-theme="light"] .space-continuity-link{color:#65768b}.html[data-jarvis-theme="light"] .space-continuity-link:hover{color:#203148;background:rgba(73,120,188,.035)}
+html[data-jarvis-theme="light"] .space-continuity-link.active{color:#19304c}.html[data-jarvis-theme="light"] .space-continuity-index{color:#8292a6}
+html[data-jarvis-theme="light"] .space-continuity-link.active:after{background:#4b7fc8}
+@media(max-width:760px){.space-continuity-rail{overflow:auto}.space-continuity-link{flex:0 0 auto;padding-left:10px;padding-right:10px}}
