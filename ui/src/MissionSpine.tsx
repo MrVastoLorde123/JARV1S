@@ -4,6 +4,7 @@ import type { JarvisSnapshot } from './contracts';
 import MissionFlow from './MissionFlow';
 import MissionPipeline from './MissionPipeline';
 import LiveMissionsFooter from './LiveMissionsFooter';
+import SelfRuntime from './SelfRuntime';
 import { deriveMissionFlowState } from './missionFlowState';
 
 type Space = 'HOME' | 'CHAT' | 'WORK' | 'CONTROL' | 'MIND' | 'CAPABILITIES' | 'SELF';
@@ -28,6 +29,7 @@ function MissionSpine({
   const [traceOpen, setTraceOpen] = useState(false);
   const [flowHost, setFlowHost] = useState<HTMLElement | null>(null);
   const [pipelineHost, setPipelineHost] = useState<HTMLElement | null>(null);
+  const [selfHost, setSelfHost] = useState<HTMLElement | null>(null);
   const selectedProject = snapshot.projects.find((project) => project.id === selectedProjectId) ?? snapshot.projects[0];
   const selectedWorkspace = snapshot.workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? snapshot.workspaces[0];
   const assignedModel = snapshot.models.find((model) => model.state === 'ACTIVE') ?? snapshot.models[0];
@@ -40,8 +42,10 @@ function MissionSpine({
     const syncHosts = () => {
       const flow = document.querySelector<HTMLElement>('.mission-flow');
       const pipeline = document.querySelector<HTMLElement>('.pipeline');
+      const self = document.querySelector<HTMLElement>('.self-runtime');
       setFlowHost((current) => current === flow ? current : flow);
       setPipelineHost((current) => current === pipeline ? current : pipeline);
+      setSelfHost((current) => current === self ? current : self);
     };
     syncHosts();
     const observer = new MutationObserver(syncHosts);
@@ -124,6 +128,7 @@ function MissionSpine({
       </section>
       {flowHost ? createPortal(<MissionFlow snapshot={snapshot} selectedProjectId={selectedProjectId} />, flowHost) : null}
       {pipelineHost ? createPortal(<MissionPipeline snapshot={snapshot} selectedProjectId={selectedProjectId} />, pipelineHost) : null}
+      {selfHost ? createPortal(<SelfRuntime snapshot={snapshot} onOpenControl={() => navigate('CONTROL')} />, selfHost) : null}
       {createPortal(<LiveMissionsFooter snapshot={snapshot} selectedProjectId={selectedProjectId} onSelectProject={onSelectProject} navigate={navigate} />, document.body)}
     </>
   );
