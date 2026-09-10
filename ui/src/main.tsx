@@ -22,6 +22,7 @@ import './self-runtime-host-m27.30.css';
 import './mission-surface-pruning-m27.31.css';
 import './self-execution-thread-m27.31.css';
 import './theme-refinement-m27.32.css';
+import './space-identity-m27.33.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
