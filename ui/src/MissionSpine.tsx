@@ -33,7 +33,6 @@ function MissionSpine({
   const assignedModel = snapshot.models.find((model) => model.state === 'ACTIVE') ?? snapshot.models[0];
   const mission = useMemo(() => deriveMissionFlowState(snapshot, selectedProjectId), [snapshot, selectedProjectId]);
   const currentStage = mission.stage;
-  const latestActivity = snapshot.selfActivity[0] ?? snapshot.activity[0];
   const linkedProjectCount = snapshot.projects.filter((project) => project.workspaceId === selectedWorkspace?.id).length;
   const traceItems = useMemo(() => snapshot.selfActivity.slice(0, 4), [snapshot.selfActivity]);
 
@@ -49,6 +48,20 @@ function MissionSpine({
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const state = document.body;
+    state.dataset.jarvisState = snapshot.online ? 'ONLINE' : 'OFFLINE';
+    state.dataset.jarvisPressure = snapshot.resources.pressure;
+    state.dataset.jarvisAttention = String(snapshot.attentionRequired);
+    state.dataset.jarvisMode = snapshot.mode.toLowerCase();
+    return () => {
+      delete state.dataset.jarvisState;
+      delete state.dataset.jarvisPressure;
+      delete state.dataset.jarvisAttention;
+      delete state.dataset.jarvisMode;
+    };
+  }, [snapshot.online, snapshot.resources.pressure, snapshot.attentionRequired, snapshot.mode]);
 
   return (
     <>
