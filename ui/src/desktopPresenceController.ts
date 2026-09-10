@@ -3,6 +3,7 @@ import { getJarvisSignalCandidates } from './signalPrioritizer';
 import {
   acknowledgeSignal,
   deriveTemporalJarvisSignal,
+  getCurrentSignal,
   getSignalInteraction,
   resolveSignal,
 } from './signalMemory';
@@ -46,13 +47,13 @@ function ensurePresence() {
   `;
 
   host.querySelector<HTMLButtonElement>('[data-signal-action="acknowledge"]')?.addEventListener('click', () => {
-    const snapshot = demoGateway.snapshotSync();
-    acknowledgeSignal(deriveTemporalJarvisSignal(getJarvisSignalCandidates(snapshot)));
+    const current = getCurrentSignal();
+    if (current) acknowledgeSignal(current);
     update();
   });
   host.querySelector<HTMLButtonElement>('[data-signal-action="resolve"]')?.addEventListener('click', () => {
-    const snapshot = demoGateway.snapshotSync();
-    resolveSignal(deriveTemporalJarvisSignal(getJarvisSignalCandidates(snapshot)));
+    const current = getCurrentSignal();
+    if (current) resolveSignal(current);
     update();
   });
 
