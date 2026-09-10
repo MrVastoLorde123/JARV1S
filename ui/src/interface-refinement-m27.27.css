@@ -1,0 +1,13 @@
+/* M27.27 — responsive refinement: keep content readable before collapsing. */
+.workspace-grid,.research-board,.plan-board,.project-detail-grid,.mind-thinking-grid{grid-template-columns:repeat(2,minmax(220px,1fr))}
+.mission-top-grid{grid-template-columns:minmax(0,1.7fr) minmax(260px,.8fr)}
+.mission-body-grid{grid-template-columns:minmax(190px,230px) minmax(0,1fr) minmax(250px,290px)}
+.pipeline-stage{min-width:145px}
+.flow-step{min-width:120px}
+.self-activity{overflow:hidden}
+.self-activity .self-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.self-activity .self-card{min-width:0;height:100%;overflow:hidden}
+.self-activity .self-card p,.self-activity .self-card b{overflow-wrap:anywhere}
+@media(max-width:1180px){.mission-top-grid{grid-template-columns:1fr}.mission-body-grid{grid-template-columns:210px minmax(0,1fr)}.mission-inspector{grid-column:1 / -1}}
+@media(max-width:900px){.mission-body-grid{grid-template-columns:1fr}.mission-project-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.mission-inspector{grid-column:auto}.workspace-grid,.research-board,.plan-board,.project-detail-grid,.mind-thinking-grid,.self-activity .self-cards{grid-template-columns:1fr}.mission-flow{overflow-x:auto}.flow-step{min-width:105px}}
+@media(max-width:720px){.mission-project-list{grid-template-columns:1fr}}
