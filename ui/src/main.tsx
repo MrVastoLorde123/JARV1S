@@ -7,6 +7,7 @@ import { installProjectLanguage } from './projectLanguageController';
 import { installSelfRuntime } from './self-runtime-controller-m27.30';
 import { installSpaceContinuity } from './space-continuity-controller-m27.33';
 import { installOperationalInstrumentSurfaces } from './operational-instrument-surfaces-m27.34';
+import { installOperationContinuity } from './operation-continuity-m27.40';
 import './styles.css';
 import './mission.css';
 import './identity.css';
@@ -29,6 +30,7 @@ import './space-continuity-m27.33.css';
 import './operational-instrument-surfaces-m27.34.css';
 import './instrument-density-m27.37.css';
 import './instrument-spatial-hierarchy-m27.38.css';
+import './operation-continuity-m27.40.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
@@ -40,3 +42,4 @@ installProjectLanguage();
 installSelfRuntime();
 installSpaceContinuity();
 installOperationalInstrumentSurfaces();
+installOperationContinuity();
