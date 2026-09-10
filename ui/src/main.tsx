@@ -14,6 +14,7 @@ import './readability.css';
 import './interface-polish.css';
 import './interface-refinement-m27.27.css';
 import './mission-flow-m27.28.css';
+import './live-missions-footer-m27.30.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
