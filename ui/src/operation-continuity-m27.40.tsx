@@ -83,7 +83,9 @@ export function installOperationContinuity() {
       root = createRoot(mount); currentSpace = current;
     }
     setSpace(current);
-    root.render(<OperationContinuity snapshot={snapshot} />);
+    const renderRoot = root;
+    if (!renderRoot) return;
+    renderRoot.render(<OperationContinuity snapshot={snapshot} />);
   };
 
   const start = () => {
