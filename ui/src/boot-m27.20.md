@@ -1,1 +1,0 @@
-Boot integration pending in main.tsx; this marker documents that the readability and Projects presentation layers are intentionally isolated until the next renderer consolidation.
