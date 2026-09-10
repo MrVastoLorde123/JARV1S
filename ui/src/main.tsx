@@ -6,6 +6,7 @@ import { installDesktopPresence } from './desktopPresenceController';
 import { installProjectLanguage } from './projectLanguageController';
 import { installSelfRuntime } from './self-runtime-controller-m27.30';
 import { installSpaceContinuity } from './space-continuity-controller-m27.33';
+import { installOperationalInstrumentSurfaces } from './operational-instrument-surfaces-m27.34';
 import './styles.css';
 import './mission.css';
 import './identity.css';
@@ -25,6 +26,7 @@ import './self-execution-thread-m27.31.css';
 import './theme-refinement-m27.32.css';
 import './space-identity-m27.33.css';
 import './space-continuity-m27.33.css';
+import './operational-instrument-surfaces-m27.34.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
@@ -35,3 +37,4 @@ installDesktopPresence();
 installProjectLanguage();
 installSelfRuntime();
 installSpaceContinuity();
+installOperationalInstrumentSurfaces();
