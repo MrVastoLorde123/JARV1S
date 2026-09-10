@@ -11,6 +11,7 @@ import './theme.css';
 import './mission-spine.css';
 import './desktop-presence.css';
 import './readability.css';
+import './interface-polish.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
