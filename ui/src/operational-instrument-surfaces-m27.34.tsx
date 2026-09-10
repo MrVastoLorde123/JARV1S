@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client';
 import React from 'react';
-import { useEffect } from 'react';
 import { demoGateway } from './demoGateway';
 import type { JarvisSnapshot } from './contracts';
 
@@ -74,26 +73,18 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
   const density = deriveDensity(space, signals);
 
   if (space === 'CHAT') {
-    const cards = [
-      metric('INPUT', snapshot.currentFocus, 'Current machine context carried into the next request.'),
-      metric('ROUTE', activeModel?.name ?? 'STANDBY', signals.modelGap ? 'No healthy active model is available for immediate routing.' : 'Intent enters JARVIS before model selection or action.'),
-      metric('SCOPE', workspace?.name ?? 'NO WORKSPACE', signals.waiting ? 'Requests can enter while execution remains waiting.' : 'Explicit workspace boundary for work-producing requests.'),
-    ];
+    const cards = [metric('INPUT', snapshot.currentFocus, 'Current machine context carried into the next request.'), metric('ROUTE', activeModel?.name ?? 'STANDBY', signals.modelGap ? 'No healthy active model is available for immediate routing.' : 'Intent enters JARVIS before model selection or action.'), metric('SCOPE', workspace?.name ?? 'NO WORKSPACE', signals.waiting ? 'Requests can enter while execution remains waiting.' : 'Explicit workspace boundary for work-producing requests.')];
     return <InstrumentShell space={space} eyebrow="INTENT MEMBRANE" title="Intent enters here." subtitle="CHAT is the intake instrument: language, direction and outcomes enter the machine before JARVIS decides what kind of work they become." cards={cards} mode="intent" signal={signal} stateLabel={stateLabel} signals={signals} action={action} density={density}>
       {signals.attention && <div className="instrument-alert attention"><b>JARVIS NEEDS YOU.</b><span>{snapshot.attentionReason}</span></div>}
       <div className="instrument-lane"><span className="instrument-node input">01 · EXPRESS</span><i /><span className="instrument-node route">02 · INTERPRET</span><i /><span className="instrument-node scope">03 · BOUND</span><i /><span className="instrument-node handoff">04 · HANDOFF</span></div>
       <div className="instrument-state-grid"><div className="instrument-state-block"><span>INTAKE STATE</span><b>{signals.waiting ? 'QUEUE READY' : 'RECEIVING'}</b><small>{signals.pressure === 'HIGH' ? 'Resource pressure may delay downstream handling.' : 'Natural language can enter the machine normally.'}</small></div><div className="instrument-state-block"><span>MODEL GATE</span><b>{signals.modelGap ? 'HELD' : `${signals.activeModels} ACTIVE`}</b><small>{signals.modelGap ? 'Routing remains visible without pretending execution is available.' : 'A healthy model lane is available.'}</small></div></div>
-      {density === 'expanded' && <div className="instrument-reveal"><span>WHY THE INSTRUMENT OPENED UP</span><b>{signals.attention ? 'Your attention outranks passive intake.' : 'The machine needs more visible routing context.'}</b><small>Additional state is exposed instead of forcing the user to infer why the normal intake path changed.</small></div>}
+      {density === 'expanded' && <div className="instrument-reveal"><span>WHY THE INSTRUMENT OPENED UP</span><b>{signals.attention ? 'Your attention outranks passive intake.' : 'The machine needs more visible routing context.'}</b><small>Additional state is exposed instead of forcing the operator to infer why the normal intake path changed.</small></div>}
       <div className="instrument-note"><b>CHAT DOES NOT EXECUTE.</b><span>It provides intent and context to the machine; downstream authority remains elsewhere.</span></div>
     </InstrumentShell>;
   }
 
   if (space === 'CONTROL') {
-    const cards = [
-      metric('MISSION', project?.name ?? 'NO MISSION', project?.currentAction ?? 'No active action.'),
-      metric('MODE', snapshot.mode, signals.pressure === 'HIGH' ? 'Resource pressure is shaping execution.' : signals.waiting ? 'The machine is waiting for an actionable transition.' : 'Runtime is within current resource policy.'),
-      metric('GUARD', snapshot.resources.strategy, 'Execution policy remains between intention and side effects.'),
-    ];
+    const cards = [metric('MISSION', project?.name ?? 'NO MISSION', project?.currentAction ?? 'No active action.'), metric('MODE', snapshot.mode, signals.pressure === 'HIGH' ? 'Resource pressure is shaping execution.' : signals.waiting ? 'The machine is waiting for an actionable transition.' : 'Runtime is within current resource policy.'), metric('GUARD', snapshot.resources.strategy, 'Execution policy remains between intention and side effects.')];
     return <InstrumentShell space={space} eyebrow="ACTION CONSOLE" title="The machine acts here." subtitle="CONTROL is the action instrument: selected mission, authority boundaries, model assignment and guarded transitions converge here." cards={cards} mode="control" signal={signal} stateLabel={stateLabel} signals={signals} action={action} density={density}>
       <div className="control-instrument-grid"><div className={signals.activeWork ? 'state-active' : 'state-quiet'}><span>SELECTED OBJECT</span><b>{project?.name ?? 'None'}</b><small>{project?.detail ?? 'Awaiting a mission object.'}</small></div><div className={signals.modelGap ? 'state-blocked' : 'state-active'}><span>ACTIVE HAND</span><b>{activeModel?.name ?? 'No active model'}</b><small>{signals.modelGap ? 'No healthy model is ready to take the next execution handoff.' : activeModel?.role ?? 'Model assignment available.'}</small></div><div className={signals.pressure === 'HIGH' || signals.waiting ? 'state-guarded' : 'state-active'}><span>NEXT EFFECT</span><b>{signals.waiting ? 'WAIT FOR TRANSITION' : project?.currentAction ?? 'Waiting for direction'}</b><small>{signals.pressure === 'HIGH' ? 'High pressure keeps the next effect behind the resource guard.' : 'Action requires the appropriate authority path before side effects.'}</small></div></div>
       <div className="instrument-authority"><span>AUTHORITY PATH</span><b>INTENT → VALIDATE → POLICY → AUTHORIZE → EXECUTE</b><small>{signals.attention ? 'User attention is currently part of the control boundary.' : signals.waiting ? 'The machine is holding rather than inventing an action.' : 'Control exposes the machine\'s actionable boundary without pretending observation is authority.'}</small></div>
@@ -103,11 +94,7 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
   }
 
   if (space === 'MIND') {
-    const cards = [
-      metric('FOCUS', snapshot.currentFocus, 'Current context carried by the runtime.'),
-      metric('CONTEXT DEPTH', signals.contextDepth, `${snapshot.projects.length} work + ${snapshot.researchTopics.length} research + ${snapshot.plans.length} plans + ${snapshot.selfActivity.length} recent runtime signals.`),
-      metric('LEARNING', snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length, 'Recent learning-shaped runtime signals.'),
-    ];
+    const cards = [metric('FOCUS', snapshot.currentFocus, 'Current context carried by the runtime.'), metric('CONTEXT DEPTH', signals.contextDepth, `${snapshot.projects.length} work + ${snapshot.researchTopics.length} research + ${snapshot.plans.length} plans + ${snapshot.selfActivity.length} recent runtime signals.`), metric('LEARNING', snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length, 'Recent learning-shaped runtime signals.')];
     const contextClass = signals.contextDepth >= 16 ? 'rich' : signals.contextDepth >= 8 ? 'layered' : 'sparse';
     return <InstrumentShell space={space} eyebrow="CONTEXT FIELD" title="The machine carries context here." subtitle="MIND is the internal-context instrument: memory, knowledge, plans, experiences and relationships give future actions somewhere to come from." cards={cards} mode="mind" signal={signals.contextDepth >= 16 ? 'CONTEXT-RICH' : signal} stateLabel={signals.contextDepth >= 16 ? 'CONTEXT RICH' : stateLabel} signals={signals} action={action} density={density}>
       <div className={`mind-instrument-map ${contextClass}`}><div className="mind-orbit core"><span>ACTIVE CONTEXT</span><b>{snapshot.currentFocus}</b></div><div className="mind-orbit memory"><span>MEMORY</span><b>{signals.contextDepth >= 8 ? 'durable context present' : 'awaiting depth'}</b></div><div className="mind-orbit learning"><span>LEARNING</span><b>{signals.activity ? 'live signal' : 'evaluation → adaptation'}</b></div><div className="mind-orbit plans"><span>PLANS</span><b>{snapshot.plans.length} plan roots</b></div><div className="mind-orbit work"><span>WORK</span><b>{snapshot.projects.length} objects</b></div></div>
@@ -118,11 +105,7 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
 
   const readyCount = snapshot.capabilities.filter((capability) => ['READY', 'CONNECTED', 'AVAILABLE', 'ONLINE'].includes(capability.state)).length;
   const unavailableCount = snapshot.capabilities.filter((capability) => ['OFFLINE', 'BLOCKED', 'UNAVAILABLE'].includes(capability.state)).length;
-  const cards = [
-    metric('AVAILABLE', readyCount, unavailableCount ? `${unavailableCount} capability records are currently unavailable.` : `${snapshot.capabilities.length} capability records are currently represented.`),
-    metric('MODELS', snapshot.models.length, signals.modelGap ? 'Model availability is currently limiting the usable ability fabric.' : `${signals.activeModels} active model lane${signals.activeModels === 1 ? '' : 's'} currently available.`),
-    metric('ACTIVE', snapshot.activeCapabilities, signals.pressure === 'HIGH' ? 'Active capability use is subject to elevated resource pressure.' : 'Capabilities currently exposed by the runtime contract.'),
-  ];
+  const cards = [metric('AVAILABLE', readyCount, unavailableCount ? `${unavailableCount} capability records are currently unavailable.` : `${snapshot.capabilities.length} capability records are currently represented.`), metric('MODELS', snapshot.models.length, signals.modelGap ? 'Model availability is currently limiting the usable ability fabric.' : `${signals.activeModels} active model lane${signals.activeModels === 1 ? '' : 's'} currently available.`), metric('ACTIVE', snapshot.activeCapabilities, signals.pressure === 'HIGH' ? 'Active capability use is subject to elevated resource pressure.' : 'Capabilities currently exposed by the runtime contract.')];
   return <InstrumentShell space={space} eyebrow="ABILITY FABRIC" title="The machine's abilities live here." subtitle="CAPABILITIES is the ability instrument: models, integrations, workers, devices, plugins and skills become inspectable, scoped and eventually invokable resources." cards={cards} mode="capabilities" signal={signals.modelGap ? 'MODEL-GAP' : signal} stateLabel={signals.modelGap ? 'MODEL AVAILABILITY GAP' : stateLabel} signals={signals} action={action} density={density}>
     <div className="capability-instrument-grid">{snapshot.capabilities.slice(0, 6).map((capability) => <div className={`capability-instrument-card state-${capability.state.toLowerCase()}`} key={capability.id}><div><span className="instrument-status" /><b>{capability.name}</b></div><span>{capability.state}</span><p>{capability.detail}</p></div>)}</div>
     {density !== 'compact' && <div className="capability-runtime-state"><div><span>INVOCATION STATE</span><b>{signals.modelGap ? 'MODEL GATE CLOSED' : signals.pressure === 'HIGH' ? 'RESOURCE-GUARDED' : 'AVAILABLE TO SCOPE'}</b><small>{signals.modelGap ? 'The ability fabric remains inspectable while invocation waits for a usable model lane.' : 'Presence remains separate from permission; every invocation still follows its authority path.'}</small></div><div><span>RUNTIME PRESSURE</span><b>{snapshot.resources.pressure}</b><small>{signals.pressure === 'HIGH' ? 'High pressure is now visible at the capability boundary.' : 'No elevated capability pressure is being expressed.'}</small></div></div>}
