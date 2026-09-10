@@ -9,7 +9,6 @@ import './styles.css';
 import './mission.css';
 import './identity.css';
 import './theme.css';
-import './mission-spine.css';
 import './desktop-presence.css';
 import './readability.css';
 import './interface-polish.css';
@@ -22,6 +21,7 @@ import './sidebar-refinement-m27.30.css';
 import './self-runtime-host-m27.30.css';
 import './mission-surface-pruning-m27.31.css';
 import './self-execution-thread-m27.31.css';
+import './theme-refinement-m27.32.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
