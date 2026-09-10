@@ -4,6 +4,7 @@ import { deriveMissionFlowState, type MissionStageStatus } from './missionFlowSt
 
 interface MissionFlowProps {
   snapshot: JarvisSnapshot;
+  selectedProjectId: string;
 }
 
 function statusLabel(status: MissionStageStatus): string {
@@ -13,15 +14,15 @@ function statusLabel(status: MissionStageStatus): string {
   return 'READY';
 }
 
-export default function MissionFlow({ snapshot }: MissionFlowProps) {
-  const flow = useMemo(() => deriveMissionFlowState(snapshot), [snapshot]);
+export default function MissionFlow({ snapshot, selectedProjectId }: MissionFlowProps) {
+  const flow = useMemo(() => deriveMissionFlowState(snapshot, selectedProjectId), [snapshot, selectedProjectId]);
   return (
     <div className="mission-flow-live" data-mission-stage={flow.stage} data-mission-status={flow.status}>
       <div className="mission-flow-state">
         <div>
-          <span className="mission-flow-kicker">CURRENT OPERATION</span>
+          <span className="mission-flow-kicker">CURRENT OPERATION · {flow.projectName ?? 'MISSION'}</span>
           <strong>{flow.headline}</strong>
-          <small>{flow.evidence}</small>
+          <small>{flow.evidence}{flow.workspaceName ? ` · ${flow.workspaceName}` : ''}</small>
         </div>
         <div className="mission-flow-guard">
           <span>GUARD</span>
@@ -43,6 +44,7 @@ export default function MissionFlow({ snapshot }: MissionFlowProps) {
           </div>
         ))}
       </div>
+      <div className="mission-flow-transition"><span>NEXT TRANSITION</span><b>{flow.transition}</b></div>
     </div>
   );
 }
