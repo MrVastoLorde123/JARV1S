@@ -18,7 +18,6 @@ import './mission-flow-m27.28.css';
 import './live-missions-footer-m27.30.css';
 import './runtime-state-expression-m27.30.css';
 import './self-runtime-m27.30.css';
-import './self-runtime-legacy-m27.30.css';
 import './sidebar-refinement-m27.30.css';
 import './self-runtime-host-m27.30.css';
 
