@@ -73,8 +73,9 @@ export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Dat
   if (current?.fingerprint === topFingerprint && now - current.shownAt < DWELL_MS) return top;
 
   const eligible = candidates.find((candidate) => {
-    const seen = lastShown(state, fingerprint(candidate));
-    const entry = state.history.findLast((item) => item.fingerprint === fingerprint(candidate));
+    const candidateFingerprint = fingerprint(candidate);
+    const seen = lastShown(state, candidateFingerprint);
+    const entry = state.history.findLast((item) => item.fingerprint === candidateFingerprint);
     if (entry?.state === 'RESOLVED' && seen !== undefined && now - seen < SUPPRESSION_MS[candidate.kind] * 2) return false;
     return seen === undefined || now - seen >= SUPPRESSION_MS[candidate.kind];
   });
@@ -87,6 +88,16 @@ export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Dat
   }
 
   return selected;
+}
+
+export function getCurrentSignal(): JarvisSignal | undefined {
+  const current = read().current;
+  if (!current) return undefined;
+  const separator = current.fingerprint.indexOf('|');
+  if (separator < 1) return undefined;
+  const kind = current.fingerprint.slice(0, separator) as JarvisSignal['kind'];
+  const message = current.fingerprint.slice(separator + 1);
+  return { kind, message, score: 0 };
 }
 
 export function getSignalInteraction(signal: JarvisSignal): SignalInteractionState {
