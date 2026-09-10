@@ -6,6 +6,7 @@ import type { JarvisSnapshot } from './contracts';
 
 type Space = 'CHAT' | 'CONTROL' | 'MIND' | 'CAPABILITIES';
 type RuntimeSignal = 'CLEAR' | 'ATTENTION' | 'PRESSURE' | 'WAITING' | 'ACTIVE' | 'MODEL-GAP' | 'CONTEXT-RICH';
+type Density = 'compact' | 'focused' | 'expanded' | 'deferred';
 type InstrumentAction = { label: string; detail: string; target: 'CHAT' | 'CONTROL' | 'MIND' | 'CAPABILITIES' | 'SELF' | 'WORK' };
 
 function metric(label: string, value: string | number, detail: string) { return { label, value: String(value), detail }; }
@@ -52,6 +53,16 @@ function deriveAction(space: Space, signals: ReturnType<typeof deriveSignals>, s
   return { label: 'Open control', detail: 'Move from available ability into the guarded action surface.', target: 'CONTROL' };
 }
 
+function deriveDensity(space: Space, signals: ReturnType<typeof deriveSignals>): Density {
+  if (signals.attention) return 'expanded';
+  if (signals.modelGap) return space === 'CAPABILITIES' || space === 'CONTROL' ? 'expanded' : 'focused';
+  if (signals.pressure === 'HIGH') return space === 'CONTROL' || space === 'CAPABILITIES' ? 'focused' : 'deferred';
+  if (signals.waiting) return space === 'CHAT' || space === 'CONTROL' ? 'focused' : 'compact';
+  if (space === 'MIND') return signals.contextDepth >= 16 ? 'expanded' : signals.contextDepth >= 8 ? 'focused' : 'compact';
+  if (signals.activity) return 'focused';
+  return 'compact';
+}
+
 export function OperationalInstrumentSurface({ space, snapshot }: { space: Space; snapshot: JarvisSnapshot }) {
   const signals = deriveSignals(snapshot);
   const project = snapshot.projects.find((item) => item.state === 'ACTIVE') ?? snapshot.projects.find((item) => item.state === 'WAITING') ?? snapshot.projects[0];
@@ -60,6 +71,7 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
   const signal = (signals.attention ? 'ATTENTION' : signals.pressure === 'HIGH' ? 'PRESSURE' : signals.waiting ? 'WAITING' : signals.modelGap ? 'MODEL-GAP' : signals.contextDepth >= 16 ? 'CONTEXT-RICH' : signals.activity ? 'ACTIVE' : 'CLEAR') as RuntimeSignal;
   const stateLabel = signals.attention ? 'USER ATTENTION' : signals.pressure === 'HIGH' ? 'HIGH RESOURCE PRESSURE' : signals.waiting ? 'STANDING BY' : signals.modelGap ? 'MODEL AVAILABILITY GAP' : signals.activity ? snapshot.mode.toUpperCase() : 'READY';
   const action = deriveAction(space, signals, snapshot);
+  const density = deriveDensity(space, signals);
 
   if (space === 'CHAT') {
     const cards = [
@@ -67,10 +79,11 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
       metric('ROUTE', activeModel?.name ?? 'STANDBY', signals.modelGap ? 'No healthy active model is available for immediate routing.' : 'Intent enters JARVIS before model selection or action.'),
       metric('SCOPE', workspace?.name ?? 'NO WORKSPACE', signals.waiting ? 'Requests can enter while execution remains waiting.' : 'Explicit workspace boundary for work-producing requests.'),
     ];
-    return <InstrumentShell space={space} eyebrow="INTENT MEMBRANE" title="Intent enters here." subtitle="CHAT is the intake instrument: language, direction and outcomes enter the machine before JARVIS decides what kind of work they become." cards={cards} mode="intent" signal={signal} stateLabel={stateLabel} signals={signals} action={action}>
+    return <InstrumentShell space={space} eyebrow="INTENT MEMBRANE" title="Intent enters here." subtitle="CHAT is the intake instrument: language, direction and outcomes enter the machine before JARVIS decides what kind of work they become." cards={cards} mode="intent" signal={signal} stateLabel={stateLabel} signals={signals} action={action} density={density}>
       {signals.attention && <div className="instrument-alert attention"><b>JARVIS NEEDS YOU.</b><span>{snapshot.attentionReason}</span></div>}
       <div className="instrument-lane"><span className="instrument-node input">01 · EXPRESS</span><i /><span className="instrument-node route">02 · INTERPRET</span><i /><span className="instrument-node scope">03 · BOUND</span><i /><span className="instrument-node handoff">04 · HANDOFF</span></div>
       <div className="instrument-state-grid"><div className="instrument-state-block"><span>INTAKE STATE</span><b>{signals.waiting ? 'QUEUE READY' : 'RECEIVING'}</b><small>{signals.pressure === 'HIGH' ? 'Resource pressure may delay downstream handling.' : 'Natural language can enter the machine normally.'}</small></div><div className="instrument-state-block"><span>MODEL GATE</span><b>{signals.modelGap ? 'HELD' : `${signals.activeModels} ACTIVE`}</b><small>{signals.modelGap ? 'Routing remains visible without pretending execution is available.' : 'A healthy model lane is available.'}</small></div></div>
+      {density === 'expanded' && <div className="instrument-reveal"><span>WHY THE INSTRUMENT OPENED UP</span><b>{signals.attention ? 'Your attention outranks passive intake.' : 'The machine needs more visible routing context.'}</b><small>Additional state is exposed instead of forcing the user to infer why the normal intake path changed.</small></div>}
       <div className="instrument-note"><b>CHAT DOES NOT EXECUTE.</b><span>It provides intent and context to the machine; downstream authority remains elsewhere.</span></div>
     </InstrumentShell>;
   }
@@ -81,10 +94,11 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
       metric('MODE', snapshot.mode, signals.pressure === 'HIGH' ? 'Resource pressure is shaping execution.' : signals.waiting ? 'The machine is waiting for an actionable transition.' : 'Runtime is within current resource policy.'),
       metric('GUARD', snapshot.resources.strategy, 'Execution policy remains between intention and side effects.'),
     ];
-    return <InstrumentShell space={space} eyebrow="ACTION CONSOLE" title="The machine acts here." subtitle="CONTROL is the action instrument: selected mission, authority boundaries, model assignment and guarded transitions converge here." cards={cards} mode="control" signal={signal} stateLabel={stateLabel} signals={signals} action={action}>
+    return <InstrumentShell space={space} eyebrow="ACTION CONSOLE" title="The machine acts here." subtitle="CONTROL is the action instrument: selected mission, authority boundaries, model assignment and guarded transitions converge here." cards={cards} mode="control" signal={signal} stateLabel={stateLabel} signals={signals} action={action} density={density}>
       <div className="control-instrument-grid"><div className={signals.activeWork ? 'state-active' : 'state-quiet'}><span>SELECTED OBJECT</span><b>{project?.name ?? 'None'}</b><small>{project?.detail ?? 'Awaiting a mission object.'}</small></div><div className={signals.modelGap ? 'state-blocked' : 'state-active'}><span>ACTIVE HAND</span><b>{activeModel?.name ?? 'No active model'}</b><small>{signals.modelGap ? 'No healthy model is ready to take the next execution handoff.' : activeModel?.role ?? 'Model assignment available.'}</small></div><div className={signals.pressure === 'HIGH' || signals.waiting ? 'state-guarded' : 'state-active'}><span>NEXT EFFECT</span><b>{signals.waiting ? 'WAIT FOR TRANSITION' : project?.currentAction ?? 'Waiting for direction'}</b><small>{signals.pressure === 'HIGH' ? 'High pressure keeps the next effect behind the resource guard.' : 'Action requires the appropriate authority path before side effects.'}</small></div></div>
       <div className="instrument-authority"><span>AUTHORITY PATH</span><b>INTENT → VALIDATE → POLICY → AUTHORIZE → EXECUTE</b><small>{signals.attention ? 'User attention is currently part of the control boundary.' : signals.waiting ? 'The machine is holding rather than inventing an action.' : 'Control exposes the machine\'s actionable boundary without pretending observation is authority.'}</small></div>
-      <div className="control-state-banner"><span>{signals.activity ? 'EXECUTION SURFACE' : 'TRANSITION SURFACE'}</span><b>{signals.modelGap ? 'DISPATCH BLOCKED' : signals.waiting ? 'STANDBY GATE' : signals.pressure === 'HIGH' ? 'GUARDED EXECUTION' : 'READY FOR AUTHORIZED ACTION'}</b></div>
+      {density !== 'compact' && <div className="control-state-banner"><span>{signals.activity ? 'EXECUTION SURFACE' : 'TRANSITION SURFACE'}</span><b>{signals.modelGap ? 'DISPATCH BLOCKED' : signals.waiting ? 'STANDBY GATE' : signals.pressure === 'HIGH' ? 'GUARDED EXECUTION' : 'READY FOR AUTHORIZED ACTION'}</b></div>}
+      {density === 'expanded' && <div className="instrument-reveal"><span>CONTROL EXPANSION</span><b>EXPOSE THE TRANSITION, NOT PRIVATE REASONING</b><small>Additional operational detail appears when attention or model availability makes the boundary important to the operator.</small></div>}
     </InstrumentShell>;
   }
 
@@ -95,9 +109,9 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
       metric('LEARNING', snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length, 'Recent learning-shaped runtime signals.'),
     ];
     const contextClass = signals.contextDepth >= 16 ? 'rich' : signals.contextDepth >= 8 ? 'layered' : 'sparse';
-    return <InstrumentShell space={space} eyebrow="CONTEXT FIELD" title="The machine carries context here." subtitle="MIND is the internal-context instrument: memory, knowledge, plans, experiences and relationships give future actions somewhere to come from." cards={cards} mode="mind" signal={signals.contextDepth >= 16 ? 'CONTEXT-RICH' : signal} stateLabel={signals.contextDepth >= 16 ? 'CONTEXT RICH' : stateLabel} signals={signals} action={action}>
+    return <InstrumentShell space={space} eyebrow="CONTEXT FIELD" title="The machine carries context here." subtitle="MIND is the internal-context instrument: memory, knowledge, plans, experiences and relationships give future actions somewhere to come from." cards={cards} mode="mind" signal={signals.contextDepth >= 16 ? 'CONTEXT-RICH' : signal} stateLabel={signals.contextDepth >= 16 ? 'CONTEXT RICH' : stateLabel} signals={signals} action={action} density={density}>
       <div className={`mind-instrument-map ${contextClass}`}><div className="mind-orbit core"><span>ACTIVE CONTEXT</span><b>{snapshot.currentFocus}</b></div><div className="mind-orbit memory"><span>MEMORY</span><b>{signals.contextDepth >= 8 ? 'durable context present' : 'awaiting depth'}</b></div><div className="mind-orbit learning"><span>LEARNING</span><b>{signals.activity ? 'live signal' : 'evaluation → adaptation'}</b></div><div className="mind-orbit plans"><span>PLANS</span><b>{snapshot.plans.length} plan roots</b></div><div className="mind-orbit work"><span>WORK</span><b>{snapshot.projects.length} objects</b></div></div>
-      <div className="mind-context-strip"><div><span>CONTEXT STATE</span><b>{contextClass.toUpperCase()}</b><small>{contextClass === 'rich' ? 'The field has enough connected material to expose more context density.' : contextClass === 'layered' ? 'Multiple context families are currently available.' : 'The field remains intentionally sparse rather than inventing context.'}</small></div><div><span>MEMORY / LEARNING</span><b>{snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length} LEARNING SIGNALS</b><small>Learning signals enrich context but do not become truth by themselves.</small></div></div>
+      {density !== 'compact' && <div className="mind-context-strip"><div><span>CONTEXT STATE</span><b>{contextClass.toUpperCase()}</b><small>{contextClass === 'rich' ? 'The field has enough connected material to expose more context density.' : contextClass === 'layered' ? 'Multiple context families are currently available.' : 'The field remains intentionally sparse rather than inventing context.'}</small></div><div><span>MEMORY / LEARNING</span><b>{snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length} LEARNING SIGNALS</b><small>Learning signals enrich context but do not become truth by themselves.</small></div></div>}
       <div className="instrument-note"><b>MIND IS NOT CHAT HISTORY.</b><span>It is the structured context layer that can be consulted by reasoning and action without becoming authority by itself.</span></div>
     </InstrumentShell>;
   }
@@ -109,20 +123,21 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
     metric('MODELS', snapshot.models.length, signals.modelGap ? 'Model availability is currently limiting the usable ability fabric.' : `${signals.activeModels} active model lane${signals.activeModels === 1 ? '' : 's'} currently available.`),
     metric('ACTIVE', snapshot.activeCapabilities, signals.pressure === 'HIGH' ? 'Active capability use is subject to elevated resource pressure.' : 'Capabilities currently exposed by the runtime contract.'),
   ];
-  return <InstrumentShell space={space} eyebrow="ABILITY FABRIC" title="The machine's abilities live here." subtitle="CAPABILITIES is the ability instrument: models, integrations, workers, devices, plugins and skills become inspectable, scoped and eventually invokable resources." cards={cards} mode="capabilities" signal={signals.modelGap ? 'MODEL-GAP' : signal} stateLabel={signals.modelGap ? 'MODEL AVAILABILITY GAP' : stateLabel} signals={signals} action={action}>
+  return <InstrumentShell space={space} eyebrow="ABILITY FABRIC" title="The machine's abilities live here." subtitle="CAPABILITIES is the ability instrument: models, integrations, workers, devices, plugins and skills become inspectable, scoped and eventually invokable resources." cards={cards} mode="capabilities" signal={signals.modelGap ? 'MODEL-GAP' : signal} stateLabel={signals.modelGap ? 'MODEL AVAILABILITY GAP' : stateLabel} signals={signals} action={action} density={density}>
     <div className="capability-instrument-grid">{snapshot.capabilities.slice(0, 6).map((capability) => <div className={`capability-instrument-card state-${capability.state.toLowerCase()}`} key={capability.id}><div><span className="instrument-status" /><b>{capability.name}</b></div><span>{capability.state}</span><p>{capability.detail}</p></div>)}</div>
-    <div className="capability-runtime-state"><div><span>INVOCATION STATE</span><b>{signals.modelGap ? 'MODEL GATE CLOSED' : signals.pressure === 'HIGH' ? 'RESOURCE-GUARDED' : 'AVAILABLE TO SCOPE'}</b><small>{signals.modelGap ? 'The ability fabric remains inspectable while invocation waits for a usable model lane.' : 'Presence remains separate from permission; every invocation still follows its authority path.'}</small></div><div><span>RUNTIME PRESSURE</span><b>{snapshot.resources.pressure}</b><small>{signals.pressure === 'HIGH' ? 'High pressure is now visible at the capability boundary.' : 'No elevated capability pressure is being expressed.'}</small></div></div>
+    {density !== 'compact' && <div className="capability-runtime-state"><div><span>INVOCATION STATE</span><b>{signals.modelGap ? 'MODEL GATE CLOSED' : signals.pressure === 'HIGH' ? 'RESOURCE-GUARDED' : 'AVAILABLE TO SCOPE'}</b><small>{signals.modelGap ? 'The ability fabric remains inspectable while invocation waits for a usable model lane.' : 'Presence remains separate from permission; every invocation still follows its authority path.'}</small></div><div><span>RUNTIME PRESSURE</span><b>{snapshot.resources.pressure}</b><small>{signals.pressure === 'HIGH' ? 'High pressure is now visible at the capability boundary.' : 'No elevated capability pressure is being expressed.'}</small></div></div>}
+    {density === 'deferred' && <div className="instrument-reveal"><span>DETAIL DEFERRED</span><b>CAPABILITY DETAIL YIELDS TO RUNTIME PRESSURE</b><small>The fabric stays inspectable while secondary operational detail is intentionally quiet.</small></div>}
     <div className="ability-boundary"><span>ABILITY LIFECYCLE</span><b>DISCOVER → INSPECT → TEST → SCOPE → INVOKE → VERIFY</b><small>Capability presence never implies permission to execute.</small></div>
   </InstrumentShell>;
 }
 
-function InstrumentShell({ space, eyebrow, title, subtitle, cards, mode, signal, stateLabel, signals, action, children }: { space: Space; eyebrow: string; title: string; subtitle: string; cards: Array<{ label: string; value: string; detail: string }>; mode: string; signal: RuntimeSignal; stateLabel: string; signals: ReturnType<typeof deriveSignals>; action: InstrumentAction; children: React.ReactNode }) {
-  return <section className={`instrument-surface instrument-${mode} instrument-signal-${signal.toLowerCase()} instrument-pressure-${signals.pressure.toLowerCase()} ${signals.attention ? 'instrument-attention' : ''} ${signals.waiting ? 'instrument-waiting' : ''} ${signals.activity ? 'instrument-active' : ''}`} data-instrument-space={space} data-runtime-signal={signal}>
+function InstrumentShell({ space, eyebrow, title, subtitle, cards, mode, signal, stateLabel, signals, action, density, children }: { space: Space; eyebrow: string; title: string; subtitle: string; cards: Array<{ label: string; value: string; detail: string }>; mode: string; signal: RuntimeSignal; stateLabel: string; signals: ReturnType<typeof deriveSignals>; action: InstrumentAction; density: Density; children: React.ReactNode }) {
+  return <section className={`instrument-surface instrument-${mode} instrument-signal-${signal.toLowerCase()} instrument-pressure-${signals.pressure.toLowerCase()} instrument-density-${density} ${signals.attention ? 'instrument-attention' : ''} ${signals.waiting ? 'instrument-waiting' : ''} ${signals.activity ? 'instrument-active' : ''}`} data-instrument-space={space} data-runtime-signal={signal} data-density={density}>
     <div className="instrument-heading"><div><span>{eyebrow}</span><h2>{title}</h2><p>{subtitle}</p></div><div className="instrument-identity"><span>{space}</span><b>{mode.toUpperCase()}</b></div></div>
     <div className="instrument-statebar"><span className="instrument-signal-dot" /><b>{stateLabel}</b><small>{signals.activeWork} ACTIVE WORK · {signals.activeModels} ACTIVE MODEL{signals.activeModels === 1 ? '' : 'S'} · {signals.pressure} PRESSURE</small></div>
     <div className="instrument-metrics">{cards.map((card) => <div className="instrument-metric" key={card.label}><span>{card.label}</span><b>{card.value}</b><small>{card.detail}</small></div>)}</div>
     <div className="instrument-body">{children}</div>
-    <button className="instrument-action" onClick={() => openSpace(action.target)}><span>{action.label}</span><small>{action.detail}</small><b>→</b></button>
+    <div className="instrument-action"><div><span>NEXT MOVE</span><b>{action.label}</b><small>{action.detail}</small></div><button onClick={() => openSpace(action.target)}>OPEN →</button></div>
   </section>;
 }
 
