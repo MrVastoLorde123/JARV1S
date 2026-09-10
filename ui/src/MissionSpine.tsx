@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { JarvisSnapshot } from './contracts';
 import MissionFlow from './MissionFlow';
+import MissionPipeline from './MissionPipeline';
 import { deriveMissionFlowState } from './missionFlowState';
 
 type Space = 'HOME' | 'CHAT' | 'WORK' | 'CONTROL' | 'MIND' | 'CAPABILITIES' | 'SELF';
@@ -25,6 +26,7 @@ function MissionSpine({
 }: MissionSpineProps) {
   const [traceOpen, setTraceOpen] = useState(false);
   const [flowHost, setFlowHost] = useState<HTMLElement | null>(null);
+  const [pipelineHost, setPipelineHost] = useState<HTMLElement | null>(null);
   const selectedProject = snapshot.projects.find((project) => project.id === selectedProjectId) ?? snapshot.projects[0];
   const selectedWorkspace = snapshot.workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? snapshot.workspaces[0];
   const assignedModel = snapshot.models.find((model) => model.state === 'ACTIVE') ?? snapshot.models[0];
@@ -35,12 +37,14 @@ function MissionSpine({
   const traceItems = useMemo(() => snapshot.selfActivity.slice(0, 4), [snapshot.selfActivity]);
 
   useEffect(() => {
-    const syncHost = () => {
-      const host = document.querySelector<HTMLElement>('.mission-flow');
-      setFlowHost((current) => current === host ? current : host);
+    const syncHosts = () => {
+      const flow = document.querySelector<HTMLElement>('.mission-flow');
+      const pipeline = document.querySelector<HTMLElement>('.pipeline');
+      setFlowHost((current) => current === flow ? current : flow);
+      setPipelineHost((current) => current === pipeline ? current : pipeline);
     };
-    syncHost();
-    const observer = new MutationObserver(syncHost);
+    syncHosts();
+    const observer = new MutationObserver(syncHosts);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
@@ -105,6 +109,7 @@ function MissionSpine({
         )}
       </section>
       {flowHost ? createPortal(<MissionFlow snapshot={snapshot} />, flowHost) : null}
+      {pipelineHost ? createPortal(<MissionPipeline snapshot={snapshot} />, pipelineHost) : null}
     </>
   );
 }
