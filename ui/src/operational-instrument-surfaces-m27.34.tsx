@@ -94,11 +94,12 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
   }
 
   if (space === 'MIND') {
-    const cards = [metric('FOCUS', snapshot.currentFocus, 'Current context carried by the runtime.'), metric('CONTEXT DEPTH', signals.contextDepth, `${snapshot.projects.length} work + ${snapshot.researchTopics.length} research + ${snapshot.plans.length} plans + ${snapshot.selfActivity.length} recent runtime signals.`), metric('LEARNING', snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length, 'Recent learning-shaped runtime signals.')];
+    const learningSignals = snapshot.mode === 'Learning' ? 1 : 0;
+    const cards = [metric('FOCUS', snapshot.currentFocus, 'Current context carried by the runtime.'), metric('CONTEXT DEPTH', signals.contextDepth, `${snapshot.projects.length} work + ${snapshot.researchTopics.length} research + ${snapshot.plans.length} plans + ${snapshot.selfActivity.length} recent runtime signals.`), metric('LEARNING', learningSignals, 'Learning-shaped runtime state represented by the current snapshot.')];
     const contextClass = signals.contextDepth >= 16 ? 'rich' : signals.contextDepth >= 8 ? 'layered' : 'sparse';
     return <InstrumentShell space={space} eyebrow="CONTEXT FIELD" title="The machine carries context here." subtitle="MIND is the internal-context instrument: memory, knowledge, plans, experiences and relationships give future actions somewhere to come from." cards={cards} mode="mind" signal={signals.contextDepth >= 16 ? 'CONTEXT-RICH' : signal} stateLabel={signals.contextDepth >= 16 ? 'CONTEXT RICH' : stateLabel} signals={signals} action={action} density={density}>
       <div className={`mind-instrument-map ${contextClass}`}><div className="mind-orbit core"><span>ACTIVE CONTEXT</span><b>{snapshot.currentFocus}</b></div><div className="mind-orbit memory"><span>MEMORY</span><b>{signals.contextDepth >= 8 ? 'durable context present' : 'awaiting depth'}</b></div><div className="mind-orbit learning"><span>LEARNING</span><b>{signals.activity ? 'live signal' : 'evaluation → adaptation'}</b></div><div className="mind-orbit plans"><span>PLANS</span><b>{snapshot.plans.length} plan roots</b></div><div className="mind-orbit work"><span>WORK</span><b>{snapshot.projects.length} objects</b></div></div>
-      {density !== 'compact' && <div className="mind-context-strip"><div><span>CONTEXT STATE</span><b>{contextClass.toUpperCase()}</b><small>{contextClass === 'rich' ? 'The field has enough connected material to expose more context density.' : contextClass === 'layered' ? 'Multiple context families are currently available.' : 'The field remains intentionally sparse rather than inventing context.'}</small></div><div><span>MEMORY / LEARNING</span><b>{snapshot.selfActivity.filter((item) => item.kind === 'LEARNING').length} LEARNING SIGNALS</b><small>Learning signals enrich context but do not become truth by themselves.</small></div></div>}
+      {density !== 'compact' && <div className="mind-context-strip"><div><span>CONTEXT STATE</span><b>{contextClass.toUpperCase()}</b><small>{contextClass === 'rich' ? 'The field has enough connected material to expose more context density.' : contextClass === 'layered' ? 'Multiple context families are currently available.' : 'The field remains intentionally sparse rather than inventing context.'}</small></div><div><span>MEMORY / LEARNING</span><b>{learningSignals} LEARNING SIGNALS</b><small>Learning signals enrich context but do not become truth by themselves.</small></div></div>}
       <div className="instrument-note"><b>MIND IS NOT CHAT HISTORY.</b><span>It is the structured context layer that can be consulted by reasoning and action without becoming authority by itself.</span></div>
     </InstrumentShell>;
   }
@@ -140,7 +141,9 @@ export function installOperationalInstrumentSurfaces() {
     const container = next === 'CAPABILITIES' ? target?.closest('.space-panel') : target;
     if (!container) return;
     if (!mount || currentSpace !== next || !container.contains(mount)) { root?.unmount(); mount?.remove(); mount = document.createElement('div'); mount.className = 'operational-instrument-mount'; container.insertBefore(mount, container.firstChild); root = createRoot(mount); currentSpace = next; }
-    root.render(<OperationalInstrumentSurface space={next} snapshot={snapshot} />);
+    const renderRoot = root;
+    if (!renderRoot) return;
+    renderRoot.render(<OperationalInstrumentSurface space={next} snapshot={snapshot} />);
   };
   const start = () => {
     sync();
