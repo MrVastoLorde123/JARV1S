@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import React from 'react';
-import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { demoGateway } from './demoGateway';
 import type { JarvisSnapshot } from './contracts';
 
@@ -64,7 +63,7 @@ export function OperationalInstrumentSurface({ space, snapshot }: { space: Space
   </InstrumentShell>;
 }
 
-function InstrumentShell({ space, eyebrow, title, subtitle, cards, mode, children }: { space: Space; eyebrow: string; title: string; subtitle: string; cards: Array<{ label: string; value: string; detail: string }>; mode: string; children: React.ReactNode }) {
+function InstrumentShell({ space, eyebrow, title, subtitle, cards, mode, children }: { space: Space; eyebrow: string; title: string; subtitle: string; cards: Array<{ label: string; value: string; detail: string }>; mode: string; children: ReactNode }) {
   return <section className={`instrument-surface instrument-${mode}`} data-instrument-space={space}>
     <div className="instrument-heading"><div><span>{eyebrow}</span><h2>{title}</h2><p>{subtitle}</p></div><div className="instrument-identity"><span>{space}</span><b>{mode.toUpperCase()}</b></div></div>
     <div className="instrument-metrics">{cards.map((card) => <div className="instrument-metric" key={card.label}><span>{card.label}</span><b>{card.value}</b><small>{card.detail}</small></div>)}</div>
