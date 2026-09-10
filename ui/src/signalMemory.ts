@@ -28,6 +28,14 @@ function fingerprint(signal: JarvisSignal): string {
   return `${signal.kind}|${signal.message}`;
 }
 
+function findLastEntry(history: SignalMemoryEntry[], fingerprintValue: string): SignalMemoryEntry | undefined {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index];
+    if (entry.fingerprint === fingerprintValue) return entry;
+  }
+  return undefined;
+}
+
 function read(): SignalMemoryState {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -60,7 +68,7 @@ function saveEntry(state: SignalMemoryState, entry: SignalMemoryEntry) {
 }
 
 function lastShown(state: SignalMemoryState, fingerprintValue: string): number | undefined {
-  return state.history.findLast((entry) => entry.fingerprint === fingerprintValue)?.shownAt;
+  return findLastEntry(state.history, fingerprintValue)?.shownAt;
 }
 
 export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Date.now()): JarvisSignal {
@@ -75,7 +83,7 @@ export function deriveTemporalJarvisSignal(candidates: JarvisSignal[], now = Dat
   const eligible = candidates.find((candidate) => {
     const candidateFingerprint = fingerprint(candidate);
     const seen = lastShown(state, candidateFingerprint);
-    const entry = state.history.findLast((item) => item.fingerprint === candidateFingerprint);
+    const entry = findLastEntry(state.history, candidateFingerprint);
     if (entry?.state === 'RESOLVED' && seen !== undefined && now - seen < SUPPRESSION_MS[candidate.kind] * 2) return false;
     return seen === undefined || now - seen >= SUPPRESSION_MS[candidate.kind];
   });
@@ -101,14 +109,14 @@ export function getCurrentSignal(): JarvisSignal | undefined {
 }
 
 export function getSignalInteraction(signal: JarvisSignal): SignalInteractionState {
-  const entry = read().history.findLast((item) => item.fingerprint === fingerprint(signal));
+  const entry = findLastEntry(read().history, fingerprint(signal));
   return entry?.state ?? 'SURFACED';
 }
 
 export function acknowledgeSignal(signal: JarvisSignal, now = Date.now()): void {
   const state = read();
   const id = fingerprint(signal);
-  const previous = state.history.findLast((item) => item.fingerprint === id);
+  const previous = findLastEntry(state.history, id);
   const entry: SignalMemoryEntry = {
     ...(previous ?? { fingerprint: id, shownAt: now }),
     state: 'ACKNOWLEDGED',
@@ -120,7 +128,7 @@ export function acknowledgeSignal(signal: JarvisSignal, now = Date.now()): void 
 export function resolveSignal(signal: JarvisSignal, now = Date.now()): void {
   const state = read();
   const id = fingerprint(signal);
-  const previous = state.history.findLast((item) => item.fingerprint === id);
+  const previous = findLastEntry(state.history, id);
   const entry: SignalMemoryEntry = {
     ...(previous ?? { fingerprint: id, shownAt: now }),
     state: 'RESOLVED',
