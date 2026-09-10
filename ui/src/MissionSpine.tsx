@@ -35,9 +35,14 @@ function MissionSpine({
   const traceItems = useMemo(() => snapshot.selfActivity.slice(0, 4), [snapshot.selfActivity]);
 
   useEffect(() => {
-    const host = document.querySelector<HTMLElement>('.mission-flow');
-    if (host) setFlowHost(host);
-    return () => setFlowHost(null);
+    const syncHost = () => {
+      const host = document.querySelector<HTMLElement>('.mission-flow');
+      setFlowHost((current) => current === host ? current : host);
+    };
+    syncHost();
+    const observer = new MutationObserver(syncHost);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, []);
 
   return (
