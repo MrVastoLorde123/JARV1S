@@ -37,12 +37,6 @@ function bestSignal(snapshot: JarvisSnapshot): JarvisSignal {
       score: 800,
       message: `Resource pressure is high: ${snapshot.resources.cpuLoad}% CPU / ${snapshot.resources.memoryLoad}% memory.`,
     });
-  } else if (snapshot.resources.pressure === 'ELEVATED') {
-    candidates.push({
-      kind: 'PRESSURE',
-      score: 700,
-      message: `Resource pressure is elevated: ${snapshot.resources.cpuLoad}% CPU / ${snapshot.resources.memoryLoad}% memory.`,
-    });
   }
 
   const paused = pausedProject(snapshot);
@@ -51,6 +45,14 @@ function bestSignal(snapshot: JarvisSnapshot): JarvisSignal {
       kind: 'ATTENTION',
       score: 650,
       message: `Project paused: ${paused.name}.`,
+    });
+  }
+
+  if (snapshot.resources.pressure === 'ELEVATED') {
+    candidates.push({
+      kind: 'PRESSURE',
+      score: 600,
+      message: `Resource pressure is elevated: ${snapshot.resources.cpuLoad}% CPU / ${snapshot.resources.memoryLoad}% memory.`,
     });
   }
 
