@@ -94,14 +94,15 @@ export function installOperationalInstrumentSurfaces() {
 
     const target = document.querySelector<HTMLElement>(selector);
     const container = next === 'CAPABILITIES' ? target?.closest('.space-panel') : target;
-    if (!container) return;
+    const parent = container?.parentElement;
+    if (!container || !parent) return;
 
-    if (!mount || currentSpace !== next || !container.contains(mount)) {
+    if (!mount || currentSpace !== next || mount.parentElement !== parent) {
       root?.unmount();
       mount?.remove();
       mount = document.createElement('div');
       mount.className = 'operational-instrument-mount';
-      container.insertBefore(mount, container.firstChild);
+      parent.insertBefore(mount, container);
       root = createRoot(mount);
       currentSpace = next;
     }
