@@ -8,6 +8,7 @@ interface SelfRuntimeProps {
 
 function SelfRuntime({ snapshot, onOpenControl }: SelfRuntimeProps) {
   const activeModel = snapshot.models.find((model) => model.state === 'ACTIVE');
+  const activeProject = snapshot.projects.find((project) => project.state === 'ACTIVE') ?? snapshot.projects[0];
   const busyModels = snapshot.models.filter((model) => model.state === 'ACTIVE');
   const observed = snapshot.selfActivity.slice(0, 4);
   const pressure = snapshot.resources.pressure;
@@ -27,6 +28,16 @@ function SelfRuntime({ snapshot, onOpenControl }: SelfRuntimeProps) {
           <small>{snapshot.mode}</small>
         </div>
       </header>
+
+      <section className="self-execution-thread" aria-label="Current execution thread">
+        <div className="self-thread-node"><span>MISSION</span><b>{activeProject?.name ?? 'No active work'}</b><small>{activeProject?.state ?? 'IDLE'}</small></div>
+        <i aria-hidden="true" />
+        <div className="self-thread-node"><span>STAGE</span><b>{snapshot.mode}</b><small>{snapshot.workRuntime.state}</small></div>
+        <i aria-hidden="true" />
+        <div className="self-thread-node"><span>MODEL</span><b>{activeModel?.name ?? 'No active model'}</b><small>{activeModel?.role ?? 'Standby'}</small></div>
+        <i aria-hidden="true" />
+        <div className="self-thread-node"><span>RESOURCE</span><b>{pressure}</b><small>{snapshot.resources.activeModelTasks}/{capacity} concurrency</small></div>
+      </section>
 
       <div className="self-runtime-grid">
         <section className="self-runtime-lane self-resource-lane">
