@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { JarvisSnapshot } from './contracts';
 import MissionFlow from './MissionFlow';
 import MissionPipeline from './MissionPipeline';
+import LiveMissionsFooter from './LiveMissionsFooter';
 import { deriveMissionFlowState } from './missionFlowState';
 
 type Space = 'HOME' | 'CHAT' | 'WORK' | 'CONTROL' | 'MIND' | 'CAPABILITIES' | 'SELF';
@@ -110,6 +111,7 @@ function MissionSpine({
       </section>
       {flowHost ? createPortal(<MissionFlow snapshot={snapshot} selectedProjectId={selectedProjectId} />, flowHost) : null}
       {pipelineHost ? createPortal(<MissionPipeline snapshot={snapshot} selectedProjectId={selectedProjectId} />, pipelineHost) : null}
+      {createPortal(<LiveMissionsFooter snapshot={snapshot} selectedProjectId={selectedProjectId} onSelectProject={onSelectProject} navigate={navigate} />, document.body)}
     </>
   );
 }
