@@ -1,5 +1,6 @@
 import { demoGateway } from './demoGateway';
-import { deriveJarvisSignal } from './signalPrioritizer';
+import { getJarvisSignalCandidates } from './signalPrioritizer';
+import { deriveTemporalJarvisSignal } from './signalMemory';
 
 const ID = 'jarvis-desktop-presence';
 
@@ -41,7 +42,7 @@ function ensurePresence() {
 function update() {
   const host = ensurePresence();
   const snapshot = demoGateway.snapshotSync();
-  const signal = deriveJarvisSignal(snapshot);
+  const signal = deriveTemporalJarvisSignal(getJarvisSignalCandidates(snapshot));
   const currentSpace = document.querySelector('.top-context')?.textContent?.trim() || 'PROJECTS';
   const focus = document.querySelector('.top-focus')?.textContent?.trim() || snapshot.currentFocus;
   const event = document.querySelector('.state-pulse div small')?.textContent?.trim() || 'Core connected';
