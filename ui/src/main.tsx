@@ -28,6 +28,7 @@ import './space-identity-m27.33.css';
 import './space-continuity-m27.33.css';
 import './operational-instrument-surfaces-m27.34.css';
 import './instrument-density-m27.37.css';
+import './instrument-spatial-hierarchy-m27.38.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
