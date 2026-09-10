@@ -77,7 +77,7 @@ export function deriveMissionFlowState(snapshot: JarvisSnapshot, selectedProject
             ? 'STANDBY'
             : 'ACTIVE';
 
-  const stages = stageOrder.map((id) => ({
+  const stages: MissionFlowStage[] = stageOrder.map((id) => ({
     id,
     label: id,
     detail: stageDetail(id, snapshot, project, assignedModel?.name ?? 'Standby', latest),
