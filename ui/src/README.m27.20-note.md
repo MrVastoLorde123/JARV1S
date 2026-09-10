@@ -1,0 +1,1 @@
+The visible navigation language uses PROJECTS while the internal Space discriminator remains WORK for now. This is intentional until a deeper route-contract migration.
