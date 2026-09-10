@@ -12,7 +12,7 @@ export interface MissionFlowStage {
 
 export interface MissionFlowState {
   stage: MissionStageId;
-  status: 'ACTIVE' | 'STANDBY' | 'ATTENTION' | 'OFFLINE' | 'GUARDED';
+  status: 'ACTIVE' | 'STANDBY' | 'ATTENTION' | 'OFFLINE' | 'GUARDED' | 'COMPLETE';
   projectId?: string;
   projectName?: string;
   workspaceName?: string;
