@@ -5,6 +5,7 @@ import { installThemeController } from './themeController';
 import { installDesktopPresence } from './desktopPresenceController';
 import { installProjectLanguage } from './projectLanguageController';
 import { installSelfRuntime } from './self-runtime-controller-m27.30';
+import { installSpaceContinuity } from './space-continuity-controller-m27.33';
 import './styles.css';
 import './mission.css';
 import './identity.css';
@@ -23,6 +24,7 @@ import './mission-surface-pruning-m27.31.css';
 import './self-execution-thread-m27.31.css';
 import './theme-refinement-m27.32.css';
 import './space-identity-m27.33.css';
+import './space-continuity-m27.33.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>,
@@ -32,3 +34,4 @@ installThemeController();
 installDesktopPresence();
 installProjectLanguage();
 installSelfRuntime();
+installSpaceContinuity();
