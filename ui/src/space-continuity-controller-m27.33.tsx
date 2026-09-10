@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { demoGateway } from './demoGateway';
 import type { JarvisSnapshot } from './contracts';
 
 type Space = 'HOME' | 'CHAT' | 'WORK' | 'CONTROL' | 'MIND' | 'CAPABILITIES' | 'SELF';
 
 const spaces: Array<{ id: Space; detail: string }> = [
-  { id: 'HOME', detail: 'orientation' },
-  { id: 'CHAT', detail: 'intent' },
-  { id: 'WORK', detail: 'execution' },
-  { id: 'CONTROL', detail: 'authority' },
-  { id: 'MIND', detail: 'context' },
-  { id: 'CAPABILITIES', detail: 'power' },
-  { id: 'SELF', detail: 'runtime' },
+  { id: 'HOME', detail: 'orientation' }, { id: 'CHAT', detail: 'intent' }, { id: 'WORK', detail: 'execution' },
+  { id: 'CONTROL', detail: 'authority' }, { id: 'MIND', detail: 'context' }, { id: 'CAPABILITIES', detail: 'power' }, { id: 'SELF', detail: 'runtime' },
 ];
 
 function openSpace(space: Space) {
@@ -21,62 +16,53 @@ function openSpace(space: Space) {
 }
 
 function ContinuityRail({ snapshot }: { snapshot: JarvisSnapshot }) {
-  const [active, setActive] = useState<Space>(() => {
-    const shell = document.querySelector<HTMLElement>('.shell');
-    const current = shell?.dataset.space as Space | undefined;
-    return current ?? 'HOME';
-  });
+  const [active, setActive] = useState<Space>('HOME');
 
   useEffect(() => {
     const sync = () => {
       const shell = document.querySelector<HTMLElement>('.shell');
       const current = shell?.dataset.space as Space | undefined;
-      if (current) setActive(current);
+      const navCurrent = document.querySelector('.nav-item.active')?.textContent?.trim() as Space | undefined;
+      const next = current ?? navCurrent;
+      if (next) setActive(next);
     };
     sync();
     const observer = new MutationObserver(sync);
-    const shell = document.querySelector<HTMLElement>('.shell');
-    if (shell) observer.observe(shell, { attributes: true, attributeFilter: ['data-space'] });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
 
-  const currentIndex = spaces.findIndex((space) => space.id === active);
   const mission = snapshot.projects.find((project) => project.state === 'ACTIVE') ?? snapshot.projects[0];
   return <nav className="space-continuity-rail" aria-label="JARVIS operating instruments">
     {spaces.map((space, index) => (
       <button key={space.id} className={`space-continuity-link ${active === space.id ? 'active' : ''}`} onClick={() => { setActive(space.id); openSpace(space.id); }}>
         <span className="space-continuity-index">{String(index + 1).padStart(2, '0')}</span>
-        <span className="space-continuity-copy"><b>{space.id}</b><small>{space.detail}{index === currentIndex ? ` · ${mission?.name ?? snapshot.currentFocus}` : ''}</small></span>
+        <span className="space-continuity-copy"><b>{space.id}</b><small>{space.detail}{active === space.id ? ` · ${mission?.name ?? snapshot.currentFocus}` : ''}</small></span>
       </button>
     ))}
   </nav>;
 }
 
 export function installSpaceContinuity() {
-  const installed = new WeakSet<HTMLElement>();
   let observer: MutationObserver | null = null;
-  const snapshot = demoGateway.snapshotSync();
-  const sync = () => {
-    const shell = document.querySelector<HTMLElement>('.shell');
+  let root: ReturnType<typeof createRoot> | null = null;
+  const start = () => {
     const layout = document.querySelector<HTMLElement>('.layout');
-    if (!shell || !layout || installed.has(layout)) return;
-    shell.dataset.space = (document.querySelector('.nav-item.active')?.textContent?.trim() || 'HOME') as Space;
+    if (!layout || root) return;
     const mount = document.createElement('div');
     mount.className = 'space-continuity-mount';
-    layout.insertBefore(mount, layout.firstChild?.nextSibling ?? layout.firstChild);
-    createPortal(<ContinuityRail snapshot={snapshot} />, mount);
-    installed.add(layout);
-  };
-  const start = () => {
-    sync();
-    observer = new MutationObserver(sync);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer?.disconnect();
+    layout.appendChild(mount);
+    root = createRoot(mount);
+    root.render(<ContinuityRail snapshot={demoGateway.snapshotSync()} />);
+    observer = new MutationObserver(() => {
+      const shell = document.querySelector<HTMLElement>('.shell');
+      const current = document.querySelector('.nav-item.active')?.textContent?.trim() as Space | undefined;
+      if (shell && current) shell.dataset.space = current;
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   };
   if (document.readyState === 'loading') {
-    let cleanup: (() => void) | undefined;
-    document.addEventListener('DOMContentLoaded', () => { cleanup = start(); }, { once: true });
-    return () => cleanup?.();
-  }
-  return start();
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+  return () => { observer?.disconnect(); root?.unmount(); };
 }
