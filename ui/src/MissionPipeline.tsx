@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import type { JarvisSnapshot } from './contracts';
 import { deriveMissionFlowState } from './missionFlowState';
 
-export default function MissionPipeline({ snapshot }: { snapshot: JarvisSnapshot }) {
-  const flow = useMemo(() => deriveMissionFlowState(snapshot), [snapshot]);
+export default function MissionPipeline({ snapshot, selectedProjectId }: { snapshot: JarvisSnapshot; selectedProjectId: string }) {
+  const flow = useMemo(() => deriveMissionFlowState(snapshot, selectedProjectId), [snapshot, selectedProjectId]);
   return (
     <div className="mission-pipeline-live" data-mission-stage={flow.stage} data-mission-status={flow.status}>
       {flow.stages.map((stage, index) => (
