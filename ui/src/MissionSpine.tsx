@@ -30,7 +30,7 @@ function MissionSpine({
   const selectedProject = snapshot.projects.find((project) => project.id === selectedProjectId) ?? snapshot.projects[0];
   const selectedWorkspace = snapshot.workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? snapshot.workspaces[0];
   const assignedModel = snapshot.models.find((model) => model.state === 'ACTIVE') ?? snapshot.models[0];
-  const mission = useMemo(() => deriveMissionFlowState(snapshot), [snapshot]);
+  const mission = useMemo(() => deriveMissionFlowState(snapshot, selectedProjectId), [snapshot, selectedProjectId]);
   const currentStage = mission.stage;
   const latestActivity = snapshot.selfActivity[0] ?? snapshot.activity[0];
   const linkedProjectCount = snapshot.projects.filter((project) => project.workspaceId === selectedWorkspace?.id).length;
@@ -64,12 +64,12 @@ function MissionSpine({
             <i aria-hidden="true">→</i>
             <button onClick={() => navigate('CONTROL')}><span>STAGE</span><b>{currentStage}</b></button>
             <i aria-hidden="true">→</i>
-            <button onClick={() => navigate('SELF')}><span>MODEL</span><b>{assignedModel?.name ?? 'Standby'}</b></button>
+            <button onClick={() => navigate('SELF')}><span>MODEL</span><b>{mission.modelName ?? assignedModel?.name ?? 'Standby'}</b></button>
           </div>
 
           <div className="spine-status">
             <span className={`spine-status-led spine-${snapshot.mode.toLowerCase().replace(/\s+/g, '-')}`} />
-            <div><b>{snapshot.mode}</b><small>{latestActivity?.title ?? 'Awaiting a transition'}</small></div>
+            <div><b>{snapshot.mode}</b><small>{mission.evidence}</small></div>
           </div>
 
           <button className="spine-trace-trigger" onClick={() => setTraceOpen((open) => !open)} aria-expanded={traceOpen}>
@@ -88,7 +88,7 @@ function MissionSpine({
             <span>CAPABILITY</span><b>{snapshot.activeCapabilities} READY</b><small>{snapshot.capabilities.filter((capability) => capability.state !== 'OFFLINE').length} connected surface{snapshot.capabilities.filter((capability) => capability.state !== 'OFFLINE').length === 1 ? '' : 's'}</small>
           </button>
           <button onClick={() => navigate('CONTROL')}>
-            <span>AUTHORITY</span><b>CORE / POLICY</b><small>{snapshot.attentionRequired ? 'Decision attention required' : 'No pending user gate'}</small>
+            <span>AUTHORITY</span><b>CORE / POLICY</b><small>{snapshot.attentionRequired ? 'Decision attention required' : mission.guard}</small>
           </button>
         </div>
 
@@ -104,12 +104,12 @@ function MissionSpine({
                 </div>
               ))}
             </div>
-            <div className="trace-drawer-foot"><span>MODEL · {assignedModel?.name ?? 'NONE'}</span><span>STAGE · {currentStage}</span><span>RESOURCE · {snapshot.resources.strategy}</span><span>RESULT · {mission.status === 'ATTENTION' ? 'USER GATE' : 'AWAITING VERIFICATION'}</span></div>
+            <div className="trace-drawer-foot"><span>MODEL · {mission.modelName ?? assignedModel?.name ?? 'NONE'}</span><span>STAGE · {currentStage}</span><span>RESOURCE · {snapshot.resources.strategy}</span><span>TRANSITION · {mission.transition}</span></div>
           </div>
         )}
       </section>
-      {flowHost ? createPortal(<MissionFlow snapshot={snapshot} />, flowHost) : null}
-      {pipelineHost ? createPortal(<MissionPipeline snapshot={snapshot} />, pipelineHost) : null}
+      {flowHost ? createPortal(<MissionFlow snapshot={snapshot} selectedProjectId={selectedProjectId} />, flowHost) : null}
+      {pipelineHost ? createPortal(<MissionPipeline snapshot={snapshot} selectedProjectId={selectedProjectId} />, pipelineHost) : null}
     </>
   );
 }
