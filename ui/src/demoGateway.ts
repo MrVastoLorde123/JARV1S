@@ -7,6 +7,7 @@ const listeners = new Set<(event: JarvisActivityEvent) => void>();
 const startedAt = Date.now();
 let sequence = 50;
 let tick = 0;
+let transitionTimer: number | undefined;
 
 function nowLabel() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
 function uptimeLabel() {
@@ -25,49 +26,34 @@ function emit(title: string, detail: string, kind = 'system'): JarvisActivityEve
 function self(kind: JarvisSnapshot['selfActivity'][number]['kind'], title: string, detail: string, modelId?: string) {
   snapshot = { ...snapshot, selfActivity: [{ id: `self-${sequence++}`, kind, title, detail, timestamp: nowLabel(), modelId }, ...snapshot.selfActivity].slice(0, 8) };
 }
-function refresh() {
+function setTransient(mode: JarvisSnapshot['mode'], focus: string, activity: JarvisSnapshot['cognitiveActivity'], attentionRequired = false) {
+  snapshot = { ...snapshot, mode, currentFocus: focus, cognitiveActivity: activity, attentionRequired, attentionReason: attentionRequired ? 'A project or system state is ready for your attention.' : 'JARVIS is processing the current request.', uptime: uptimeLabel(), lastStateChange: nowLabel() };
+  if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
+}
+function settleToWaiting(focus = 'Standing by for direction') {
+  if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
+  transitionTimer = window.setTimeout(() => {
+    snapshot = { ...snapshot, mode: 'Waiting', cognitiveActivity: 'LOW', currentFocus: focus, attentionRequired: false, attentionReason: 'Nothing currently requires your presence.', uptime: uptimeLabel(), lastStateChange: nowLabel() };
+    emit('Ready for direction', focus, 'state');
+  }, 1400);
+}
+function refreshTelemetry() {
   tick += 1;
-  const phases = [
-    { mode: 'Monitoring' as const, activity: 'MEDIUM' as const, focus: 'Repository state and runtime signals', caps: 4, sources: 2, attention: false },
-    { mode: 'Thinking' as const, activity: 'HIGH' as const, focus: 'Interface architecture and system model', caps: 4, sources: 4, attention: false },
-    { mode: 'Working' as const, activity: 'HIGH' as const, focus: 'Functional interface evolution', caps: 5, sources: 5, attention: true },
-    { mode: 'Learning' as const, activity: 'MEDIUM' as const, focus: 'Understanding user workflow patterns', caps: 5, sources: 3, attention: false },
-    { mode: 'Waiting' as const, activity: 'LOW' as const, focus: 'Standing by for direction', caps: 4, sources: 1, attention: false },
-  ];
-  const phase = phases[tick % phases.length];
-  const projects = snapshot.projects.map((project) => {
-    if (project.state !== 'ACTIVE' || project.progress === undefined) return project;
-    const progress = Math.min(100, project.progress + 1);
-    return { ...project, progress, currentAction: progress >= 100 ? 'Completed' : project.currentAction };
-  });
-  const cpu = 28 + ((tick * 7) % 42);
-  const memory = 38 + ((tick * 5) % 34);
-  const gpu = 6 + ((tick * 3) % 24);
-  const pressure = cpu > 65 || memory > 68 ? 'HIGH' : cpu > 52 || memory > 58 ? 'ELEVATED' : 'NORMAL';
-  const strategy = pressure === 'HIGH' ? 'SEQUENTIAL' : pressure === 'ELEVATED' ? 'SEQUENTIAL' : tick % 5 === 0 ? 'LIMITED_CONCURRENCY' : 'SEQUENTIAL';
-  const activeModelTasks = pressure === 'HIGH' ? 0 : 1;
+  const cpu = 28 + ((tick * 7) % 32);
+  const memory = 38 + ((tick * 5) % 27);
+  const gpu = 6 + ((tick * 3) % 18);
+  const pressure = cpu > 55 || memory > 60 ? 'ELEVATED' : 'NORMAL';
+  const strategy = pressure === 'ELEVATED' ? 'SEQUENTIAL' : tick % 5 === 0 ? 'LIMITED_CONCURRENCY' : 'SEQUENTIAL';
+  const previousPressure = snapshot.resources.pressure;
   snapshot = {
     ...snapshot,
-    projects,
-    mode: phase.mode,
-    cognitiveActivity: phase.activity,
-    currentFocus: phase.focus,
-    activeCapabilities: phase.caps,
-    monitoredSources: phase.sources,
-    attentionRequired: phase.attention,
-    attentionReason: phase.attention ? 'A project or system state is ready for your attention.' : 'Nothing currently requires your presence.',
     uptime: uptimeLabel(),
-    lastStateChange: nowLabel(),
-    activeWork: projects.filter((project) => project.state === 'ACTIVE').length,
-    resources: { cpuLoad: cpu, memoryLoad: memory, gpuLoad: gpu, activeModelTasks, concurrencyLimit: strategy === 'LIMITED_CONCURRENCY' ? 2 : 1, pressure, strategy },
+    resources: { cpuLoad: cpu, memoryLoad: memory, gpuLoad: gpu, activeModelTasks: snapshot.mode === 'Working' ? 1 : 0, concurrencyLimit: strategy === 'LIMITED_CONCURRENCY' ? 2 : 1, pressure, strategy },
   };
-  const model = strategy === 'LIMITED_CONCURRENCY' ? 'reasoning' : 'reasoning';
-  if (phase.mode === 'Thinking') self('THINKING', 'Thinking through current priorities', `JARVIS is reasoning about ${phase.focus}.`, model);
-  else if (phase.mode === 'Working') self('DELEGATING', 'Preparing the next model task', 'The current procedure is staged; the next model receives work only after resource checks.', model);
-  else if (phase.mode === 'Monitoring') self('RESOURCE_GUARD', 'Watching system pressure', `CPU ${cpu}% · memory ${memory}% · strategy ${strategy}.`);
-  else if (phase.mode === 'Learning') self('COMMUNICATING', 'Updating cognitive context', 'JARVIS is preparing context that can be shared with the assigned model.', model);
-  else self('WAITING', 'Holding for direction', 'No model task is being advanced while JARVIS waits.', model);
-  emit(`JARVIS → ${phase.mode}`, `${phase.focus} · ${pressure.toLowerCase()} resource pressure · ${strategy.toLowerCase().replace('_', ' ')} model strategy.`, 'state');
+  if (pressure !== previousPressure) {
+    self('RESOURCE_GUARD', `Resource pressure ${pressure.toLowerCase()}`, `CPU ${cpu}% · memory ${memory}% · strategy ${strategy}.`);
+    emit('Resource posture changed', `${pressure.toLowerCase()} pressure · ${strategy.toLowerCase().replace('_', ' ')} strategy.`, 'resource');
+  }
 }
 function createProjectFromText(text: string): ProjectContract | null {
   const match = text.match(/create project\s+(.+)/i);
@@ -87,15 +73,19 @@ export const demoGateway: JarvisGateway & { snapshotSync: () => JarvisSnapshot }
     const event = emit('Command received', `JARVIS recorded: “${command.text}”`, 'command');
     if (command.surface === 'PROJECTS' && command.projectId && (lower.startsWith('pause project') || lower.startsWith('resume project'))) {
       const nextState = lower.startsWith('pause project') ? 'PAUSED' : 'ACTIVE';
-      snapshot = { ...snapshot, projects: snapshot.projects.map((project) => project.id === command.projectId ? { ...project, state: nextState, currentAction: nextState === 'PAUSED' ? 'Paused for user guidance' : 'Resumed under current guidance' } : project), currentFocus: nextState === 'PAUSED' ? 'Project paused for user guidance' : 'Project resumed', mode: nextState === 'PAUSED' ? 'Waiting' : 'Working', cognitiveActivity: nextState === 'PAUSED' ? 'LOW' : 'HIGH', workRuntime: { state: nextState === 'PAUSED' ? 'PAUSED' : 'RUNNING', detail: nextState === 'PAUSED' ? 'The selected project is held for additional guidance.' : 'The selected project may continue under current guidance.', lastCommand: command.text } };
-      self(nextState === 'PAUSED' ? 'WAITING' : 'DELEGATING', nextState === 'PAUSED' ? 'Project execution held' : 'Project execution resumed', nextState === 'PAUSED' ? 'JARVIS is waiting for additional guidance.' : 'JARVIS restored the project procedure under current guidance.');
+      setTransient(nextState === 'PAUSED' ? 'Waiting' : 'Working', nextState === 'PAUSED' ? 'Project paused for user guidance' : 'Project resumed under current guidance', nextState === 'PAUSED' ? 'LOW' : 'HIGH', nextState === 'PAUSED');
+      snapshot = { ...snapshot, projects: snapshot.projects.map((project) => project.id === command.projectId ? { ...project, state: nextState, currentAction: nextState === 'PAUSED' ? 'Paused for user guidance' : 'Resumed under current guidance' } : project), workRuntime: { state: nextState === 'PAUSED' ? 'PAUSED' : 'RUNNING', detail: nextState === 'PAUSED' ? 'The selected project is held for additional guidance.' : 'The selected project may continue under current guidance.', lastCommand: command.text } };
+      self(nextState === 'PAUSED' ? 'WAITING' : 'DELEGATING', nextState === 'PAUSED' ? 'Project procedure held' : 'Project procedure resumed', nextState === 'PAUSED' ? 'JARVIS is waiting for additional guidance.' : 'JARVIS restored the project procedure under current guidance.');
+      emit(nextState === 'PAUSED' ? 'Project paused' : 'Project resumed', `${command.projectId} is now ${nextState.toLowerCase()}.`, 'project');
       return event;
     }
     const createdProject = createProjectFromText(command.text);
     if (createdProject) {
-      snapshot = { ...snapshot, projects: [createdProject, ...snapshot.projects], currentFocus: createdProject.name, mode: 'Working', cognitiveActivity: 'HIGH', attentionRequired: false, attentionReason: 'The new project procedure has been initiated.' };
+      setTransient('Working', createdProject.name, 'HIGH');
+      snapshot = { ...snapshot, projects: [createdProject, ...snapshot.projects] };
       self('DELEGATING', 'Project procedure initiated', `${createdProject.name} entered the active project queue.`, 'reasoning');
       emit('Project initiated', `${createdProject.name} was created and attached to the active workspace.`, 'project');
+      settleToWaiting(`Project created: ${createdProject.name}`);
       return event;
     }
     const workspaceMatch = command.text.match(/select workspace directory\s+(.+)/i);
@@ -111,16 +101,23 @@ export const demoGateway: JarvisGateway & { snapshotSync: () => JarvisSnapshot }
     }
     if (command.surface === 'RESEARCH' && lower.includes('think')) {
       const active = snapshot.researchTopics.find((topic) => topic.state === 'ACTIVE') ?? snapshot.researchTopics[0];
-      if (active) { snapshot = { ...snapshot, researchTopics: snapshot.researchTopics.map((topic) => topic.id === active.id ? { ...topic, state: 'THOUGHT_ON', thoughtCount: topic.thoughtCount + 1, lastThought: `JARVIS thought on this topic at ${nowLabel()}.` } : topic), currentFocus: active.title, mode: 'Thinking', cognitiveActivity: 'HIGH' }; self('THINKING', 'Research thought opened', `JARVIS is thinking on ${active.title}.`, 'reasoning'); emit('Research thought opened', `JARVIS is thinking on ${active.title}.`, 'research'); }
+      if (active) { setTransient('Thinking', active.title, 'HIGH'); snapshot = { ...snapshot, researchTopics: snapshot.researchTopics.map((topic) => topic.id === active.id ? { ...topic, state: 'THOUGHT_ON', thoughtCount: topic.thoughtCount + 1, lastThought: `JARVIS thought on this topic at ${nowLabel()}.` } : topic) }; self('THINKING', 'Research thought opened', `JARVIS is thinking on ${active.title}.`, 'reasoning'); emit('Research thought opened', `JARVIS is thinking on ${active.title}.`, 'research'); settleToWaiting(`Research thought recorded: ${active.title}`); }
       return event;
     }
-    if (command.surface === 'PLANNING' && (lower.includes('automate') || lower.includes('schedule'))) { snapshot = { ...snapshot, currentFocus: 'Planning automation', mode: 'Thinking', cognitiveActivity: 'HIGH' }; self('DELEGATING', 'Automation procedure staged', 'Planning has produced a candidate procedure for future execution.'); emit('Automation plan considered', 'The planning surface is preparing an executable automation proposal.', 'planning'); return event; }
-    snapshot = { ...snapshot, currentFocus: command.text.slice(0, 72), mode: snapshot.workRuntime.state === 'PAUSED' ? 'Waiting' : 'Thinking', cognitiveActivity: snapshot.workRuntime.state === 'PAUSED' ? 'LOW' : 'HIGH', attentionRequired: false, attentionReason: 'JARVIS is processing the current request.' };
+    if (command.surface === 'PLANNING' && (lower.includes('automate') || lower.includes('schedule'))) {
+      setTransient('Thinking', 'Planning automation', 'HIGH');
+      self('DELEGATING', 'Automation procedure staged', 'Planning has produced a candidate procedure for future execution.');
+      emit('Automation plan considered', 'The planning surface is preparing an executable automation proposal.', 'planning');
+      settleToWaiting('Automation plan staged');
+      return event;
+    }
+    setTransient('Thinking', command.text.slice(0, 72), 'HIGH');
     self('COMMUNICATING', 'Command context passed inward', 'JARVIS updated its active cognitive context from the user request.');
-    if (snapshot.workRuntime.state !== 'PAUSED') window.setTimeout(() => emit('Response cycle complete', 'Command returned to the active interface surface.', 'response'), 900);
+    emit('Cognitive cycle started', 'The request is being interpreted against current context and boundaries.', 'thinking');
+    if (snapshot.workRuntime.state !== 'PAUSED') settleToWaiting('Standing by for the next meaningful transition');
     return event;
   },
   subscribe(_sessionId, onEvent) { listeners.add(onEvent); return () => listeners.delete(onEvent); },
 };
-const timer = window.setInterval(refresh, 4500);
+const timer = window.setInterval(refreshTelemetry, 4500);
 void timer;
