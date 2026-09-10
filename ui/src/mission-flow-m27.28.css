@@ -32,7 +32,7 @@
 .mission-pipeline-stage{min-width:135px;min-height:62px;padding:10px 11px;border:1px solid rgba(120,150,195,.13);border-radius:9px;background:rgba(76,101,138,.045);display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center}
 .mission-pipeline-stage>span{font-size:12px;color:var(--muted,#718199)}
 .mission-pipeline-stage b{display:block;font-size:10px;letter-spacing:.08em;color:var(--text,#e8eef7)}
-.mission-pipeline-stage small{display:block;margin-top:3px;font-size:8px;line-height:1.35;color:var(--muted,#7e8ca2);overflow-wrap:anywhere)}
+.mission-pipeline-stage small{display:block;margin-top:3px;font-size:8px;line-height:1.35;color:var(--muted,#7e8ca2);overflow-wrap:anywhere}
 .mission-pipeline-stage.active{border-color:rgba(142,184,251,.38);background:rgba(108,153,221,.09);box-shadow:0 0 18px rgba(104,153,240,.06)}
 .mission-pipeline-stage.active>span,.mission-pipeline-stage.active b{color:#cfe0fb}
 .mission-pipeline-stage.attention{border-color:rgba(237,181,90,.35);background:rgba(180,130,52,.08)}
