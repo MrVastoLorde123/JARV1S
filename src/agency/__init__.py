@@ -1,5 +1,14 @@
-"""Agency runtime components for controlled execution and continuation."""
+"""Agency runtime components for controlled execution, workforce, and world observation."""
 
+from .agent_entity import AgentEntity, AgentLandscape, AgentStatus
+from .agent_runtime import (
+    AgentHandoff,
+    AgentRoute,
+    AgentRuntime,
+    EvidenceBundle,
+    EvidenceReference,
+    WorkLineage,
+)
 from .driveability import (
     ContinuationCycle,
     ContinuationDecision,
@@ -16,8 +25,21 @@ from .execution_runtime import (
     ExecutionRuntime,
     ExecutionStatus,
 )
+from .world_projection import WorldAgentObservation, WorldObservation, WorldObservationProjector
 
 __all__ = [
+    "AgentEntity",
+    "AgentLandscape",
+    "AgentStatus",
+    "AgentHandoff",
+    "AgentRoute",
+    "AgentRuntime",
+    "EvidenceBundle",
+    "EvidenceReference",
+    "WorkLineage",
+    "WorldAgentObservation",
+    "WorldObservation",
+    "WorldObservationProjector",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
