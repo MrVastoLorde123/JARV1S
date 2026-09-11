@@ -4,18 +4,15 @@ import type { JarvisSnapshot } from './contracts';
 
 function summarize(snapshot: JarvisSnapshot, previous: JarvisSnapshot | null) {
   if (!previous) return null;
-  const currentIds = new Set(snapshot.selfActivity.map((item) => item.id));
-  const newSignals = snapshot.selfActivity.filter((item) => !new Set(previous.selfActivity.map((entry) => entry.id)).has(item.id));
+  const previousIds = new Set(previous.selfActivity.map((entry) => entry.id));
+  const newSignals = snapshot.selfActivity.filter((item) => !previousIds.has(item.id));
   const active = snapshot.projects.filter((project) => project.state === 'ACTIVE').length;
-  const completed = snapshot.projects.filter((project) => project.state === 'COMPLETED').length - previous.projects.filter((project) => project.state === 'COMPLETED').length;
   const latest = newSignals[0] ?? snapshot.selfActivity[0];
   const learning = snapshot.researchTopics.filter((topic) => topic.thoughtCount > 0).length;
   const next = snapshot.projects.find((project) => project.state === 'ACTIVE') ?? snapshot.projects.find((project) => project.state === 'WAITING');
-  void currentIds;
   return {
     newSignals: newSignals.length,
     active,
-    completed: Math.max(0, completed),
     latest: latest?.title ?? 'JARVIS maintained the current context',
     focus: snapshot.currentFocus,
     learning,
