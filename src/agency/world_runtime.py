@@ -1,8 +1,8 @@
 """M28.15 runtime-owned composition of M9 worker execution into the JARVIS world.
 
-This module does not replace M9 workforce or M8 execution. It owns the
-lifetime of concrete AgentEntity projections for work that the canonical
-runtime explicitly runs through the existing BoundedWorkerRuntime.
+This module does not replace M9 workforce, delegation, or M8 execution. It
+owns the lifetime of concrete AgentEntity projections for work that the
+canonical runtime explicitly runs through the existing M9.5/M9.2 path.
 
 The retained state is the runtime's current world-facing projection, not a
 second source of execution truth or an independent persistence store.
@@ -11,10 +11,11 @@ second source of execution truth or an independent persistence store.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from src.agency.agent_entity import AgentEntity, AgentLandscape, AgentStatus
 from src.agency.agent_runtime import AgentRuntime
+from src.agency.delegation import DelegationCoordinator, DelegationPlan, DelegationResult
 from src.agency.world_projection import WorldObservation, WorldObservationProjector
 from src.agency.worker_runtime import BoundedWorkerRuntime, WorkerRuntimeResult
 from src.agency.workforce import WorkerAssignment, WorkerRegistry
@@ -27,7 +28,7 @@ def _now() -> str:
 
 
 class AgentWorldRuntime:
-    """Runtime-owned bridge from bounded worker execution to world observation."""
+    """Runtime-owned bridge from bounded M9 delegation/execution to world observation."""
 
     def __init__(
         self,
@@ -35,6 +36,7 @@ class AgentWorldRuntime:
         worker_runtime: BoundedWorkerRuntime,
         *,
         agent_runtime: AgentRuntime | None = None,
+        delegation_coordinator: DelegationCoordinator | None = None,
         projector: WorldObservationProjector | None = None,
     ) -> None:
         if not isinstance(registry, WorkerRegistry):
@@ -44,13 +46,21 @@ class AgentWorldRuntime:
         self._registry = registry
         self._worker_runtime = worker_runtime
         self._agent_runtime = agent_runtime or AgentRuntime(registry)
+        self._delegation = delegation_coordinator or DelegationCoordinator(registry)
         self._projector = projector or WorldObservationProjector()
         self._agents: dict[str, AgentEntity] = {}
         self._assignments: dict[str, WorkerAssignment] = {}
+        self._delegation_results: dict[str, DelegationResult] = {}
 
     @property
     def agents(self) -> tuple[AgentEntity, ...]:
         return tuple(self._agents.values())
+
+    def coordinate_delegation(self, plan: DelegationPlan) -> DelegationResult:
+        """Validate/order real M9 assignments before any world agent is instantiated."""
+        result = self._delegation.coordinate(plan)
+        self._delegation_results[result.plan.plan_id] = result
+        return result
 
     def instantiate(
         self,
@@ -77,8 +87,39 @@ class AgentWorldRuntime:
         self._assignments[entity.agent_id] = assignment
         return entity
 
+    def instantiate_delegated_agents(
+        self,
+        plan: DelegationPlan,
+        *,
+        agent_id_factory: Callable[[WorkerAssignment, int], str],
+        display_name_factory: Callable[[WorkerAssignment, int], str],
+        created_at: str | None = None,
+        landscape: AgentLandscape = AgentLandscape.AGENTS,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> tuple[AgentEntity, ...]:
+        """Create world agents from the exact deterministic M9.5 assignment order."""
+        result = self.coordinate_delegation(plan)
+        if not callable(agent_id_factory) or not callable(display_name_factory):
+            raise TypeError("agent and display name factories must be callable")
+        entities: list[AgentEntity] = []
+        for index, assignment in enumerate(result.ordered_assignments):
+            entity = self.instantiate(
+                agent_id=agent_id_factory(assignment, index),
+                display_name=display_name_factory(assignment, index),
+                assignment=assignment,
+                created_at=created_at,
+                landscape=landscape,
+                metadata={
+                    "delegation_plan_id": result.plan.plan_id,
+                    "delegation_order": index,
+                    **dict(metadata or {}),
+                },
+            )
+            entities.append(entity)
+        return tuple(entities)
+
     def begin_execution(self, agent_id: str, updated_at: str | None = None) -> AgentEntity:
-        """Move an assigned agent into executing state immediately before M9 run."""
+        """Move an assigned agent into executing state immediately before M9 worker run."""
         agent = self._require_agent(agent_id)
         if agent.status is not AgentStatus.ASSIGNED:
             raise ValueError("only an assigned agent may begin execution")
@@ -94,7 +135,7 @@ class AgentWorldRuntime:
         initial_preparation: ExecutionPreparation,
         next_step_provider=None,
     ) -> WorkerRuntimeResult:
-        """Execute the real M9 worker assignment while reflecting its lifecycle in the world."""
+        """Execute the real M9.2 worker assignment while reflecting its world lifecycle."""
         agent = self._require_agent(agent_id)
         assignment = self._assignment_for(agent)
         if agent.status is not AgentStatus.ASSIGNED:
@@ -110,16 +151,14 @@ class AgentWorldRuntime:
 
         self._agent_runtime.validate_report(self._agents[agent_id], assignment, result.report)
         current = self._agents[agent_id]
+        current = current.with_status(AgentStatus.RETURNING, _now())
         if result.succeeded:
-            current = current.with_status(AgentStatus.RETURNING, _now())
             current = current.with_status(AgentStatus.HANDOFF, _now())
             current = current.with_status(AgentStatus.RETIRED, _now())
         elif result.observations:
-            current = current.with_status(AgentStatus.RETURNING, _now())
             current = current.with_status(AgentStatus.HANDOFF, _now())
         else:
             current = current.with_status(AgentStatus.HANDOFF, _now())
-
         self._agents[agent_id] = current
         return result
 
