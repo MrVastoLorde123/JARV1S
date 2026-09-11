@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from src.agency.world_bootstrap import create_local_world_runtime
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
 from src.context.memory_context_source_provider import MemoryContextSourceProvider
@@ -68,10 +69,12 @@ def main():
         )
 
     default_processor = JARVIS(ai_service=ai_service)
+    world_runtime = create_local_world_runtime() if enable_world_http else None
     runtime = JARVISRuntime.from_processor(
         default_processor,
         conversation_store=conversation_store,
         durable_processor_factory=processor_factory,
+        world_runtime=world_runtime,
     )
 
     world_host = None
