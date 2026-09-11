@@ -1,0 +1,40 @@
+.jarvis-process-world::after {
+  content:'07\A Researcher-07';
+  white-space:pre;
+  position:absolute;
+  left:50%;
+  top:49%;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(210,232,246,.24);
+  border-radius:50%;
+  color:rgba(214,232,241,.72);
+  font:500 7px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-align:center;
+  letter-spacing:.06em;
+  background:radial-gradient(circle,rgba(180,215,238,.11),rgba(7,10,15,.08) 68%);
+  box-shadow:0 0 28px rgba(165,205,236,.08);
+  opacity:.72;
+  pointer-events:none;
+  z-index:8;
+  transition:left 1s cubic-bezier(.18,.74,.22,1), top 1s cubic-bezier(.18,.74,.22,1), transform 1s cubic-bezier(.18,.74,.22,1), opacity .4s ease;
+}
+.process-agents::after { left:22%; top:43%; transform:scale(1.08) rotate(-8deg); }
+.process-models::after { left:49%; top:31%; transform:scale(.96) rotate(45deg); }
+.process-models::after { animation:researcherSelection 2.8s ease-in-out infinite; }
+.process-work::after { left:69%; top:57%; transform:scale(1) rotate(0deg); }
+.process-mind::after { left:73%; top:40%; transform:scale(.84); opacity:.5; }
+.process-capabilities::after { left:38%; top:59%; transform:scale(.72) rotate(45deg); opacity:.42; }
+.process-market::after { left:82%; top:32%; transform:scale(.76); opacity:.3; }
+.process-operations::after { left:50%; top:54%; transform:scale(.9); opacity:.42; }
+
+.jarvis-landscape.landscape-agents .jarvis-presence { animation:jarvisPresenceFlow 3.8s ease-in-out infinite; }
+.jarvis-landscape.landscape-models .jarvis-presence { animation:jarvisPresenceModel 2.4s ease-in-out infinite; }
+.jarvis-landscape.landscape-work .jarvis-presence { animation:jarvisPresenceWork 4.6s ease-in-out infinite; }
+
+@keyframes researcherSelection { 0%,100% { box-shadow:0 0 24px rgba(165,205,236,.07); } 50% { box-shadow:0 0 42px rgba(205,231,249,.16); } }
+@keyframes jarvisPresenceFlow { 0%,100% { transform:translate(-50%,-50%) skewX(0); } 50% { transform:translate(-47%,-53%) skewX(-5deg); } }
+@keyframes jarvisPresenceModel { 0%,100% { transform:translate(-50%,-50%) rotate(0deg); } 50% { transform:translate(-50%,-50%) rotate(18deg); } }
+@keyframes jarvisPresenceWork { 0%,100% { transform:translate(-50%,-50%); } 50% { transform:translate(-46%,-54%); } }
