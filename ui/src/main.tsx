@@ -18,6 +18,7 @@ import './jarvis-agent-travel.css';
 import './jarvis-world-guide.css';
 import './jarvis-return-briefing.css';
 import './jarvis-return-briefing-refinement.css';
+import './jarvis-world-cleanup.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
