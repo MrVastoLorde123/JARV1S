@@ -5,13 +5,13 @@ import type { JarvisSnapshot } from './contracts';
 type LandscapeId = 'OPERATIONS' | 'MIND' | 'AGENTS' | 'MODELS' | 'CAPABILITIES' | 'WORK' | 'MARKET';
 
 const landscapes: Array<{ id: LandscapeId; title: string; detail: string }> = [
-  { id: 'OPERATIONS', title: 'OPERATIONS', detail: 'missions, context, activity' },
-  { id: 'MIND', title: 'MIND', detail: 'memory, learning, reasoning' },
-  { id: 'AGENTS', title: 'AGENTS', detail: 'workers, delegation, handoffs' },
-  { id: 'MODELS', title: 'MODELS', detail: 'intelligence lanes and providers' },
-  { id: 'CAPABILITIES', title: 'CAPABILITIES', detail: 'skills, tools, permissions' },
-  { id: 'WORK', title: 'WORK', detail: 'projects, workspaces, artifacts' },
-  { id: 'MARKET', title: 'MARKET', detail: 'trading and external systems' },
+  { id: 'OPERATIONS', title: 'OPERATIONS', detail: 'command paths, navigation, active intent' },
+  { id: 'MIND', title: 'MIND', detail: 'memory, knowledge, concepts, learning' },
+  { id: 'AGENTS', title: 'AGENTS', detail: 'workers, delegation, movement, handoffs' },
+  { id: 'MODELS', title: 'MODELS', detail: 'providers, model lanes, selection, execution' },
+  { id: 'CAPABILITIES', title: 'CAPABILITIES', detail: 'skills, tools, permissions, surfaces' },
+  { id: 'WORK', title: 'WORK', detail: 'projects, workspaces, artifacts, procedures' },
+  { id: 'MARKET', title: 'MARKET', detail: 'signals, positions, external systems' },
 ];
 
 function target(snapshot: JarvisSnapshot) {
@@ -38,6 +38,7 @@ export default function JarvisLandscape() {
   const moveLandscape = (next: LandscapeId) => {
     if (next === landscape) return;
     setTraveling(true);
+    window.dispatchEvent(new CustomEvent<LandscapeId>('jarvis:landscape', { detail: next }));
     window.setTimeout(() => {
       setLandscape(next);
       setTraveling(false);
@@ -48,7 +49,7 @@ export default function JarvisLandscape() {
     <div className={`jarvis-landscape landscape-${landscape.toLowerCase()} target-${destination.toLowerCase()} ${traveling ? 'traveling' : ''}`}>
       <div className="landscape-topology" aria-hidden="true" />
       <div className="landscape-label">
-        <span>JARVIS WORLD</span>
+        <span>JARVIS WORLD / LANDSCAPE</span>
         <b>{activeLandscape.title}</b>
         <small>{activeLandscape.detail}</small>
       </div>
@@ -84,7 +85,7 @@ export default function JarvisLandscape() {
           <article><span>MISSION</span><b>{mission?.name ?? 'No active mission'}</b><small>{mission?.progress ?? 0}% · {mission?.state ?? 'IDLE'}</small></article>
           <article><span>MODEL</span><b>{activeModel?.name ?? 'No active model'}</b><small>{snapshot.resources.activeModelTasks}/{snapshot.resources.concurrencyLimit} active lanes</small></article>
           <article><span>ABILITY</span><b>{snapshot.activeCapabilities} live</b><small>{snapshot.capabilities.filter((item) => item.state !== 'OFFLINE').length} connected surfaces</small></article>
-          <article><span>HISTORY</span><b>{snapshot.selfActivity.length} recent signals</b><small>world state retained</small></article>
+          <article><span>HISTORY</span><b>{snapshot.selfActivity.length} recent signals</b><small>world state retained and reorganized by relevance</small></article>
         </div>
       </div>
     </div>
