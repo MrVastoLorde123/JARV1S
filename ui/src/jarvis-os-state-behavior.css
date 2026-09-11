@@ -1,9 +1,0 @@
-/* M28.1 — state changes alter visual weight, not merely color. */
-.jarvis-os{transition:background .45s ease,filter .35s ease}.os-main,.os-rail,.os-inspector,.os-chrome,.os-status{transition:opacity .35s ease,background .45s ease,border-color .35s ease}.os-focus-row{transition:transform .35s ease}.os-causal{transition:margin .35s ease,transform .35s ease}.os-workbench{transition:min-height .35s ease}
-.jarvis-os.os-active .os-focus-row{transform:translateY(0)}
-.jarvis-os.os-active .os-state-card{box-shadow:0 10px 36px rgba(80,126,195,.05)}
-.jarvis-os.os-waiting .os-focus-row{opacity:.9}.jarvis-os.os-waiting .os-causal{margin-top:18px}.jarvis-os.os-waiting .os-causal .causal-node.current{transform:none}.jarvis-os.os-waiting .os-state-card{background:rgba(255,255,255,.018)}.jarvis-os.os-waiting .os-input{border-color:rgba(145,185,246,.09)}
-.jarvis-os.os-attention .os-focus-row{transform:translateY(2px)}.jarvis-os.os-attention .os-causal .causal-node.current{transform:translateY(-4px) scale(1.012)}.jarvis-os.os-attention .os-workbench{min-height:440px}.jarvis-os.os-attention .os-inspector{background:rgba(12,13,14,.58)}
-.jarvis-os.os-guarded .os-rail{opacity:.84}.jarvis-os.os-guarded .os-causal{margin-top:19px}.jarvis-os.os-guarded .causal-node:not(.current){opacity:.8}.jarvis-os.os-guarded .os-inspector{opacity:.9}.jarvis-os.os-guarded .os-input{box-shadow:0 8px 28px rgba(173,132,62,.045)}
-.jarvis-os.os-offline{filter:saturate(.72)}.jarvis-os.os-offline .os-main{opacity:.9}.jarvis-os.os-offline .os-causal{opacity:.68}.jarvis-os.os-offline .os-input{border-style:dashed;background:rgba(9,14,20,.72)}.jarvis-os.os-offline .os-status{color:#606d7e}
-@media(max-width:760px){.jarvis-os.os-attention .os-causal .causal-node.current{transform:none}.jarvis-os.os-attention .os-workbench{min-height:0}}

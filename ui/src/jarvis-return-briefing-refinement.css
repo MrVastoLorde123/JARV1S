@@ -1,9 +1,0 @@
-.jarvis-return-briefing { width:min(450px,38vw); grid-template-columns:34px 1fr; background:rgba(7,9,10,.72); border-color:rgba(206,224,230,.11); }
-.briefing-copy > b { font-size:11px; }
-.briefing-facts { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:10px; }
-.briefing-facts article { padding:7px 8px; border:1px solid rgba(206,224,230,.07); background:rgba(206,224,230,.02); }
-.briefing-facts small { display:block; font-size:5.5px; letter-spacing:.15em; opacity:.38; }
-.briefing-facts strong { display:block; margin-top:4px; font-size:12px; font-weight:500; opacity:.78; }
-.briefing-copy p { margin-top:9px; }
-.briefing-copy p b { color:#b9cbd2; font-weight:500; }
-@media (max-width:680px) { .jarvis-return-briefing{width:auto;} }
