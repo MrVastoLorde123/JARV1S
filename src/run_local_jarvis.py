@@ -11,6 +11,7 @@ from src.core.jarvis_runtime import JARVISRuntime
 from src.database_bootstrap import bootstrap_database
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
+from src.interface.world_host import start_world_http
 from src.personalization.end_to_end import PersonalizedWorkingContextRuntime
 from src.personalization.persistence import PersonalizationStore
 from src.personalization.runtime import PersonalizationRuntime
@@ -27,6 +28,7 @@ def main():
     )
     requested_session_id = os.environ.get("JARVIS_SESSION_ID")
     data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data"))
+    enable_world_http = os.environ.get("JARVIS_WORLD_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
 
     bootstrap_database()
 
@@ -72,6 +74,11 @@ def main():
         durable_processor_factory=processor_factory,
     )
 
+    world_host = None
+    if enable_world_http:
+        world_host = start_world_http(runtime)
+        print("JARVIS World HTTP transport listening on http://127.0.0.1:8765")
+
     session_identity = PersistentSessionIdentity(
         data_dir / "active_session.json",
     )
@@ -83,7 +90,11 @@ def main():
         session_identity=session_identity,
     )
 
-    operator.run()
+    try:
+        operator.run()
+    finally:
+        if world_host is not None:
+            world_host.close()
 
 
 if __name__ == "__main__":
