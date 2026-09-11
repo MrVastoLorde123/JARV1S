@@ -13,6 +13,7 @@ import './jarvis-world-work-scene.css';
 import './jarvis-landscape.css';
 import './jarvis-world-breathing.css';
 import './jarvis-world-process.css';
+import './jarvis-landscape-physics.css';
 import './jarvis-world-guide.css';
 import './jarvis-return-briefing.css';
 
