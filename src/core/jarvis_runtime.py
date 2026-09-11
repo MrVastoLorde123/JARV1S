@@ -2,7 +2,8 @@
 
 The canonical runtime remains the application-facing composition root. M28.15
 adds an optional world-facing agency composition that reuses the existing M9
-worker runtime and exposes only immutable observation outward to the interface.
+worker/delegation runtime and exposes only immutable observation outward to the
+interface.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 from typing import Callable, Mapping
 
 from src.agency.agent_entity import AgentEntity, AgentLandscape
+from src.agency.delegation import DelegationPlan, DelegationResult
 from src.agency.world_projection import WorldObservation
 from src.agency.world_runtime import AgentWorldRuntime
 from src.agency.workforce import WorkerAssignment
@@ -86,6 +88,34 @@ class JARVISRuntime:
     @property
     def world_runtime(self) -> AgentWorldRuntime | None:
         return self._world_runtime
+
+    def coordinate_world_delegation(self, plan: DelegationPlan) -> DelegationResult:
+        """Validate and order a real M9.5 delegation plan before world instantiation."""
+        if self._world_runtime is None:
+            raise RuntimeError("JARVISRuntime has no AgentWorldRuntime configured")
+        return self._world_runtime.coordinate_delegation(plan)
+
+    def instantiate_world_agents(
+        self,
+        plan: DelegationPlan,
+        *,
+        agent_id_factory: Callable[[WorkerAssignment, int], str],
+        display_name_factory: Callable[[WorkerAssignment, int], str],
+        created_at: str | None = None,
+        landscape: AgentLandscape = AgentLandscape.AGENTS,
+        metadata: Mapping[str, object] | None = None,
+    ) -> tuple[AgentEntity, ...]:
+        """Instantiate agents from deterministic M9.5 assignment order."""
+        if self._world_runtime is None:
+            raise RuntimeError("JARVISRuntime has no AgentWorldRuntime configured")
+        return self._world_runtime.instantiate_delegated_agents(
+            plan,
+            agent_id_factory=agent_id_factory,
+            display_name_factory=display_name_factory,
+            created_at=created_at,
+            landscape=landscape,
+            metadata=metadata,
+        )
 
     def observe_world(
         self,
