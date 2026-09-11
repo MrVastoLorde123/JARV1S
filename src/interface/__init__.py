@@ -30,6 +30,7 @@ from .reliability import (
 from .request import InterfaceRequestBridge, JARVISRequest
 from .session import ConversationSession, ConversationTurn, SessionConflictError, SessionRuntime, SessionStore
 from .session_identity import PersistentSessionIdentity
+from .world_host import WorldHostHandle, start_world_http
 from .world_observation import WorldObservationFrame, WorldObservationInterfaceAdapter
 
 __all__ = [
@@ -68,10 +69,12 @@ __all__ = [
     "SessionIdentityRuntime",
     "SessionRuntime",
     "SessionStore",
+    "WorldHostHandle",
     "WorldObservationFrame",
     "WorldObservationHTTPConfig",
     "WorldObservationInterfaceAdapter",
     "WorldObservationSupplier",
     "create_world_observation_server",
     "serve_world_observation",
+    "start_world_http",
 ]
