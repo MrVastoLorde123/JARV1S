@@ -46,6 +46,7 @@ class AgentWorldRuntime:
         self._agent_runtime = agent_runtime or AgentRuntime(registry)
         self._projector = projector or WorldObservationProjector()
         self._agents: dict[str, AgentEntity] = {}
+        self._assignments: dict[str, WorkerAssignment] = {}
 
     @property
     def agents(self) -> tuple[AgentEntity, ...]:
@@ -73,6 +74,7 @@ class AgentWorldRuntime:
         if entity.agent_id in self._agents:
             raise ValueError(f"agent_id '{entity.agent_id}' is already active in the runtime")
         self._agents[entity.agent_id] = entity
+        self._assignments[entity.agent_id] = assignment
         return entity
 
     def begin_execution(self, agent_id: str, updated_at: str | None = None) -> AgentEntity:
@@ -106,6 +108,7 @@ class AgentWorldRuntime:
             next_step_provider=next_step_provider,
         )
 
+        self._agent_runtime.validate_report(self._agents[agent_id], assignment, result.report)
         current = self._agents[agent_id]
         if result.succeeded:
             current = current.with_status(AgentStatus.RETURNING, _now())
@@ -149,10 +152,10 @@ class AgentWorldRuntime:
             raise KeyError(f"unknown runtime agent: {agent_id}") from exc
 
     def _assignment_for(self, agent: AgentEntity) -> WorkerAssignment:
+        assignment = self._assignments.get(agent.agent_id)
+        if assignment is None:
+            raise KeyError(f"no runtime assignment retained for agent: {agent.agent_id}")
         worker_id = str(agent.metadata.get("worker_id", "")).strip()
-        if not worker_id:
-            raise ValueError("agent metadata does not contain worker_id")
-        assignment = self._registry.get_assignment(agent.assignment_id)
         if assignment.worker_id != worker_id:
             raise ValueError("agent worker identity does not match assignment")
         return assignment
