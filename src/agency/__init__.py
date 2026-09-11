@@ -26,6 +26,7 @@ from .execution_runtime import (
     ExecutionStatus,
 )
 from .world_projection import WorldAgentObservation, WorldObservation, WorldObservationProjector
+from .world_runtime import AgentWorldRuntime
 
 __all__ = [
     "AgentEntity",
@@ -34,6 +35,7 @@ __all__ = [
     "AgentHandoff",
     "AgentRoute",
     "AgentRuntime",
+    "AgentWorldRuntime",
     "EvidenceBundle",
     "EvidenceReference",
     "WorkLineage",
