@@ -11,6 +11,12 @@ from .hitl import (
     HumanDecisionStore,
     HumanResponseStatus,
 )
+from .http_world import (
+    WorldObservationHTTPConfig,
+    WorldObservationSupplier,
+    create_world_observation_server,
+    serve_world_observation,
+)
 from .human_operating_layer import HumanCommand, HumanOperatingLayer, HumanTurn, SessionIdentityRuntime
 from .multimodal import InterfaceModality, ModalityDescriptor, MultiModalRequest, MultiModalRuntime
 from .reliability import (
@@ -63,5 +69,9 @@ __all__ = [
     "SessionRuntime",
     "SessionStore",
     "WorldObservationFrame",
+    "WorldObservationHTTPConfig",
     "WorldObservationInterfaceAdapter",
+    "WorldObservationSupplier",
+    "create_world_observation_server",
+    "serve_world_observation",
 ]
