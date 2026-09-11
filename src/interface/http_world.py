@@ -73,7 +73,8 @@ class _WorldObservationHandler(BaseHTTPRequestHandler):
         except Exception as exc:  # pragma: no cover - transport safety boundary
             body = (
                 '{"error":"world observation unavailable",'
-                f'"detail":{_json_string(str(exc))}}'
+                f'"detail":{_json_string(str(exc))}'
+                '}'
             ).encode("utf-8")
             self.send_response(500)
             self._write_cors_headers()
