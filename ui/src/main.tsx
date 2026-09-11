@@ -9,6 +9,7 @@ import './jarvis-world-prototype-refinement.css';
 import './jarvis-world-follow.css';
 import './jarvis-world-work-scene.css';
 import './jarvis-landscape.css';
+import './jarvis-world-breathing.css';
 import './jarvis-world-guide.css';
 
 createRoot(document.getElementById('root')!).render(
