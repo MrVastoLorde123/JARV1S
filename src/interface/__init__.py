@@ -24,6 +24,7 @@ from .reliability import (
 from .request import InterfaceRequestBridge, JARVISRequest
 from .session import ConversationSession, ConversationTurn, SessionConflictError, SessionRuntime, SessionStore
 from .session_identity import PersistentSessionIdentity
+from .world_observation import WorldObservationFrame, WorldObservationInterfaceAdapter
 
 __all__ = [
     "ConversationSession",
@@ -61,4 +62,6 @@ __all__ = [
     "SessionIdentityRuntime",
     "SessionRuntime",
     "SessionStore",
+    "WorldObservationFrame",
+    "WorldObservationInterfaceAdapter",
 ]
