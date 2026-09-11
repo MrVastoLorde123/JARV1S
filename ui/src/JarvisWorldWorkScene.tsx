@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { demoGateway } from './demoGateway';
 import type { JarvisSnapshot, SelfActivityContract } from './contracts';
 
@@ -22,20 +22,19 @@ function activityRole(item: SelfActivityContract) {
 
 export default function JarvisWorldWorkScene() {
   const [snapshot, setSnapshot] = useState<JarvisSnapshot>(() => demoGateway.snapshotSync());
-  const [previousActivity, setPreviousActivity] = useState<string[]>(() => snapshot.selfActivity.map((item) => item.id));
   const [arrival, setArrival] = useState<string | null>(null);
+  const knownActivity = useRef(new Set(snapshot.selfActivity.map((item) => item.id)));
 
   useEffect(() => demoGateway.subscribe('jarvis-world-scene', () => {
     const next = demoGateway.snapshotSync();
-    const known = new Set(previousActivity);
-    const newest = next.selfActivity.find((item) => !known.has(item.id));
+    const newest = next.selfActivity.find((item) => !knownActivity.current.has(item.id));
     if (newest) {
+      knownActivity.current = new Set(next.selfActivity.map((item) => item.id));
       setArrival(newest.id);
       window.setTimeout(() => setArrival(null), 1200);
-      setPreviousActivity(next.selfActivity.map((item) => item.id));
     }
     setSnapshot(next);
-  }), [previousActivity]);
+  }), []);
 
   const activities = useMemo(() => snapshot.selfActivity.slice(0, 5), [snapshot.selfActivity]);
   const kind = sceneKind(snapshot);
