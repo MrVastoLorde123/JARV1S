@@ -17,9 +17,11 @@ import './jarvis-world-cleanup.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AppWorld />
-    <JarvisLandscape />
-    <JarvisWorldProcess />
-    <JarvisReturnBriefing />
+    <div className="jarvis-world-shell">
+      <AppWorld />
+      <JarvisLandscape />
+      <JarvisWorldProcess />
+      <JarvisReturnBriefing />
+    </div>
   </React.StrictMode>,
 );
