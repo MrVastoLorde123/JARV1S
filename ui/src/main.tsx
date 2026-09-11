@@ -5,6 +5,7 @@ import JarvisWorldGuide from './JarvisWorldGuide';
 import './jarvis-world-prototype.css';
 import './jarvis-world-prototype-refinement.css';
 import './jarvis-world-guide.css';
+import './jarvis-world-follow.css';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
