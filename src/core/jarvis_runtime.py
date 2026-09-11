@@ -92,7 +92,7 @@ class JARVISRuntime:
         *,
         generated_at: str | None = None,
         focused_agent_id: str | None = None,
-        current_landscape: AgentLandscape,
+        current_landscape: AgentLandscape = AgentLandscape.OPERATIONS,
         metadata: Mapping[str, object] | None = None,
     ) -> WorldObservation:
         """Return the current runtime-owned world projection for transport/UI use."""
