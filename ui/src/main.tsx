@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppWorld from './JarvisWorldPrototype';
 import JarvisLandscape from './JarvisLandscape';
@@ -15,13 +15,34 @@ import './jarvis-return-briefing.css';
 import './jarvis-return-briefing-refinement.css';
 import './jarvis-world-cleanup.css';
 
+type LandscapeId = 'OPERATIONS' | 'MIND' | 'AGENTS' | 'MODELS' | 'CAPABILITIES' | 'WORK' | 'MARKET';
+
+function WorldShell() {
+  const [landscape, setLandscape] = useState<LandscapeId>('OPERATIONS');
+
+  useEffect(() => {
+    const onLandscapeChange = (event: Event) => {
+      const next = (event as CustomEvent<LandscapeId>).detail;
+      if (typeof next === 'string') setLandscape(next);
+    };
+    window.addEventListener('jarvis:landscape', onLandscapeChange);
+    return () => window.removeEventListener('jarvis:landscape', onLandscapeChange);
+  }, []);
+
+  return (
+    <div className={`jarvis-world-shell field-${landscape.toLowerCase()}`}>
+      <div className="jarvis-legacy-layer">
+        <AppWorld />
+        <JarvisWorldProcess />
+        <JarvisReturnBriefing />
+      </div>
+      <JarvisLandscape />
+    </div>
+  );
+}
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <div className="jarvis-world-shell">
-      <AppWorld />
-      <JarvisLandscape />
-      <JarvisWorldProcess />
-      <JarvisReturnBriefing />
-    </div>
+    <WorldShell />
   </React.StrictMode>,
 );
