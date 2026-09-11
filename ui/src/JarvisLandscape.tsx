@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { demoGateway } from './demoGateway';
+import { fetchWorldObservation, type WorldObservationPayload } from './worldObservationClient';
 import type { JarvisSnapshot } from './contracts';
 
 type LandscapeId = 'OPERATIONS' | 'MIND' | 'AGENTS' | 'MODELS' | 'CAPABILITIES' | 'WORK' | 'MARKET';
@@ -14,26 +15,41 @@ const landscapes: Array<{ id: LandscapeId; title: string; detail: string }> = [
   { id: 'MARKET', title: 'MARKET', detail: 'signals, positions, external systems' },
 ];
 
-function target(snapshot: JarvisSnapshot) {
-  if (!snapshot.online || snapshot.mode === 'Waiting') return 'CORE';
-  if (snapshot.attentionRequired || snapshot.mode === 'Needs You') return 'ATTENTION';
-  if (snapshot.mode === 'Working') return 'MISSION';
-  if (snapshot.mode === 'Thinking' || snapshot.mode === 'Learning') return 'CONTEXT';
-  if (snapshot.mode === 'Monitoring') return 'RUNTIME';
-  return 'CORE';
-}
-
 export default function JarvisLandscape() {
   const [snapshot, setSnapshot] = useState<JarvisSnapshot>(() => demoGateway.snapshotSync());
+  const [world, setWorld] = useState<WorldObservationPayload | null>(null);
   const [landscape, setLandscape] = useState<LandscapeId>('OPERATIONS');
   const [traveling, setTraveling] = useState(false);
 
   useEffect(() => demoGateway.subscribe('jarvis-landscape', () => setSnapshot(demoGateway.snapshotSync())), []);
 
-  const destination = target(snapshot);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const result = await fetchWorldObservation();
+        if (!cancelled) {
+          setWorld(result.observation);
+          const backendLandscape = result.observation.world.current_landscape as LandscapeId;
+          if (landscapes.some((item) => item.id === backendLandscape)) setLandscape(backendLandscape);
+        }
+      } catch {
+        if (!cancelled) setWorld(null);
+      }
+    };
+    void load();
+    const interval = window.setInterval(() => void load(), 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const activeModel = snapshot.models.find((model) => model.state === 'ACTIVE');
   const mission = snapshot.projects.find((project) => project.state === 'ACTIVE') ?? snapshot.projects[0];
   const activeLandscape = useMemo(() => landscapes.find((item) => item.id === landscape)!, [landscape]);
+  const activeAgents = world?.world.active_agent_count ?? 0;
+  const agentsInLandscape = world?.world.landscape_counts?.[landscape] ?? 0;
 
   const moveLandscape = (next: LandscapeId) => {
     if (next === landscape) return;
@@ -46,12 +62,12 @@ export default function JarvisLandscape() {
   };
 
   return (
-    <div className={`jarvis-landscape landscape-${landscape.toLowerCase()} target-${destination.toLowerCase()} ${traveling ? 'traveling' : ''}`}>
+    <div className={`jarvis-landscape landscape-${landscape.toLowerCase()} target-${landscape.toLowerCase()} ${traveling ? 'traveling' : ''}`}>
       <div className="landscape-topology" aria-hidden="true" />
       <div className="landscape-label">
         <span>JARVIS WORLD / LANDSCAPE</span>
         <b>{activeLandscape.title}</b>
-        <small>{activeLandscape.detail}</small>
+        <small>{activeLandscape.detail} · {agentsInLandscape} backend agents here</small>
       </div>
 
       <div className="landscape-selector" role="navigation" aria-label="JARVIS landscapes">
@@ -78,14 +94,14 @@ export default function JarvisLandscape() {
         <div className="jarvis-presence">
           <span className="presence-trail" />
           <div className="presence-body"><i /><b>J</b></div>
-          <small>{snapshot.mode}</small>
+          <small>{activeAgents > 0 ? `${activeAgents} AGENTS ACTIVE` : world ? 'WORLD QUIET' : 'WORLD OFFLINE'}</small>
         </div>
 
         <div className="chart-data">
           <article><span>MISSION</span><b>{mission?.name ?? 'No active mission'}</b><small>{mission?.progress ?? 0}% · {mission?.state ?? 'IDLE'}</small></article>
           <article><span>MODEL</span><b>{activeModel?.name ?? 'No active model'}</b><small>{snapshot.resources.activeModelTasks}/{snapshot.resources.concurrencyLimit} active lanes</small></article>
-          <article><span>ABILITY</span><b>{snapshot.activeCapabilities} live</b><small>{snapshot.capabilities.filter((item) => item.state !== 'OFFLINE').length} connected surfaces</small></article>
-          <article><span>HISTORY</span><b>{snapshot.selfActivity.length} recent signals</b><small>world state retained and reorganized by relevance</small></article>
+          <article><span>AGENCY</span><b>{activeAgents} live agents</b><small>{agentsInLandscape} currently in {landscape}</small></article>
+          <article><span>HISTORY</span><b>{snapshot.selfActivity.length} recent signals</b><small>backend world observation is the source of agent presence</small></article>
         </div>
       </div>
     </div>
