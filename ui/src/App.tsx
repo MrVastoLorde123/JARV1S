@@ -9,36 +9,48 @@ type WorldFrame = {
     generated_at?: string;
     active_agent_count?: number;
     current_landscape?: string;
-    landscape_counts?: Record<string, number>;
     authority_granted?: boolean;
     permissions_granted?: boolean;
   };
-  metadata?: Record<string, unknown>;
-  authority_granted?: boolean;
-  authorization_granted?: boolean;
-  execution_requested?: boolean;
-  policy_mutation?: boolean;
 };
 
 type Envelope = {
   content?: string;
   request_id?: string;
-  metadata?: Record<string, unknown>;
   error?: string;
   detail?: string;
 };
 
+type Capability = {
+  name: string;
+  description: string;
+  version: string;
+  risk_level: string;
+  requires_confirmation: boolean;
+};
+
+type CapabilityFrame = {
+  schema?: string;
+  capabilities?: Capability[];
+  read_only?: boolean;
+  authority_granted?: boolean;
+  execution_requested?: boolean;
+};
+
 const WORLD_ENDPOINT = "/api/world/observation";
 const COMMAND_ENDPOINT = "/api/command";
+const CAPABILITY_ENDPOINT = "/api/capabilities";
 
 function App() {
   const [frame, setFrame] = useState<WorldFrame | null>(null);
+  const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [capabilityError, setCapabilityError] = useState<string | null>(null);
   const [command, setCommand] = useState("");
   const [commandResult, setCommandResult] = useState("No command has been submitted.");
   const [busy, setBusy] = useState(false);
 
-  async function refresh() {
+  async function refreshWorld() {
     try {
       const response = await fetch(WORLD_ENDPOINT, {
         headers: {
@@ -69,9 +81,33 @@ function App() {
     }
   }
 
+  async function refreshCapabilities() {
+    try {
+      const response = await fetch(CAPABILITY_ENDPOINT, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as CapabilityFrame;
+      if (!response.ok) {
+        throw new Error(`Capability catalog returned HTTP ${response.status}.`);
+      }
+      if (payload.schema !== "m28.capabilities.v1") {
+        throw new Error(`Unexpected capability schema: ${String(payload.schema)}.`);
+      }
+      setCapabilities(payload.capabilities ?? []);
+      setCapabilityError(null);
+    } catch (cause) {
+      setCapabilityError(cause instanceof Error ? cause.message : "Capability catalog unavailable.");
+    }
+  }
+
   useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 2000);
+    void refreshWorld();
+    void refreshCapabilities();
+    const timer = window.setInterval(() => {
+      void refreshWorld();
+      void refreshCapabilities();
+    }, 3000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -136,7 +172,7 @@ function App() {
             <Metric label="ACTIVE AGENTS" value={activeAgents} />
             <Metric label="LANDSCAPE" value={landscape} />
             <Metric label="AUTHORITY" value={world?.authority_granted ? "GRANTED" : "NOT GRANTED"} />
-            <Metric label="EXECUTION" value={"BACKEND OWNED"} />
+            <Metric label="CAPABILITIES" value={capabilities.length} />
           </div>
         </section>
 
@@ -167,13 +203,16 @@ function App() {
         </section>
 
         <section className="m28-panel">
-          <div className="m28-panel-label">CAPABILITY SURFACE</div>
-          <Capability name="World observation" state={online ? "READY" : "UNAVAILABLE"} />
-          <Capability name="UI command → JARVIS runtime" state="READY" />
-          <Capability name="Tool execution" state="BACKEND OWNED" />
-          <Capability name="Filesystem mutation" state="NOT VERIFIED" />
-          <Capability name="Coding-agent delegation" state="NOT VERIFIED" />
-          <Capability name="Independent verification" state="NOT VERIFIED" />
+          <div className="m28-panel-label">BACKEND CAPABILITIES</div>
+          {capabilityError ? (
+            <div className="m28-event-meta">{capabilityError}</div>
+          ) : capabilities.length === 0 ? (
+            <div className="m28-event-meta">Waiting for capability catalog.</div>
+          ) : (
+            capabilities.map((capability) => (
+              <Capability key={capability.name} capability={capability} />
+            ))
+          )}
         </section>
       </main>
 
@@ -195,13 +234,18 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function Capability({ name, state }: { name: string; state: string }) {
-  const ready = state === "READY";
+function Capability({ capability }: { capability: Capability }) {
+  const ready = capability.name === "run_test";
+  const confirmation = capability.requires_confirmation ? "CONFIRMATION" : "DIRECT";
+
   return (
     <div className="m28-capability">
       <span className={`m28-capability-dot ${ready ? "ready" : "muted"}`} />
-      <span>{name}</span>
-      <b>{state}</b>
+      <div>
+        <strong>{capability.name}</strong>
+        <div className="m28-capability-description">{capability.description}</div>
+      </div>
+      <b>{capability.risk_level.toUpperCase()} · {confirmation}</b>
     </div>
   );
 }
