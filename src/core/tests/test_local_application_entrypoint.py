@@ -69,6 +69,9 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
                 "JARVIS_LOCAL_BASE_URL": "http://127.0.0.1:8080",
                 "JARVIS_LOCAL_MODEL": "qwen3-4b-local",
                 "JARVIS_SESSION_ID": "test-session",
+                "JARVIS_WORLD_HTTP": "0",
+                "JARVIS_COMMAND_HTTP": "0",
+                "JARVIS_CAPABILITY_HTTP": "0",
             },
             clear=False,
         ), redirect_stdout(output):
@@ -135,7 +138,15 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         )
         tool_stack_builder.return_value.gate = _FakeToolInvoker()
         session_identity_cls.return_value.get_or_create.return_value = "test-session"
-        with redirect_stdout(io.StringIO()):
+        with patch.dict(
+            os.environ,
+            {
+                "JARVIS_WORLD_HTTP": "0",
+                "JARVIS_COMMAND_HTTP": "0",
+                "JARVIS_CAPABILITY_HTTP": "0",
+            },
+            clear=False,
+        ), redirect_stdout(io.StringIO()):
             run_local_jarvis.main()
 
         runtime_cls.from_processor.return_value.receive.assert_not_called()
