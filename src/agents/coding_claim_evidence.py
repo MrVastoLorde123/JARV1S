@@ -56,6 +56,10 @@ class CodingClaimEvidenceAdapter:
             raise TypeError("result must be a CodingAgentResult")
         if result.task_id != task.task_id:
             raise ValueError("coding result task_id must match task task_id")
+        if len(result.edit_results) != result.edits_attempted:
+            raise ValueError("edit_results must match edits_attempted")
+        if len(result.edit_results) > len(plan.edits):
+            raise ValueError("edit_results cannot exceed plan edits")
 
         operation_id = task.metadata.get("coding_operation_id")
         if operation_id is not None and not isinstance(operation_id, str):
@@ -131,9 +135,14 @@ class CodingClaimEvidenceAdapter:
                 "details": dict(result.error.details),
             }
 
+        source_type = (
+            EvidenceType.FILESYSTEM_OBSERVATION
+            if result.success
+            else EvidenceType.CONTRADICTION
+        )
         return Evidence(
             task_id=task.task_id,
-            source_type=EvidenceType.FILESYSTEM_OBSERVATION,
+            source_type=source_type,
             payload=payload,
             provenance={
                 "source": "write_file",
