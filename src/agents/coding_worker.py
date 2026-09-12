@@ -127,9 +127,9 @@ class CodingAgentPlanner(Protocol):
 
 
 class CodingAgentToolInvoker(Protocol):
-    """Execution contract for the existing JARVIS tool gate."""
+    """Execution contract for the existing JARVIS tool boundary."""
 
-    def __call__(self, request: ToolRequest) -> ToolResult:
+    def invoke(self, request: ToolRequest) -> ToolResult:
         ...
 
 
@@ -175,7 +175,7 @@ class CodingAgentWorker:
             if coding_operation_id is not None:
                 request_metadata["coding_operation_id"] = coding_operation_id
 
-            result = self._tool_invoker(
+            result = self._tool_invoker.invoke(
                 ToolRequest(
                     tool_name="write_file",
                     arguments={
@@ -223,7 +223,7 @@ class CodingAgentWorker:
         if coding_operation_id is not None:
             verification_metadata["coding_operation_id"] = coding_operation_id
 
-        verification = self._tool_invoker(
+        verification = self._tool_invoker.invoke(
             ToolRequest(
                 tool_name="run_test",
                 arguments=verification_arguments_payload,
