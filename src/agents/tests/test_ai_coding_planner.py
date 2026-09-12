@@ -56,7 +56,7 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
         self.assertEqual(provider_name, "local")
         self.assertEqual(required_capabilities, ("structured_output",))
         self.assertEqual(request.generation_options["temperature"], 0)
-        self.assertEqual(request.generation_options["max_output_tokens"], 1536)
+        self.assertEqual(request.generation_options["max_output_tokens"], 768)
         self.assertEqual(
             request.generation_options["response_format"],
             {"type": "json_object"},
