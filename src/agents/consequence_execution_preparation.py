@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from enum import Enum
 import hashlib
 import json
-from typing import Mapping
 
 from src.tools.authorization_integrity import (
     AuthorizationIntegrityResult,
@@ -51,6 +50,7 @@ class ConsequenceExecutionPreparation:
     tool_name: str
     invocation_id: str | None
     status: ConsequenceExecutionPreparationStatus
+    authorization_granted: bool
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
     integrity: AuthorizationIntegrityResult | None
@@ -74,6 +74,8 @@ class ConsequenceExecutionPreparation:
             raise TypeError("invocation_id must be a string or None")
         if not isinstance(self.status, ConsequenceExecutionPreparationStatus):
             raise TypeError("status must be a ConsequenceExecutionPreparationStatus member")
+        if not isinstance(self.authorization_granted, bool):
+            raise TypeError("authorization_granted must be a bool")
         if any(not isinstance(ref, str) or not ref for ref in self.evidence_refs):
             raise TypeError("evidence_refs must contain non-empty strings")
         if any(not isinstance(ref, str) or not ref for ref in self.verification_refs):
@@ -94,6 +96,8 @@ class ConsequenceExecutionPreparation:
             raise TypeError("reason must be a string or None")
 
         if self.status is ConsequenceExecutionPreparationStatus.PREPARED:
+            if not self.authorization_granted:
+                raise ValueError("PREPARED requires granted authorization")
             if self.integrity is None or not self.integrity.valid:
                 raise ValueError("PREPARED requires valid authorization integrity")
             if self.sandbox_admission is None or not self.sandbox_admission.admissible:
@@ -127,7 +131,7 @@ class ConsequenceExecutionPreparation:
             "execution_started": False,
             "worker_assigned": False,
             "containment_active": False,
-            "authorization_granted": self.prepared,
+            "authorization_granted": self.authorization_granted,
             "evidence_refs": self.evidence_refs,
             "verification_refs": self.verification_refs,
             "execution_handoff_id": (
@@ -175,7 +179,7 @@ class ConsequenceExecutionPreparationService:
             raise TypeError("request must be a ToolRequest")
 
         if authorization.status is not ConsequenceAuthorizationStatus.AUTHORIZED:
-            return self._blocked(authorization, request, "consequence authorization is not granted")
+            return self._blocked(authorization, request, "consequence authorization is not granted", authorization_granted=False)
 
         underlying = authorization.underlying_decision
         if underlying is None or not underlying.authorized:
@@ -183,6 +187,7 @@ class ConsequenceExecutionPreparationService:
                 authorization,
                 request,
                 "authorized consequence is missing an authorized underlying decision",
+                authorization_granted=False,
             )
 
         if definition.name.strip().lower() != request.tool_name.strip().lower():
@@ -190,24 +195,28 @@ class ConsequenceExecutionPreparationService:
                 authorization,
                 request,
                 "tool definition identity does not match request",
+                authorization_granted=True,
             )
         if underlying.authorization_id != authorization.authorization_id:
             return self._blocked(
                 authorization,
                 request,
                 "underlying authorization identity does not match consequence authorization",
+                authorization_granted=True,
             )
         if underlying.tool_name.strip().lower() != request.tool_name.strip().lower():
             return self._blocked(
                 authorization,
                 request,
                 "underlying authorization tool identity does not match request",
+                authorization_granted=True,
             )
         if underlying.invocation_id != request.invocation_id:
             return self._blocked(
                 authorization,
                 request,
                 "underlying authorization invocation identity does not match request",
+                authorization_granted=True,
             )
 
         integrity = self._integrity.attest(underlying, request)
@@ -216,6 +225,7 @@ class ConsequenceExecutionPreparationService:
                 authorization,
                 request,
                 integrity.reason or "authorization integrity verification failed",
+                authorization_granted=True,
                 integrity=integrity,
             )
 
@@ -231,6 +241,7 @@ class ConsequenceExecutionPreparationService:
                 authorization,
                 request,
                 admission.reason or "sandbox admission failed",
+                authorization_granted=True,
                 integrity=integrity,
                 sandbox_admission=admission,
             )
@@ -252,6 +263,7 @@ class ConsequenceExecutionPreparationService:
             tool_name=authorization.tool_name,
             invocation_id=authorization.invocation_id,
             status=ConsequenceExecutionPreparationStatus.PREPARED,
+            authorization_granted=True,
             evidence_refs=authorization.evidence_refs,
             verification_refs=authorization.verification_refs,
             integrity=integrity,
@@ -265,6 +277,7 @@ class ConsequenceExecutionPreparationService:
         request: ToolRequest,
         reason: str,
         *,
+        authorization_granted: bool,
         integrity: AuthorizationIntegrityResult | None = None,
         sandbox_admission: SandboxAdmissionDecision | None = None,
     ) -> ConsequenceExecutionPreparation:
@@ -282,6 +295,7 @@ class ConsequenceExecutionPreparationService:
             tool_name=request.tool_name,
             invocation_id=request.invocation_id,
             status=ConsequenceExecutionPreparationStatus.BLOCKED,
+            authorization_granted=authorization_granted,
             evidence_refs=authorization.evidence_refs,
             verification_refs=authorization.verification_refs,
             integrity=integrity,
