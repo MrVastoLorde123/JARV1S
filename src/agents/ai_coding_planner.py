@@ -19,7 +19,7 @@ from .coding_worker import (
 class AICodingAgentPlanner:
     """Turn one coding task into a validated, non-executing coding plan."""
 
-    _MAX_OUTPUT_TOKENS = 1536
+    _MAX_OUTPUT_TOKENS = 768
 
     def __init__(
         self,
