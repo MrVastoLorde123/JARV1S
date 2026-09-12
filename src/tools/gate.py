@@ -156,6 +156,9 @@ class PolicyGate:
                 )
             return outcome.result
 
+        if outcome.result is not None:
+            return outcome.result
+
         return self._blocked_result(
             request,
             code="execution_attempt_failed",
