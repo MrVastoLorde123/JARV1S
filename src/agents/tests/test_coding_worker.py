@@ -29,7 +29,7 @@ class RecordingInvoker:
         self.responses = list(responses)
         self.requests: list[ToolRequest] = []
 
-    def __call__(self, request: ToolRequest) -> ToolResult:
+    def invoke(self, request: ToolRequest) -> ToolResult:
         self.requests.append(request)
         return self.responses.pop(0)
 
