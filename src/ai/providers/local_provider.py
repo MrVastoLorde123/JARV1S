@@ -211,6 +211,14 @@ class LocalProvider(AIProvider):
                 options["response_format"]
             )
 
+        if "chat_template_kwargs" in options:
+            chat_template_kwargs = options["chat_template_kwargs"]
+            if not isinstance(chat_template_kwargs, Mapping):
+                raise InvalidRequestError(
+                    "LocalProvider chat_template_kwargs must be a mapping."
+                )
+            payload["chat_template_kwargs"] = dict(chat_template_kwargs)
+
         return payload
 
     def generate(self, request_object):
