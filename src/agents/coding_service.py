@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
+from src.agents.ai_coding_planner import AICodingAgentPlanner
 from src.agents.coding_worker import (
     CodingAgentPlan,
     CodingAgentResult,
     CodingAgentTask,
     CodingAgentWorker,
 )
-from src.agents.ai_coding_planner import AICodingAgentPlanner
+from src.agents.repository_context import RepositoryContextComposer
 
 
 class CodingAgentService:
-    """Compose a planner and bounded worker without owning tool authority."""
+    """Compose JARVIS context, a planner, and a bounded coding worker."""
 
-    def __init__(self, planner, worker: CodingAgentWorker) -> None:
+    def __init__(self, planner, worker: CodingAgentWorker, context_composer=None) -> None:
         self._planner = planner
         self._worker = worker
+        self._context_composer = context_composer
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -28,13 +30,28 @@ class CodingAgentService:
             planner,
             tool_invoker,
         )
-        return cls(planner, worker)
+        context_composer = RepositoryContextComposer(tool_invoker)
+        return cls(planner, worker, context_composer)
 
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
-        """Generate a proposal without invoking repository tools."""
+        """Compose observed environment context before generating a proposal."""
         if not isinstance(task, CodingAgentTask):
             raise TypeError("task must be a CodingAgentTask")
-        return self._worker.plan(task)
+
+        enriched_task = task
+        if self._context_composer is not None:
+            repository_context = self._context_composer.compose()
+            enriched_metadata = {
+                **dict(task.metadata),
+                "repository_context": repository_context.render(),
+            }
+            enriched_task = CodingAgentTask(
+                objective=task.objective,
+                task_id=task.task_id,
+                metadata=enriched_metadata,
+            )
+
+        return self._worker.plan(enriched_task)
 
     def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
         """Execute exactly the supplied plan through the worker authority boundary."""
