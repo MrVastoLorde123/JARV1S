@@ -17,12 +17,7 @@ from .coding_worker import (
 
 
 class AICodingAgentPlanner:
-    """Turn one coding task into a validated, non-executing coding plan.
-
-    The planner is intentionally unable to invoke tools. It asks an
-    ``AIService`` for structured output, parses that output into the bounded
-    ``CodingAgentPlan`` contract, and returns the plan to the worker.
-    """
+    """Turn one coding task into a validated, non-executing coding plan."""
 
     def __init__(
         self,
@@ -62,6 +57,10 @@ class AICodingAgentPlanner:
 
     @staticmethod
     def _build_prompt(task: CodingAgentTask) -> str:
+        repository_context = task.metadata.get("repository_context")
+        if not isinstance(repository_context, str):
+            repository_context = "No repository context was supplied. Do not invent environment facts."
+
         return (
             "You are the planning component of a bounded coding agent inside JARVIS.\n"
             "Produce ONLY one JSON object matching this shape:\n"
@@ -81,8 +80,12 @@ class AICodingAgentPlanner:
             "- Never propose shell commands.\n"
             "- Never use a runner other than python_unittest or npm_build.\n"
             "- File paths must be workspace-relative.\n"
+            "- Only use repository paths that are supported by the observed context when possible.\n"
+            "- Do not invent directories or filenames when JARVIS has provided observations.\n"
             "- An edit must contain the complete replacement file content.\n"
             "- Keep the edit set as small as practical.\n\n"
+            "JARVIS OBSERVED REPOSITORY CONTEXT:\n"
+            f"{repository_context}\n\n"
             f"JARVIS coding objective:\n{task.objective}"
         )
 
