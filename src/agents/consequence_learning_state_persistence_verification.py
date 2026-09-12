@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 from typing import Any, Mapping, Protocol
 
 from src.agents.consequence_learning_state_persistence import (
@@ -14,13 +15,7 @@ from src.agents.consequence_learning_write_request import ConsequenceLearningWri
 class ConsequenceLearningStateReader(Protocol):
     """Explicit read authority for persisted learning state."""
 
-    def read(
-        self,
-        *,
-        request_id: str,
-        record_id: str,
-    ) -> Mapping[str, Any] | None:
-        """Return the persisted record or None when it cannot be observed."""
+    def read(self, *, request_id: str, record_id: str) -> Mapping[str, Any] | None:
         ...
 
 
@@ -36,12 +31,7 @@ class ConsequenceLearningStatePersistenceVerification:
     reason: str
 
     def __post_init__(self) -> None:
-        for field_name, value in (
-            ("verification_id", self.verification_id),
-            ("request_id", self.request_id),
-            ("record_id", self.record_id),
-            ("reason", self.reason),
-        ):
+        for field_name, value in (("verification_id", self.verification_id), ("request_id", self.request_id), ("record_id", self.record_id), ("reason", self.reason)):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
         for field_name, value in (("verified", self.verified), ("observed", self.observed)):
@@ -81,11 +71,7 @@ class ConsequenceLearningStatePersistenceVerificationService:
             raise TypeError("reader must provide a callable read method")
         self._reader = reader
 
-    def verify(
-        self,
-        request: ConsequenceLearningWriteRequest,
-        receipt: ConsequenceLearningStatePersistenceReceipt,
-    ) -> ConsequenceLearningStatePersistenceVerification:
+    def verify(self, request: ConsequenceLearningWriteRequest, receipt: ConsequenceLearningStatePersistenceReceipt) -> ConsequenceLearningStatePersistenceVerification:
         if not isinstance(request, ConsequenceLearningWriteRequest):
             raise TypeError("request must be a ConsequenceLearningWriteRequest")
         if not isinstance(receipt, ConsequenceLearningStatePersistenceReceipt):
@@ -94,14 +80,9 @@ class ConsequenceLearningStatePersistenceVerificationService:
             raise ValueError("receipt does not belong to request")
         if self._reader is None:
             raise RuntimeError("learning-state reader is not bound")
-
         observed = self._reader.read(request_id=request.request_id, record_id=receipt.record_id)
         verified = self._matches(request, receipt, observed)
-        reason = (
-            "persisted learning state independently matches request and receipt"
-            if verified
-            else "persisted learning state could not be independently matched to request and receipt"
-        )
+        reason = "persisted learning state independently matches request and receipt" if verified else "persisted learning state could not be independently matched to request and receipt"
         return ConsequenceLearningStatePersistenceVerification(
             verification_id=self._verification_id(request.request_id, receipt.record_id),
             request_id=request.request_id,
@@ -112,28 +93,17 @@ class ConsequenceLearningStatePersistenceVerificationService:
         )
 
     @staticmethod
-    def _matches(
-        request: ConsequenceLearningWriteRequest,
-        receipt: ConsequenceLearningStatePersistenceReceipt,
-        observed: Mapping[str, Any] | None,
-    ) -> bool:
+    def _matches(request: ConsequenceLearningWriteRequest, receipt: ConsequenceLearningStatePersistenceReceipt, observed: Mapping[str, Any] | None) -> bool:
         if not isinstance(observed, Mapping):
             return False
-        return (
-            observed.get("request_id") == request.request_id
-            and observed.get("record_id") == receipt.record_id
-            and observed.get("payload") == dict(request.learning_payload)
-        )
+        return observed.get("request_id") == request.request_id and observed.get("record_id") == receipt.record_id and observed.get("payload") == dict(request.learning_payload)
 
     @staticmethod
     def _verification_id(request_id: str, record_id: str) -> str:
-        import hashlib
-
         return f"consequence-learning-persistence-verification-{hashlib.sha256(f'{request_id}:{record_id}'.encode('utf-8')).hexdigest()[:24]}"
 
 
 __all__ = [
-    "ConsequenceLearningStatePersistenceReader",
     "ConsequenceLearningStatePersistenceVerification",
     "ConsequenceLearningStatePersistenceVerificationService",
     "ConsequenceLearningStateReader",
