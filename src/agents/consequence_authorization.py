@@ -76,11 +76,6 @@ class ConsequenceAuthorizationDecision:
     def authorized(self) -> bool:
         return self.status is ConsequenceAuthorizationStatus.AUTHORIZED
 
-    @property
-    def execution_allowed(self) -> bool:
-        """Authorization permits a later execution layer; it does not execute."""
-        return self.authorized
-
     def to_context(self) -> dict[str, object]:
         return {
             "authority_handoff_id": self.handoff_id,
