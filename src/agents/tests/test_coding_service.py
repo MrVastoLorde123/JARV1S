@@ -45,9 +45,8 @@ class M28CodingAgentServiceTests(unittest.TestCase):
             edits=(),
             verification=CodingAgentVerification(runner="npm_build"),
         )
-        planner = FakePlanner(plan)
         worker = FakeWorker(result="unused", plan_result=plan)
-        service = CodingAgentService(planner, worker)
+        service = CodingAgentService(FakePlanner(plan), worker)
 
         result = service.plan(task)
 
