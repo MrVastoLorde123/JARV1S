@@ -20,17 +20,23 @@ from src.agents.coding_worker import (
     CodingAgentWorker,
     CodingAgentVerification,
 )
+from src.agents.claim_evidence import ClaimEvaluation
+from src.agents.consequence_authorization import (
+    ConsequenceAuthorizationDecision,
+    ConsequenceAuthorizationService,
+)
 from src.agents.consequence_gate import (
     ConsequenceDecision,
     ConsequenceRequest,
     EvidenceGatedConsequencePolicy,
 )
 from src.agents.repository_context import RepositoryContextComposer
-from src.agents.claim_evidence import ClaimEvaluation
+from src.tools.authorization import ExplicitAuthorizationService
+from src.tools.models import ToolDefinition, ToolRequest
 
 
 class CodingAgentService:
-    """Compose JARVIS context, planning, execution, evidence, eligibility, and authority handoff."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, and authorization."""
 
     def __init__(
         self,
@@ -40,6 +46,7 @@ class CodingAgentService:
         claim_evidence_adapter: CodingClaimEvidenceAdapter | None = None,
         consequence_policy: EvidenceGatedConsequencePolicy | None = None,
         authority_handoff_policy: AuthorityHandoffPolicy | None = None,
+        consequence_authorization_service: ConsequenceAuthorizationService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -47,6 +54,7 @@ class CodingAgentService:
         self._claim_evidence_adapter = claim_evidence_adapter or CodingClaimEvidenceAdapter()
         self._consequence_policy = consequence_policy or EvidenceGatedConsequencePolicy()
         self._authority_handoff_policy = authority_handoff_policy or AuthorityHandoffPolicy()
+        self._consequence_authorization_service = consequence_authorization_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -60,6 +68,18 @@ class CodingAgentService:
         )
         context_composer = RepositoryContextComposer(tool_invoker)
         return cls(planner, worker, context_composer)
+
+    def bind_consequence_authorization(
+        self,
+        authorization_service: ExplicitAuthorizationService,
+        *,
+        authority_target: str = "coding_confirmation",
+    ) -> None:
+        """Bind the existing M22.8 authorizer to the M31→M32 consequence seam."""
+        self._consequence_authorization_service = ConsequenceAuthorizationService(
+            authorization_service,
+            authority_target=authority_target,
+        )
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
         """Attach JARVIS-observed environment context to a task before planning."""
@@ -82,13 +102,7 @@ class CodingAgentService:
 
     @staticmethod
     def _apply_verification_authority(plan: CodingAgentPlan) -> CodingAgentPlan:
-        """Apply deterministic repository verification policy after model planning.
-
-        Agent-selected verification is advisory. For changes under the UI
-        workspace, JARVIS owns the verification contract and requires the
-        repository's canonical frontend build rather than an unconstrained
-        unittest discovery invocation.
-        """
+        """Apply deterministic repository verification policy after model planning."""
         if not any(edit.path == "ui" or edit.path.startswith("ui/") for edit in plan.edits):
             return plan
         if plan.verification.runner == "npm_build" and not plan.verification.arguments:
@@ -148,6 +162,24 @@ class CodingAgentService:
             decision,
             authority_target=authority_target,
             authority_context=authority_context,
+        )
+
+    def authorize_consequence(
+        self,
+        handoff: AuthorityHandoffRequest,
+        definition: ToolDefinition,
+        request: ToolRequest,
+        *,
+        authorization_id: str,
+    ) -> ConsequenceAuthorizationDecision:
+        """Authorize one M31 handoff through the existing explicit authorizer."""
+        if self._consequence_authorization_service is None:
+            raise RuntimeError("consequence authorization service is not bound")
+        return self._consequence_authorization_service.authorize(
+            handoff,
+            definition,
+            request,
+            authorization_id=authorization_id,
         )
 
 
