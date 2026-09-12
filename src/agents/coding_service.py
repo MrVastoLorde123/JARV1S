@@ -25,6 +25,10 @@ from src.agents.consequence_authorization import (
     ConsequenceAuthorizationDecision,
     ConsequenceAuthorizationService,
 )
+from src.agents.consequence_execution_attempt import (
+    ConsequenceExecutionAttempt,
+    ConsequenceExecutionAttemptService,
+)
 from src.agents.consequence_execution_preparation import (
     ConsequenceExecutionPreparation,
     ConsequenceExecutionPreparationService,
@@ -37,10 +41,11 @@ from src.agents.consequence_gate import (
 from src.agents.repository_context import RepositoryContextComposer
 from src.tools.authorization import ExplicitAuthorizationService
 from src.tools.models import ToolDefinition, ToolRequest
+from src.tools.execution_attempt import ToolExecutor
 
 
 class CodingAgentService:
-    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, and preparation."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, and attempt."""
 
     def __init__(
         self,
@@ -52,6 +57,7 @@ class CodingAgentService:
         authority_handoff_policy: AuthorityHandoffPolicy | None = None,
         consequence_authorization_service: ConsequenceAuthorizationService | None = None,
         consequence_execution_preparation_service: ConsequenceExecutionPreparationService | None = None,
+        consequence_execution_attempt_service: ConsequenceExecutionAttemptService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -61,6 +67,7 @@ class CodingAgentService:
         self._authority_handoff_policy = authority_handoff_policy or AuthorityHandoffPolicy()
         self._consequence_authorization_service = consequence_authorization_service
         self._consequence_execution_preparation_service = consequence_execution_preparation_service
+        self._consequence_execution_attempt_service = consequence_execution_attempt_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -95,6 +102,22 @@ class CodingAgentService:
         self._consequence_execution_preparation_service = (
             preparation_service or ConsequenceExecutionPreparationService()
         )
+
+    def bind_consequence_execution_attempt(
+        self,
+        executor: ToolExecutor | None = None,
+        *,
+        attempt_service: ConsequenceExecutionAttemptService | None = None,
+    ) -> None:
+        """Bind the M34 consequence preparation → existing attempt seam."""
+        if attempt_service is not None and executor is not None:
+            raise ValueError("provide either executor or attempt_service, not both")
+        if attempt_service is not None:
+            self._consequence_execution_attempt_service = attempt_service
+            return
+        if executor is None:
+            raise ValueError("executor or attempt_service is required")
+        self._consequence_execution_attempt_service = ConsequenceExecutionAttemptService(executor)
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
         """Attach JARVIS-observed environment context to a task before planning."""
@@ -211,6 +234,15 @@ class CodingAgentService:
             definition,
             request,
         )
+
+    def attempt_prepared_consequence(
+        self,
+        preparation: ConsequenceExecutionPreparation,
+    ) -> ConsequenceExecutionAttempt:
+        """Start one M33-prepared consequence through the existing execution-attempt boundary."""
+        if self._consequence_execution_attempt_service is None:
+            raise RuntimeError("consequence execution-attempt service is not bound")
+        return self._consequence_execution_attempt_service.attempt(preparation)
 
 
 __all__ = ["CodingAgentService"]
