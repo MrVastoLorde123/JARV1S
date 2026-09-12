@@ -40,7 +40,7 @@ class M35CodingServiceConsequenceExecutionOutcomeTests(unittest.TestCase):
             verification_refs=("verification-service-35",),
             execution_result=result,
             underlying_attempt=underlying,
-            reason=reason if status is ConsequenceExecutionAttemptStatus.ATTEMPTED_FAILED else None,
+            reason=reason if status is not ConsequenceExecutionAttemptStatus.ATTEMPTED_COMPLETED else None,
         )
 
     def test_service_requires_explicit_outcome_binding(self):
