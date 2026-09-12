@@ -33,25 +33,29 @@ class CodingAgentService:
         context_composer = RepositoryContextComposer(tool_invoker)
         return cls(planner, worker, context_composer)
 
-    def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
-        """Compose observed environment context before generating a proposal."""
+    def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
+        """Attach JARVIS-observed environment context to a task before planning."""
         if not isinstance(task, CodingAgentTask):
             raise TypeError("task must be a CodingAgentTask")
+        if self._context_composer is None:
+            return task
+        if isinstance(task.metadata.get("repository_context"), str):
+            return task
 
-        enriched_task = task
-        if self._context_composer is not None:
-            repository_context = self._context_composer.compose()
-            enriched_metadata = {
+        repository_context = self._context_composer.compose()
+        return CodingAgentTask(
+            objective=task.objective,
+            task_id=task.task_id,
+            metadata={
                 **dict(task.metadata),
                 "repository_context": repository_context.render(),
-            }
-            enriched_task = CodingAgentTask(
-                objective=task.objective,
-                task_id=task.task_id,
-                metadata=enriched_metadata,
-            )
+            },
+        )
 
-        return self._worker.plan(enriched_task)
+    def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
+        """Compose observed environment context before generating a proposal."""
+        prepared_task = self.prepare_task(task)
+        return self._worker.plan(prepared_task)
 
     def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
         """Execute exactly the supplied plan through the worker authority boundary."""
