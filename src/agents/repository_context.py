@@ -9,6 +9,9 @@ from uuid import uuid4
 from src.tools.models import ToolRequest, ToolResult
 
 
+_MAX_RENDERED_PATHS = 60
+
+
 @dataclass(frozen=True)
 class RepositoryContext:
     """Observed environment facts safe to provide to an agent planner."""
@@ -19,12 +22,45 @@ class RepositoryContext:
     facts: tuple[str, ...]
 
     def render(self) -> str:
-        lines = [f"WORKSPACE: {self.workspace}", "OBSERVED REPOSITORY PATHS:"]
-        lines.extend(f"- {path}" for path in self.observed_paths)
+        lines = [f"WORKSPACE: {self.workspace}"]
         if self.facts:
             lines.append("JARVIS OBSERVED FACTS:")
             lines.extend(f"- {fact}" for fact in self.facts)
+
+        prioritized_paths = self._prioritized_paths()
+        if prioritized_paths:
+            lines.append("OBSERVED REPOSITORY PATHS (bounded projection):")
+            lines.extend(f"- {path}" for path in prioritized_paths)
+
+        if len(self.observed_paths) > len(prioritized_paths):
+            lines.append(
+                f"- additional repository paths observed internally but omitted from planner context: "
+                f"{len(self.observed_paths) - len(prioritized_paths)}"
+            )
+
         return "\n".join(lines)
+
+    def _prioritized_paths(self) -> tuple[str, ...]:
+        """Project broad observations into a small planner-safe context.
+
+        JARVIS may observe more than the LLM needs. The planner receives only
+        a bounded projection so small local models are not overwhelmed by raw
+        repository inventory. The projection prioritizes top-level paths and
+        common application surfaces such as the UI.
+        """
+        paths = tuple(sorted(self.observed_paths))
+        top_level = [path for path in paths if "/" not in path and "\\" not in path]
+        ui_paths = [path for path in paths if path == "ui" or path.startswith("ui/")]
+        src_paths = [path for path in paths if path == "src" or path.startswith("src/")]
+
+        selected: list[str] = []
+        for group in (top_level, ui_paths, src_paths, list(paths)):
+            for path in group:
+                if path not in selected:
+                    selected.append(path)
+                if len(selected) >= _MAX_RENDERED_PATHS:
+                    return tuple(selected)
+        return tuple(selected)
 
 
 class RepositoryContextComposer:
