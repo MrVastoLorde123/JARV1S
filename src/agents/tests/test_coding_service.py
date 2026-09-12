@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import unittest
 
+from src.agents.claim_evidence import ClaimState
 from src.agents.coding_service import CodingAgentService
 from src.agents.coding_worker import (
     CodingAgentEdit,
     CodingAgentPlan,
+    CodingAgentResult,
     CodingAgentTask,
     CodingAgentVerification,
 )
+from src.tools.models import ToolResult
 
 
 class FakePlanner:
@@ -137,6 +140,48 @@ class M28CodingAgentServiceTests(unittest.TestCase):
         result = service.execute(task, approved_plan)
 
         self.assertEqual(result, "worker-result")
+        self.assertIs(worker.seen_task, task)
+        self.assertIs(worker.seen_plan, approved_plan)
+
+    def test_service_execute_and_evaluate_transforms_worker_result_into_m29(self) -> None:
+        task = CodingAgentTask(
+            objective="Execute approved interface change",
+            task_id="coding-service-m29",
+            metadata={"coding_operation_id": "operation-service"},
+        )
+        approved_plan = CodingAgentPlan(
+            edits=(CodingAgentEdit(path="ui/index.html", content="approved"),),
+            verification=CodingAgentVerification(runner="npm_build"),
+        )
+        worker_result = CodingAgentResult(
+            task_id=task.task_id,
+            status="verified",
+            edits_attempted=1,
+            edits_applied=1,
+            edit_results=(
+                ToolResult(
+                    success=True,
+                    tool_name="write_file",
+                    content={"written": True},
+                    invocation_id="edit-service",
+                ),
+            ),
+            verification=ToolResult(
+                success=True,
+                tool_name="run_test",
+                content={"exit_code": 0},
+                invocation_id="verify-service",
+            ),
+            message="verification passed",
+        )
+        worker = FakeWorker(result=worker_result, plan_result=approved_plan)
+        service = CodingAgentService(FakePlanner(approved_plan), worker)
+
+        outcome = service.execute_and_evaluate(task, approved_plan)
+
+        self.assertEqual(outcome.state, ClaimState.VERIFIED)
+        self.assertEqual(outcome.claim.task_id, task.task_id)
+        self.assertEqual(len(outcome.evidence), 2)
         self.assertIs(worker.seen_task, task)
         self.assertIs(worker.seen_plan, approved_plan)
 
