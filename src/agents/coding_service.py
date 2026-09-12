@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Mapping
+
 from src.agents.ai_coding_planner import AICodingAgentPlanner
 from src.agents.authority_handoff import (
     AuthorityHandoffPolicy,
@@ -139,11 +141,13 @@ class CodingAgentService:
         decision: ConsequenceDecision,
         *,
         authority_target: str = "existing_authority",
+        authority_context: Mapping[str, object] | None = None,
     ) -> AuthorityHandoffRequest:
         """Prepare a non-authorizing handoff for the existing authority layer."""
         return self._authority_handoff_policy.handoff(
             decision,
             authority_target=authority_target,
+            authority_context=authority_context,
         )
 
 
