@@ -10,7 +10,12 @@ from src.agents.consequence_execution_preparation import (
     ConsequenceExecutionPreparationService,
     ConsequenceExecutionPreparationStatus,
 )
-from src.agents.consequence_gate import ConsequenceAction, ConsequenceDecision, ConsequenceKind, ConsequenceRequest
+from src.agents.consequence_gate import (
+    ConsequenceAction,
+    ConsequenceDecision,
+    ConsequenceKind,
+    ConsequenceRequest,
+)
 from src.tools.authorization import ExplicitAuthorizationService
 from src.tools.confirmation import AutoApproveConfirmationProvider
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
@@ -110,22 +115,19 @@ class M33ConsequenceExecutionPreparationTests(unittest.TestCase):
         self.assertFalse(context["execution_started"])
         self.assertFalse(context["worker_assigned"])
         self.assertFalse(context["containment_active"])
-        self.assertIsNone(result.execution_handoff.to_context().get("execution_started")) if False else self.assertFalse(
-            result.execution_handoff.to_context()["execution_started"]
-        )
+        self.assertFalse(result.execution_handoff.to_context()["execution_started"])
+        self.assertFalse(result.execution_handoff.to_context()["worker_assigned"])
+        self.assertFalse(result.execution_handoff.to_context()["containment_active"])
 
     def test_denied_consequence_cannot_prepare(self):
-        denied = ConsequenceDecision(
-            **{
-                **self.handoff.__dict__,
-            }
-        )
-        # Rebuild the denied handoff from an explicit blocked consequence so
-        # the M31 status is not READY_FOR_AUTHORITY.
         blocked_decision = ConsequenceDecision(
             claim_id=self.handoff.claim_id,
             task_id=self.handoff.task_id,
-            consequence=self.handoff.consequence,
+            consequence=ConsequenceRequest(
+                kind=self.handoff.consequence_kind,
+                consequence_id=self.handoff.consequence_id,
+                metadata=dict(self.handoff.consequence_metadata or {}),
+            ),
             action=ConsequenceAction.BLOCK,
             reason="blocked",
             evidence_refs=self.handoff.evidence_refs,
