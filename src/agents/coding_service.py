@@ -41,6 +41,10 @@ from src.agents.consequence_execution_preparation import (
     ConsequenceExecutionPreparation,
     ConsequenceExecutionPreparationService,
 )
+from src.agents.consequence_feedback_evaluation import (
+    ConsequenceFeedbackEvaluation,
+    ConsequenceFeedbackEvaluationService,
+)
 from src.agents.consequence_gate import (
     ConsequenceDecision,
     ConsequenceRequest,
@@ -53,7 +57,7 @@ from src.tools.execution_attempt import ToolExecutor
 
 
 class CodingAgentService:
-    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, attempt, outcome, and feedback."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, attempt, outcome, feedback, and feedback evaluation."""
 
     def __init__(
         self,
@@ -68,6 +72,7 @@ class CodingAgentService:
         consequence_execution_attempt_service: ConsequenceExecutionAttemptService | None = None,
         consequence_execution_outcome_service: ConsequenceExecutionOutcomeService | None = None,
         consequence_execution_feedback_service: ConsequenceExecutionFeedbackService | None = None,
+        consequence_feedback_evaluation_service: ConsequenceFeedbackEvaluationService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -80,6 +85,7 @@ class CodingAgentService:
         self._consequence_execution_attempt_service = consequence_execution_attempt_service
         self._consequence_execution_outcome_service = consequence_execution_outcome_service
         self._consequence_execution_feedback_service = consequence_execution_feedback_service
+        self._consequence_feedback_evaluation_service = consequence_feedback_evaluation_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -145,6 +151,15 @@ class CodingAgentService:
         """Bind the M36 observed-outcome → inert-feedback seam."""
         self._consequence_execution_feedback_service = (
             feedback_service or ConsequenceExecutionFeedbackService()
+        )
+
+    def bind_consequence_feedback_evaluation(
+        self,
+        evaluation_service: ConsequenceFeedbackEvaluationService | None = None,
+    ) -> None:
+        """Bind the M37 consequence-feedback → inert-evaluation seam."""
+        self._consequence_feedback_evaluation_service = (
+            evaluation_service or ConsequenceFeedbackEvaluationService()
         )
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
@@ -289,6 +304,15 @@ class CodingAgentService:
         if self._consequence_execution_feedback_service is None:
             raise RuntimeError("consequence execution-feedback service is not bound")
         return self._consequence_execution_feedback_service.evaluate(outcome)
+
+    def evaluate_consequence_feedback(
+        self,
+        feedback: ConsequenceExecutionFeedback,
+    ) -> ConsequenceFeedbackEvaluation:
+        """Evaluate one M36 feedback event into an inert M37 signal."""
+        if self._consequence_feedback_evaluation_service is None:
+            raise RuntimeError("consequence feedback-evaluation service is not bound")
+        return self._consequence_feedback_evaluation_service.evaluate(feedback)
 
 
 __all__ = ["CodingAgentService"]
