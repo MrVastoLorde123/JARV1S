@@ -38,6 +38,16 @@ class FakeWorker:
         return self.result
 
 
+class FakeRepositoryContext:
+    def render(self):
+        return "WORKSPACE: .\nOBSERVED REPOSITORY PATHS:\n- ui/index.html"
+
+
+class FakeContextComposer:
+    def compose(self):
+        return FakeRepositoryContext()
+
+
 class M28CodingAgentServiceTests(unittest.TestCase):
     def test_service_plans_without_execution(self) -> None:
         task = CodingAgentTask(objective="Improve the interface")
@@ -53,6 +63,31 @@ class M28CodingAgentServiceTests(unittest.TestCase):
         self.assertIs(result, plan)
         self.assertIs(worker.seen_task, task)
         self.assertIsNone(worker.seen_plan)
+
+    def test_service_preserves_context_in_prepared_task(self) -> None:
+        task = CodingAgentTask(objective="Improve the interface")
+        plan = CodingAgentPlan(
+            edits=(),
+            verification=CodingAgentVerification(runner="npm_build"),
+        )
+        worker = FakeWorker(result="unused", plan_result=plan)
+        service = CodingAgentService(
+            FakePlanner(plan),
+            worker,
+            FakeContextComposer(),
+        )
+
+        prepared = service.prepare_task(task)
+        result = service.plan(prepared)
+
+        self.assertIs(result, plan)
+        self.assertIsNot(prepared, task)
+        self.assertEqual(prepared.task_id, task.task_id)
+        self.assertEqual(
+            prepared.metadata["repository_context"],
+            "WORKSPACE: .\nOBSERVED REPOSITORY PATHS:\n- ui/index.html",
+        )
+        self.assertIs(worker.seen_task, prepared)
 
     def test_service_executes_exactly_the_supplied_plan(self) -> None:
         task = CodingAgentTask(objective="Execute approved interface change")
