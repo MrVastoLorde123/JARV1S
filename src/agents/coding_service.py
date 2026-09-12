@@ -14,11 +14,17 @@ from src.agents.coding_worker import (
     CodingAgentWorker,
     CodingAgentVerification,
 )
+from src.agents.consequence_gate import (
+    ConsequenceDecision,
+    ConsequenceRequest,
+    EvidenceGatedConsequencePolicy,
+)
 from src.agents.repository_context import RepositoryContextComposer
+from src.agents.claim_evidence import ClaimEvaluation
 
 
 class CodingAgentService:
-    """Compose JARVIS context, a planner, a bounded worker, and M29 evaluation."""
+    """Compose JARVIS context, a planner, a bounded worker, M29 evaluation, and M30 consequence eligibility."""
 
     def __init__(
         self,
@@ -26,11 +32,13 @@ class CodingAgentService:
         worker: CodingAgentWorker,
         context_composer=None,
         claim_evidence_adapter: CodingClaimEvidenceAdapter | None = None,
+        consequence_policy: EvidenceGatedConsequencePolicy | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
         self._context_composer = context_composer
         self._claim_evidence_adapter = claim_evidence_adapter or CodingClaimEvidenceAdapter()
+        self._consequence_policy = consequence_policy or EvidenceGatedConsequencePolicy()
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -111,6 +119,14 @@ class CodingAgentService:
         """Execute through M28 authority, then deterministically evaluate M29 evidence."""
         result = self.execute(task, plan)
         return self._claim_evidence_adapter.evaluate(task, plan, result)
+
+    def decide_consequence(
+        self,
+        evaluation: ClaimEvaluation,
+        consequence: ConsequenceRequest,
+    ) -> ConsequenceDecision:
+        """Consume an M29 evaluation through the M30 consequence boundary."""
+        return self._consequence_policy.decide(evaluation, consequence)
 
 
 __all__ = ["CodingAgentService"]
