@@ -1,0 +1,39 @@
+name: M28 Verification
+
+on:
+  push:
+    branches:
+      - feature/m28-jarvis-os-prototype
+  pull_request:
+    branches:
+      - feature/m28-jarvis-os-prototype
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Backend focused tests
+        run: python -m unittest src.interface.tests.test_http_command src.interface.tests.test_boundary
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install interface dependencies
+        working-directory: ui
+        run: npm install
+
+      - name: Build interface
+        working-directory: ui
+        run: npm run build
