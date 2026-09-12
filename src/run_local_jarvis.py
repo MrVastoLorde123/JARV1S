@@ -32,7 +32,10 @@ def main():
     requested_session_id = os.environ.get("JARVIS_SESSION_ID")
     data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data"))
     enable_world_http = os.environ.get("JARVIS_WORLD_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
-    enable_command_http = os.environ.get("JARVIS_COMMAND_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
+    enable_command_http = os.environ.get(
+        "JARVIS_COMMAND_HTTP",
+        "1" if enable_world_http else "0",
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     bootstrap_database()
 
