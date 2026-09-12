@@ -16,8 +16,10 @@ class FixedPlanner:
     def __init__(self, plan: CodingAgentPlan) -> None:
         self.plan_value = plan
         self.seen_task: CodingAgentTask | None = None
+        self.calls = 0
 
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
+        self.calls += 1
         self.seen_task = task
         return self.plan_value
 
@@ -50,7 +52,72 @@ def failure(tool_name: str, code: str, message: str) -> ToolResult:
 
 
 class M28CodingAgentWorkerTests(unittest.TestCase):
-    def test_worker_applies_edits_then_verifies(self) -> None:
+    def test_worker_plans_without_invoking_tools(self) -> None:
+        task = CodingAgentTask(objective="Propose an interface improvement")
+        plan = CodingAgentPlan(
+            edits=(CodingAgentEdit(path="ui/src/App.tsx", content="proposed"),),
+            verification=CodingAgentVerification(runner="npm_build"),
+        )
+        planner = FixedPlanner(plan)
+        invoker = RecordingInvoker([])
+        worker = CodingAgentWorker(planner, invoker)
+
+        result = worker.plan(task)
+
+        self.assertIs(result, plan)
+        self.assertEqual(planner.calls, 1)
+        self.assertEqual(invoker.requests, [])
+        self.assertIs(planner.seen_task, task)
+
+    def test_worker_executes_exactly_the_supplied_plan(self) -> None:
+        task = CodingAgentTask(objective="Execute approved change")
+        approved_plan = CodingAgentPlan(
+            edits=(
+                CodingAgentEdit(
+                    path="ui/src/App.tsx",
+                    content="approved content",
+                    overwrite=True,
+                    create_parents=True,
+                ),
+                CodingAgentEdit(
+                    path="ui/src/main.tsx",
+                    content="second approved content",
+                ),
+            ),
+            verification=CodingAgentVerification(
+                runner="python_unittest",
+                arguments=("-m", "unittest", "src.interface.tests.test_boundary"),
+                timeout_seconds=120,
+            ),
+            rationale="Use the smallest approved change set.",
+        )
+        planner = FixedPlanner(approved_plan)
+        invoker = RecordingInvoker([
+            success("write_file"),
+            success("write_file"),
+            success("run_test", content={"exit_code": 0}),
+        ])
+        worker = CodingAgentWorker(planner, invoker)
+
+        result = worker.execute(task, approved_plan)
+
+        self.assertEqual(result.status, "verified")
+        self.assertTrue(result.successful)
+        self.assertEqual(planner.calls, 0)
+        self.assertEqual(len(invoker.requests), 3)
+        self.assertEqual(invoker.requests[0].arguments["path"], "ui/src/App.tsx")
+        self.assertEqual(invoker.requests[0].arguments["content"], "approved content")
+        self.assertTrue(invoker.requests[0].arguments["overwrite"])
+        self.assertTrue(invoker.requests[0].arguments["create_parents"])
+        self.assertEqual(invoker.requests[1].arguments["path"], "ui/src/main.tsx")
+        self.assertEqual(invoker.requests[2].arguments["runner"], "python_unittest")
+        self.assertEqual(
+            invoker.requests[2].arguments["arguments"],
+            ["-m", "unittest", "src.interface.tests.test_boundary"],
+        )
+        self.assertEqual(invoker.requests[2].arguments["timeout_seconds"], 120)
+
+    def test_worker_run_keeps_plan_then_execute_convenience(self) -> None:
         task = CodingAgentTask(objective="Improve the interface")
         plan = CodingAgentPlan(
             edits=(
@@ -81,7 +148,7 @@ class M28CodingAgentWorkerTests(unittest.TestCase):
         self.assertEqual(invoker.requests[0].metadata["actor"], "coding_agent")
         self.assertEqual(invoker.requests[1].tool_name, "run_test")
         self.assertEqual(invoker.requests[1].arguments["runner"], "npm_build")
-        self.assertEqual(planner.seen_task, task)
+        self.assertEqual(planner.calls, 1)
 
     def test_worker_stops_when_edit_is_blocked(self) -> None:
         task = CodingAgentTask(objective="Change one file")
@@ -96,7 +163,7 @@ class M28CodingAgentWorkerTests(unittest.TestCase):
             failure("write_file", "confirmation_denied", "confirmation required"),
         ])
 
-        result = CodingAgentWorker(FixedPlanner(plan), invoker).run(task)
+        result = CodingAgentWorker(FixedPlanner(plan), invoker).execute(task, plan)
 
         self.assertEqual(result.status, "blocked")
         self.assertEqual(result.blocked_tool, "write_file")
@@ -121,7 +188,7 @@ class M28CodingAgentWorkerTests(unittest.TestCase):
         )
         invoker = RecordingInvoker([verification_failure])
 
-        result = CodingAgentWorker(FixedPlanner(plan), invoker).run(task)
+        result = CodingAgentWorker(FixedPlanner(plan), invoker).execute(task, plan)
 
         self.assertEqual(result.status, "verification_failed")
         self.assertFalse(result.successful)
