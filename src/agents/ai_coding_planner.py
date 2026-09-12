@@ -19,6 +19,8 @@ from .coding_worker import (
 class AICodingAgentPlanner:
     """Turn one coding task into a validated, non-executing coding plan."""
 
+    _MAX_OUTPUT_TOKENS = 1536
+
     def __init__(
         self,
         ai_service: AIService,
@@ -41,6 +43,7 @@ class AICodingAgentPlanner:
                 model=self._model,
                 generation_options={
                     "temperature": 0,
+                    "max_output_tokens": self._MAX_OUTPUT_TOKENS,
                     "response_format": {"type": "json_object"},
                 },
                 metadata={
