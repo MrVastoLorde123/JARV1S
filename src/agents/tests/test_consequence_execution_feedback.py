@@ -13,7 +13,7 @@ from src.tools.models import ToolError, ToolResult
 
 
 class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
-    def _outcome(self, status, *, execution_id="exec-1", reason=None, result=None):
+    def _make_outcome(self, status, *, execution_id="exec-1", reason=None, result=None):
         return ConsequenceExecutionOutcome(
             outcome_id=f"outcome-{status.value.lower()}",
             attempt_id="attempt-1",
@@ -42,7 +42,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
             metadata={"count": 1},
         )
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS, result=result)
+            self._make_outcome(ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS, result=result)
         )
         self.assertEqual(feedback.kind, ConsequenceExecutionFeedbackKind.SUCCESS)
         self.assertEqual(feedback.execution_id, "exec-1")
@@ -56,7 +56,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
             error=ToolError(code="E_FAIL", message="tool failed"),
         )
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.COMPLETED_FAILURE,
                 reason="tool failed",
                 result=result,
@@ -68,7 +68,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
 
     def test_blocked_maps_to_not_executed(self):
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.NOT_EXECUTED,
                 execution_id=None,
                 reason="execution was blocked",
@@ -82,7 +82,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
 
     def test_full_provenance_is_preserved(self):
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.NOT_EXECUTED,
                 execution_id=None,
                 reason="blocked",
@@ -104,7 +104,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
 
     def test_feedback_id_is_deterministic(self):
         service = ConsequenceExecutionFeedbackService()
-        outcome = self._outcome(
+        outcome = self._make_outcome(
             ConsequenceExecutionOutcomeStatus.NOT_EXECUTED,
             execution_id=None,
             reason="blocked",
@@ -114,26 +114,26 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
     def test_identical_outcomes_produce_identical_feedback_id(self):
         service = ConsequenceExecutionFeedbackService()
         first = service.evaluate(
-            self._outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="blocked")
+            self._make_outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="blocked")
         )
         second = service.evaluate(
-            self._outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="blocked")
+            self._make_outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="blocked")
         )
         self.assertEqual(first.feedback_id, second.feedback_id)
 
     def test_different_reason_changes_feedback_id(self):
         service = ConsequenceExecutionFeedbackService()
         first = service.evaluate(
-            self._outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="blocked")
+            self._make_outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="blocked")
         )
         second = service.evaluate(
-            self._outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="policy")
+            self._make_outcome(ConsequenceExecutionOutcomeStatus.NOT_EXECUTED, execution_id=None, reason="policy")
         )
         self.assertNotEqual(first.feedback_id, second.feedback_id)
 
     def test_payload_is_immutable(self):
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS,
                 result=ToolResult(success=True, tool_name="demo_tool", content={"ok": True}),
             )
@@ -214,7 +214,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
 
     def test_context_preserves_authority_walls(self):
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.NOT_EXECUTED,
                 execution_id=None,
                 reason="blocked",
@@ -231,7 +231,7 @@ class M36ConsequenceExecutionFeedbackTests(unittest.TestCase):
 
     def test_authorization_provenance_is_not_reissued_as_authority(self):
         feedback = ConsequenceExecutionFeedbackService().evaluate(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS,
                 result=ToolResult(success=True, tool_name="demo_tool", content="ok"),
             )
