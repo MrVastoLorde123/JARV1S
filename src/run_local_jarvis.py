@@ -18,6 +18,7 @@ from src.interface.world_host import start_world_http
 from src.personalization.end_to_end import PersonalizedWorkingContextRuntime
 from src.personalization.persistence import PersonalizationStore
 from src.personalization.runtime import PersonalizationRuntime
+from src.tools.bootstrap import build_local_development_tool_stack
 
 
 def main():
@@ -31,6 +32,7 @@ def main():
     )
     requested_session_id = os.environ.get("JARVIS_SESSION_ID")
     data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data"))
+    workspace_dir = Path(os.environ.get("JARVIS_WORKSPACE_DIR", Path.cwd())).resolve()
     enable_world_http = os.environ.get("JARVIS_WORLD_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
     enable_command_http = os.environ.get(
         "JARVIS_COMMAND_HTTP",
@@ -53,6 +55,7 @@ def main():
         data_dir / "personalization.json",
     )
     personalization_runtime = PersonalizationRuntime()
+    tool_stack = build_local_development_tool_stack(workspace_dir)
 
     def processor_factory(session_id, conversation_id):
         base_context_runtime = WorkingContextRuntime(
@@ -72,9 +75,13 @@ def main():
             conversation_id=conversation_id,
             enable_memory_formation=True,
             working_context_runtime=personalized_context_runtime,
+            tool_invoker=tool_stack.gate,
         )
 
-    default_processor = JARVIS(ai_service=ai_service)
+    default_processor = JARVIS(
+        ai_service=ai_service,
+        tool_invoker=tool_stack.gate,
+    )
     world_runtime = create_local_world_runtime() if enable_world_http else None
     runtime = JARVISRuntime.from_processor(
         default_processor,
