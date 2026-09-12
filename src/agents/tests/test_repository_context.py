@@ -73,6 +73,26 @@ class M28RepositoryContextTests(unittest.TestCase):
         self.assertNotIn("public", context.observed_paths)
         self.assertNotIn("public/index.html", context.observed_paths)
 
+    def test_render_is_bounded_even_when_observation_is_large(self) -> None:
+        invoker = FakeInvoker()
+        context = RepositoryContextComposer(invoker).compose()
+        context = type(context)(
+            workspace=context.workspace,
+            top_level_entries=context.top_level_entries,
+            observed_paths=tuple(
+                ["README.md", "ui/index.html", "ui/package.json"]
+                + [f"src/generated/path_{index}.py" for index in range(1000)]
+            ),
+            facts=context.facts,
+        )
+
+        rendered = context.render()
+
+        self.assertLessEqual(rendered.count("\n- "), 61)
+        self.assertIn("ui/index.html", rendered)
+        self.assertIn("ui/package.json", rendered)
+        self.assertIn("additional repository paths observed internally but omitted", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()
