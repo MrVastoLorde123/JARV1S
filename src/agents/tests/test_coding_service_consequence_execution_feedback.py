@@ -13,7 +13,7 @@ from src.tools.models import ToolResult
 
 
 class M36CodingServiceConsequenceExecutionFeedbackTests(unittest.TestCase):
-    def _outcome(self, status, *, execution_id="execution-service-36", reason=None, result=None):
+    def _make_outcome(self, status, *, execution_id="execution-service-36", reason=None, result=None):
         return ConsequenceExecutionOutcome(
             outcome_id="outcome-service-36",
             attempt_id="attempt-service-36",
@@ -38,7 +38,7 @@ class M36CodingServiceConsequenceExecutionFeedbackTests(unittest.TestCase):
         service = CodingAgentService(planner=object(), worker=object())
         with self.assertRaises(RuntimeError):
             service.evaluate_execution_feedback(
-                self._outcome(
+                self._make_outcome(
                     ConsequenceExecutionOutcomeStatus.NOT_EXECUTED,
                     execution_id=None,
                     reason="blocked",
@@ -49,7 +49,7 @@ class M36CodingServiceConsequenceExecutionFeedbackTests(unittest.TestCase):
         service = CodingAgentService(planner=object(), worker=object())
         service.bind_consequence_execution_feedback()
         feedback = service.evaluate_execution_feedback(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS,
                 result=ToolResult(success=True, tool_name="write_file"),
             )
@@ -60,7 +60,7 @@ class M36CodingServiceConsequenceExecutionFeedbackTests(unittest.TestCase):
         service = CodingAgentService(planner=object(), worker=object())
         service.bind_consequence_execution_feedback(ConsequenceExecutionFeedbackService())
         feedback = service.evaluate_execution_feedback(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.COMPLETED_FAILURE,
                 reason="executor unavailable",
             )
@@ -72,7 +72,7 @@ class M36CodingServiceConsequenceExecutionFeedbackTests(unittest.TestCase):
         service = CodingAgentService(planner=object(), worker=object())
         service.bind_consequence_execution_feedback()
         feedback = service.evaluate_execution_feedback(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.NOT_EXECUTED,
                 execution_id=None,
                 reason="blocked",
@@ -88,7 +88,7 @@ class M36CodingServiceConsequenceExecutionFeedbackTests(unittest.TestCase):
         service = CodingAgentService(planner=object(), worker=object())
         service.bind_consequence_execution_feedback()
         feedback = service.evaluate_execution_feedback(
-            self._outcome(
+            self._make_outcome(
                 ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS,
                 result=ToolResult(success=True, tool_name="write_file"),
             )
