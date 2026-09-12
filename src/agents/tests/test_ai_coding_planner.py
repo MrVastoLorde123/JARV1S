@@ -62,6 +62,35 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
         )
         self.assertIn("Improve the interface", request.task)
 
+    def test_planner_includes_jarvis_observed_repository_context(self) -> None:
+        service = FakeAIService(
+            {
+                "rationale": "Use the observed frontend entrypoint.",
+                "edits": [],
+                "verification": {"runner": "npm_build", "arguments": []},
+            }
+        )
+        task = CodingAgentTask(
+            objective="Add a visible status indicator",
+            metadata={
+                "repository_context": (
+                    "WORKSPACE: .\n"
+                    "OBSERVED REPOSITORY PATHS:\n"
+                    "- ui/index.html\n"
+                    "- ui/package.json\n"
+                    "JARVIS OBSERVED FACTS:\n"
+                    "- ui/index.html exists"
+                )
+            },
+        )
+
+        AICodingAgentPlanner(service).plan(task)
+
+        request, _, _ = service.calls[0]
+        self.assertIn("JARVIS OBSERVED REPOSITORY CONTEXT:", request.task)
+        self.assertIn("ui/index.html", request.task)
+        self.assertIn("Do not invent directories or filenames", request.task)
+
     def test_planner_rejects_invalid_json_text(self) -> None:
         service = FakeAIService("not-json")
         task = CodingAgentTask(objective="Do something")
