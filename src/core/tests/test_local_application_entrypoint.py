@@ -13,14 +13,20 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
     @patch("src.run_local_jarvis.HumanOperatingLayer")
     @patch("src.run_local_jarvis.JARVISRuntime")
     @patch("src.run_local_jarvis.ConversationStore")
-    @patch("src.run_local_jarvis.JARVIS")
+    @patch("src.run_local_jarvis.CodingAgentJARVIS")
+    @patch("src.run_local_jarvis.CodingAgentConfirmationProvider")
+    @patch("src.run_local_jarvis.CodingAgentConfirmationService")
+    @patch("src.run_local_jarvis.CodingAgentService")
     @patch("src.run_local_jarvis.AIService")
     @patch("src.run_local_jarvis.LocalProvider")
     def test_main_uses_canonical_runtime_and_operator(
         self,
         local_provider_cls,
         ai_service_cls,
-        jarvis_cls,
+        coding_service_cls,
+        confirmation_service_cls,
+        confirmation_provider_cls,
+        coding_jarvis_cls,
         conversation_store_cls,
         runtime_cls,
         operator_cls,
@@ -28,7 +34,10 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
     ):
         provider = local_provider_cls.return_value
         ai_service = ai_service_cls.return_value
-        processor = jarvis_cls.return_value
+        confirmation_service = confirmation_service_cls.return_value
+        confirmation_provider = confirmation_provider_cls.return_value
+        coding_service = coding_service_cls.from_ai_service.return_value
+        processor = coding_jarvis_cls.return_value
         store = conversation_store_cls.return_value
         runtime = runtime_cls.from_processor.return_value
         operator = operator_cls.return_value
@@ -55,11 +64,23 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         ai_service_cls.assert_called_once_with(default_provider="local")
         ai_service.register_provider.assert_called_once_with(provider)
         conversation_store_cls.assert_called_once_with()
-        jarvis_cls.assert_called_once_with(ai_service=ai_service)
+        confirmation_service_cls.assert_called_once_with()
+        confirmation_provider_cls.assert_called_once_with(confirmation_service)
+        coding_service_cls.from_ai_service.assert_called_once_with(
+            ai_service,
+            ANY,
+        )
+        coding_jarvis_cls.assert_called_once_with(
+            ai_service=ai_service,
+            tool_invoker=ANY,
+            coding_agent_service=coding_service,
+            coding_confirmation_service=confirmation_service,
+        )
         runtime_cls.from_processor.assert_called_once_with(
             processor,
             conversation_store=store,
             durable_processor_factory=ANY,
+            world_runtime=None,
         )
         operator_cls.assert_called_once_with(
             runtime,
@@ -72,14 +93,20 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
     @patch("src.run_local_jarvis.HumanOperatingLayer")
     @patch("src.run_local_jarvis.JARVISRuntime")
     @patch("src.run_local_jarvis.ConversationStore")
-    @patch("src.run_local_jarvis.JARVIS")
+    @patch("src.run_local_jarvis.CodingAgentJARVIS")
+    @patch("src.run_local_jarvis.CodingAgentConfirmationProvider")
+    @patch("src.run_local_jarvis.CodingAgentConfirmationService")
+    @patch("src.run_local_jarvis.CodingAgentService")
     @patch("src.run_local_jarvis.AIService")
     @patch("src.run_local_jarvis.LocalProvider")
     def test_main_does_not_call_processor_or_runtime_directly(
         self,
         local_provider_cls,
         ai_service_cls,
-        jarvis_cls,
+        coding_service_cls,
+        confirmation_service_cls,
+        confirmation_provider_cls,
+        coding_jarvis_cls,
         conversation_store_cls,
         runtime_cls,
         operator_cls,
@@ -89,7 +116,7 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             run_local_jarvis.main()
 
-        jarvis_cls.return_value.ask.assert_not_called()
+        coding_jarvis_cls.return_value.ask.assert_not_called()
         runtime_cls.from_processor.return_value.receive.assert_not_called()
         runtime_cls.from_processor.return_value.respond.assert_not_called()
         operator_cls.return_value.run.assert_called_once_with()
