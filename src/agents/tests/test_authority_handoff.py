@@ -4,11 +4,7 @@ from src.agents.authority_handoff import (
     AuthorityHandoffPolicy,
     AuthorityHandoffStatus,
 )
-from src.agents.claim_evidence import (
-    Claim,
-    ClaimEvaluation,
-    ClaimState,
-)
+from src.agents.claim_evidence import Claim, ClaimEvaluation, ClaimState
 from src.agents.consequence_gate import (
     ConsequenceAction,
     ConsequenceKind,
@@ -62,21 +58,59 @@ class M31AuthorityHandoffTests(unittest.TestCase):
         self.assertFalse(handoff.ready_for_authority)
         self.assertFalse(handoff.authorized)
 
-    def test_provenance_is_preserved(self):
+    def test_provenance_and_consequence_context_are_preserved(self):
         decision = self.decision(ConsequenceAction.ALLOW)
-        handoff = self.policy.handoff(decision, authority_target="coding_confirmation")
+        handoff = self.policy.handoff(
+            decision,
+            authority_target="coding_confirmation",
+            authority_context={"operation_id": "op-31"},
+        )
         self.assertEqual(handoff.claim_id, decision.claim_id)
         self.assertEqual(handoff.task_id, decision.task_id)
+        self.assertEqual(handoff.consequence_kind, decision.consequence.kind)
         self.assertEqual(handoff.consequence_id, decision.consequence.consequence_id)
+        self.assertEqual(dict(handoff.consequence_metadata), {"scope": "coding"})
         self.assertEqual(handoff.evidence_refs, decision.evidence_refs)
         self.assertEqual(handoff.verification_refs, decision.verification_refs)
         self.assertEqual(handoff.authority_target, "coding_confirmation")
+        self.assertEqual(dict(handoff.authority_context), {"operation_id": "op-31"})
+
+    def test_context_and_consequence_metadata_are_immutable(self):
+        decision = self.decision(ConsequenceAction.ALLOW)
+        handoff = self.policy.handoff(
+            decision,
+            authority_context={"operation_id": "op-31"},
+        )
+        with self.assertRaises(TypeError):
+            handoff.authority_context["operation_id"] = "changed"
+        with self.assertRaises(TypeError):
+            handoff.consequence_metadata["scope"] = "changed"
 
     def test_handoff_identity_is_deterministic(self):
         decision = self.decision(ConsequenceAction.ALLOW)
-        first = self.policy.handoff(decision, authority_target="coding_confirmation")
-        second = self.policy.handoff(decision, authority_target="coding_confirmation")
+        first = self.policy.handoff(
+            decision,
+            authority_target="coding_confirmation",
+            authority_context={"operation_id": "op-31"},
+        )
+        second = self.policy.handoff(
+            decision,
+            authority_target="coding_confirmation",
+            authority_context={"operation_id": "op-31"},
+        )
         self.assertEqual(first.handoff_id, second.handoff_id)
+
+    def test_context_changes_handoff_identity(self):
+        decision = self.decision(ConsequenceAction.ALLOW)
+        first = self.policy.handoff(
+            decision,
+            authority_context={"operation_id": "op-31"},
+        )
+        second = self.policy.handoff(
+            decision,
+            authority_context={"operation_id": "op-32"},
+        )
+        self.assertNotEqual(first.handoff_id, second.handoff_id)
 
     def test_different_authority_targets_get_distinct_identity(self):
         decision = self.decision(ConsequenceAction.ALLOW)
@@ -92,6 +126,11 @@ class M31AuthorityHandoffTests(unittest.TestCase):
         decision = self.decision(ConsequenceAction.ALLOW)
         with self.assertRaises(ValueError):
             self.policy.handoff(decision, authority_target=" ")
+
+    def test_wrong_authority_context_type_is_rejected(self):
+        decision = self.decision(ConsequenceAction.ALLOW)
+        with self.assertRaises(TypeError):
+            self.policy.handoff(decision, authority_context=object())
 
     def test_handoff_is_inert(self):
         decision = self.decision(ConsequenceAction.ALLOW)
