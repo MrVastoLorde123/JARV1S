@@ -87,6 +87,7 @@ class M33ConsequenceExecutionPreparationTests(unittest.TestCase):
 
         self.assertEqual(result.status, ConsequenceExecutionPreparationStatus.PREPARED)
         self.assertTrue(result.prepared)
+        self.assertTrue(result.authorization_granted)
         self.assertIsNotNone(result.integrity)
         self.assertTrue(result.integrity.valid)
         self.assertIsNotNone(result.sandbox_admission)
@@ -152,6 +153,7 @@ class M33ConsequenceExecutionPreparationTests(unittest.TestCase):
 
         result = self.service.prepare(denied_authorization, self.definition, self.request)
         self.assertEqual(result.status, ConsequenceExecutionPreparationStatus.BLOCKED)
+        self.assertFalse(result.authorization_granted)
         self.assertIsNone(result.execution_handoff)
         self.assertIn("authorization", result.reason)
 
@@ -165,6 +167,7 @@ class M33ConsequenceExecutionPreparationTests(unittest.TestCase):
         )
         result = self.service.prepare(self.authorization, wrong_definition, self.request)
         self.assertEqual(result.status, ConsequenceExecutionPreparationStatus.BLOCKED)
+        self.assertTrue(result.authorization_granted)
         self.assertIn("definition identity", result.reason)
 
     def test_request_identity_is_rechecked_against_underlying_authorization(self):
@@ -180,6 +183,7 @@ class M33ConsequenceExecutionPreparationTests(unittest.TestCase):
             mismatched_request,
         )
         self.assertEqual(result.status, ConsequenceExecutionPreparationStatus.BLOCKED)
+        self.assertTrue(result.authorization_granted)
         self.assertIn("invocation", result.reason)
 
     def test_non_default_sandbox_profile_from_definition_is_used(self):
@@ -215,6 +219,7 @@ class M33ConsequenceExecutionPreparationTests(unittest.TestCase):
         )
         result = self.service.prepare(self.authorization, definition, self.request)
         self.assertEqual(result.status, ConsequenceExecutionPreparationStatus.BLOCKED)
+        self.assertTrue(result.authorization_granted)
         self.assertIsNotNone(result.sandbox_admission)
         self.assertFalse(result.sandbox_admission.admissible)
         self.assertIn("sandbox profile", result.reason)
