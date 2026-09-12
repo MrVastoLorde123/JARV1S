@@ -10,16 +10,25 @@ from src.agents.coding_worker import (
     CodingAgentTask,
     CodingAgentVerification,
 )
-from src.tools.models import ToolRequest, ToolDefinition, RiskLevel
+from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
 
 
 class M28CodingAgentConfirmationProviderTests(unittest.TestCase):
     def setUp(self) -> None:
         self.service = CodingAgentConfirmationService()
         self.provider = CodingAgentConfirmationProvider(self.service)
-        self.task = CodingAgentTask(objective="Update the interface", task_id="coding-provider-001")
+        self.task = CodingAgentTask(
+            objective="Update the interface",
+            task_id="coding-provider-001",
+        )
         self.plan = CodingAgentPlan(
-            edits=(CodingAgentEdit(path="ui/src/App.tsx", content="approved", overwrite=True),),
+            edits=(
+                CodingAgentEdit(
+                    path="ui/src/App.tsx",
+                    content="approved",
+                    overwrite=True,
+                ),
+            ),
             verification=CodingAgentVerification(runner="npm_build"),
         )
         self.operation = self.service.stage(self.task, self.plan)
@@ -27,6 +36,9 @@ class M28CodingAgentConfirmationProviderTests(unittest.TestCase):
         self.definition = ToolDefinition(
             name="write_file",
             description="write a file",
+            version="1.0.0",
+            input_schema={},
+            output_schema={},
             risk_level=RiskLevel.HIGH,
             requires_confirmation=True,
         )
