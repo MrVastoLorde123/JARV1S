@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping
 
 from src.agents.authority_handoff import AuthorityHandoffRequest, AuthorityHandoffStatus
 from src.tools.authorization import AuthorizationDecision, ExplicitAuthorizationService
@@ -34,10 +33,44 @@ class ConsequenceAuthorizationDecision:
     tool_name: str
     invocation_id: str | None
     status: ConsequenceAuthorizationStatus
-    underlying_decision: AuthorizationDecision
+    underlying_decision: AuthorizationDecision | None
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
     reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.authorization_id, str) or not self.authorization_id.strip():
+            raise ValueError("authorization_id must be a non-empty string")
+        if not isinstance(self.handoff_id, str) or not self.handoff_id.strip():
+            raise ValueError("handoff_id must be a non-empty string")
+        if not isinstance(self.claim_id, str) or not self.claim_id.strip():
+            raise ValueError("claim_id must be a non-empty string")
+        if not isinstance(self.task_id, str) or not self.task_id.strip():
+            raise ValueError("task_id must be a non-empty string")
+        if not isinstance(self.consequence_id, str) or not self.consequence_id.strip():
+            raise ValueError("consequence_id must be a non-empty string")
+        if not isinstance(self.tool_name, str) or not self.tool_name.strip():
+            raise ValueError("tool_name must be a non-empty string")
+        if self.invocation_id is not None and not isinstance(self.invocation_id, str):
+            raise TypeError("invocation_id must be a string or None")
+        if not isinstance(self.status, ConsequenceAuthorizationStatus):
+            raise TypeError("status must be a ConsequenceAuthorizationStatus")
+        if self.underlying_decision is not None and not isinstance(
+            self.underlying_decision, AuthorizationDecision
+        ):
+            raise TypeError("underlying_decision must be an AuthorizationDecision or None")
+        if any(not isinstance(ref, str) or not ref for ref in self.evidence_refs):
+            raise TypeError("evidence_refs must contain non-empty strings")
+        if any(not isinstance(ref, str) or not ref for ref in self.verification_refs):
+            raise TypeError("verification_refs must contain non-empty strings")
+        if self.reason is not None and not isinstance(self.reason, str):
+            raise TypeError("reason must be a string or None")
+
+        if self.status is ConsequenceAuthorizationStatus.AUTHORIZED:
+            if self.underlying_decision is None or not self.underlying_decision.authorized:
+                raise ValueError("AUTHORIZED requires an authorized underlying decision")
+        elif self.underlying_decision is not None and self.underlying_decision.authorized:
+            raise ValueError("DENIED cannot wrap an authorized underlying decision")
 
     @property
     def authorized(self) -> bool:
@@ -45,7 +78,7 @@ class ConsequenceAuthorizationDecision:
 
     @property
     def execution_allowed(self) -> bool:
-        """M32 never authorizes execution as a separate authority concept."""
+        """Authorization permits a later execution layer; it does not execute."""
         return self.authorized
 
     def to_context(self) -> dict[str, object]:
@@ -88,6 +121,13 @@ class ConsequenceAuthorizationService:
     ) -> ConsequenceAuthorizationDecision:
         if not isinstance(handoff, AuthorityHandoffRequest):
             raise TypeError("handoff must be an AuthorityHandoffRequest")
+        if not isinstance(definition, ToolDefinition):
+            raise TypeError("definition must be a ToolDefinition")
+        if not isinstance(request, ToolRequest):
+            raise TypeError("request must be a ToolRequest")
+        if not isinstance(authorization_id, str) or not authorization_id.strip():
+            raise ValueError("authorization_id must be a non-empty string")
+
         if handoff.status is not AuthorityHandoffStatus.READY_FOR_AUTHORITY:
             return self._denied(
                 handoff,
@@ -102,13 +142,6 @@ class ConsequenceAuthorizationService:
                 authorization_id,
                 reason="authority handoff target does not match this authorization boundary",
             )
-        if not isinstance(definition, ToolDefinition):
-            raise TypeError("definition must be a ToolDefinition")
-        if not isinstance(request, ToolRequest):
-            raise TypeError("request must be a ToolRequest")
-        if not isinstance(authorization_id, str) or not authorization_id.strip():
-            raise ValueError("authorization_id must be a non-empty string")
-
         if request.metadata.get("authority_handoff_id") != handoff.handoff_id:
             return self._denied(
                 handoff,
@@ -163,10 +196,10 @@ class ConsequenceAuthorizationService:
             claim_id=handoff.claim_id,
             task_id=handoff.task_id,
             consequence_id=handoff.consequence_id,
-            tool_name=request.tool_name if isinstance(request, ToolRequest) else "",
-            invocation_id=request.invocation_id if isinstance(request, ToolRequest) else None,
+            tool_name=request.tool_name,
+            invocation_id=request.invocation_id,
             status=ConsequenceAuthorizationStatus.DENIED,
-            underlying_decision=None,  # type: ignore[arg-type]
+            underlying_decision=None,
             evidence_refs=handoff.evidence_refs,
             verification_refs=handoff.verification_refs,
             reason=reason,
