@@ -1,9 +1,6 @@
 import unittest
 
-from src.agents.authority_handoff import (
-    AuthorityHandoffPolicy,
-    AuthorityHandoffStatus,
-)
+from src.agents.authority_handoff import AuthorityHandoffPolicy, AuthorityHandoffStatus
 from src.agents.claim_evidence import Claim
 from src.agents.consequence_authorization import (
     ConsequenceAuthorizationDecision,
@@ -19,7 +16,17 @@ from src.agents.consequence_gate import (
 from src.tools.authorization import ExplicitAuthorizationService
 from src.tools.confirmation import AutoApproveConfirmationProvider, AutoDenyConfirmationProvider
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
-from src.tools.policy import DefaultPolicy
+from src.tools.policy import DefaultPolicy, PolicyDecision, PolicyVerdict
+
+
+class CountingPolicy:
+    def __init__(self, verdict):
+        self.verdict = verdict
+        self.calls = 0
+
+    def evaluate(self, definition, request):
+        self.calls += 1
+        return self.verdict
 
 
 class M32ConsequenceAuthorizationTests(unittest.TestCase):
@@ -142,6 +149,25 @@ class M32ConsequenceAuthorizationTests(unittest.TestCase):
         self.assertEqual(result.status, ConsequenceAuthorizationStatus.DENIED)
         self.assertIsNone(result.underlying_decision)
 
+    def test_blocked_handoff_does_not_call_existing_authorizer(self):
+        blocked = ConsequenceDecision(
+            **{**self.decision.__dict__, "action": ConsequenceAction.BLOCK}
+        )
+        handoff = AuthorityHandoffPolicy().handoff(
+            blocked,
+            authority_target="coding_confirmation",
+        )
+        counting_policy = CountingPolicy(PolicyVerdict(decision=PolicyDecision.ALLOW))
+        service = self.service(policy=counting_policy)
+        result = service.authorize(
+            handoff,
+            self.definition,
+            self.request(),
+            authorization_id="auth-short-circuit",
+        )
+        self.assertEqual(result.status, ConsequenceAuthorizationStatus.DENIED)
+        self.assertEqual(counting_policy.calls, 0)
+
     def test_wrong_authority_target_is_denied(self):
         handoff = AuthorityHandoffPolicy().handoff(
             self.decision,
@@ -224,7 +250,7 @@ class M32ConsequenceAuthorizationTests(unittest.TestCase):
             authorization_id="auth-inert",
         )
         self.assertTrue(result.authorized)
-        self.assertEqual(result.to_context()["execution_requested"], False)
+        self.assertFalse(result.to_context()["execution_requested"])
 
     def test_wrong_types_are_rejected(self):
         service = self.service()
