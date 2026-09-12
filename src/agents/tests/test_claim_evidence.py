@@ -37,7 +37,7 @@ class M29ClaimEvidenceTests(unittest.TestCase):
     def test_evidence_identity_is_deterministic(self) -> None:
         first = Evidence(
             task_id="task-1",
-            source_type=EvidenceType.FILE_SYSTEM_OBSERVATION if False else EvidenceType.FILESYSTEM_OBSERVATION,
+            source_type=EvidenceType.FILESYSTEM_OBSERVATION,
             payload={"path": "ui/index.html", "exists": True},
             provenance={"tool": "read_file"},
         )
