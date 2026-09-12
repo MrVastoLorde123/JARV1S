@@ -11,9 +11,10 @@ from dataclasses import dataclass
 from enum import Enum
 import hashlib
 import json
-from typing import Mapping
+from types import MappingProxyType
+from typing import Any, Mapping
 
-from src.agents.consequence_gate import ConsequenceAction, ConsequenceDecision
+from src.agents.consequence_gate import ConsequenceAction, ConsequenceDecision, ConsequenceKind
 
 
 class AuthorityHandoffStatus(str, Enum):
@@ -24,30 +25,50 @@ class AuthorityHandoffStatus(str, Enum):
     BLOCKED = "BLOCKED"
 
 
+def _freeze(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType({str(key): _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(item) for item in value)
+    return value
+
+
 def _canonical(value: object) -> object:
     if isinstance(value, Mapping):
         return {str(key): _canonical(item) for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))}
     if isinstance(value, (tuple, list)):
         return [_canonical(item) for item in value]
     if isinstance(value, (set, frozenset)):
-        return sorted(_canonical(item) for item in value)
+        return sorted(
+            (_canonical(item) for item in value),
+            key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")),
+        )
     if isinstance(value, Enum):
         return value.value
     return value
 
 
-def _handoff_id(decision: ConsequenceDecision, authority_target: str) -> str:
+def _handoff_id(
+    decision: ConsequenceDecision,
+    authority_target: str,
+    authority_context: Mapping[str, Any],
+) -> str:
     payload = {
         "claim_id": decision.claim_id,
         "task_id": decision.task_id,
         "consequence_kind": decision.consequence.kind.value,
         "consequence_id": decision.consequence.consequence_id,
-        "metadata": decision.consequence.metadata,
+        "consequence_metadata": decision.consequence.metadata,
         "action": decision.action.value,
         "reason": decision.reason,
         "evidence_refs": decision.evidence_refs,
         "verification_refs": decision.verification_refs,
         "authority_target": authority_target,
+        "authority_context": authority_context,
     }
     encoded = json.dumps(
         _canonical(payload),
@@ -65,8 +86,11 @@ class AuthorityHandoffRequest:
     handoff_id: str
     claim_id: str
     task_id: str
+    consequence_kind: ConsequenceKind
     consequence_id: str
+    consequence_metadata: Mapping[str, object] | None
     authority_target: str
+    authority_context: Mapping[str, object]
     status: AuthorityHandoffStatus
     reason: str
     evidence_refs: tuple[str, ...]
@@ -90,11 +114,18 @@ class AuthorityHandoffPolicy:
         decision: ConsequenceDecision,
         *,
         authority_target: str = "existing_authority",
+        authority_context: Mapping[str, object] | None = None,
     ) -> AuthorityHandoffRequest:
         if not isinstance(decision, ConsequenceDecision):
             raise TypeError("decision must be a ConsequenceDecision")
         if not isinstance(authority_target, str) or not authority_target.strip():
             raise ValueError("authority_target must be a non-empty string")
+        if authority_context is not None and not isinstance(authority_context, Mapping):
+            raise TypeError("authority_context must be a mapping or None")
+
+        frozen_context = _freeze(authority_context or {})
+        if not isinstance(frozen_context, Mapping):
+            raise TypeError("authority_context must freeze to a mapping")
 
         if decision.action is ConsequenceAction.ALLOW:
             status = AuthorityHandoffStatus.READY_FOR_AUTHORITY
@@ -106,12 +137,16 @@ class AuthorityHandoffPolicy:
             status = AuthorityHandoffStatus.BLOCKED
             reason = "M30 blocked this consequence from reaching authority"
 
+        consequence_metadata = _freeze(decision.consequence.metadata)
         return AuthorityHandoffRequest(
-            handoff_id=_handoff_id(decision, authority_target),
+            handoff_id=_handoff_id(decision, authority_target, frozen_context),
             claim_id=decision.claim_id,
             task_id=decision.task_id,
+            consequence_kind=decision.consequence.kind,
             consequence_id=decision.consequence.consequence_id,
+            consequence_metadata=consequence_metadata,
             authority_target=authority_target,
+            authority_context=frozen_context,
             status=status,
             reason=reason,
             evidence_refs=decision.evidence_refs,
