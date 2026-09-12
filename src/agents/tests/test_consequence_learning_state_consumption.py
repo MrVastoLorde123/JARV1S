@@ -58,10 +58,14 @@ class M42LearningStateConsumptionTests(unittest.TestCase):
         result = ConsequenceLearningStateConsumptionService().consume(req, verification())
         self.assertEqual(result.payload, dict(req.learning_payload))
 
-    def test_result_is_immutable(self):
+    def test_result_and_payload_are_immutable(self):
         result = ConsequenceLearningStateConsumptionService().consume(request(), verification())
         with self.assertRaises(Exception):
             result.consumed = False
+        with self.assertRaises(TypeError):
+            result.payload["new_field"] = True
+        with self.assertRaises(TypeError):
+            result.payload["signal_evidence"]["changed"] = True
 
     def test_context_marks_consumption_without_authority(self):
         context = ConsequenceLearningStateConsumptionService().consume(request(), verification()).to_context()
