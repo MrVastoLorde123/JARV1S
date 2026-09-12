@@ -8,6 +8,7 @@ from src.agents.coding_worker import (
     CodingAgentResult,
     CodingAgentTask,
     CodingAgentWorker,
+    CodingAgentVerification,
 )
 from src.agents.repository_context import RepositoryContextComposer
 
@@ -52,10 +53,33 @@ class CodingAgentService:
             },
         )
 
+    @staticmethod
+    def _apply_verification_authority(plan: CodingAgentPlan) -> CodingAgentPlan:
+        """Apply deterministic repository verification policy after model planning.
+
+        Agent-selected verification is advisory. For changes under the UI
+        workspace, JARVIS owns the verification contract and requires the
+        repository's canonical frontend build rather than an unconstrained
+        unittest discovery invocation.
+        """
+        if any(edit.path == "ui" or edit.path.startswith("ui/") for edit in plan.edits):
+            verification = CodingAgentVerification(
+                runner="npm_build",
+                arguments=(),
+                timeout_seconds=plan.verification.timeout_seconds,
+            )
+            return CodingAgentPlan(
+                edits=plan.edits,
+                verification=verification,
+                rationale=plan.rationale,
+            )
+        return plan
+
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
         """Compose observed environment context before generating a proposal."""
         prepared_task = self.prepare_task(task)
-        return self._worker.plan(prepared_task)
+        proposed_plan = self._worker.plan(prepared_task)
+        return self._apply_verification_authority(proposed_plan)
 
     def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
         """Execute exactly the supplied plan through the worker authority boundary."""
