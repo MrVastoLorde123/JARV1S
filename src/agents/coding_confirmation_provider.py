@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from src.tools.confirmation import ConfirmationResponse
+from src.tools.confirmation import ConfirmationProvider, ConfirmationResponse
 from src.tools.models import ToolDefinition, ToolRequest
 
 from .coding_confirmation import CodingAgentConfirmationService
 
 
-class CodingAgentConfirmationProvider:
+class CodingAgentConfirmationProvider(ConfirmationProvider):
     """Approve only tool requests that belong to an approved coding plan."""
 
     def __init__(self, confirmation_service: CodingAgentConfirmationService) -> None:
