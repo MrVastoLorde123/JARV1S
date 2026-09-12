@@ -1,19 +1,16 @@
-# JARVIS Interface
+# JARVIS M28 Interface
 
-The V2 interface is a separate React + TypeScript presentation domain.
+The M28 interface is intentionally minimal and truthful. It renders backend-owned world observation and provides one browser command surface into the canonical `JARVISRuntime`.
 
-## Product map
+## Live surfaces
 
 ```text
 JARVIS
-├── HOME            living system state + conversation
-├── WORK            active and waiting work
-├── MIND            memory + knowledge
-├── CAPABILITIES    tools + models + integrations
-└── SELF            architecture + health + learning
+├── World observation      GET /api/world/observation
+└── Command input          POST /api/command
 ```
 
-The UI is not a Python client. It consumes the `JarvisGateway` contract and stable presentation models. The transport can evolve from local development to HTTP + SSE/WebSocket without changing the core presentation model.
+The interface does not fabricate projects, models, device telemetry, agent work, tool execution, or authority. Capabilities that are not currently exposed are shown explicitly as unavailable or unverified.
 
 ## Development
 
@@ -23,4 +20,6 @@ npm install
 npm run dev
 ```
 
-The current shell intentionally uses a local snapshot so the visual language can be exercised before live gateway transport is attached.
+The Vite development server runs on port `5173`. World observation is proxied to the local JARVIS world host on `8765`; browser commands are proxied to the canonical command transport on `8766`.
+
+The local JARVIS process enables the command transport automatically whenever `JARVIS_WORLD_HTTP=1`, unless `JARVIS_COMMAND_HTTP` is explicitly set to `0`.
