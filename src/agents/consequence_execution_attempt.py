@@ -144,7 +144,7 @@ class ConsequenceExecutionAttempt:
             "execution_attempted": self.attempted,
             "execution_completed": self.completed,
             "authorization_granted": self.authorization_granted,
-            "execution_requested": False,
+            "execution_requested": self.attempted,
             "worker_assigned": False,
             "containment_active": False,
             "evidence_refs": self.evidence_refs,
