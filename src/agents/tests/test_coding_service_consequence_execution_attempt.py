@@ -5,8 +5,17 @@ from src.agents.consequence_execution_attempt import (
     ConsequenceExecutionAttemptService,
     ConsequenceExecutionAttemptStatus,
 )
-from src.agents.tests.test_consequence_execution_attempt import RecordingExecutor
 from src.tools.models import ToolResult
+
+
+class RecordingExecutor:
+    def __init__(self, result=None):
+        self.result = result
+        self.calls = []
+
+    def execute(self, handoff):
+        self.calls.append(handoff)
+        return self.result
 
 
 class M34CodingServiceConsequenceExecutionAttemptTests(unittest.TestCase):
