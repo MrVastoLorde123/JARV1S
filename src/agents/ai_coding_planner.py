@@ -45,6 +45,7 @@ class AICodingAgentPlanner:
                     "temperature": 0,
                     "max_output_tokens": self._MAX_OUTPUT_TOKENS,
                     "response_format": {"type": "json_object"},
+                    "chat_template_kwargs": {"enable_thinking": False},
                 },
                 metadata={
                     "actor": "coding_agent_planner",
