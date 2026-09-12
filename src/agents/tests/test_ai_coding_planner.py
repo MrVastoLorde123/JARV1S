@@ -61,6 +61,10 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
             request.generation_options["response_format"],
             {"type": "json_object"},
         )
+        self.assertEqual(
+            request.generation_options["chat_template_kwargs"],
+            {"enable_thinking": False},
+        )
         self.assertIn("Improve the interface", request.task)
 
     def test_planner_defaults_python_unittest_to_canonical_prefix(self) -> None:
