@@ -7,6 +7,13 @@ from unittest.mock import ANY, patch
 from src import run_local_jarvis
 
 
+class _FakeToolInvoker:
+    """Minimal structural stand-in for the ToolInvoker contract."""
+
+    def invoke(self, request):
+        raise AssertionError("entrypoint test must not invoke the tool stack")
+
+
 class LocalApplicationEntrypointTests(unittest.TestCase):
 
     @patch("src.run_local_jarvis.PersistentSessionIdentity")
@@ -42,7 +49,7 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         confirmation_provider = confirmation_provider_cls.return_value
         coding_agent_service = coding_service_cls.from_ai_service.return_value
         tool_stack = tool_stack_builder.return_value
-        tool_stack.gate = object()
+        tool_stack.gate = _FakeToolInvoker()
         session_identity.get_or_create.return_value = "test-session"
 
         output = io.StringIO()
@@ -111,7 +118,7 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         operator_cls,
         session_identity_cls,
     ):
-        tool_stack_builder.return_value.gate = object()
+        tool_stack_builder.return_value.gate = _FakeToolInvoker()
         session_identity_cls.return_value.get_or_create.return_value = "test-session"
         with redirect_stdout(io.StringIO()):
             run_local_jarvis.main()
