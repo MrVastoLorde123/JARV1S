@@ -10,6 +10,8 @@ from src.core.conversation_store import ConversationStore
 from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
 from src.database_bootstrap import bootstrap_database
+from src.interface.command_host import start_command_http
+from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
 from src.interface.world_host import start_world_http
@@ -30,6 +32,7 @@ def main():
     requested_session_id = os.environ.get("JARVIS_SESSION_ID")
     data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data"))
     enable_world_http = os.environ.get("JARVIS_WORLD_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
+    enable_command_http = os.environ.get("JARVIS_COMMAND_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
 
     bootstrap_database()
 
@@ -82,6 +85,14 @@ def main():
         world_host = start_world_http(runtime)
         print("JARVIS World HTTP transport listening on http://127.0.0.1:8765")
 
+    command_host = None
+    if enable_command_http:
+        command_host = start_command_http(
+            runtime,
+            config=CommandHTTPConfig(port=8766),
+        )
+        print("JARVIS Command HTTP transport listening on http://127.0.0.1:8766")
+
     session_identity = PersistentSessionIdentity(
         data_dir / "active_session.json",
     )
@@ -96,6 +107,8 @@ def main():
     try:
         operator.run()
     finally:
+        if command_host is not None:
+            command_host.close()
         if world_host is not None:
             world_host.close()
 
