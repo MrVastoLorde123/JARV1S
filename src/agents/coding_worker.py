@@ -161,8 +161,20 @@ class CodingAgentWorker:
         if not isinstance(plan, CodingAgentPlan):
             raise TypeError("plan must be a CodingAgentPlan")
 
+        coding_operation_id = task.metadata.get("coding_operation_id")
+        if coding_operation_id is not None and not isinstance(coding_operation_id, str):
+            raise TypeError("coding_operation_id must be a string when provided")
+
         edits_applied = 0
         for index, edit in enumerate(plan.edits):
+            request_metadata = {
+                "actor": "coding_agent",
+                "task_id": task.task_id,
+                "edit_index": index,
+            }
+            if coding_operation_id is not None:
+                request_metadata["coding_operation_id"] = coding_operation_id
+
             result = self._tool_invoker(
                 ToolRequest(
                     tool_name="write_file",
@@ -172,11 +184,7 @@ class CodingAgentWorker:
                         "overwrite": edit.overwrite,
                         "create_parents": edit.create_parents,
                     },
-                    metadata={
-                        "actor": "coding_agent",
-                        "task_id": task.task_id,
-                        "edit_index": index,
-                    },
+                    metadata=request_metadata,
                     invocation_id=f"{task.task_id}-edit-{index + 1}",
                 )
             )
@@ -207,15 +215,19 @@ class CodingAgentWorker:
         if plan.verification.timeout_seconds is not None:
             verification_arguments_payload["timeout_seconds"] = plan.verification.timeout_seconds
 
+        verification_metadata = {
+            "actor": "coding_agent",
+            "task_id": task.task_id,
+            "phase": "verification",
+        }
+        if coding_operation_id is not None:
+            verification_metadata["coding_operation_id"] = coding_operation_id
+
         verification = self._tool_invoker(
             ToolRequest(
                 tool_name="run_test",
                 arguments=verification_arguments_payload,
-                metadata={
-                    "actor": "coding_agent",
-                    "task_id": task.task_id,
-                    "phase": "verification",
-                },
+                metadata=verification_metadata,
                 invocation_id=f"{task.task_id}-verification",
             )
         )
