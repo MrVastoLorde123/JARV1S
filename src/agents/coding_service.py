@@ -29,6 +29,10 @@ from src.agents.consequence_execution_attempt import (
     ConsequenceExecutionAttempt,
     ConsequenceExecutionAttemptService,
 )
+from src.agents.consequence_execution_outcome import (
+    ConsequenceExecutionOutcome,
+    ConsequenceExecutionOutcomeService,
+)
 from src.agents.consequence_execution_preparation import (
     ConsequenceExecutionPreparation,
     ConsequenceExecutionPreparationService,
@@ -58,6 +62,7 @@ class CodingAgentService:
         consequence_authorization_service: ConsequenceAuthorizationService | None = None,
         consequence_execution_preparation_service: ConsequenceExecutionPreparationService | None = None,
         consequence_execution_attempt_service: ConsequenceExecutionAttemptService | None = None,
+        consequence_execution_outcome_service: ConsequenceExecutionOutcomeService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -68,6 +73,7 @@ class CodingAgentService:
         self._consequence_authorization_service = consequence_authorization_service
         self._consequence_execution_preparation_service = consequence_execution_preparation_service
         self._consequence_execution_attempt_service = consequence_execution_attempt_service
+        self._consequence_execution_outcome_service = consequence_execution_outcome_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -118,6 +124,13 @@ class CodingAgentService:
         if executor is None:
             raise ValueError("executor or attempt_service is required")
         self._consequence_execution_attempt_service = ConsequenceExecutionAttemptService(executor)
+
+    def bind_consequence_execution_outcome(
+        self,
+        outcome_service: ConsequenceExecutionOutcomeService | None = None,
+    ) -> None:
+        """Bind the M35 execution-attempt → observed-outcome seam."""
+        self._consequence_execution_outcome_service = outcome_service or ConsequenceExecutionOutcomeService()
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
         """Attach JARVIS-observed environment context to a task before planning."""
@@ -243,6 +256,15 @@ class CodingAgentService:
         if self._consequence_execution_attempt_service is None:
             raise RuntimeError("consequence execution-attempt service is not bound")
         return self._consequence_execution_attempt_service.attempt(preparation)
+
+    def evaluate_execution_outcome(
+        self,
+        attempt: ConsequenceExecutionAttempt,
+    ) -> ConsequenceExecutionOutcome:
+        """Interpret one M34 execution attempt as an observed M35 outcome."""
+        if self._consequence_execution_outcome_service is None:
+            raise RuntimeError("consequence execution-outcome service is not bound")
+        return self._consequence_execution_outcome_service.evaluate(attempt)
 
 
 __all__ = ["CodingAgentService"]
