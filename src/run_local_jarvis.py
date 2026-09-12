@@ -10,6 +10,8 @@ from src.core.conversation_store import ConversationStore
 from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
 from src.database_bootstrap import bootstrap_database
+from src.interface.capability_host import start_capability_http
+from src.interface.http_capabilities import CapabilityHTTPConfig
 from src.interface.command_host import start_command_http
 from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
@@ -36,6 +38,10 @@ def main():
     enable_world_http = os.environ.get("JARVIS_WORLD_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
     enable_command_http = os.environ.get(
         "JARVIS_COMMAND_HTTP",
+        "1" if enable_world_http else "0",
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    enable_capability_http = os.environ.get(
+        "JARVIS_CAPABILITY_HTTP",
         "1" if enable_world_http else "0",
     ).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -103,6 +109,14 @@ def main():
         )
         print("JARVIS Command HTTP transport listening on http://127.0.0.1:8766")
 
+    capability_host = None
+    if enable_capability_http:
+        capability_host = start_capability_http(
+            tool_stack.gate,
+            config=CapabilityHTTPConfig(port=8767),
+        )
+        print("JARVIS Capability HTTP transport listening on http://127.0.0.1:8767")
+
     session_identity = PersistentSessionIdentity(
         data_dir / "active_session.json",
     )
@@ -117,6 +131,8 @@ def main():
     try:
         operator.run()
     finally:
+        if capability_host is not None:
+            capability_host.close()
         if command_host is not None:
             command_host.close()
         if world_host is not None:
