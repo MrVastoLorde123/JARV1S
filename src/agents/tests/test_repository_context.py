@@ -87,8 +87,10 @@ class M28RepositoryContextTests(unittest.TestCase):
         )
 
         rendered = context.render()
+        observed_section = rendered.split("OBSERVED REPOSITORY PATHS (bounded projection):", 1)[1]
+        observed_path_lines = [line for line in observed_section.splitlines() if line.startswith("- ")]
 
-        self.assertLessEqual(rendered.count("\n- "), 61)
+        self.assertLessEqual(len(observed_path_lines), 61)
         self.assertIn("ui/index.html", rendered)
         self.assertIn("ui/package.json", rendered)
         self.assertIn("additional repository paths observed internally but omitted", rendered)
