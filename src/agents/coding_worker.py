@@ -104,15 +104,24 @@ class CodingAgentTask:
 
 @dataclass(frozen=True)
 class CodingAgentResult:
-    """Structured evidence returned by one worker attempt."""
+    """Structured outcome and tool observations returned by one worker attempt."""
 
     task_id: str
     status: str
     edits_attempted: int
     edits_applied: int
     verification: ToolResult | None
+    edit_results: tuple[ToolResult, ...] = ()
     blocked_tool: str | None = None
     message: str = ""
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.task_id, str) or not self.task_id.strip():
+            raise ValueError("task_id must be a non-empty string")
+        if any(not isinstance(result, ToolResult) for result in self.edit_results):
+            raise TypeError("edit_results must contain ToolResult values")
+        if self.verification is not None and not isinstance(self.verification, ToolResult):
+            raise TypeError("verification must be a ToolResult or None")
 
     @property
     def successful(self) -> bool:
@@ -165,6 +174,7 @@ class CodingAgentWorker:
         if coding_operation_id is not None and not isinstance(coding_operation_id, str):
             raise TypeError("coding_operation_id must be a string when provided")
 
+        edit_results: list[ToolResult] = []
         edits_applied = 0
         for index, edit in enumerate(plan.edits):
             request_metadata = {
@@ -188,6 +198,7 @@ class CodingAgentWorker:
                     invocation_id=f"{task.task_id}-edit-{index + 1}",
                 )
             )
+            edit_results.append(result)
             if not result.success:
                 blocked_codes = {
                     "policy_denied",
@@ -202,6 +213,7 @@ class CodingAgentWorker:
                     edits_attempted=index + 1,
                     edits_applied=edits_applied,
                     verification=None,
+                    edit_results=tuple(edit_results),
                     blocked_tool="write_file" if blocked else None,
                     message=result.error.message if result.error else "edit failed",
                 )
@@ -238,6 +250,7 @@ class CodingAgentWorker:
             edits_attempted=len(plan.edits),
             edits_applied=edits_applied,
             verification=verification,
+            edit_results=tuple(edit_results),
             message=(
                 "verification passed"
                 if verification.success
