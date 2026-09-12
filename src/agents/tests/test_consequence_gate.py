@@ -3,6 +3,7 @@ import unittest
 from src.agents.claim_evidence import (
     Claim,
     ClaimEvidenceEvaluator,
+    ClaimEvaluation,
     ClaimState,
     Evidence,
     EvidenceType,
@@ -81,7 +82,7 @@ class M30ConsequenceGateTests(unittest.TestCase):
     def test_proposed_blocks(self):
         claim = self.claim()
         evaluation = self.evaluator.evaluate(claim, ())
-        evaluation = evaluation.__class__(
+        evaluation = ClaimEvaluation(
             claim=claim,
             state=ClaimState.PROPOSED,
             evidence_refs=(),
@@ -106,12 +107,12 @@ class M30ConsequenceGateTests(unittest.TestCase):
 
     def test_disputed_blocks(self):
         claim = self.claim()
-        evaluation = evaluation = type("Evaluation", (), {
-            "claim": claim,
-            "state": ClaimState.DISPUTED,
-            "evidence_refs": (),
-            "verification_refs": (),
-        })()
+        evaluation = ClaimEvaluation(
+            claim=claim,
+            state=ClaimState.DISPUTED,
+            evidence_refs=(),
+            verification_refs=(),
+        )
         decision = self.policy.decide(evaluation, self.consequence)
         self.assertEqual(decision.action, ConsequenceAction.BLOCK)
 
