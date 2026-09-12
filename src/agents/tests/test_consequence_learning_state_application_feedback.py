@@ -35,8 +35,8 @@ class M48LearningStateApplicationFeedbackTests(unittest.TestCase):
         self.assertEqual(result.verification_id, "verification-1")
 
     def test_rejects_unsupported_status(self):
-        with self.assertRaisesRegex(ValueError, "observed-applied evaluation"):
-            ConsequenceLearningStateApplicationFeedbackService().create(evaluation("OTHER"))
+        with self.assertRaisesRegex(ValueError, "unsupported application-observation evaluation status"):
+            evaluation("OTHER")
 
     def test_feedback_id_is_deterministic(self):
         service = ConsequenceLearningStateApplicationFeedbackService()
