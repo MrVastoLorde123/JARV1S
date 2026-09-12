@@ -14,7 +14,7 @@ this execution boundary.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Mapping, Protocol, Sequence
+from typing import Mapping, Protocol
 from uuid import uuid4
 
 from src.tools.models import ToolRequest, ToolResult
@@ -134,7 +134,7 @@ class CodingAgentToolInvoker(Protocol):
 
 
 class CodingAgentWorker:
-    """Execute one bounded coding plan through the existing tool authority."""
+    """Plan and execute bounded coding work through existing tool authority."""
 
     def __init__(
         self,
@@ -144,13 +144,22 @@ class CodingAgentWorker:
         self._planner = planner
         self._tool_invoker = tool_invoker
 
-    def run(self, task: CodingAgentTask) -> CodingAgentResult:
+    def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
+        """Generate a bounded proposal without invoking any repository tool."""
         if not isinstance(task, CodingAgentTask):
             raise TypeError("task must be a CodingAgentTask")
 
         plan = self._planner.plan(task)
         if not isinstance(plan, CodingAgentPlan):
             raise TypeError("planner must return a CodingAgentPlan")
+        return plan
+
+    def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
+        """Execute exactly the supplied plan through the existing tool gate."""
+        if not isinstance(task, CodingAgentTask):
+            raise TypeError("task must be a CodingAgentTask")
+        if not isinstance(plan, CodingAgentPlan):
+            raise TypeError("plan must be a CodingAgentPlan")
 
         edits_applied = 0
         for index, edit in enumerate(plan.edits):
@@ -172,39 +181,31 @@ class CodingAgentWorker:
                 )
             )
             if not result.success:
+                blocked_codes = {
+                    "policy_denied",
+                    "confirmation_denied",
+                    "authorization_integrity_failed",
+                    "sandbox_admission_failed",
+                }
+                blocked = result.error is not None and result.error.code in blocked_codes
                 return CodingAgentResult(
                     task_id=task.task_id,
-                    status="blocked" if result.error and result.error.code in {
-                        "policy_denied",
-                        "confirmation_denied",
-                        "authorization_integrity_failed",
-                        "sandbox_admission_failed",
-                    } else "edit_failed",
+                    status="blocked" if blocked else "edit_failed",
                     edits_attempted=index + 1,
                     edits_applied=edits_applied,
                     verification=None,
-                    blocked_tool="write_file" if result.error and result.error.code in {
-                        "policy_denied",
-                        "confirmation_denied",
-                        "authorization_integrity_failed",
-                        "sandbox_admission_failed",
-                    } else None,
+                    blocked_tool="write_file" if blocked else None,
                     message=result.error.message if result.error else "edit failed",
                 )
             edits_applied += 1
 
         verification_arguments = list(plan.verification.arguments)
+        verification_arguments_payload = {
+            "runner": plan.verification.runner,
+            "arguments": verification_arguments,
+        }
         if plan.verification.timeout_seconds is not None:
-            verification_arguments_payload = {
-                "runner": plan.verification.runner,
-                "arguments": verification_arguments,
-                "timeout_seconds": plan.verification.timeout_seconds,
-            }
-        else:
-            verification_arguments_payload = {
-                "runner": plan.verification.runner,
-                "arguments": verification_arguments,
-            }
+            verification_arguments_payload["timeout_seconds"] = plan.verification.timeout_seconds
 
         verification = self._tool_invoker(
             ToolRequest(
@@ -231,6 +232,10 @@ class CodingAgentWorker:
                 else (verification.error.message if verification.error else "verification failed")
             ),
         )
+
+    def run(self, task: CodingAgentTask) -> CodingAgentResult:
+        """Plan and immediately execute; retained for convenience/internal use."""
+        return self.execute(task, self.plan(task))
 
 
 __all__ = [
