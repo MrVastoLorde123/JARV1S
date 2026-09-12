@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Mapping
+
 from src.agents.ai_coding_planner import AICodingAgentPlanner
+from src.agents.authority_handoff import (
+    AuthorityHandoffPolicy,
+    AuthorityHandoffRequest,
+)
 from src.agents.coding_claim_evidence import (
     CodingClaimEvidenceAdapter,
     CodingClaimEvidenceResult,
@@ -24,7 +30,7 @@ from src.agents.claim_evidence import ClaimEvaluation
 
 
 class CodingAgentService:
-    """Compose JARVIS context, a planner, a bounded worker, M29 evaluation, and M30 consequence eligibility."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, and authority handoff."""
 
     def __init__(
         self,
@@ -33,12 +39,14 @@ class CodingAgentService:
         context_composer=None,
         claim_evidence_adapter: CodingClaimEvidenceAdapter | None = None,
         consequence_policy: EvidenceGatedConsequencePolicy | None = None,
+        authority_handoff_policy: AuthorityHandoffPolicy | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
         self._context_composer = context_composer
         self._claim_evidence_adapter = claim_evidence_adapter or CodingClaimEvidenceAdapter()
         self._consequence_policy = consequence_policy or EvidenceGatedConsequencePolicy()
+        self._authority_handoff_policy = authority_handoff_policy or AuthorityHandoffPolicy()
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -127,6 +135,20 @@ class CodingAgentService:
     ) -> ConsequenceDecision:
         """Consume an M29 evaluation through the M30 consequence boundary."""
         return self._consequence_policy.decide(evaluation, consequence)
+
+    def prepare_authority_handoff(
+        self,
+        decision: ConsequenceDecision,
+        *,
+        authority_target: str = "existing_authority",
+        authority_context: Mapping[str, object] | None = None,
+    ) -> AuthorityHandoffRequest:
+        """Prepare a non-authorizing handoff for the existing authority layer."""
+        return self._authority_handoff_policy.handoff(
+            decision,
+            authority_target=authority_target,
+            authority_context=authority_context,
+        )
 
 
 __all__ = ["CodingAgentService"]
