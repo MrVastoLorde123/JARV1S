@@ -96,6 +96,32 @@ class AuthorityHandoffRequest:
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.handoff_id, str) or not self.handoff_id.strip():
+            raise ValueError("handoff_id must be a non-empty string")
+        if not isinstance(self.claim_id, str) or not self.claim_id.strip():
+            raise ValueError("claim_id must be a non-empty string")
+        if not isinstance(self.task_id, str) or not self.task_id.strip():
+            raise ValueError("task_id must be a non-empty string")
+        if not isinstance(self.consequence_kind, ConsequenceKind):
+            raise TypeError("consequence_kind must be a ConsequenceKind")
+        if not isinstance(self.consequence_id, str) or not self.consequence_id.strip():
+            raise ValueError("consequence_id must be a non-empty string")
+        if self.consequence_metadata is not None and not isinstance(self.consequence_metadata, Mapping):
+            raise TypeError("consequence_metadata must be a mapping or None")
+        if not isinstance(self.authority_target, str) or not self.authority_target.strip():
+            raise ValueError("authority_target must be a non-empty string")
+        if not isinstance(self.authority_context, Mapping):
+            raise TypeError("authority_context must be a mapping")
+        if not isinstance(self.status, AuthorityHandoffStatus):
+            raise TypeError("status must be an AuthorityHandoffStatus")
+        if not isinstance(self.reason, str):
+            raise TypeError("reason must be a string")
+        if any(not isinstance(ref, str) or not ref for ref in self.evidence_refs):
+            raise TypeError("evidence_refs must contain non-empty strings")
+        if any(not isinstance(ref, str) or not ref for ref in self.verification_refs):
+            raise TypeError("verification_refs must contain non-empty strings")
+
     @property
     def ready_for_authority(self) -> bool:
         return self.status is AuthorityHandoffStatus.READY_FOR_AUTHORITY
