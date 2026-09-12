@@ -29,6 +29,10 @@ from src.agents.consequence_execution_attempt import (
     ConsequenceExecutionAttempt,
     ConsequenceExecutionAttemptService,
 )
+from src.agents.consequence_execution_feedback import (
+    ConsequenceExecutionFeedback,
+    ConsequenceExecutionFeedbackService,
+)
 from src.agents.consequence_execution_outcome import (
     ConsequenceExecutionOutcome,
     ConsequenceExecutionOutcomeService,
@@ -49,7 +53,7 @@ from src.tools.execution_attempt import ToolExecutor
 
 
 class CodingAgentService:
-    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, and attempt."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, attempt, outcome, and feedback."""
 
     def __init__(
         self,
@@ -63,6 +67,7 @@ class CodingAgentService:
         consequence_execution_preparation_service: ConsequenceExecutionPreparationService | None = None,
         consequence_execution_attempt_service: ConsequenceExecutionAttemptService | None = None,
         consequence_execution_outcome_service: ConsequenceExecutionOutcomeService | None = None,
+        consequence_execution_feedback_service: ConsequenceExecutionFeedbackService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -74,6 +79,7 @@ class CodingAgentService:
         self._consequence_execution_preparation_service = consequence_execution_preparation_service
         self._consequence_execution_attempt_service = consequence_execution_attempt_service
         self._consequence_execution_outcome_service = consequence_execution_outcome_service
+        self._consequence_execution_feedback_service = consequence_execution_feedback_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -131,6 +137,15 @@ class CodingAgentService:
     ) -> None:
         """Bind the M35 execution-attempt → observed-outcome seam."""
         self._consequence_execution_outcome_service = outcome_service or ConsequenceExecutionOutcomeService()
+
+    def bind_consequence_execution_feedback(
+        self,
+        feedback_service: ConsequenceExecutionFeedbackService | None = None,
+    ) -> None:
+        """Bind the M36 observed-outcome → inert-feedback seam."""
+        self._consequence_execution_feedback_service = (
+            feedback_service or ConsequenceExecutionFeedbackService()
+        )
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
         """Attach JARVIS-observed environment context to a task before planning."""
@@ -265,6 +280,15 @@ class CodingAgentService:
         if self._consequence_execution_outcome_service is None:
             raise RuntimeError("consequence execution-outcome service is not bound")
         return self._consequence_execution_outcome_service.evaluate(attempt)
+
+    def evaluate_execution_feedback(
+        self,
+        outcome: ConsequenceExecutionOutcome,
+    ) -> ConsequenceExecutionFeedback:
+        """Convert one M35 observed outcome into inert M36 consequence feedback."""
+        if self._consequence_execution_feedback_service is None:
+            raise RuntimeError("consequence execution-feedback service is not bound")
+        return self._consequence_execution_feedback_service.evaluate(outcome)
 
 
 __all__ = ["CodingAgentService"]
