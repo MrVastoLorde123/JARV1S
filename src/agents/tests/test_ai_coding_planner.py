@@ -62,6 +62,37 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
         )
         self.assertIn("Improve the interface", request.task)
 
+    def test_planner_defaults_python_unittest_to_canonical_prefix(self) -> None:
+        service = FakeAIService(
+            {
+                "edits": [],
+                "verification": {
+                    "runner": "python_unittest",
+                    "arguments": [],
+                },
+            }
+        )
+        task = CodingAgentTask(objective="Run repository tests")
+
+        plan = AICodingAgentPlanner(service).plan(task)
+
+        self.assertEqual(plan.verification.arguments, ("-m", "unittest"))
+
+    def test_planner_rejects_invalid_python_unittest_prefix(self) -> None:
+        service = FakeAIService(
+            {
+                "edits": [],
+                "verification": {
+                    "runner": "python_unittest",
+                    "arguments": ["python", "tests"],
+                },
+            }
+        )
+        task = CodingAgentTask(objective="Run repository tests safely")
+
+        with self.assertRaises(ValueError):
+            AICodingAgentPlanner(service).plan(task)
+
     def test_planner_includes_jarvis_observed_repository_context(self) -> None:
         service = FakeAIService(
             {
