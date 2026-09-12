@@ -2,12 +2,15 @@ import os
 from pathlib import Path
 
 from src.agency.world_bootstrap import create_local_world_runtime
+from src.agents.coding_confirmation import CodingAgentConfirmationService
+from src.agents.coding_confirmation_provider import CodingAgentConfirmationProvider
+from src.agents.coding_service import CodingAgentService
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
 from src.context.memory_context_source_provider import MemoryContextSourceProvider
 from src.context.working_context_runtime import WorkingContextRuntime
+from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.core.conversation_store import ConversationStore
-from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
 from src.database_bootstrap import bootstrap_database
 from src.interface.capability_host import start_capability_http
@@ -61,7 +64,19 @@ def main():
         data_dir / "personalization.json",
     )
     personalization_runtime = PersonalizationRuntime()
-    tool_stack = build_local_development_tool_stack(workspace_dir)
+
+    coding_confirmation_service = CodingAgentConfirmationService()
+    coding_confirmation_provider = CodingAgentConfirmationProvider(
+        coding_confirmation_service,
+    )
+    tool_stack = build_local_development_tool_stack(
+        workspace_dir,
+        confirmation_provider=coding_confirmation_provider,
+    )
+    coding_agent_service = CodingAgentService.from_ai_service(
+        ai_service,
+        tool_stack.gate,
+    )
 
     def processor_factory(session_id, conversation_id):
         base_context_runtime = WorkingContextRuntime(
@@ -75,18 +90,22 @@ def main():
             personalization_runtime=personalization_runtime,
             persistence_store=personalization_store,
         )
-        return JARVIS(
+        return CodingAgentJARVIS(
             ai_service=ai_service,
             conversation_store=conversation_store,
             conversation_id=conversation_id,
             enable_memory_formation=True,
             working_context_runtime=personalized_context_runtime,
             tool_invoker=tool_stack.gate,
+            coding_agent_service=coding_agent_service,
+            coding_confirmation_service=coding_confirmation_service,
         )
 
-    default_processor = JARVIS(
+    default_processor = CodingAgentJARVIS(
         ai_service=ai_service,
         tool_invoker=tool_stack.gate,
+        coding_agent_service=coding_agent_service,
+        coding_confirmation_service=coding_confirmation_service,
     )
     world_runtime = create_local_world_runtime() if enable_world_http else None
     runtime = JARVISRuntime.from_processor(
