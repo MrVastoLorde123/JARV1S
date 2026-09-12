@@ -111,7 +111,7 @@ class M29CodingClaimEvidenceTests(unittest.TestCase):
         self.assertEqual(outcome.evidence[-1].source_type, EvidenceType.BUILD_RESULT)
         self.assertFalse(outcome.evidence[-1].payload["passed"])
 
-    def test_edit_failure_without_verification_cannot_be_verified(self):
+    def test_edit_failure_is_explicit_contradiction_without_verification(self):
         task, plan = self.make_task_and_plan()
         result = CodingAgentResult(
             task_id=task.task_id,
@@ -132,9 +132,23 @@ class M29CodingClaimEvidenceTests(unittest.TestCase):
 
         outcome = CodingClaimEvidenceAdapter().evaluate(task, plan, result)
 
-        self.assertEqual(outcome.state, ClaimState.SUPPORTED)
+        self.assertEqual(outcome.state, ClaimState.CONTRADICTED)
         self.assertEqual(len(outcome.evaluation.verification_refs), 0)
-        self.assertEqual(outcome.evidence[0].source_type, EvidenceType.FILESYSTEM_OBSERVATION)
+        self.assertEqual(outcome.evidence[0].source_type, EvidenceType.CONTRADICTION)
+
+    def test_missing_observations_are_rejected_at_integration_boundary(self):
+        task, plan = self.make_task_and_plan()
+        result = CodingAgentResult(
+            task_id=task.task_id,
+            status="edit_failed",
+            edits_attempted=1,
+            edits_applied=0,
+            edit_results=(),
+            verification=None,
+        )
+
+        with self.assertRaises(ValueError):
+            CodingClaimEvidenceAdapter().evaluate(task, plan, result)
 
     def test_result_task_lineage_is_required(self):
         task, plan = self.make_task_and_plan()
@@ -163,7 +177,7 @@ class M29CodingClaimEvidenceTests(unittest.TestCase):
 
         self.assertEqual(outcome.claim.actor, "coding_agent")
         self.assertEqual(outcome.claim.state, ClaimState.PROPOSED)
-        self.assertNotIn("authorize", outcome.claim.payload)
+        self.assertEqual(outcome.evaluation.state, ClaimState.VERIFIED)
         self.assertEqual(len(outcome.evidence), 1)
         self.assertEqual(outcome.evidence[0].source_type, EvidenceType.BUILD_RESULT)
 
