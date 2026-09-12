@@ -49,14 +49,15 @@ class M28_TestRunnerTests(unittest.TestCase):
     def test_npm_build_requires_no_custom_arguments(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             handler = TestRunnerHandler(temp_dir)
-            self.assertEqual(
-                handler._build_command("npm_build", ()),  # noqa: SLF001
-                [handler._build_command("npm_build", ())[0], "run", "build"],  # noqa: SLF001
-            )
-            self.assertIsInstance(
-                handler._build_command("npm_build", ("run", "build")),  # noqa: SLF001
-                str,
-            )
+            command = handler._build_command("npm_build", ())  # noqa: SLF001
+            if isinstance(command, str):
+                self.assertIn("could not locate executable", command)
+            else:
+                self.assertEqual(command[1:], ["run", "build"])
+
+            rejected = handler._build_command("npm_build", ("run", "build"))  # noqa: SLF001
+            self.assertIsInstance(rejected, str)
+            self.assertIn("does not accept arguments", rejected)
 
 
 if __name__ == "__main__":
