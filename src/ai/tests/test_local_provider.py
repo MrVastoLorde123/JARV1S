@@ -257,6 +257,9 @@ class LocalProviderTests(unittest.TestCase):
                 "top_p": 0.8,
                 "max_output_tokens": 100,
                 "seed": 42,
+                "chat_template_kwargs": {
+                    "enable_thinking": False,
+                },
             },
         )
 
@@ -286,6 +289,11 @@ class LocalProviderTests(unittest.TestCase):
         self.assertEqual(
             sent["seed"],
             42
+        )
+
+        self.assertEqual(
+            sent["chat_template_kwargs"],
+            {"enable_thinking": False},
         )
 
     def test_context_is_translated_into_system_context(self):
