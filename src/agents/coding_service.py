@@ -62,18 +62,21 @@ class CodingAgentService:
         repository's canonical frontend build rather than an unconstrained
         unittest discovery invocation.
         """
-        if any(edit.path == "ui" or edit.path.startswith("ui/") for edit in plan.edits):
-            verification = CodingAgentVerification(
-                runner="npm_build",
-                arguments=(),
-                timeout_seconds=plan.verification.timeout_seconds,
-            )
-            return CodingAgentPlan(
-                edits=plan.edits,
-                verification=verification,
-                rationale=plan.rationale,
-            )
-        return plan
+        if not any(edit.path == "ui" or edit.path.startswith("ui/") for edit in plan.edits):
+            return plan
+        if plan.verification.runner == "npm_build" and not plan.verification.arguments:
+            return plan
+
+        verification = CodingAgentVerification(
+            runner="npm_build",
+            arguments=(),
+            timeout_seconds=plan.verification.timeout_seconds,
+        )
+        return CodingAgentPlan(
+            edits=plan.edits,
+            verification=verification,
+            rationale=plan.rationale,
+        )
 
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
         """Compose observed environment context before generating a proposal."""
