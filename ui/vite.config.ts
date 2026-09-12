@@ -7,8 +7,12 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': {
+      '/api/world': {
         target: 'http://127.0.0.1:8765',
+        changeOrigin: true,
+      },
+      '/api/command': {
+        target: 'http://127.0.0.1:8766',
         changeOrigin: true,
       },
     },
