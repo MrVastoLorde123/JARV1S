@@ -24,20 +24,23 @@ type Envelope = {
   content?: string;
   request_id?: string;
   metadata?: Record<string, unknown>;
+  error?: string;
+  detail?: string;
 };
 
-const ENDPOINT = "/api/world/observation";
+const WORLD_ENDPOINT = "/api/world/observation";
+const COMMAND_ENDPOINT = "/api/command";
 
 function App() {
   const [frame, setFrame] = useState<WorldFrame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [command, setCommand] = useState("");
-  const [commandResult, setCommandResult] = useState("Commands are not exposed by M28 yet.");
+  const [commandResult, setCommandResult] = useState("No command has been submitted.");
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
     try {
-      const response = await fetch(ENDPOINT, {
+      const response = await fetch(WORLD_ENDPOINT, {
         headers: {
           Accept: "application/json",
           "X-JARVIS-Session-ID": "desktop",
@@ -83,9 +86,31 @@ function App() {
     if (!text || busy) return;
 
     setBusy(true);
-    setCommandResult("Command held at the interface boundary. No write endpoint exists in M28 yet.");
-    setCommand("");
-    setBusy(false);
+    setCommandResult("Sending command to JARVIS...");
+
+    try {
+      const response = await fetch(COMMAND_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-JARVIS-Session-ID": "desktop",
+        },
+        body: JSON.stringify({ content: text }),
+      });
+
+      const payload = (await response.json()) as Envelope;
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.error || `Command returned HTTP ${response.status}.`);
+      }
+
+      setCommandResult(payload.content || "JARVIS returned an empty response.");
+      setCommand("");
+    } catch (cause) {
+      setCommandResult(cause instanceof Error ? cause.message : "Unknown command error.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -111,7 +136,7 @@ function App() {
             <Metric label="ACTIVE AGENTS" value={activeAgents} />
             <Metric label="LANDSCAPE" value={landscape} />
             <Metric label="AUTHORITY" value={world?.authority_granted ? "GRANTED" : "NOT GRANTED"} />
-            <Metric label="EXECUTION" value={"NOT EXPOSED"} />
+            <Metric label="EXECUTION" value={"BACKEND OWNED"} />
           </div>
         </section>
 
@@ -120,12 +145,8 @@ function App() {
           <div className="m28-event-title">
             {error ?? (frame ? "M28.13 world observation received." : "Waiting for backend observation.")}
           </div>
-          <div className="m28-event-meta">
-            Generated: {world?.generated_at ?? "UNAVAILABLE"}
-          </div>
-          <div className="m28-event-meta">
-            Request: {frame?.request_id ?? "UNAVAILABLE"}
-          </div>
+          <div className="m28-event-meta">Generated: {world?.generated_at ?? "UNAVAILABLE"}</div>
+          <div className="m28-event-meta">Request: {frame?.request_id ?? "UNAVAILABLE"}</div>
         </section>
 
         <section className="m28-panel">
@@ -139,26 +160,26 @@ function App() {
               disabled={busy}
             />
             <button type="submit" disabled={!command.trim() || busy}>
-              {busy ? "HOLDING" : "SEND"}
+              {busy ? "RUNNING" : "SEND"}
             </button>
           </form>
-          <div className="m28-boundary-note">{commandResult}</div>
+          <pre className="m28-command-result">{commandResult}</pre>
         </section>
 
         <section className="m28-panel">
           <div className="m28-panel-label">CAPABILITY SURFACE</div>
           <Capability name="World observation" state={online ? "READY" : "UNAVAILABLE"} />
-          <Capability name="Command execution" state="NOT EXPOSED" />
-          <Capability name="Filesystem mutation" state="NOT EXPOSED" />
-          <Capability name="Coding-agent delegation" state="NOT EXPOSED" />
-          <Capability name="Test runner" state="NOT EXPOSED" />
-          <Capability name="Independent verification" state="NOT EXPOSED" />
+          <Capability name="UI command → JARVIS runtime" state="READY" />
+          <Capability name="Tool execution" state="BACKEND OWNED" />
+          <Capability name="Filesystem mutation" state="NOT VERIFIED" />
+          <Capability name="Coding-agent delegation" state="NOT VERIFIED" />
+          <Capability name="Independent verification" state="NOT VERIFIED" />
         </section>
       </main>
 
       <footer className="m28-footer">
         <span>M28</span>
-        <span>READ-ONLY WORLD INTERFACE</span>
+        <span>MINIMAL TRUTHFUL SHELL</span>
         <span>{online ? "BACKEND CONNECTED" : "BACKEND DISCONNECTED"}</span>
       </footer>
     </div>
