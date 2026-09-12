@@ -5,6 +5,8 @@ from contextlib import redirect_stdout
 from unittest.mock import ANY, patch
 
 from src import run_local_jarvis
+from src.agents.coding_confirmation import CodingAgentConfirmationService
+from src.agents.coding_service import CodingAgentService
 
 
 class _FakeToolInvoker:
@@ -45,9 +47,17 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         runtime = runtime_cls.from_processor.return_value
         operator = operator_cls.return_value
         session_identity = session_identity_cls.return_value
-        confirmation_service = confirmation_service_cls.return_value
+
+        confirmation_service = CodingAgentConfirmationService()
+        confirmation_service_cls.return_value = confirmation_service
         confirmation_provider = confirmation_provider_cls.return_value
-        coding_agent_service = coding_service_cls.from_ai_service.return_value
+
+        coding_agent_service = CodingAgentService(
+            planner=object(),
+            worker=object(),
+        )
+        coding_service_cls.from_ai_service.return_value = coding_agent_service
+
         tool_stack = tool_stack_builder.return_value
         tool_stack.gate = _FakeToolInvoker()
         session_identity.get_or_create.return_value = "test-session"
@@ -118,6 +128,11 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         operator_cls,
         session_identity_cls,
     ):
+        confirmation_service_cls.return_value = CodingAgentConfirmationService()
+        coding_service_cls.from_ai_service.return_value = CodingAgentService(
+            planner=object(),
+            worker=object(),
+        )
         tool_stack_builder.return_value.gate = _FakeToolInvoker()
         session_identity_cls.return_value.get_or_create.return_value = "test-session"
         with redirect_stdout(io.StringIO()):
