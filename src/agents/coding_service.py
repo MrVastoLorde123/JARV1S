@@ -58,6 +58,11 @@ from src.agents.consequence_learning_state_persistence import (
     ConsequenceLearningStatePersistenceService,
     ConsequenceLearningStateWriter,
 )
+from src.agents.consequence_learning_state_persistence_verification import (
+    ConsequenceLearningStatePersistenceVerification,
+    ConsequenceLearningStatePersistenceVerificationService,
+    ConsequenceLearningStateReader,
+)
 from src.agents.consequence_gate import (
     ConsequenceDecision,
     ConsequenceRequest,
@@ -70,7 +75,7 @@ from src.tools.execution_attempt import ToolExecutor
 
 
 class CodingAgentService:
-    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, attempt, outcome, feedback, evaluation, learning decision, learning-write request, and persistence."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, attempt, outcome, feedback, evaluation, learning decision, learning-write request, persistence, and persistence verification."""
 
     def __init__(
         self,
@@ -89,6 +94,7 @@ class CodingAgentService:
         consequence_learning_decision_service: ConsequenceLearningDecisionService | None = None,
         consequence_learning_write_request_service: ConsequenceLearningWriteRequestService | None = None,
         consequence_learning_state_persistence_service: ConsequenceLearningStatePersistenceService | None = None,
+        consequence_learning_state_persistence_verification_service: ConsequenceLearningStatePersistenceVerificationService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -105,6 +111,7 @@ class CodingAgentService:
         self._consequence_learning_decision_service = consequence_learning_decision_service
         self._consequence_learning_write_request_service = consequence_learning_write_request_service
         self._consequence_learning_state_persistence_service = consequence_learning_state_persistence_service
+        self._consequence_learning_state_persistence_verification_service = consequence_learning_state_persistence_verification_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -158,6 +165,21 @@ class CodingAgentService:
         if writer is None:
             raise ValueError("writer or persistence_service is required")
         self._consequence_learning_state_persistence_service = ConsequenceLearningStatePersistenceService(writer)
+
+    def bind_consequence_learning_state_persistence_verification(
+        self,
+        reader: ConsequenceLearningStateReader | None = None,
+        *,
+        verification_service: ConsequenceLearningStatePersistenceVerificationService | None = None,
+    ) -> None:
+        if reader is not None and verification_service is not None:
+            raise ValueError("provide either reader or verification_service, not both")
+        if verification_service is not None:
+            self._consequence_learning_state_persistence_verification_service = verification_service
+            return
+        if reader is None:
+            raise ValueError("reader or verification_service is required")
+        self._consequence_learning_state_persistence_verification_service = ConsequenceLearningStatePersistenceVerificationService(reader)
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
         if not isinstance(task, CodingAgentTask):
@@ -246,6 +268,15 @@ class CodingAgentService:
         if self._consequence_learning_state_persistence_service is None:
             raise RuntimeError("consequence learning-state persistence service is not bound")
         return self._consequence_learning_state_persistence_service.persist(request)
+
+    def verify_consequence_learning_state_persistence(
+        self,
+        request: ConsequenceLearningWriteRequest,
+        receipt: ConsequenceLearningStatePersistenceReceipt,
+    ) -> ConsequenceLearningStatePersistenceVerification:
+        if self._consequence_learning_state_persistence_verification_service is None:
+            raise RuntimeError("consequence learning-state persistence-verification service is not bound")
+        return self._consequence_learning_state_persistence_verification_service.verify(request, receipt)
 
 
 __all__ = ["CodingAgentService"]
