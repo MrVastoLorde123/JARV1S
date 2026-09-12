@@ -79,6 +79,8 @@ class AICodingAgentPlanner:
             "Constraints:\n"
             "- Never propose shell commands.\n"
             "- Never use a runner other than python_unittest or npm_build.\n"
+            "- For python_unittest, arguments may be empty; JARVIS will supply the canonical '-m unittest' prefix.\n"
+            "- For npm_build, arguments must be empty; JARVIS always runs 'npm run build'.\n"
             "- File paths must be workspace-relative.\n"
             "- Only use repository paths that are supported by the observed context when possible.\n"
             "- Do not invent directories or filenames when JARVIS has provided observations.\n"
@@ -128,9 +130,23 @@ class AICodingAgentPlanner:
         if not isinstance(raw_verification, Mapping):
             raise TypeError("coding planner 'verification' must be an object")
 
+        runner = raw_verification.get("runner")
         arguments = raw_verification.get("arguments", [])
         if not isinstance(arguments, list):
             raise TypeError("coding planner verification 'arguments' must be an array")
+        if any(not isinstance(item, str) for item in arguments):
+            raise TypeError("coding planner verification arguments must be strings")
+
+        if runner == "python_unittest":
+            if not arguments:
+                arguments = ["-m", "unittest"]
+            elif len(arguments) < 2 or arguments[:2] != ["-m", "unittest"]:
+                raise ValueError(
+                    "python_unittest verification arguments must begin with '-m', 'unittest'"
+                )
+        elif runner == "npm_build":
+            if arguments:
+                raise ValueError("npm_build verification does not accept arguments")
 
         timeout_seconds = raw_verification.get("timeout_seconds")
         if timeout_seconds is not None and not isinstance(timeout_seconds, int):
@@ -139,7 +155,7 @@ class AICodingAgentPlanner:
         return CodingAgentPlan(
             edits=tuple(edits),
             verification=CodingAgentVerification(
-                runner=raw_verification.get("runner"),
+                runner=runner,
                 arguments=tuple(arguments),
                 timeout_seconds=timeout_seconds,
             ),
