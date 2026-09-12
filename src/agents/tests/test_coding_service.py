@@ -64,6 +64,42 @@ class M28CodingAgentServiceTests(unittest.TestCase):
         self.assertIs(worker.seen_task, task)
         self.assertIsNone(worker.seen_plan)
 
+    def test_service_replaces_model_verification_for_ui_changes(self) -> None:
+        task = CodingAgentTask(objective="Add a visible status indicator")
+        proposed = CodingAgentPlan(
+            edits=(CodingAgentEdit(path="ui/index.html", content="updated"),),
+            verification=CodingAgentVerification(
+                runner="python_unittest",
+                arguments=("-m", "unittest"),
+            ),
+        )
+        worker = FakeWorker(result="unused", plan_result=proposed)
+        service = CodingAgentService(FakePlanner(proposed), worker)
+
+        result = service.plan(task)
+
+        self.assertIsNot(result, proposed)
+        self.assertEqual(result.verification.runner, "npm_build")
+        self.assertEqual(result.verification.arguments, ())
+        self.assertEqual(result.edits, proposed.edits)
+        self.assertEqual(result.rationale, proposed.rationale)
+
+    def test_service_preserves_non_ui_verification(self) -> None:
+        task = CodingAgentTask(objective="Improve a Python module")
+        proposed = CodingAgentPlan(
+            edits=(CodingAgentEdit(path="src/app.py", content="updated"),),
+            verification=CodingAgentVerification(
+                runner="python_unittest",
+                arguments=("-m", "unittest", "src.tests.test_app"),
+            ),
+        )
+        worker = FakeWorker(result="unused", plan_result=proposed)
+        service = CodingAgentService(FakePlanner(proposed), worker)
+
+        result = service.plan(task)
+
+        self.assertIs(result, proposed)
+
     def test_service_preserves_context_in_prepared_task(self) -> None:
         task = CodingAgentTask(objective="Improve the interface")
         plan = CodingAgentPlan(
