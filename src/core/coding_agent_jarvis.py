@@ -98,6 +98,7 @@ class CodingAgentJARVIS(JARVIS):
         )
 
         try:
+            task = self.coding_agent_service.prepare_task(task)
             plan = self.coding_agent_service.plan(task)
         except (TypeError, ValueError) as exc:
             return JARVISResponse(
