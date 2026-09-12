@@ -2,14 +2,22 @@ import unittest
 
 from src.agents.authority_handoff import (
     AuthorityHandoffPolicy,
+    AuthorityHandoffRequest,
     AuthorityHandoffStatus,
 )
-from src.agents.claim_evidence import Claim, ClaimEvaluation, ClaimState
+from src.agents.claim_evidence import (
+    Claim,
+    ClaimEvidenceEvaluator,
+    ClaimState,
+    Evidence,
+    EvidenceType,
+)
 from src.agents.consequence_gate import (
     ConsequenceAction,
     ConsequenceKind,
     ConsequenceRequest,
     ConsequenceDecision,
+    EvidenceGatedConsequencePolicy,
 )
 
 
@@ -132,6 +140,23 @@ class M31AuthorityHandoffTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.policy.handoff(decision, authority_context=object())
 
+    def test_handoff_request_contract_rejects_malformed_state(self):
+        with self.assertRaises(ValueError):
+            AuthorityHandoffRequest(
+                handoff_id="",
+                claim_id="claim",
+                task_id="task",
+                consequence_kind=ConsequenceKind.ADVANCE_WORKFLOW,
+                consequence_id="coding:advance",
+                consequence_metadata={},
+                authority_target="existing_authority",
+                authority_context={},
+                status=AuthorityHandoffStatus.READY_FOR_AUTHORITY,
+                reason="reason",
+                evidence_refs=(),
+                verification_refs=(),
+            )
+
     def test_handoff_is_inert(self):
         decision = self.decision(ConsequenceAction.ALLOW)
         before = decision
@@ -140,26 +165,34 @@ class M31AuthorityHandoffTests(unittest.TestCase):
         self.assertEqual(handoff.status, AuthorityHandoffStatus.READY_FOR_AUTHORITY)
         self.assertFalse(handoff.authorized)
 
-    def test_m30_evaluation_provenance_can_survive_the_chain(self):
-        evaluation = ClaimEvaluation(
-            claim=self.claim,
-            state=ClaimState.VERIFIED,
-            evidence_refs=("evidence-1",),
-            verification_refs=("verification-1",),
+    def test_m29_to_m30_to_m31_chain_preserves_verification(self):
+        evaluator = ClaimEvidenceEvaluator()
+        evidence = Evidence(
+            task_id=self.claim.task_id,
+            source_type=EvidenceType.TEST_RESULT,
+            payload={"passed": True},
+            provenance={"invocation_id": "run-31"},
         )
-        decision = ConsequenceDecision(
-            claim_id=evaluation.claim.claim_id,
-            task_id=evaluation.claim.task_id,
-            consequence=self.consequence,
-            action=ConsequenceAction.ALLOW,
-            reason="required verification evidence is present",
-            evidence_refs=evaluation.evidence_refs,
-            verification_refs=evaluation.verification_refs,
+        evaluation = evaluator.evaluate(self.claim, (evidence,))
+        self.assertEqual(evaluation.state, ClaimState.VERIFIED)
+
+        consequence_decision = EvidenceGatedConsequencePolicy().decide(
+            evaluation,
+            self.consequence,
         )
-        handoff = self.policy.handoff(decision)
-        self.assertEqual(handoff.claim_id, evaluation.claim.claim_id)
+        self.assertEqual(consequence_decision.action, ConsequenceAction.ALLOW)
+
+        handoff = self.policy.handoff(
+            consequence_decision,
+            authority_target="coding_confirmation",
+            authority_context={"operation_id": "op-31"},
+        )
+        self.assertEqual(handoff.status, AuthorityHandoffStatus.READY_FOR_AUTHORITY)
+        self.assertEqual(handoff.claim_id, self.claim.claim_id)
+        self.assertEqual(handoff.task_id, self.claim.task_id)
         self.assertEqual(handoff.evidence_refs, evaluation.evidence_refs)
         self.assertEqual(handoff.verification_refs, evaluation.verification_refs)
+        self.assertEqual(handoff.authorized, False)
 
 
 if __name__ == "__main__":
