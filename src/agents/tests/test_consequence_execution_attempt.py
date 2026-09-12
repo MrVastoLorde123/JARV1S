@@ -165,7 +165,9 @@ class M34ConsequenceExecutionAttemptTests(unittest.TestCase):
         context = result.to_context()
 
         self.assertTrue(context["authorization_granted"])
-        self.assertFalse(context["execution_requested"])
+        self.assertTrue(context["execution_requested"])
+        self.assertTrue(context["execution_attempted"])
+        self.assertTrue(context["execution_completed"])
         self.assertFalse(context["worker_assigned"])
         self.assertFalse(context["containment_active"])
 
