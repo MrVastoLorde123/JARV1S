@@ -41,6 +41,10 @@ class CodingPendingOperation:
     def is_pending(self) -> bool:
         return self.status == CodingConfirmationStatus.PENDING
 
+    @property
+    def is_confirmed(self) -> bool:
+        return self.status == CodingConfirmationStatus.CONFIRMED
+
     @staticmethod
     def now_iso() -> str:
         return datetime.now(timezone.utc).isoformat()
