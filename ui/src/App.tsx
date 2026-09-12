@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import "./functional.css";
 
 type WorldFrame = {
@@ -77,7 +77,7 @@ function App() {
   const activeAgents = world?.active_agent_count ?? 0;
   const landscape = world?.current_landscape ?? "UNKNOWN";
 
-  async function submitCommand(event: React.FormEvent) {
+  async function submitCommand(event: FormEvent) {
     event.preventDefault();
     const text = command.trim();
     if (!text || busy) return;
