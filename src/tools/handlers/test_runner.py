@@ -3,8 +3,8 @@
 This handler deliberately does not expose an arbitrary shell. It supports only
 repository verification operations that map to known executable forms:
 
-* Python unittest: ``python -m unittest <arguments...>``
-* npm build: ``npm run build``
+* Python unittest: ``python -m unittest <arguments...>`` from repository root
+* npm build: ``npm run build`` from the repository's ``ui`` directory
 
 JARVIS still reaches this handler through the normal tool policy, authorization,
 sandbox, handoff, and execution-attempt layers.
@@ -29,7 +29,7 @@ MAX_TIMEOUT_SECONDS = 600
 
 
 class TestRunnerHandler:
-    """Run approved repository verification commands inside one workspace."""
+    """Run approved repository verification operations inside one workspace."""
 
     TOOL_NAME = "run_test"
 
@@ -136,12 +136,16 @@ class TestRunnerHandler:
         if isinstance(command, str):
             return self._failure(request, "invalid_arguments", command)
 
+        cwd = self._working_directory(runner)
+        if isinstance(cwd, str):
+            return self._failure(request, "workspace_error", cwd)
+
         started = time.monotonic()
         timed_out = False
         try:
             completed = subprocess.run(
                 command,
-                cwd=self._base_dir,
+                cwd=cwd,
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
@@ -170,7 +174,7 @@ class TestRunnerHandler:
         content = {
             "runner": runner,
             "command": list(command),
-            "cwd": str(self._base_dir),
+            "cwd": str(cwd),
             "exit_code": exit_code,
             "stdout": self._truncate(stdout),
             "stderr": self._truncate(stderr),
@@ -210,6 +214,15 @@ class TestRunnerHandler:
             content=content,
             invocation_id=request.invocation_id,
         )
+
+    def _working_directory(self, runner: str) -> Path | str:
+        if runner == "python_unittest":
+            return self._base_dir
+
+        ui_dir = self._base_dir / "ui"
+        if not ui_dir.is_dir():
+            return f"UI workspace does not exist: {ui_dir}"
+        return ui_dir
 
     @staticmethod
     def _build_command(runner: str, arguments: tuple[str, ...]) -> list[str] | str:
