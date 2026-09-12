@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Backend focused tests
-        run: python -m unittest src.interface.tests.test_http_command src.interface.tests.test_boundary src.tools.tests.test_test_runner
+        run: python -m unittest src.interface.tests.test_http_command src.interface.tests.test_http_capabilities src.interface.tests.test_boundary src.tools.tests.test_test_runner
 
       - name: Set up Node
         uses: actions/setup-node@v4
