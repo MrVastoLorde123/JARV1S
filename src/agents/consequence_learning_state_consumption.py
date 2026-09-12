@@ -80,7 +80,7 @@ class ConsequenceLearningStateConsumptionService:
             raise ValueError("verification does not belong to request")
         if not verification.record_id.strip():
             raise ValueError("verification record identity is required")
-        payload = dict(request.learning_payload)
+        payload = request.learning_payload
         return ConsequenceLearningStateConsumption(
             consumption_id=self._consumption_id(
                 request.request_id,
