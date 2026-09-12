@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from src.agents.ai_coding_planner import AICodingAgentPlanner
+from src.agents.coding_claim_evidence import (
+    CodingClaimEvidenceAdapter,
+    CodingClaimEvidenceResult,
+)
 from src.agents.coding_worker import (
     CodingAgentPlan,
     CodingAgentResult,
@@ -14,12 +18,19 @@ from src.agents.repository_context import RepositoryContextComposer
 
 
 class CodingAgentService:
-    """Compose JARVIS context, a planner, and a bounded coding worker."""
+    """Compose JARVIS context, a planner, a bounded worker, and M29 evaluation."""
 
-    def __init__(self, planner, worker: CodingAgentWorker, context_composer=None) -> None:
+    def __init__(
+        self,
+        planner,
+        worker: CodingAgentWorker,
+        context_composer=None,
+        claim_evidence_adapter: CodingClaimEvidenceAdapter | None = None,
+    ) -> None:
         self._planner = planner
         self._worker = worker
         self._context_composer = context_composer
+        self._claim_evidence_adapter = claim_evidence_adapter or CodingClaimEvidenceAdapter()
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -91,6 +102,15 @@ class CodingAgentService:
         if not isinstance(plan, CodingAgentPlan):
             raise TypeError("plan must be a CodingAgentPlan")
         return self._worker.execute(task, plan)
+
+    def execute_and_evaluate(
+        self,
+        task: CodingAgentTask,
+        plan: CodingAgentPlan,
+    ) -> CodingClaimEvidenceResult:
+        """Execute through M28 authority, then deterministically evaluate M29 evidence."""
+        result = self.execute(task, plan)
+        return self._claim_evidence_adapter.evaluate(task, plan, result)
 
 
 __all__ = ["CodingAgentService"]
