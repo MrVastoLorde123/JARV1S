@@ -25,6 +25,10 @@ from src.agents.consequence_authorization import (
     ConsequenceAuthorizationDecision,
     ConsequenceAuthorizationService,
 )
+from src.agents.consequence_execution_preparation import (
+    ConsequenceExecutionPreparation,
+    ConsequenceExecutionPreparationService,
+)
 from src.agents.consequence_gate import (
     ConsequenceDecision,
     ConsequenceRequest,
@@ -36,7 +40,7 @@ from src.tools.models import ToolDefinition, ToolRequest
 
 
 class CodingAgentService:
-    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, and authorization."""
+    """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, and preparation."""
 
     def __init__(
         self,
@@ -47,6 +51,7 @@ class CodingAgentService:
         consequence_policy: EvidenceGatedConsequencePolicy | None = None,
         authority_handoff_policy: AuthorityHandoffPolicy | None = None,
         consequence_authorization_service: ConsequenceAuthorizationService | None = None,
+        consequence_execution_preparation_service: ConsequenceExecutionPreparationService | None = None,
     ) -> None:
         self._planner = planner
         self._worker = worker
@@ -55,6 +60,7 @@ class CodingAgentService:
         self._consequence_policy = consequence_policy or EvidenceGatedConsequencePolicy()
         self._authority_handoff_policy = authority_handoff_policy or AuthorityHandoffPolicy()
         self._consequence_authorization_service = consequence_authorization_service
+        self._consequence_execution_preparation_service = consequence_execution_preparation_service
 
     @classmethod
     def from_ai_service(cls, ai_service, tool_invoker, *, provider_name: str | None = None):
@@ -79,6 +85,15 @@ class CodingAgentService:
         self._consequence_authorization_service = ConsequenceAuthorizationService(
             authorization_service,
             authority_target=authority_target,
+        )
+
+    def bind_consequence_execution_preparation(
+        self,
+        preparation_service: ConsequenceExecutionPreparationService | None = None,
+    ) -> None:
+        """Bind the M33 consequence authorization → execution-preparation seam."""
+        self._consequence_execution_preparation_service = (
+            preparation_service or ConsequenceExecutionPreparationService()
         )
 
     def prepare_task(self, task: CodingAgentTask) -> CodingAgentTask:
@@ -180,6 +195,21 @@ class CodingAgentService:
             definition,
             request,
             authorization_id=authorization_id,
+        )
+
+    def prepare_authorized_consequence(
+        self,
+        authorization: ConsequenceAuthorizationDecision,
+        definition: ToolDefinition,
+        request: ToolRequest,
+    ) -> ConsequenceExecutionPreparation:
+        """Prepare one M32-authorized consequence through M22.9/M30 execution walls."""
+        if self._consequence_execution_preparation_service is None:
+            raise RuntimeError("consequence execution-preparation service is not bound")
+        return self._consequence_execution_preparation_service.prepare(
+            authorization,
+            definition,
+            request,
         )
 
 
