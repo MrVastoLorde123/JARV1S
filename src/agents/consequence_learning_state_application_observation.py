@@ -38,7 +38,7 @@ class ConsequenceLearningStateApplicationObservation:
         if not isinstance(self.observed, bool):
             raise TypeError("observed must be a bool")
         if not self.observed:
-            raise ValueError("application observation requires observed=True")
+            raise ValueError("application observation requires an observed application")
 
     def to_context(self) -> dict[str, object]:
         return {
