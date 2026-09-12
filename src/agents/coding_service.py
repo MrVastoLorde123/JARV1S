@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from src.agents.coding_worker import (
+    CodingAgentPlan,
     CodingAgentResult,
     CodingAgentTask,
     CodingAgentWorker,
@@ -29,10 +30,19 @@ class CodingAgentService:
         )
         return cls(planner, worker)
 
-    def execute(self, task: CodingAgentTask) -> CodingAgentResult:
+    def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
+        """Generate a proposal without invoking repository tools."""
         if not isinstance(task, CodingAgentTask):
             raise TypeError("task must be a CodingAgentTask")
-        return self._worker.run(task)
+        return self._worker.plan(task)
+
+    def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
+        """Execute exactly the supplied plan through the worker authority boundary."""
+        if not isinstance(task, CodingAgentTask):
+            raise TypeError("task must be a CodingAgentTask")
+        if not isinstance(plan, CodingAgentPlan):
+            raise TypeError("plan must be a CodingAgentPlan")
+        return self._worker.execute(task, plan)
 
 
 __all__ = ["CodingAgentService"]
