@@ -124,7 +124,7 @@ class ConsequenceExecutionFeedback:
             "invocation_id": self.invocation_id,
             "consequence_feedback_kind": self.kind.value,
             "payload": dict(self.payload),
-            "authorization_granted": self.authorization_granted,
+            "authorization_granted": False,
             "evidence_refs": self.evidence_refs,
             "verification_refs": self.verification_refs,
             "reason": self.reason,
