@@ -2,7 +2,7 @@ import io
 import os
 import unittest
 from contextlib import redirect_stdout
-from unittest.mock import patch, ANY
+from unittest.mock import ANY, patch
 
 from src import run_local_jarvis
 
@@ -13,20 +13,20 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
     @patch("src.run_local_jarvis.HumanOperatingLayer")
     @patch("src.run_local_jarvis.JARVISRuntime")
     @patch("src.run_local_jarvis.ConversationStore")
-    @patch("src.run_local_jarvis.CodingAgentJARVIS")
+    @patch("src.run_local_jarvis.CodingAgentService")
     @patch("src.run_local_jarvis.CodingAgentConfirmationProvider")
     @patch("src.run_local_jarvis.CodingAgentConfirmationService")
-    @patch("src.run_local_jarvis.CodingAgentService")
+    @patch("src.run_local_jarvis.build_local_development_tool_stack")
     @patch("src.run_local_jarvis.AIService")
     @patch("src.run_local_jarvis.LocalProvider")
     def test_main_uses_canonical_runtime_and_operator(
         self,
         local_provider_cls,
         ai_service_cls,
-        coding_service_cls,
+        tool_stack_builder,
         confirmation_service_cls,
         confirmation_provider_cls,
-        coding_jarvis_cls,
+        coding_service_cls,
         conversation_store_cls,
         runtime_cls,
         operator_cls,
@@ -34,14 +34,15 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
     ):
         provider = local_provider_cls.return_value
         ai_service = ai_service_cls.return_value
-        confirmation_service = confirmation_service_cls.return_value
-        confirmation_provider = confirmation_provider_cls.return_value
-        coding_service = coding_service_cls.from_ai_service.return_value
-        processor = coding_jarvis_cls.return_value
         store = conversation_store_cls.return_value
         runtime = runtime_cls.from_processor.return_value
         operator = operator_cls.return_value
         session_identity = session_identity_cls.return_value
+        confirmation_service = confirmation_service_cls.return_value
+        confirmation_provider = confirmation_provider_cls.return_value
+        coding_agent_service = coding_service_cls.from_ai_service.return_value
+        tool_stack = tool_stack_builder.return_value
+        tool_stack.gate = object()
         session_identity.get_or_create.return_value = "test-session"
 
         output = io.StringIO()
@@ -66,18 +67,16 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         conversation_store_cls.assert_called_once_with()
         confirmation_service_cls.assert_called_once_with()
         confirmation_provider_cls.assert_called_once_with(confirmation_service)
+        tool_stack_builder.assert_called_once_with(
+            ANY,
+            confirmation_provider=confirmation_provider,
+        )
         coding_service_cls.from_ai_service.assert_called_once_with(
             ai_service,
-            ANY,
-        )
-        coding_jarvis_cls.assert_called_once_with(
-            ai_service=ai_service,
-            tool_invoker=ANY,
-            coding_agent_service=coding_service,
-            coding_confirmation_service=confirmation_service,
+            tool_stack.gate,
         )
         runtime_cls.from_processor.assert_called_once_with(
-            processor,
+            ANY,
             conversation_store=store,
             durable_processor_factory=ANY,
             world_runtime=None,
@@ -93,30 +92,30 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
     @patch("src.run_local_jarvis.HumanOperatingLayer")
     @patch("src.run_local_jarvis.JARVISRuntime")
     @patch("src.run_local_jarvis.ConversationStore")
-    @patch("src.run_local_jarvis.CodingAgentJARVIS")
+    @patch("src.run_local_jarvis.CodingAgentService")
     @patch("src.run_local_jarvis.CodingAgentConfirmationProvider")
     @patch("src.run_local_jarvis.CodingAgentConfirmationService")
-    @patch("src.run_local_jarvis.CodingAgentService")
+    @patch("src.run_local_jarvis.build_local_development_tool_stack")
     @patch("src.run_local_jarvis.AIService")
     @patch("src.run_local_jarvis.LocalProvider")
     def test_main_does_not_call_processor_or_runtime_directly(
         self,
         local_provider_cls,
         ai_service_cls,
-        coding_service_cls,
+        tool_stack_builder,
         confirmation_service_cls,
         confirmation_provider_cls,
-        coding_jarvis_cls,
+        coding_service_cls,
         conversation_store_cls,
         runtime_cls,
         operator_cls,
         session_identity_cls,
     ):
+        tool_stack_builder.return_value.gate = object()
         session_identity_cls.return_value.get_or_create.return_value = "test-session"
         with redirect_stdout(io.StringIO()):
             run_local_jarvis.main()
 
-        coding_jarvis_cls.return_value.ask.assert_not_called()
         runtime_cls.from_processor.return_value.receive.assert_not_called()
         runtime_cls.from_processor.return_value.respond.assert_not_called()
         operator_cls.return_value.run.assert_called_once_with()
