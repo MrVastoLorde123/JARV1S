@@ -101,7 +101,12 @@ class M28CodingAgentServiceTests(unittest.TestCase):
                 verification=CodingAgentVerification(runner="npm_build"),
             )
         )
-        worker = CodingAgentWorker(planner, lambda request: None)
+
+        class NoopInvoker:
+            def invoke(self, request):
+                return None
+
+        worker = CodingAgentWorker(planner, NoopInvoker())
         service = CodingAgentService(planner, worker)
 
         self.assertIs(service._worker, worker)
