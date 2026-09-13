@@ -56,6 +56,13 @@ class M65Tests(unittest.TestCase):
             job = job.wait_for_authorization("authorization required")
         elif status is AutonomousJobStatus.WAITING_TOOL:
             job = job.wait_for_tool("tool confirmation required")
+            job = job.with_working_context({
+                "pending_tool_request": {
+                    "tool_name": "echo",
+                    "arguments": {"x": 1},
+                    "invocation_id": "echo-1",
+                }
+            })
         elif status is AutonomousJobStatus.WAITING_INPUT:
             job = job.wait_for_input("input required")
         elif status is AutonomousJobStatus.PAUSED:
@@ -81,6 +88,7 @@ class M65Tests(unittest.TestCase):
             boundary.resume(AutonomousJobResumeRequest("j65", AutonomousJobResumeKind.TOOL))
         out = boundary.resume(AutonomousJobResumeRequest("j65", AutonomousJobResumeKind.TOOL, confirmed=True))
         self.assertEqual(out.job.status, AutonomousJobStatus.RUNNING)
+        self.assertIn("_runtime_resume_authorization", out.job.working_context)
 
     def test_input_wait_requires_and_applies_explicit_context(self):
         boundary, persistence, _ = self.boundary()
@@ -118,7 +126,15 @@ class M66Tests(unittest.TestCase):
 
     def test_confirmed_tool_resume_reenters_one_pulse(self):
         handoff, persistence = self.handoff(confirm=True)
-        persistence.persist(AutonomousJob("j66", "inspect").start().wait_for_tool("confirmation"))
+        waiting = AutonomousJob("j66", "inspect").start().wait_for_tool("confirmation")
+        waiting = waiting.with_working_context({
+            "pending_tool_request": {
+                "tool_name": "echo",
+                "arguments": {"x": 1},
+                "invocation_id": "a66",
+            }
+        })
+        persistence.persist(waiting)
         out = handoff.resume_and_pulse(AutonomousJobResumeRequest("j66", AutonomousJobResumeKind.TOOL, confirmed=True))
         self.assertTrue(out.pulse.cycle.tool_executed)
         self.assertEqual(out.job.status, AutonomousJobStatus.RUNNING)
