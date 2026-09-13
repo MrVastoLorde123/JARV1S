@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__
 from dataclasses import dataclass
 import hashlib
 from typing import Protocol
@@ -60,7 +60,11 @@ class AutonomousRuntimeScheduler:
             if claim is None: results.append(AutonomousRuntimeScheduleResult(schedule, None, False)); continue
             try: run = self._run_loop.run(schedule.job_id, max_pulses=1)
             except Exception as exc:
-                failure = f"{type(exc).__name__}: {exc}"; count = schedule.failure_count + 1; mult = min(2 ** (count - 1), max_backoff_multiplier)
+                failure = f"{type(exc).__name__}: {exc}"; count = schedule.failure_count + 1
+                mult = 1
+                for _ in range(count - 1):
+                    if mult >= max_backoff_multiplier: break
+                    mult = min(mult * 2, max_backoff_multiplier)
                 replacement = AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval * mult, schedule.interval, failure_count=count, last_failure=failure, last_failure_at=now)
                 done = self._store.complete_claim(schedule, claim, replacement); results.append(AutonomousRuntimeScheduleResult(schedule, None, False, claim, done, failure)); continue
             terminal = run.job.status in {AutonomousJobStatus.COMPLETED, AutonomousJobStatus.FAILED, AutonomousJobStatus.CANCELLED}; removed = terminal or run.job.resumable
