@@ -35,6 +35,10 @@ from .autonomous_reasoning_tool_gate import (
     AutonomousReasoningToolGate,
     AutonomousReasoningToolGateResult,
 )
+from .autonomous_tool_result_feedback import (
+    AutonomousToolResultFeedback,
+    AutonomousToolResultFeedbackAdapter,
+)
 
 __all__ = [
     "AutonomousAIReasoningProvider",
@@ -60,4 +64,6 @@ __all__ = [
     "AutonomousReasoningDisposition",
     "AutonomousReasoningToolGate",
     "AutonomousReasoningToolGateResult",
+    "AutonomousToolResultFeedback",
+    "AutonomousToolResultFeedbackAdapter",
 ]
