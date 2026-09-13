@@ -40,7 +40,9 @@ class V1TaskSchedulerSafetyTests(unittest.TestCase):
 
             second = runtime.tick(6)[0]
             self.assertIsNone(second.run)
-            self.assertEqual(second.schedule.failure_count, 0)
+            self.assertEqual(second.schedule.failure_count, 1)
+            self.assertEqual(second.schedule.last_failure, "RuntimeError: provider unavailable")
+            self.assertEqual(second.schedule.last_failure_at, 6)
             self.assertEqual(calls["count"], 2)
             self.assertEqual(runtime.schedule_store.load_due(15), [])
             self.assertEqual(len(runtime.schedule_store.load_due(16)), 1)
