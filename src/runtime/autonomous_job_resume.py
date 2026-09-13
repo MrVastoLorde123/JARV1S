@@ -15,6 +15,9 @@ class AutonomousJobResumeKind(str, Enum):
     PAUSE = "PAUSE"
 
 
+_RUNTIME_RESUME_AUTHORIZATION_KEY = "_runtime_resume_authorization"
+
+
 @dataclass(frozen=True)
 class AutonomousJobResumeRequest:
     job_id: str
@@ -68,6 +71,8 @@ class AutonomousJobResumeBoundary:
             raise ValueError("input_context must be a non-empty mapping when resuming input wait")
 
         next_job = job.resume()
+        if request.kind is AutonomousJobResumeKind.TOOL:
+            next_job = next_job.with_working_context({_RUNTIME_RESUME_AUTHORIZATION_KEY: AutonomousJobResumeKind.TOOL.value})
         if request.input_context is not None:
             next_job = next_job.with_working_context(request.input_context)
 
