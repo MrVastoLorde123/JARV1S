@@ -68,6 +68,62 @@ class V1TaskPlanAuthorityTests(unittest.TestCase):
         finally:
             directory.cleanup()
 
+    def test_model_cannot_complete_while_runtime_owned_plan_has_pending_steps(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        try:
+            path = Path(directory.name) / "jarvis.db"
+
+            def reason(job):
+                return AutonomousReasoningAction(
+                    "finish-too-early",
+                    AutonomousReasoningDisposition.COMPLETE,
+                    "the model says the work is complete",
+                    result="done",
+                )
+
+            runtime = SQLiteAutonomousTaskRuntime(reason, connection_factory=lambda: sqlite3.connect(path))
+            runtime.submit("finish only after plan", now=1, interval=5, job_id="plan-completion")
+            runtime.set_plan("plan-completion", AutonomousTaskPlan.from_descriptions(["first", "second"]))
+
+            result = runtime.tick(1)[0]
+
+            self.assertEqual(result.run.job.status, AutonomousJobStatus.RUNNING)
+            self.assertIn("task_completion_rejected", result.run.job.working_context)
+            self.assertIn("task_plan", result.run.job.working_context)
+        finally:
+            directory.cleanup()
+
+    def test_model_cannot_complete_with_a_new_incomplete_plan_proposal(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        try:
+            path = Path(directory.name) / "jarvis.db"
+
+            def reason(job):
+                return AutonomousReasoningAction(
+                    "finish-with-plan",
+                    AutonomousReasoningDisposition.COMPLETE,
+                    "complete while proposing remaining work",
+                    result="done",
+                    metadata={
+                        "task_plan": {
+                            "steps": [
+                                {"step_id": "step-1", "description": "still pending"},
+                            ]
+                        }
+                    },
+                )
+
+            runtime = SQLiteAutonomousTaskRuntime(reason, connection_factory=lambda: sqlite3.connect(path))
+            runtime.submit("finish only after new plan", now=1, interval=5, job_id="new-plan-completion")
+
+            result = runtime.tick(1)[0]
+
+            self.assertEqual(result.run.job.status, AutonomousJobStatus.RUNNING)
+            self.assertIn("task_completion_rejected", result.run.job.working_context)
+            self.assertEqual(runtime.plan("new-plan-completion").steps[0].step_id, "step-1")
+        finally:
+            directory.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main()
