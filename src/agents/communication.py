@@ -1,4 +1,12 @@
-"""Structured communication contract between agents and JARVIS."""
+"""Structured communication contract between agents and JARVIS.
+
+Agents are capable of reasoning, but they are not the authority. This module
+provides the language an agent uses to communicate with JARVIS about state,
+questions, blockers, capability needs, tool needs, escalation, and completion.
+
+The protocol deliberately does not grant permission. An agent can describe
+what it needs and why; JARVIS decides whether anything is granted.
+"""
 
 from __future__ import annotations
 
@@ -190,5 +198,4 @@ class AgentCommunicationGuide:
         object.__setattr__(self, "required_behaviors", _items(self.required_behaviors, "required_behaviors"))
 
 DEFAULT_AGENT_COMMUNICATION_GUIDE = AgentCommunicationGuide()
-
 __all__ = ["AgentCommunication", "AgentCommunicationGuide", "AgentDirective", "AgentDirectiveKind", "AgentMessageKind", "AgentNeed", "AgentNeedStatus", "AgentUrgency", "DEFAULT_AGENT_COMMUNICATION_GUIDE"]
