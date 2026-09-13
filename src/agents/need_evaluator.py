@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping
 
 from src.agents.communication import (
     AgentCommunication,
@@ -52,6 +51,11 @@ class AgentNeedEvaluator:
         if not isinstance(policy, AgentNeedPolicy):
             raise TypeError("policy must be an AgentNeedPolicy")
         self._policy = policy
+
+    @property
+    def policy(self) -> AgentNeedPolicy:
+        """Read-only access to the JARVIS-owned policy used for evaluation."""
+        return self._policy
 
     def evaluate(self, message: AgentCommunication) -> AgentDirective:
         if not isinstance(message, AgentCommunication):
