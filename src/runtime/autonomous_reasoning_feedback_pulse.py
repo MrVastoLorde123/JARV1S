@@ -7,6 +7,7 @@ from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_driver import AutonomousCycleDisposition
 from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceReceipt, AutonomousJobPersistenceService
 from src.runtime.autonomous_reasoning_tool_feedback_cycle import AutonomousReasoningToolFeedbackCycle, AutonomousReasoningToolFeedbackCycleCoordinator
+from src.runtime.autonomous_task_plan import AutonomousTaskPlan, AutonomousTaskPlanValidationError
 from src.runtime.autonomous_task_progress import AutonomousTaskProgressEvaluator, AutonomousTaskProgressResult, DeterministicAutonomousTaskProgressEvaluator
 
 
@@ -78,6 +79,24 @@ class AutonomousReasoningFeedbackPulse:
         progress = self._progress_evaluator.evaluate(current, next_job, cycle.cycle)
         progress_context = {"task_progress": progress.to_context()}
         d = cycle.cycle.disposition
+        completion_rejected = False
+        if d is AutonomousCycleDisposition.COMPLETE and "task_plan" in current.working_context:
+            try:
+                plan = AutonomousTaskPlan.from_mapping(current.working_context["task_plan"])
+            except (TypeError, AutonomousTaskPlanValidationError) as exc:
+                failed = next_job.fail(
+                    f"runtime-owned task plan could not be validated during completion: {type(exc).__name__}: {exc}",
+                    context_delta=progress_context,
+                )
+                receipt = self._persistence.persist(failed)
+                return AutonomousReasoningFeedbackPulseResult(failed, cycle, receipt, True, progress)
+            if not plan.complete:
+                completion_rejected = True
+                progress_context["task_completion_rejected"] = {
+                    "reason": "runtime-owned task plan is not complete",
+                    "remaining_steps": [step.to_dict() for step in plan.steps if not step.terminal],
+                }
+                d = AutonomousCycleDisposition.CONTINUE
         if d is AutonomousCycleDisposition.WAIT_AUTHORIZATION:
             next_job = next_job.wait_for_authorization(cycle.cycle.reason or "authorization required")
         elif d is AutonomousCycleDisposition.WAIT_INPUT:
@@ -93,7 +112,7 @@ class AutonomousReasoningFeedbackPulse:
         else:
             next_job = next_job.with_working_context(progress_context)
 
-        progressed = next_job != job
+        progressed = next_job != job or completion_rejected
         receipt = self._persistence.persist(next_job) if progressed else None
         return AutonomousReasoningFeedbackPulseResult(next_job, cycle, receipt, progressed, progress)
 
