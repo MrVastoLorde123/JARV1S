@@ -1,5 +1,6 @@
 """JARVIS V1 application-layer runtime components."""
 
+from .autonomous_ai_reasoning_provider import AutonomousAIReasoningProvider
 from .autonomous_job import (
     AutonomousJob,
     AutonomousJobEvent,
@@ -32,6 +33,7 @@ from .autonomous_reasoning_action import (
 )
 
 __all__ = [
+    "AutonomousAIReasoningProvider",
     "AutonomousCycleDisposition",
     "AutonomousCycleResult",
     "AutonomousJob",
