@@ -1,10 +1,10 @@
 """Structured communication contract between agents and JARVIS.
 
-Agents are capable of reasoning, but they are not the authority.  This module
+Agents are capable of reasoning, but they are not the authority. This module
 provides the language an agent uses to communicate with JARVIS about state,
 questions, blockers, capability needs, tool needs, escalation, and completion.
 
-The protocol deliberately does not grant permission.  An agent can describe
+The protocol deliberately does not grant permission. An agent can describe
 what it needs and why; JARVIS decides whether anything is granted.
 """
 
@@ -271,6 +271,26 @@ class AgentCommunication:
             kind=AgentMessageKind.BLOCKER,
             summary=summary,
             urgency=AgentUrgency.BLOCKING,
+            evidence=evidence or {},
+            blocking=True,
+        )
+
+    @classmethod
+    def escalation(
+        cls,
+        *,
+        agent_id: str,
+        task_id: str,
+        summary: str,
+        evidence: Mapping[str, Any] | None = None,
+        critical: bool = False,
+    ) -> "AgentCommunication":
+        return cls(
+            agent_id=agent_id,
+            task_id=task_id,
+            kind=AgentMessageKind.ESCALATION,
+            urgency=AgentUrgency.CRITICAL if critical else AgentUrgency.BLOCKING,
+            summary=summary,
             evidence=evidence or {},
             blocking=True,
         )
