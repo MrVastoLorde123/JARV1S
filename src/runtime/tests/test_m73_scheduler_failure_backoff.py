@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import MagicMock
 
-from src.runtime.autonomous_job import AutonomousJob
+from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceService
 from src.runtime.autonomous_reasoning_run_loop import AutonomousReasoningRunLoop
 from src.runtime.autonomous_runtime_scheduler import AutonomousRuntimeSchedule, AutonomousRuntimeScheduler
@@ -60,10 +61,9 @@ class SuccessfulRunLoop(AutonomousReasoningRunLoop):
         pass
 
     def run(self, job_id, *, max_pulses=1):
-        from unittest.mock import MagicMock
         result = MagicMock()
         result.job = MagicMock()
-        result.job.status = "RUNNING"
+        result.job.status = AutonomousJobStatus.RUNNING
         result.job.resumable = False
         return result
 
@@ -84,8 +84,7 @@ class M73SchedulerFailureBackoffTests(unittest.TestCase):
 
     def test_failure_backoff_grows_and_caps(self):
         scheduler, store = self.build(FailingRunLoop())
-        schedule = AutonomousRuntimeSchedule("j73", 1, 5, failure_count=2)
-        store.save(schedule)
+        store.save(AutonomousRuntimeSchedule("j73", 1, 5, failure_count=2))
         out = scheduler.tick(1, max_backoff_multiplier=8)[0]
         self.assertTrue(out.completed_claim)
         self.assertEqual(store.schedule.next_due, 21)
