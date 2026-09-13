@@ -52,7 +52,7 @@ class AutonomousReasoningWorker:
             plan = AutonomousTaskPlan.from_mapping(raw)
         except Exception as exc:
             raise ValueError(f"task_plan validation failed: {type(exc).__name__}: {exc}") from exc
-        return {"task_plan": plan.to_dict()}
+        return {"task_plan_proposal": plan.to_dict()}
 
     @staticmethod
     def _context(action: AutonomousReasoningAction, *, fallback_blocker: str | None = None) -> dict[str, object]:
@@ -81,8 +81,7 @@ class AutonomousReasoningWorker:
         d = action.disposition
         try:
             if d is AutonomousReasoningDisposition.CONTINUE:
-                context = AutonomousReasoningWorker._context(action)
-                return AutonomousCycleResult(AutonomousCycleDisposition.CONTINUE, "reasoning", action.rationale, context_delta=context)
+                return AutonomousCycleResult(AutonomousCycleDisposition.CONTINUE, "reasoning", action.rationale, context_delta=AutonomousReasoningWorker._context(action))
             if d is AutonomousReasoningDisposition.TOOL_REQUEST:
                 blocker = f"tool request pending: {action.tool_name}"
                 context = AutonomousReasoningWorker._context(action, fallback_blocker=blocker)
