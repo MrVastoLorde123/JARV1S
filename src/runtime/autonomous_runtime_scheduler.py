@@ -15,6 +15,7 @@ class AutonomousRuntimeSchedule:
     interval: float
     claim_token: str | None = None
     lease_until: float | None = None
+    failure_count: int = 0
 
     def __post_init__(self) -> None:
         if not isinstance(self.job_id, str) or not self.job_id.strip():
@@ -27,6 +28,8 @@ class AutonomousRuntimeSchedule:
             raise ValueError("claim_token must be non-empty or None")
         if self.lease_until is not None and (isinstance(self.lease_until, bool) or not isinstance(self.lease_until, (int, float))):
             raise TypeError("lease_until must be numeric or None")
+        if isinstance(self.failure_count, bool) or not isinstance(self.failure_count, int) or self.failure_count < 0:
+            raise ValueError("failure_count must be a non-negative integer")
         if (self.claim_token is None) != (self.lease_until is None):
             raise ValueError("claim_token and lease_until must be set together")
 
@@ -62,13 +65,15 @@ class AutonomousRuntimeScheduler:
         self._store.save(schedule)
         return schedule
 
-    def tick(self, now: float, *, max_jobs: int = 1, lease_seconds: float = 30.0) -> tuple[AutonomousRuntimeScheduleResult, ...]:
+    def tick(self, now: float, *, max_jobs: int = 1, lease_seconds: float = 30.0, max_backoff_multiplier: int = 8) -> tuple[AutonomousRuntimeScheduleResult, ...]:
         if isinstance(now, bool) or not isinstance(now, (int, float)):
             raise TypeError("now must be numeric")
         if isinstance(max_jobs, bool) or not isinstance(max_jobs, int) or max_jobs <= 0:
             raise ValueError("max_jobs must be positive")
         if isinstance(lease_seconds, bool) or not isinstance(lease_seconds, (int, float)) or lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
+        if isinstance(max_backoff_multiplier, bool) or not isinstance(max_backoff_multiplier, int) or max_backoff_multiplier <= 0:
+            raise ValueError("max_backoff_multiplier must be a positive integer")
         due = self._store.load_due(now)[:max_jobs]
         results: list[AutonomousRuntimeScheduleResult] = []
         for schedule in due:
@@ -79,7 +84,15 @@ class AutonomousRuntimeScheduler:
             try:
                 run = self._run_loop.run(schedule.job_id, max_pulses=1)
             except Exception as exc:
-                replacement = AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval)
+                next_failure_count = schedule.failure_count + 1
+                delay_multiplier = min(2 ** (next_failure_count - 1), max_backoff_multiplier)
+                retry_delay = schedule.interval * delay_multiplier
+                replacement = AutonomousRuntimeSchedule(
+                    schedule.job_id,
+                    now + retry_delay,
+                    schedule.interval,
+                    failure_count=next_failure_count,
+                )
                 completed_claim = self._store.complete_claim(schedule, claim, replacement)
                 results.append(
                     AutonomousRuntimeScheduleResult(
@@ -95,7 +108,7 @@ class AutonomousRuntimeScheduler:
             terminal = run.job.status in {AutonomousJobStatus.COMPLETED, AutonomousJobStatus.FAILED, AutonomousJobStatus.CANCELLED}
             waiting = run.job.resumable
             removed = terminal or waiting
-            replacement = None if removed else AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval)
+            replacement = None if removed else AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval, failure_count=0)
             completed_claim = self._store.complete_claim(schedule, claim, replacement)
             results.append(AutonomousRuntimeScheduleResult(schedule, run, removed, claim, completed_claim, None))
         return tuple(results)
