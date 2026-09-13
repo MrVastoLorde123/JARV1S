@@ -14,7 +14,7 @@ class Store:
     def load_due(self,n): return [] if self.schedule is None or self.schedule.next_due>n else [self.schedule]
     def claim(self,schedule,now,lease_seconds):
         token="lease-1"
-        self.schedule=AutonomousRuntimeSchedule(schedule.job_id,schedule.next_due,schedule.interval,claim_token=token,lease_until=now+lease_seconds)
+        self.schedule=AutonomousRuntimeSchedule(schedule.job_id,schedule.next_due,schedule.interval,claim_token=token,lease_until=now+lease_seconds,failure_count=schedule.failure_count)
         return token
     def complete_claim(self,schedule,token,replacement):
         if self.schedule is None or self.schedule.claim_token != token: return False
@@ -34,7 +34,8 @@ class M72SchedulerFailureRecoveryTests(unittest.TestCase):
         out=scheduler.tick(1)[0]
         self.assertIsNone(out.run); self.assertEqual(out.failure,"RuntimeError: worker crashed")
         self.assertTrue(out.completed_claim); self.assertFalse(out.removed)
-        self.assertEqual(store.schedule.next_due,6); self.assertIsNone(store.schedule.claim_token)
+        self.assertEqual(store.schedule.next_due,11); self.assertIsNone(store.schedule.claim_token)
+        self.assertEqual(store.schedule.failure_count,1)
     def test_failure_is_not_success(self):
         store=Store(); scheduler=self.build(store); scheduler.schedule("j72",next_due=1,interval=5)
         out=scheduler.tick(1)[0]
