@@ -6,11 +6,7 @@ from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_driver import AutonomousCycleDisposition
 from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceReceipt, AutonomousJobPersistenceService
 from src.runtime.autonomous_reasoning_tool_feedback_cycle import AutonomousReasoningToolFeedbackCycle, AutonomousReasoningToolFeedbackCycleCoordinator
-from src.runtime.autonomous_task_progress import (
-    AutonomousTaskProgressEvaluator,
-    AutonomousTaskProgressResult,
-    DeterministicAutonomousTaskProgressEvaluator,
-)
+from src.runtime.autonomous_task_progress import AutonomousTaskProgressEvaluator, AutonomousTaskProgressResult, DeterministicAutonomousTaskProgressEvaluator
 
 
 @dataclass(frozen=True)
@@ -23,21 +19,11 @@ class AutonomousReasoningFeedbackPulseResult:
 
     @property
     def waiting(self) -> bool:
-        return self.job.status in {
-            AutonomousJobStatus.WAITING_AUTHORIZATION,
-            AutonomousJobStatus.WAITING_INPUT,
-            AutonomousJobStatus.WAITING_TOOL,
-            AutonomousJobStatus.PAUSED,
-        }
+        return self.job.status in {AutonomousJobStatus.WAITING_AUTHORIZATION, AutonomousJobStatus.WAITING_INPUT, AutonomousJobStatus.WAITING_TOOL, AutonomousJobStatus.PAUSED}
 
 
 class AutonomousReasoningFeedbackPulse:
-    def __init__(
-        self,
-        persistence: AutonomousJobPersistenceService,
-        coordinator: AutonomousReasoningToolFeedbackCycleCoordinator,
-        progress_evaluator: AutonomousTaskProgressEvaluator | None = None,
-    ) -> None:
+    def __init__(self, persistence: AutonomousJobPersistenceService, coordinator: AutonomousReasoningToolFeedbackCycleCoordinator, progress_evaluator: AutonomousTaskProgressEvaluator | None = None) -> None:
         if not isinstance(persistence, AutonomousJobPersistenceService):
             raise TypeError("persistence must be an AutonomousJobPersistenceService")
         if not isinstance(coordinator, AutonomousReasoningToolFeedbackCycleCoordinator):
@@ -57,13 +43,11 @@ class AutonomousReasoningFeedbackPulse:
         current = job.start() if job.status is AutonomousJobStatus.QUEUED else job
         if current.status is not AutonomousJobStatus.RUNNING:
             return AutonomousReasoningFeedbackPulseResult(current, None, None, current != job, None)
+
         cycle = self._coordinator.run_cycle(current, confirmed=confirmed)
-        next_job = current.record_step(
-            phase=cycle.cycle.phase,
-            summary=cycle.cycle.summary,
-            observation=cycle.cycle.observation,
-            context_delta=cycle.cycle.context_delta,
-        )
+        next_job = current.record_step(phase=cycle.cycle.phase, summary=cycle.cycle.summary, observation=cycle.cycle.observation, context_delta=cycle.cycle.context_delta)
+        progress = self._progress_evaluator.evaluate(current, next_job, cycle.cycle)
+        progress_context = {"task_progress": progress.to_context()}
         d = cycle.cycle.disposition
         if d is AutonomousCycleDisposition.WAIT_AUTHORIZATION:
             next_job = next_job.wait_for_authorization(cycle.cycle.reason or "authorization required")
@@ -74,12 +58,12 @@ class AutonomousReasoningFeedbackPulse:
         elif d is AutonomousCycleDisposition.PAUSE:
             next_job = next_job.pause(cycle.cycle.reason or "job paused")
         elif d is AutonomousCycleDisposition.COMPLETE:
-            next_job = next_job.complete(cycle.cycle.result or "job completed")
+            next_job = next_job.complete(cycle.cycle.result or "job completed", context_delta=progress_context)
         elif d is AutonomousCycleDisposition.FAIL:
-            next_job = next_job.fail(cycle.cycle.reason or "job failed")
+            next_job = next_job.fail(cycle.cycle.reason or "job failed", context_delta=progress_context)
+        else:
+            next_job = next_job.with_working_context(progress_context)
 
-        progress = self._progress_evaluator.evaluate(current, next_job, cycle.cycle)
-        next_job = next_job.with_working_context({"task_progress": progress.to_context()}) if not next_job.terminal else next_job
         progressed = next_job != job
         receipt = self._persistence.persist(next_job) if progressed else None
         return AutonomousReasoningFeedbackPulseResult(next_job, cycle, receipt, progressed, progress)
