@@ -152,6 +152,41 @@ class V1TaskToolResumeContinuationTests(unittest.TestCase):
         finally:
             directory.cleanup()
 
+    def test_resume_authorization_is_consumed_before_provider_failure(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        try:
+            path = Path(directory.name) / "jarvis.db"
+            tool = _ConfirmedTool()
+            registry = ToolRegistry()
+            registry.register(tool)
+            calls = {"count": 0}
+
+            def reason(job):
+                calls["count"] += 1
+                if calls["count"] == 1:
+                    return AutonomousReasoningAction(
+                        "request-tool",
+                        AutonomousReasoningDisposition.TOOL_REQUEST,
+                        "inspect the confirmed probe",
+                        tool_name="confirmed_probe",
+                        arguments={"probe": "v1"},
+                    )
+                raise RuntimeError("provider unavailable")
+
+            runtime = self.make_runtime(path, registry, reason)
+            runtime.submit("consume authorization before failure", now=1, interval=5, job_id="failure-consume")
+            self.assertEqual(runtime.tick(1)[0].run.job.status, AutonomousJobStatus.WAITING_TOOL)
+
+            runtime.resume("failure-consume", now=2, interval=5, confirmed=True)
+            failed = runtime.tick(2)[0]
+            self.assertIsNone(failed.run)
+
+            restored = runtime.inspect("failure-consume")
+            self.assertIsNone(restored.working_context.get("_runtime_resume_authorization"))
+            self.assertEqual(tool.calls, [])
+        finally:
+            directory.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
