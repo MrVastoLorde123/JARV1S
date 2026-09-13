@@ -18,6 +18,7 @@ from .coding_agent_policy import (
 )
 from .communication_service import AgentCommunicationRoute, AgentCommunicationService
 from .need_evaluator import AgentNeedDecision, AgentNeedEvaluator, AgentNeedPolicy
+from .permanent_agent import PermanentAgentDefinition, PermanentAgentRegistry
 
 __all__ = [
     "AgentCommunication",
@@ -37,4 +38,6 @@ __all__ = [
     "CodingAgentPolicy",
     "CodingWorkKind",
     "DEFAULT_CODING_AGENT_POLICY",
+    "PermanentAgentDefinition",
+    "PermanentAgentRegistry",
 ]
