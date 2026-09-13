@@ -8,7 +8,10 @@ from src.runtime.autonomous_job_persistence import (
     AutonomousJobPersistenceReceipt,
     AutonomousJobPersistenceService,
 )
-from src.runtime.autonomous_runtime_scheduler import AutonomousRuntimeSchedule
+from src.runtime.autonomous_runtime_scheduler import (
+    AutonomousRuntimeSchedule,
+    AutonomousRuntimeScheduler,
+)
 from src.runtime.autonomous_task_runtime import AutonomousTaskRuntime
 
 
