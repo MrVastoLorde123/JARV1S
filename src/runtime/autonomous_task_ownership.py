@@ -1,0 +1,120 @@
+"""Durable task ownership state derived from an autonomous-job snapshot."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Mapping
+
+from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
+
+_MAX_ITEM_LENGTH = 2048
+_MAX_ITEMS = 64
+
+
+def _text(value: Any, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    if len(value) > _MAX_ITEM_LENGTH:
+        raise ValueError(f"{field_name} exceeds maximum length of {_MAX_ITEM_LENGTH}")
+    return value.strip()
+
+
+def _remaining_work(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, (list, tuple)):
+        raise ValueError("remaining_work must be a list or tuple")
+    if len(value) > _MAX_ITEMS:
+        raise ValueError(f"remaining_work exceeds maximum size of {_MAX_ITEMS}")
+    return tuple(_text(item, "remaining_work item") for item in value)
+
+
+@dataclass(frozen=True)
+class AutonomousTaskOwnershipState:
+    """Explicit operational view of what JARVIS knows about one owned task."""
+
+    job_id: str
+    goal: str
+    status: AutonomousJobStatus
+    step_count: int
+    max_steps: int
+    remaining_work: tuple[str, ...] = ()
+    next_action: str | None = None
+    blocker: str | None = None
+    waiting_reason: str | None = None
+    last_step_summary: str | None = None
+    last_observation: str | None = None
+
+    @property
+    def terminal(self) -> bool:
+        return self.status in {
+            AutonomousJobStatus.COMPLETED,
+            AutonomousJobStatus.FAILED,
+            AutonomousJobStatus.CANCELLED,
+        }
+
+    @property
+    def working(self) -> bool:
+        return self.status in {
+            AutonomousJobStatus.QUEUED,
+            AutonomousJobStatus.RUNNING,
+        }
+
+    @property
+    def blocked(self) -> bool:
+        return self.status in {
+            AutonomousJobStatus.WAITING_AUTHORIZATION,
+            AutonomousJobStatus.WAITING_INPUT,
+            AutonomousJobStatus.WAITING_TOOL,
+            AutonomousJobStatus.PAUSED,
+        }
+
+    @property
+    def complete(self) -> bool:
+        return self.status is AutonomousJobStatus.COMPLETED
+
+    @classmethod
+    def from_job(cls, job: AutonomousJob) -> "AutonomousTaskOwnershipState":
+        if not isinstance(job, AutonomousJob):
+            raise TypeError("job must be an AutonomousJob")
+
+        raw = job.working_context.get("task_ownership", {})
+        if not isinstance(raw, Mapping):
+            raise ValueError("task_ownership working context must be a mapping")
+
+        remaining = _remaining_work(raw.get("remaining_work", []))
+        next_action = raw.get("next_action")
+        blocker = raw.get("blocker")
+        waiting_reason = job.waiting_reason
+
+        if next_action is not None:
+            next_action = _text(next_action, "next_action")
+        if blocker is not None:
+            blocker = _text(blocker, "blocker")
+
+        last_step = job.steps[-1] if job.steps else None
+        return cls(
+            job_id=job.job_id,
+            goal=job.goal,
+            status=job.status,
+            step_count=job.step_count,
+            max_steps=job.max_steps,
+            remaining_work=remaining,
+            next_action=next_action,
+            blocker=blocker or waiting_reason,
+            waiting_reason=waiting_reason,
+            last_step_summary=last_step.summary if last_step else None,
+            last_observation=last_step.observation if last_step else None,
+        )
+
+    def to_context(self) -> dict[str, object]:
+        return {
+            "task_ownership": {
+                "remaining_work": list(self.remaining_work),
+                "next_action": self.next_action,
+                "blocker": self.blocker,
+            }
+        }
+
+
+__all__ = ["AutonomousTaskOwnershipState"]
