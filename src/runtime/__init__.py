@@ -8,12 +8,24 @@ from .autonomous_job import (
     AutonomousJobStep,
     AutonomousJobValidationError,
 )
+from .autonomous_job_driver import (
+    AutonomousCycleDisposition,
+    AutonomousCycleResult,
+    AutonomousJobDriver,
+    AutonomousJobDriverValidationError,
+    AutonomousJobWorker,
+)
 
 __all__ = [
+    "AutonomousCycleDisposition",
+    "AutonomousCycleResult",
     "AutonomousJob",
+    "AutonomousJobDriver",
+    "AutonomousJobDriverValidationError",
     "AutonomousJobEvent",
     "AutonomousJobEventKind",
     "AutonomousJobStatus",
     "AutonomousJobStep",
     "AutonomousJobValidationError",
+    "AutonomousJobWorker",
 ]
