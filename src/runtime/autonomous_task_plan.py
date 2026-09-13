@@ -29,16 +29,13 @@ _MAX_STEPS = 256
 def _text(value: str, field_name: str, maximum: int) -> str:
     if not isinstance(value, str) or not value.strip():
         raise AutonomousTaskPlanValidationError(f"{field_name} must be a non-empty string")
-    value = value.strip()
     if len(value) > maximum:
         raise AutonomousTaskPlanValidationError(f"{field_name} exceeds maximum length of {maximum}")
-    return value
+    return value.strip()
 
 
 @dataclass(frozen=True)
 class AutonomousTaskPlanStep:
-    """One durable unit of work within a task plan."""
-
     step_id: str
     description: str
     status: AutonomousTaskPlanStepStatus = AutonomousTaskPlanStepStatus.PENDING
@@ -64,8 +61,6 @@ class AutonomousTaskPlanStep:
 
 @dataclass(frozen=True)
 class AutonomousTaskPlan:
-    """Immutable durable plan snapshot independent of model authority."""
-
     steps: tuple[AutonomousTaskPlanStep, ...]
 
     def __post_init__(self) -> None:
@@ -113,11 +108,7 @@ class AutonomousTaskPlan:
 
     @property
     def current(self) -> AutonomousTaskPlanStep | None:
-        for status in (
-            AutonomousTaskPlanStepStatus.IN_PROGRESS,
-            AutonomousTaskPlanStepStatus.PENDING,
-            AutonomousTaskPlanStepStatus.BLOCKED,
-        ):
+        for status in (AutonomousTaskPlanStepStatus.IN_PROGRESS, AutonomousTaskPlanStepStatus.PENDING, AutonomousTaskPlanStepStatus.BLOCKED):
             for step in self.steps:
                 if step.status is status:
                     return step
@@ -140,16 +131,24 @@ class AutonomousTaskPlan:
         return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.IN_PROGRESS))
 
     def complete_step(self, step_id: str, reason: str | None = None) -> "AutonomousTaskPlan":
-        step = self._require(step_id)
-        if step.terminal:
-            raise AutonomousTaskPlanValidationError("terminal plan steps cannot be completed")
-        return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.COMPLETED, reason=reason))
+        return self._finish(step_id, AutonomousTaskPlanStepStatus.COMPLETED, reason, "complete")
+
+    def skip_step(self, step_id: str, reason: str) -> "AutonomousTaskPlan":
+        return self._finish(step_id, AutonomousTaskPlanStepStatus.SKIPPED, reason, "skip")
 
     def block(self, step_id: str, reason: str) -> "AutonomousTaskPlan":
         step = self._require(step_id)
         if step.terminal:
             raise AutonomousTaskPlanValidationError("terminal plan steps cannot be blocked")
         return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.BLOCKED, reason=reason))
+
+    def _finish(self, step_id: str, status: AutonomousTaskPlanStepStatus, reason: str | None, operation: str) -> "AutonomousTaskPlan":
+        step = self._require(step_id)
+        if step.terminal:
+            raise AutonomousTaskPlanValidationError(f"terminal plan steps cannot be {operation}d")
+        if status is AutonomousTaskPlanStepStatus.SKIPPED and not reason:
+            raise AutonomousTaskPlanValidationError("SKIPPED steps require a reason")
+        return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=status, reason=reason))
 
     def _require(self, step_id: str) -> AutonomousTaskPlanStep:
         _text(step_id, "step_id", _MAX_STEP_ID)
