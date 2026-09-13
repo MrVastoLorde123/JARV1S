@@ -177,141 +177,32 @@ class AgentCommunication:
         return tuple(need for need in self.needs if need.pending)
 
     @classmethod
-    def status(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        evidence: Mapping[str, Any] | None = None,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.STATUS,
-            summary=summary,
-            urgency=AgentUrgency.INFORMATIONAL,
-            evidence=evidence or {},
-        )
+    def status(cls, *, agent_id: str, task_id: str, summary: str, evidence: Mapping[str, Any] | None = None) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.STATUS, summary=summary, urgency=AgentUrgency.INFORMATIONAL, evidence=evidence or {})
 
     @classmethod
-    def question_message(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        question: str,
-        blocking: bool = True,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.QUESTION,
-            summary=summary,
-            question=question,
-            blocking=blocking,
-        )
+    def question_message(cls, *, agent_id: str, task_id: str, summary: str, question: str, blocking: bool = True) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.QUESTION, summary=summary, question=question, blocking=blocking)
 
     @classmethod
-    def capability_request(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        needs: tuple[AgentNeed, ...],
-        requested_action: str | None = None,
-        blocking: bool = True,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.CAPABILITY_REQUEST,
-            summary=summary,
-            needs=needs,
-            requested_action=requested_action,
-            blocking=blocking,
-        )
+    def capability_request(cls, *, agent_id: str, task_id: str, summary: str, needs: tuple[AgentNeed, ...], requested_action: str | None = None, blocking: bool = True) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.CAPABILITY_REQUEST, summary=summary, needs=needs, requested_action=requested_action, blocking=blocking)
 
     @classmethod
-    def tool_request(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        tool_name: str,
-        reason: str,
-        scope: Mapping[str, Any] | None = None,
-        blocking: bool = True,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.TOOL_REQUEST,
-            summary=summary,
-            needs=(AgentNeed(tool_name, reason, scope=scope or {}),),
-            requested_action=f"Invoke tool: {tool_name}",
-            blocking=blocking,
-        )
+    def tool_request(cls, *, agent_id: str, task_id: str, summary: str, tool_name: str, reason: str, scope: Mapping[str, Any] | None = None, blocking: bool = True) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.TOOL_REQUEST, summary=summary, needs=(AgentNeed(tool_name, reason, scope=scope or {}),), requested_action=f"Invoke tool: {tool_name}", blocking=blocking)
 
     @classmethod
-    def blocker(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        evidence: Mapping[str, Any] | None = None,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.BLOCKER,
-            summary=summary,
-            urgency=AgentUrgency.BLOCKING,
-            evidence=evidence or {},
-            blocking=True,
-        )
+    def blocker(cls, *, agent_id: str, task_id: str, summary: str, evidence: Mapping[str, Any] | None = None) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.BLOCKER, summary=summary, urgency=AgentUrgency.BLOCKING, evidence=evidence or {}, blocking=True)
 
     @classmethod
-    def escalation(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        evidence: Mapping[str, Any] | None = None,
-        critical: bool = False,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.ESCALATION,
-            urgency=AgentUrgency.CRITICAL if critical else AgentUrgency.BLOCKING,
-            summary=summary,
-            evidence=evidence or {},
-            blocking=True,
-        )
+    def escalation(cls, *, agent_id: str, task_id: str, summary: str, evidence: Mapping[str, Any] | None = None, critical: bool = False) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.ESCALATION, urgency=AgentUrgency.CRITICAL if critical else AgentUrgency.BLOCKING, summary=summary, evidence=evidence or {}, blocking=True)
 
     @classmethod
-    def completion(
-        cls,
-        *,
-        agent_id: str,
-        task_id: str,
-        summary: str,
-        evidence: Mapping[str, Any] | None = None,
-    ) -> "AgentCommunication":
-        return cls(
-            agent_id=agent_id,
-            task_id=task_id,
-            kind=AgentMessageKind.COMPLETION,
-            summary=summary,
-            urgency=AgentUrgency.INFORMATIONAL,
-            evidence=evidence or {},
-        )
+    def completion(cls, *, agent_id: str, task_id: str, summary: str, evidence: Mapping[str, Any] | None = None) -> "AgentCommunication":
+        return cls(agent_id=agent_id, task_id=task_id, kind=AgentMessageKind.COMPLETION, summary=summary, urgency=AgentUrgency.INFORMATIONAL, evidence=evidence or {})
 
 
 @dataclass(frozen=True)
@@ -369,7 +260,6 @@ class AgentCommunicationGuide:
 
 
 DEFAULT_AGENT_COMMUNICATION_GUIDE = AgentCommunicationGuide()
-
 
 __all__ = [
     "AgentCommunication",
