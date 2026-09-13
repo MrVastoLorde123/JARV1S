@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_driver import AutonomousCycleDisposition
@@ -63,7 +63,7 @@ class AutonomousReasoningFeedbackPulse:
         cycle = self._coordinator.run_cycle(
             reasoning_job,
             confirmed=continuation_confirmed,
-            authorization_token=runtime_resume_authorization if isinstance(runtime_resume_authorization, dict) else None,
+            authorization_token=runtime_resume_authorization if isinstance(runtime_resume_authorization, Mapping) else None,
         )
         cycle_context = dict(cycle.cycle.context_delta)
         proposed_plan = cycle_context.pop("task_plan_proposal", None)
