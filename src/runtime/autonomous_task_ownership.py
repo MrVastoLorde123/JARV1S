@@ -45,6 +45,19 @@ class AutonomousTaskOwnershipState:
     last_step_summary: str | None = None
     last_observation: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.remaining_work and self.next_action is None:
+            raise ValueError("remaining_work requires a next_action")
+        if self.status in {
+            AutonomousJobStatus.WAITING_AUTHORIZATION,
+            AutonomousJobStatus.WAITING_INPUT,
+            AutonomousJobStatus.WAITING_TOOL,
+            AutonomousJobStatus.PAUSED,
+        } and not self.blocker:
+            raise ValueError("blocked task state requires a blocker")
+        if self.status is AutonomousJobStatus.COMPLETED and self.remaining_work:
+            raise ValueError("completed task state cannot retain remaining_work")
+
     @property
     def terminal(self) -> bool:
         return self.status in {
@@ -86,6 +99,8 @@ class AutonomousTaskOwnershipState:
             next_action = _text(next_action, "next_action")
         if blocker is not None:
             blocker = _text(blocker, "blocker")
+        if remaining and next_action is None:
+            raise ValueError("remaining_work requires a next_action")
         return {
             "remaining_work": list(remaining),
             "next_action": next_action,
