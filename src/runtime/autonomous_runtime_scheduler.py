@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import hashlib
+import uuid
 from typing import Protocol
 from src.runtime.autonomous_job import AutonomousJobStatus
 from src.runtime.autonomous_reasoning_run_loop import AutonomousReasoningRunLoop, AutonomousReasoningRunResult
@@ -73,7 +73,10 @@ class AutonomousRuntimeScheduler:
         return tuple(results)
 
 def scheduler_claim_token(job_id: str, now: float, lease_seconds: float) -> str:
-    return f"scheduler-claim-{hashlib.sha256(f'{job_id}:{now}:{lease_seconds}'.encode()).hexdigest()[:24]}"
+    if not isinstance(job_id, str) or not job_id.strip(): raise ValueError("job_id must be non-empty")
+    if isinstance(now, bool) or not isinstance(now, (int, float)): raise TypeError("now must be numeric")
+    if isinstance(lease_seconds, bool) or not isinstance(lease_seconds, (int, float)) or lease_seconds <= 0: raise ValueError("lease_seconds must be positive")
+    return f"scheduler-claim-{uuid.uuid4().hex}"
 
 def scheduler_lease_expired(lease_until: float, now: float) -> bool:
     if isinstance(lease_until, bool) or not isinstance(lease_until, (int, float)): raise TypeError("lease_until must be numeric")
