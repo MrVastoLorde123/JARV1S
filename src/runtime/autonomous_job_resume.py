@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Mapping, Any
+from typing import Any, Mapping
 
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceReceipt, AutonomousJobPersistenceService
@@ -57,28 +57,19 @@ class AutonomousJobResumeBoundary:
             AutonomousJobResumeKind.PAUSE: AutonomousJobStatus.PAUSED,
         }[request.kind]
         if job.status is not expected:
-            raise ValueError(
-                f"resume kind {request.kind.value} does not match persisted status {job.status.value}"
-            )
-
+            raise ValueError(f"resume kind {request.kind.value} does not match persisted status {job.status.value}")
         if request.kind in {AutonomousJobResumeKind.AUTHORIZATION, AutonomousJobResumeKind.TOOL} and not request.confirmed:
             raise PermissionError(f"explicit confirmation is required to resume {request.kind.value.lower()} wait")
-
-        next_job = job.resume()
-        if request.kind is AutonomousJobResumeKind.INPUT:
-            if not isinstance(request.input_context, Mapping) or not request.input_context:
-                raise ValueError("input_context must be a non-empty mapping when resuming input wait")
-            next_job = next_job.with_working_context(request.input_context)
-        elif request.input_context is not None:
+        if request.kind is not AutonomousJobResumeKind.INPUT and request.input_context is not None:
             raise ValueError("input_context is only valid when resuming input wait")
 
-        receipt = self._persistence.persist(next_job)
-        return AutonomousJobResumeResult(next_job, receipt)
+        next_job = job.resume()
+        if request.input_context is not None:
+            if not isinstance(request.input_context, Mapping):
+                raise ValueError("input_context must be a mapping")
+            next_job = next_job.with_working_context(request.input_context)
+
+        return AutonomousJobResumeResult(next_job, self._persistence.persist(next_job))
 
 
-__all__ = [
-    "AutonomousJobResumeBoundary",
-    "AutonomousJobResumeKind",
-    "AutonomousJobResumeRequest",
-    "AutonomousJobResumeResult",
-]
+__all__ = ["AutonomousJobResumeBoundary", "AutonomousJobResumeKind", "AutonomousJobResumeRequest", "AutonomousJobResumeResult"]
