@@ -9,18 +9,26 @@ from src.agents.communication import (
     AgentNeedStatus,
 )
 from src.agents.communication_service import AgentCommunicationService
-from src.agents.need_evaluator import AgentNeedEvaluator, AgentNeedPolicy
+from src.agents.need_evaluator import AgentNeedPolicy
+from src.agents.permanent_agent import PermanentAgentDefinition, PermanentAgentRegistry
 
 
 class AgentCommunicationServiceTests(unittest.TestCase):
     def setUp(self) -> None:
-        evaluator = AgentNeedEvaluator(
-            AgentNeedPolicy(
-                allowed_capabilities=frozenset({"read_repo", "write_repo", "run_tests"}),
-                max_scope_keys=3,
+        registry = PermanentAgentRegistry(
+            (
+                PermanentAgentDefinition(
+                    agent_id="coding-agent",
+                    name="Coding Agent",
+                    role="software engineering",
+                    need_policy=AgentNeedPolicy(
+                        allowed_capabilities=frozenset({"read_repo", "write_repo", "run_tests"}),
+                        max_scope_keys=3,
+                    ),
+                ),
             )
         )
-        self.service = AgentCommunicationService({"coding-agent": evaluator})
+        self.service = AgentCommunicationService(registry)
 
     def test_capability_request_is_evaluated_by_agent_policy(self) -> None:
         message = AgentCommunication.capability_request(
