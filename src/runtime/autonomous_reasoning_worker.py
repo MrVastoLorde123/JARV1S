@@ -48,7 +48,10 @@ class AutonomousReasoningWorker:
             return None
         if not isinstance(raw, Mapping):
             raise ValueError("task_plan action metadata must be a mapping")
-        plan = AutonomousTaskPlan.from_mapping(raw)
+        try:
+            plan = AutonomousTaskPlan.from_mapping(raw)
+        except Exception as exc:
+            raise ValueError(f"task_plan validation failed: {type(exc).__name__}: {exc}") from exc
         return {"task_plan": plan.to_dict()}
 
     @staticmethod
@@ -68,7 +71,7 @@ class AutonomousReasoningWorker:
             AutonomousCycleDisposition.FAIL,
             "reasoning",
             "reasoning action could not be translated into a valid cycle",
-            reason=f"reasoning context validation failed: {type(exc).__name__}: {exc}",
+            reason=f"task_plan context validation failed: {type(exc).__name__}: {exc}" if "task_plan" in str(exc) else f"reasoning context validation failed: {type(exc).__name__}: {exc}",
         )
 
     @staticmethod
