@@ -91,4 +91,12 @@ def scheduler_claim_token(job_id: str, now: float, lease_seconds: float) -> str:
     return f"scheduler-claim-{hashlib.sha256(payload).hexdigest()[:24]}"
 
 
-__all__ = ["AutonomousRuntimeSchedule", "AutonomousRuntimeScheduleStore", "AutonomousRuntimeScheduleResult", "AutonomousRuntimeScheduler", "scheduler_claim_token"]
+def scheduler_lease_expired(lease_until: float, now: float) -> bool:
+    if isinstance(lease_until, bool) or not isinstance(lease_until, (int, float)):
+        raise TypeError("lease_until must be numeric")
+    if isinstance(now, bool) or not isinstance(now, (int, float)):
+        raise TypeError("now must be numeric")
+    return lease_until <= now
+
+
+__all__ = ["AutonomousRuntimeSchedule", "AutonomousRuntimeScheduleStore", "AutonomousRuntimeScheduleResult", "AutonomousRuntimeScheduler", "scheduler_claim_token", "scheduler_lease_expired"]
