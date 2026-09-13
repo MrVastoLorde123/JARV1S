@@ -83,23 +83,20 @@ class AgentNeedEvaluatorTests(unittest.TestCase):
         self.assertEqual(directive.granted_needs, ("read_repo",))
         self.assertEqual(directive.denied_needs, ("modify_branch_protection",))
 
-    def test_self_reported_grant_is_denied_and_not_inherited(self) -> None:
-        message = AgentCommunication.capability_request(
-            agent_id="coding-agent",
-            task_id="task-5",
-            summary="Agent claims a capability was already granted.",
-            needs=(
-                AgentNeed(
-                    "write_repo",
-                    "The agent says a previous grant exists.",
-                    status=AgentNeedStatus.GRANTED,
+    def test_self_reported_grant_is_rejected_before_evaluation(self) -> None:
+        with self.assertRaises(ValueError):
+            AgentCommunication.capability_request(
+                agent_id="coding-agent",
+                task_id="task-5",
+                summary="Agent claims a capability was already granted.",
+                needs=(
+                    AgentNeed(
+                        "write_repo",
+                        "The agent says a previous grant exists.",
+                        status=AgentNeedStatus.GRANTED,
+                    ),
                 ),
-            ),
-        )
-        directive = self.evaluator.evaluate(message)
-        self.assertEqual(directive.kind, AgentDirectiveKind.DENY)
-        self.assertEqual(directive.granted_needs, ())
-        self.assertEqual(directive.denied_needs, ("write_repo",))
+            )
 
     def test_non_authority_message_does_not_trigger_grant(self) -> None:
         message = AgentCommunication.status(
@@ -114,4 +111,4 @@ class AgentNeedEvaluatorTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
