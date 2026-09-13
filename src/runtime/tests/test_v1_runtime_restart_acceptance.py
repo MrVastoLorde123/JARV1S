@@ -152,8 +152,9 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
             scheduler1.schedule("retry", next_due=10, interval=5)
             failed = scheduler1.tick(10)[0]
             self.assertEqual(failed.failure, "RuntimeError: simulated restart failure")
-            self.assertEqual(schedule_store1.load_due(10)[0].failure_count, 1)
-            self.assertEqual(schedule_store1.load_due(10)[0].next_due, 15)
+            persisted = schedule_store1.load_due(15)[0]
+            self.assertEqual(persisted.failure_count, 1)
+            self.assertEqual(persisted.next_due, 15)
 
             def complete(_job):
                 return AutonomousReasoningAction(
