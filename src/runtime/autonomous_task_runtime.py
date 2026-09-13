@@ -24,6 +24,11 @@ from src.runtime.autonomous_runtime_scheduler import (
     AutonomousRuntimeScheduleResult,
     AutonomousRuntimeScheduler,
 )
+from src.runtime.autonomous_task_ownership import AutonomousTaskOwnershipState
+from src.runtime.autonomous_task_ownership_controller import (
+    AutonomousTaskOwnershipController,
+    AutonomousTaskOwnershipUpdateResult,
+)
 from src.tools.registry import ToolRegistry
 from src.tools.service import ToolService
 
@@ -60,6 +65,7 @@ class AutonomousTaskRuntime:
             raise TypeError("scheduler must be an AutonomousRuntimeScheduler")
         self._persistence = persistence
         self._scheduler = scheduler
+        self._ownership_controller = AutonomousTaskOwnershipController(self, persistence)
 
     def submit(
         self,
@@ -88,6 +94,26 @@ class AutonomousTaskRuntime:
     def inspect(self, job_id: str) -> AutonomousJob | None:
         """Return the durable task snapshot without changing its state."""
         return self._persistence.restore(job_id)
+
+    def ownership(self, job_id: str) -> AutonomousTaskOwnershipState | None:
+        """Return the durable operational ownership view for one task."""
+        return self._ownership_controller.inspect(job_id)
+
+    def update_ownership(
+        self,
+        job_id: str,
+        *,
+        remaining_work: list[str] | tuple[str, ...],
+        next_action: str | None,
+        blocker: str | None = None,
+    ) -> AutonomousTaskOwnershipUpdateResult:
+        """Explicitly update durable task ownership metadata without executing work."""
+        return self._ownership_controller.update(
+            job_id,
+            remaining_work=remaining_work,
+            next_action=next_action,
+            blocker=blocker,
+        )
 
     def tick(
         self,
