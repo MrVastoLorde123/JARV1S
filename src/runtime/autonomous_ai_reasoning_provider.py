@@ -2,6 +2,10 @@ from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.runtime.autonomous_job import AutonomousJob
 
+
+_RUNTIME_CONTEXT_PREFIX = "_runtime_"
+
+
 class AutonomousAIReasoningProvider:
     def __init__(self, ai_service: AIService, provider_name=None):
         if not isinstance(ai_service, AIService):
@@ -12,6 +16,11 @@ class AutonomousAIReasoningProvider:
     def reason(self, job: AutonomousJob):
         if not isinstance(job, AutonomousJob):
             raise TypeError("job must be an AutonomousJob")
+        model_context = {
+            key: value
+            for key, value in dict(job.working_context).items()
+            if not key.startswith(_RUNTIME_CONTEXT_PREFIX)
+        }
         request = AIRequest(
             task="Perform one bounded autonomous reasoning cycle and return one AutonomousReasoningAction for: " + job.goal,
             context={
@@ -19,9 +28,13 @@ class AutonomousAIReasoningProvider:
                 "status": job.status.value,
                 "step_count": job.step_count,
                 "max_steps": job.max_steps,
-                "working_context": dict(job.working_context),
+                "working_context": model_context,
                 "previous_steps": [step.to_dict() for step in job.steps[-8:]],
             },
             metadata={"runtime": "autonomous_reasoning", "job_id": job.job_id},
         )
-        return self._ai_service.generate(request, provider_name=self._provider_name, required_capabilities=("structured_output",)).content
+        return self._ai_service.generate(
+            request,
+            provider_name=self._provider_name,
+            required_capabilities=("structured_output",),
+        ).content
