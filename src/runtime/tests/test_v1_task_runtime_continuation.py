@@ -99,13 +99,19 @@ class V1TaskRuntimeContinuationTests(unittest.TestCase):
         waiting = submitted.job.start().wait_for_input("operator input required")
         self.persistence.jobs["task-3"] = waiting
 
-        resumed = self.runtime.resume("task-3", now=75.0, interval=20.0)
+        resumed = self.runtime.resume(
+            "task-3",
+            now=75.0,
+            interval=20.0,
+            input_context={"operator_input": "continue"},
+        )
 
         self.assertEqual(resumed.job.status, AutonomousJobStatus.RUNNING)
         self.assertEqual(resumed.job.events[-1].kind.value, "RESUMED")
         self.assertEqual(resumed.schedule.next_due, 75.0)
         self.assertEqual(len(self.scheduler.schedules), 2)
         self.assertEqual(self.persistence.jobs["task-3"], resumed.job)
+        self.assertEqual(resumed.job.working_context["operator_input"], "continue")
 
     def test_resume_rejects_non_waiting_task(self) -> None:
         self.runtime.submit(
