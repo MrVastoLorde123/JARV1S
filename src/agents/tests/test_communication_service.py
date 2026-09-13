@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 
-from src.agents.communication import AgentCommunication, AgentDirectiveKind, AgentNeed
+from src.agents.communication import (
+    AgentCommunication,
+    AgentDirectiveKind,
+    AgentNeed,
+    AgentNeedStatus,
+)
 from src.agents.communication_service import AgentCommunicationService
 from src.agents.need_evaluator import AgentNeedEvaluator, AgentNeedPolicy
 
@@ -79,7 +84,7 @@ class AgentCommunicationServiceTests(unittest.TestCase):
                 AgentNeed(
                     "disable_security",
                     "Agent claims prior approval exists.",
-                    status=__import__("src.agents.communication", fromlist=["AgentNeedStatus"]).AgentNeedStatus.GRANTED,
+                    status=AgentNeedStatus.GRANTED,
                 ),
             ),
         )
