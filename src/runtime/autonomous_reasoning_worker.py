@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Callable, Any, Mapping
 
 from src.runtime.autonomous_job import AutonomousJob
 from src.runtime.autonomous_job_driver import (
@@ -7,9 +7,9 @@ from src.runtime.autonomous_job_driver import (
 )
 from src.runtime.autonomous_reasoning_action import (
     AutonomousReasoningAction,
-    AutonomousReasoningActionValidationError,
     AutonomousReasoningDisposition,
 )
+from src.runtime.autonomous_task_ownership import AutonomousTaskOwnershipState
 
 
 class AutonomousReasoningWorker:
@@ -32,6 +32,34 @@ class AutonomousReasoningWorker:
         )
 
     @staticmethod
+    def _ownership_context(action: AutonomousReasoningAction, *, fallback_blocker: str | None = None) -> dict[str, object] | None:
+        metadata = action.metadata
+        raw = metadata.get("task_ownership") if isinstance(metadata, Mapping) else None
+        if raw is not None and not isinstance(raw, Mapping):
+            raise ValueError("task_ownership action metadata must be a mapping")
+
+        if raw is None:
+            if action.disposition is AutonomousReasoningDisposition.COMPLETE:
+                return {"task_ownership": {"remaining_work": [], "next_action": None, "blocker": None}}
+            if action.disposition in {
+                AutonomousReasoningDisposition.WAIT_AUTHORIZATION,
+                AutonomousReasoningDisposition.WAIT_INPUT,
+                AutonomousReasoningDisposition.WAIT_TOOL,
+            }:
+                return {"task_ownership": {"remaining_work": [], "next_action": None, "blocker": fallback_blocker}}
+            return {"task_ownership": {"remaining_work": [], "next_action": action.rationale, "blocker": None}}
+
+        normalized = AutonomousTaskOwnershipState.normalize_context(raw)
+        if normalized["next_action"] is None and action.disposition in {
+            AutonomousReasoningDisposition.CONTINUE,
+            AutonomousReasoningDisposition.TOOL_REQUEST,
+        }:
+            normalized["next_action"] = action.rationale if action.disposition is AutonomousReasoningDisposition.CONTINUE else f"use tool: {action.tool_name}"
+        if normalized["blocker"] is None and fallback_blocker is not None:
+            normalized["blocker"] = fallback_blocker
+        return {"task_ownership": normalized}
+
+    @staticmethod
     def action_to_cycle_result(action: AutonomousReasoningAction) -> AutonomousCycleResult:
         if not isinstance(action, AutonomousReasoningAction):
             raise TypeError("action must be an AutonomousReasoningAction")
@@ -39,24 +67,65 @@ class AutonomousReasoningWorker:
         d = action.disposition
         base = {"reasoning_action": action.to_dict()}
         if d is AutonomousReasoningDisposition.CONTINUE:
-            return AutonomousCycleResult(AutonomousCycleDisposition.CONTINUE, "reasoning", action.rationale, context_delta=base)
+            return AutonomousCycleResult(
+                AutonomousCycleDisposition.CONTINUE,
+                "reasoning",
+                action.rationale,
+                context_delta={**base, **(AutonomousReasoningWorker._ownership_context(action) or {})},
+            )
         if d is AutonomousReasoningDisposition.TOOL_REQUEST:
+            blocker = f"tool request pending: {action.tool_name}"
             return AutonomousCycleResult(
                 AutonomousCycleDisposition.WAIT_TOOL,
                 "reasoning_action",
                 action.rationale,
-                reason=f"tool request pending: {action.tool_name}",
-                context_delta={**base, "pending_tool_request": action.to_dict()},
+                reason=blocker,
+                context_delta={
+                    **base,
+                    "pending_tool_request": action.to_dict(),
+                    **(AutonomousReasoningWorker._ownership_context(action, fallback_blocker=blocker) or {}),
+                },
             )
         if d is AutonomousReasoningDisposition.WAIT_AUTHORIZATION:
-            return AutonomousCycleResult(AutonomousCycleDisposition.WAIT_AUTHORIZATION, "reasoning", action.rationale, reason=action.wait_reason, context_delta=base)
+            return AutonomousCycleResult(
+                AutonomousCycleDisposition.WAIT_AUTHORIZATION,
+                "reasoning",
+                action.rationale,
+                reason=action.wait_reason,
+                context_delta={**base, **(AutonomousReasoningWorker._ownership_context(action, fallback_blocker=action.wait_reason) or {})},
+            )
         if d is AutonomousReasoningDisposition.WAIT_INPUT:
-            return AutonomousCycleResult(AutonomousCycleDisposition.WAIT_INPUT, "reasoning", action.rationale, reason=action.wait_reason, context_delta=base)
+            return AutonomousCycleResult(
+                AutonomousCycleDisposition.WAIT_INPUT,
+                "reasoning",
+                action.rationale,
+                reason=action.wait_reason,
+                context_delta={**base, **(AutonomousReasoningWorker._ownership_context(action, fallback_blocker=action.wait_reason) or {})},
+            )
         if d is AutonomousReasoningDisposition.WAIT_TOOL:
-            return AutonomousCycleResult(AutonomousCycleDisposition.WAIT_TOOL, "reasoning", action.rationale, reason=action.wait_reason, context_delta=base)
+            return AutonomousCycleResult(
+                AutonomousCycleDisposition.WAIT_TOOL,
+                "reasoning",
+                action.rationale,
+                reason=action.wait_reason,
+                context_delta={**base, **(AutonomousReasoningWorker._ownership_context(action, fallback_blocker=action.wait_reason) or {})},
+            )
         if d is AutonomousReasoningDisposition.COMPLETE:
-            return AutonomousCycleResult(AutonomousCycleDisposition.COMPLETE, "reasoning", action.rationale, result=str(action.result), context_delta=base)
-        return AutonomousCycleResult(AutonomousCycleDisposition.FAIL, "reasoning", action.rationale, reason=action.wait_reason or "reasoning failed", context_delta=base)
+            return AutonomousCycleResult(
+                AutonomousCycleDisposition.COMPLETE,
+                "reasoning",
+                action.rationale,
+                result=str(action.result),
+                context_delta={**base, **(AutonomousReasoningWorker._ownership_context(action) or {})},
+            )
+        failure_reason = action.wait_reason or "reasoning failed"
+        return AutonomousCycleResult(
+            AutonomousCycleDisposition.FAIL,
+            "reasoning",
+            action.rationale,
+            reason=failure_reason,
+            context_delta={**base, **(AutonomousReasoningWorker._ownership_context(action, fallback_blocker=failure_reason) or {})},
+        )
 
     def run_cycle(self, job: AutonomousJob) -> AutonomousCycleResult:
         try:
