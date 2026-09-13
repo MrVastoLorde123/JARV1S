@@ -34,6 +34,7 @@ from src.runtime.autonomous_task_plan_controller import (
     AutonomousTaskPlanController,
     AutonomousTaskPlanUpdateResult,
 )
+from src.runtime.autonomous_task_progress import AutonomousTaskProgressEvaluator
 from src.tools.registry import ToolRegistry
 from src.tools.service import ToolService
 
@@ -217,6 +218,7 @@ class SQLiteAutonomousTaskRuntime(AutonomousTaskRuntime):
         *,
         connection_factory: Callable[[], sqlite3.Connection] = get_connection,
         registry: ToolRegistry | None = None,
+        progress_evaluator: AutonomousTaskProgressEvaluator | None = None,
     ) -> None:
         if not callable(reason):
             raise TypeError("reason must be callable")
@@ -224,6 +226,8 @@ class SQLiteAutonomousTaskRuntime(AutonomousTaskRuntime):
             raise TypeError("connection_factory must be callable")
         if registry is not None and not isinstance(registry, ToolRegistry):
             raise TypeError("registry must be a ToolRegistry or None")
+        if progress_evaluator is not None and not callable(getattr(progress_evaluator, "evaluate", None)):
+            raise TypeError("progress_evaluator must provide evaluate(before, after, cycle)")
 
         tool_registry = registry or ToolRegistry()
         tool_service = ToolService(tool_registry)
@@ -233,7 +237,11 @@ class SQLiteAutonomousTaskRuntime(AutonomousTaskRuntime):
         worker = AutonomousReasoningWorker(reason)
         gate = AutonomousReasoningToolGate(tool_registry, tool_service)
         coordinator = AutonomousReasoningToolFeedbackCycleCoordinator(worker, gate)
-        pulse = AutonomousReasoningFeedbackPulse(persistence, coordinator)
+        pulse = AutonomousReasoningFeedbackPulse(
+            persistence,
+            coordinator,
+            progress_evaluator=progress_evaluator,
+        )
         run_loop = AutonomousReasoningRunLoop(pulse)
         scheduler = AutonomousRuntimeScheduler(schedule_store, run_loop)
 
