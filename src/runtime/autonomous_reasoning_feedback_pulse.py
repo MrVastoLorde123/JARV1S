@@ -80,9 +80,9 @@ class AutonomousReasoningFeedbackPulse:
         progress_context = {"task_progress": progress.to_context()}
         d = cycle.cycle.disposition
         completion_rejected = False
-        if d is AutonomousCycleDisposition.COMPLETE and "task_plan" in current.working_context:
+        if d is AutonomousCycleDisposition.COMPLETE and "task_plan" in next_job.working_context:
             try:
-                plan = AutonomousTaskPlan.from_mapping(current.working_context["task_plan"])
+                plan = AutonomousTaskPlan.from_mapping(next_job.working_context["task_plan"])
             except (TypeError, AutonomousTaskPlanValidationError) as exc:
                 failed = next_job.fail(
                     f"runtime-owned task plan could not be validated during completion: {type(exc).__name__}: {exc}",
