@@ -57,6 +57,14 @@ class AutonomousTaskResumeResult:
     schedule: AutonomousRuntimeSchedule
 
 
+@dataclass(frozen=True)
+class AutonomousTaskLifecycleResult:
+    """Durable receipt for an explicit pause or cancellation transition."""
+
+    job: AutonomousJob
+    persistence_receipt: AutonomousJobPersistenceReceipt
+
+
 class AutonomousTaskRuntime:
     """Own the application lifecycle that turns a goal into durable ongoing work."""
 
@@ -155,6 +163,26 @@ class AutonomousTaskRuntime:
     ) -> AutonomousTaskPlanUpdateResult:
         """Durably record a blocker for one plan step."""
         return self._plan_controller.block(job_id, step_id, reason)
+
+    def pause(self, job_id: str, reason: str) -> AutonomousTaskLifecycleResult:
+        """Explicitly pause a non-terminal task; no automatic execution is granted."""
+        job = self._persistence.restore(job_id)
+        if job is None:
+            raise LookupError(f"autonomous task not found: {job_id}")
+        if job.status is not AutonomousJobStatus.RUNNING:
+            raise ValueError("only RUNNING tasks can be paused")
+        paused = job.pause(reason)
+        receipt = self._persistence.persist(paused)
+        return AutonomousTaskLifecycleResult(paused, receipt)
+
+    def cancel(self, job_id: str, reason: str = "Job cancelled") -> AutonomousTaskLifecycleResult:
+        """Explicitly cancel a non-terminal task and persist the terminal state."""
+        job = self._persistence.restore(job_id)
+        if job is None:
+            raise LookupError(f"autonomous task not found: {job_id}")
+        cancelled = job.cancel(reason)
+        receipt = self._persistence.persist(cancelled)
+        return AutonomousTaskLifecycleResult(cancelled, receipt)
 
     def tick(
         self,
@@ -273,6 +301,7 @@ class SQLiteAutonomousTaskRuntime(AutonomousTaskRuntime):
 
 
 __all__ = [
+    "AutonomousTaskLifecycleResult",
     "AutonomousTaskRuntime",
     "AutonomousTaskSubmissionResult",
     "AutonomousTaskResumeResult",
