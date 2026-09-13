@@ -129,10 +129,14 @@ class V1FinalAcceptanceTests(unittest.TestCase):
             runtime2.start_plan_step("v1-final", "step-2")
             runtime2.complete_plan_step("v1-final", "step-2", reason="inventory published")
             third = runtime2.tick(7)[0]
+            self.assertFalse(third.removed)
+            self.assertEqual(third.run.job.status, AutonomousJobStatus.RUNNING)
+            self.assertEqual(third.run.job.step_count, 3)
 
-            self.assertTrue(third.removed)
-            self.assertEqual(third.run.job.status, AutonomousJobStatus.COMPLETED)
-            self.assertEqual(third.run.job.result, "inventory published")
+            fourth = runtime2.tick(12)[0]
+            self.assertTrue(fourth.removed)
+            self.assertEqual(fourth.run.job.status, AutonomousJobStatus.COMPLETED)
+            self.assertEqual(fourth.run.job.result, "inventory published")
             self.assertTrue(runtime2.snapshot("v1-final").plan_complete)
             self.assertTrue(runtime2.snapshot("v1-final").ownership.complete)
             self.assertEqual(tool.calls, [{"site": "lab"}])
@@ -142,4 +146,4 @@ class V1FinalAcceptanceTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
