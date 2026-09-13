@@ -49,6 +49,10 @@ from .autonomous_reasoning_tool_feedback_cycle import (
     AutonomousReasoningToolFeedbackCycle,
     AutonomousReasoningToolFeedbackCycleCoordinator,
 )
+from .autonomous_resume_reasoning_handoff import (
+    AutonomousResumeReasoningHandoff,
+    AutonomousResumeReasoningHandoffResult,
+)
 from .autonomous_tool_result_feedback import (
     AutonomousToolResultFeedback,
     AutonomousToolResultFeedbackAdapter,
@@ -86,6 +90,8 @@ __all__ = [
     "AutonomousReasoningToolGateResult",
     "AutonomousReasoningToolFeedbackCycle",
     "AutonomousReasoningToolFeedbackCycleCoordinator",
+    "AutonomousResumeReasoningHandoff",
+    "AutonomousResumeReasoningHandoffResult",
     "AutonomousToolResultFeedback",
     "AutonomousToolResultFeedbackAdapter",
 ]
