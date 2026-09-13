@@ -30,17 +30,29 @@ class V1TaskResumeAuthorityTests(unittest.TestCase):
         finally:
             directory.cleanup()
 
-    def test_tool_resume_requires_confirmation(self) -> None:
+    def test_tool_resume_requires_confirmation_and_retains_bound_request(self) -> None:
         directory = tempfile.TemporaryDirectory()
         try:
             runtime = self._runtime(directory)
             runtime.submit("tool task", now=1, interval=5, job_id="resume-tool")
-            waiting = runtime.inspect("resume-tool").start().wait_for_tool("tool completion required")
+            waiting = runtime.inspect("resume-tool").start().wait_for_tool("tool authorization required")
+            waiting = waiting.with_working_context(
+                {
+                    "pending_tool_request": {
+                        "tool_name": "probe",
+                        "arguments": {"target": "switch-01"},
+                        "invocation_id": "probe-1",
+                    }
+                }
+            )
             runtime.job_store.save(waiting)
             with self.assertRaises(PermissionError):
                 runtime.resume("resume-tool", now=2, interval=5)
             resumed = runtime.resume("resume-tool", now=2, interval=5, confirmed=True)
             self.assertEqual(resumed.job.status, AutonomousJobStatus.RUNNING)
+            authorization = resumed.job.working_context["_runtime_resume_authorization"]
+            self.assertEqual(authorization["kind"], "TOOL")
+            self.assertTrue(authorization["request_fingerprint"])
         finally:
             directory.cleanup()
 
