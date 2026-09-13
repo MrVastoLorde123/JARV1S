@@ -16,6 +16,7 @@ from .coding_agent_policy import (
     CodingAgentPolicy,
     CodingWorkKind,
 )
+from .need_evaluator import AgentNeedDecision, AgentNeedEvaluator, AgentNeedPolicy
 
 __all__ = [
     "AgentCommunication",
@@ -24,6 +25,9 @@ __all__ = [
     "AgentDirectiveKind",
     "AgentMessageKind",
     "AgentNeed",
+    "AgentNeedDecision",
+    "AgentNeedEvaluator",
+    "AgentNeedPolicy",
     "AgentNeedStatus",
     "AgentUrgency",
     "DEFAULT_AGENT_COMMUNICATION_GUIDE",
