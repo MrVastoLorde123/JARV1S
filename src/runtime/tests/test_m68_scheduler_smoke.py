@@ -17,6 +17,7 @@ class Store:
         self.jobs = {}
         self.schedule = None
         self.claimed = False
+        self.completed_claim_tokens = set()
 
     def save(self, x):
         if isinstance(x, AutonomousJob):
@@ -46,10 +47,12 @@ class Store:
         return token
 
     def complete_claim(self, schedule, claim_token, replacement):
+        if claim_token in self.completed_claim_tokens:
+            return False
         if self.schedule is None or self.schedule.claim_token != claim_token:
             return False
         self.schedule = replacement
-        self.claimed = False
+        self.completed_claim_tokens.add(claim_token)
         return True
 
 
@@ -92,5 +95,4 @@ class M68SchedulerSmoke(unittest.TestCase):
         self.assertIsNone(out[1].run)
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
