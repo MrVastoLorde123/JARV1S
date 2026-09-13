@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_task_ownership import AutonomousTaskOwnershipState
@@ -42,10 +42,10 @@ class AutonomousTaskSnapshot:
             raise TypeError("job must be an AutonomousJob")
         ownership = AutonomousTaskOwnershipState.from_job(job)
         raw_plan = job.working_context.get("task_plan")
-        plan = AutonomousTaskPlan.from_mapping(raw_plan) if isinstance(raw_plan, dict) else None
+        plan = AutonomousTaskPlan.from_mapping(raw_plan) if isinstance(raw_plan, Mapping) else None
         raw_progress = job.working_context.get("task_progress")
         progress = None
-        if isinstance(raw_progress, dict):
+        if isinstance(raw_progress, Mapping):
             try:
                 progress = AutonomousTaskProgressResult(
                     verdict=AutonomousTaskProgressVerdict(raw_progress["verdict"]),
