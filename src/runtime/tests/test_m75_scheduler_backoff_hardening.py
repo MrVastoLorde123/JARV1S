@@ -87,7 +87,7 @@ class M75SchedulerBackoffHardeningTests(unittest.TestCase):
         scheduler, store = self.build(FailingRunLoop())
         store.save(AutonomousRuntimeSchedule("j75", 1, 5, failure_count=10**9))
         scheduler.tick(1, max_backoff_multiplier=8)
-        self.assertEqual(store.schedule.next_due, 9)
+        self.assertEqual(store.schedule.next_due, 41)
         self.assertEqual(store.schedule.failure_count, 10**9 + 1)
 
     def test_non_power_of_two_cap_is_respected(self):
