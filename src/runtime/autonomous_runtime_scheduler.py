@@ -45,6 +45,7 @@ class AutonomousRuntimeScheduleResult:
     removed: bool
     claim_token: str | None = None
     completed_claim: bool = False
+    failure: str | None = None
 
 
 class AutonomousRuntimeScheduler:
@@ -73,15 +74,30 @@ class AutonomousRuntimeScheduler:
         for schedule in due:
             claim = self._store.claim(schedule, now, lease_seconds)
             if claim is None:
-                results.append(AutonomousRuntimeScheduleResult(schedule, None, False, None, False))
+                results.append(AutonomousRuntimeScheduleResult(schedule, None, False, None, False, None))
                 continue
-            run = self._run_loop.run(schedule.job_id, max_pulses=1)
+            try:
+                run = self._run_loop.run(schedule.job_id, max_pulses=1)
+            except Exception as exc:
+                replacement = AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval)
+                completed_claim = self._store.complete_claim(schedule, claim, replacement)
+                results.append(
+                    AutonomousRuntimeScheduleResult(
+                        schedule,
+                        None,
+                        False,
+                        claim,
+                        completed_claim,
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                )
+                continue
             terminal = run.job.status in {AutonomousJobStatus.COMPLETED, AutonomousJobStatus.FAILED, AutonomousJobStatus.CANCELLED}
             waiting = run.job.resumable
             removed = terminal or waiting
             replacement = None if removed else AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval)
             completed_claim = self._store.complete_claim(schedule, claim, replacement)
-            results.append(AutonomousRuntimeScheduleResult(schedule, run, removed, claim, completed_claim))
+            results.append(AutonomousRuntimeScheduleResult(schedule, run, removed, claim, completed_claim, None))
         return tuple(results)
 
 
