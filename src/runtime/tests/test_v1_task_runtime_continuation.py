@@ -13,6 +13,7 @@ from src.runtime.autonomous_runtime_scheduler import (
     AutonomousRuntimeScheduler,
 )
 from src.runtime.autonomous_task_runtime import AutonomousTaskRuntime
+from src.runtime.autonomous_task_runtime_loop import AutonomousTaskRuntimeLoop
 
 
 class _MemoryPersistence(AutonomousJobPersistenceService):
@@ -122,6 +123,57 @@ class V1TaskRuntimeContinuationTests(unittest.TestCase):
 
         self.assertEqual(result, tuple())
         self.assertEqual(self.scheduler.ticks, [123.0])
+
+
+class _LoopRuntime:
+    def __init__(self) -> None:
+        self.calls: list[float] = []
+
+    def tick(self, now: float, *, max_jobs, lease_seconds, max_backoff_multiplier):
+        self.calls.append(now)
+        return (now,)
+
+
+class V1TaskRuntimeLoopTests(unittest.TestCase):
+    def test_bounded_run_calls_runtime_and_sleeps_between_iterations(self) -> None:
+        runtime = _LoopRuntime()
+        clock = iter((1.0, 2.0, 3.0))
+        sleeps: list[float] = []
+        loop = AutonomousTaskRuntimeLoop(runtime, now=lambda: next(clock), sleep=sleeps.append)
+
+        result = loop.run(max_iterations=3, sleep_seconds=0.25, max_jobs=2)
+
+        self.assertEqual(runtime.calls, [1.0, 2.0, 3.0])
+        self.assertEqual(result, ((1.0,), (2.0,), (3.0,)))
+        self.assertEqual(sleeps, [0.25, 0.25])
+
+    def test_stop_request_is_honored(self) -> None:
+        runtime = _LoopRuntime()
+        loop = AutonomousTaskRuntimeLoop(runtime, now=lambda: 10.0, sleep=lambda _: loop.stop())
+
+        result = loop.run(sleep_seconds=0.1)
+
+        self.assertEqual(result, ((10.0,),))
+        self.assertTrue(loop.stopped)
+
+    def test_sleep_zero_never_calls_sleep(self) -> None:
+        runtime = _LoopRuntime()
+        slept: list[float] = []
+        loop = AutonomousTaskRuntimeLoop(runtime, now=lambda: 20.0, sleep=slept.append)
+
+        loop.run(max_iterations=2, sleep_seconds=0)
+
+        self.assertEqual(slept, [])
+        self.assertEqual(runtime.calls, [20.0, 20.0])
+
+    def test_invalid_bounds_are_rejected(self) -> None:
+        runtime = _LoopRuntime()
+        loop = AutonomousTaskRuntimeLoop(runtime)
+
+        with self.assertRaises(ValueError):
+            loop.run(max_iterations=0)
+        with self.assertRaises(ValueError):
+            loop.run(sleep_seconds=-1)
 
 
 if __name__ == "__main__":
