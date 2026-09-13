@@ -25,6 +25,11 @@ from .autonomous_job_persistence import (
     AutonomousJobPersistenceValidationError,
     AutonomousJobStore,
 )
+from .autonomous_reasoning_action import (
+    AutonomousReasoningAction,
+    AutonomousReasoningActionValidationError,
+    AutonomousReasoningDisposition,
+)
 
 __all__ = [
     "AutonomousCycleDisposition",
@@ -44,4 +49,7 @@ __all__ = [
     "AutonomousJobStore",
     "AutonomousJobValidationError",
     "AutonomousJobWorker",
+    "AutonomousReasoningAction",
+    "AutonomousReasoningActionValidationError",
+    "AutonomousReasoningDisposition",
 ]
