@@ -62,11 +62,13 @@ class AutonomousJobResumeBoundary:
             raise PermissionError(f"explicit confirmation is required to resume {request.kind.value.lower()} wait")
         if request.kind is not AutonomousJobResumeKind.INPUT and request.input_context is not None:
             raise ValueError("input_context is only valid when resuming input wait")
+        if request.kind is AutonomousJobResumeKind.INPUT and (
+            not isinstance(request.input_context, Mapping) or not request.input_context
+        ):
+            raise ValueError("input_context must be a non-empty mapping when resuming input wait")
 
         next_job = job.resume()
         if request.input_context is not None:
-            if not isinstance(request.input_context, Mapping):
-                raise ValueError("input_context must be a mapping")
             next_job = next_job.with_working_context(request.input_context)
 
         return AutonomousJobResumeResult(next_job, self._persistence.persist(next_job))
