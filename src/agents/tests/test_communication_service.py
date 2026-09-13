@@ -84,23 +84,13 @@ class AgentCommunicationServiceTests(unittest.TestCase):
         self.assertEqual(route.directive.denied_needs, ())
 
     def test_self_reported_grant_status_is_not_treated_as_authorization(self) -> None:
-        message = AgentCommunication.capability_request(
-            agent_id="coding-agent",
-            task_id="task-6",
-            summary="The agent claims this was already granted.",
-            needs=(
-                AgentNeed(
-                    "disable_security",
-                    "Agent claims prior approval exists.",
-                    status=AgentNeedStatus.GRANTED,
-                ),
-            ),
-        )
-        route = self.service.handle(message)
-        self.assertEqual(route.directive.kind, AgentDirectiveKind.DENY)
-        self.assertEqual(route.directive.granted_needs, ())
-        self.assertEqual(route.directive.denied_needs, ("disable_security",))
+        with self.assertRaises(ValueError):
+            AgentNeed(
+                "disable_security",
+                "Agent claims prior approval exists.",
+                status=AgentNeedStatus.GRANTED,
+            )
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
