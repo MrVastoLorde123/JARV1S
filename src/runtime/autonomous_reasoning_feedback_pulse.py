@@ -54,23 +54,26 @@ class AutonomousReasoningFeedbackPulse:
             return AutonomousReasoningFeedbackPulseResult(failed, None, receipt, True, None)
 
         runtime_resume_authorization = current.working_context.get(_RUNTIME_RESUME_AUTHORIZATION_KEY)
+        reasoning_job = current
+        if runtime_resume_authorization is not None:
+            reasoning_job = current.with_working_context({_RUNTIME_RESUME_AUTHORIZATION_KEY: None})
+            self._persistence.persist(reasoning_job)
+
         continuation_confirmed = confirmed and runtime_resume_authorization is None
         cycle = self._coordinator.run_cycle(
-            current,
+            reasoning_job,
             confirmed=continuation_confirmed,
             authorization_token=runtime_resume_authorization if isinstance(runtime_resume_authorization, dict) else None,
         )
         cycle_context = dict(cycle.cycle.context_delta)
-        if runtime_resume_authorization is not None:
-            cycle_context[_RUNTIME_RESUME_AUTHORIZATION_KEY] = None
         proposed_plan = cycle_context.pop("task_plan_proposal", None)
         if proposed_plan is not None:
-            if "task_plan" in current.working_context:
+            if "task_plan" in reasoning_job.working_context:
                 cycle_context["task_plan_proposal"] = proposed_plan
             else:
                 cycle_context["task_plan"] = proposed_plan
 
-        next_job = current.record_step(
+        next_job = reasoning_job.record_step(
             phase=cycle.cycle.phase,
             summary=cycle.cycle.summary,
             observation=cycle.cycle.observation,
