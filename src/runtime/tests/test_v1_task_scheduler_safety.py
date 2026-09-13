@@ -42,10 +42,16 @@ class V1TaskSchedulerSafetyTests(unittest.TestCase):
             self.assertIsNone(second.run)
             self.assertEqual(second.schedule.failure_count, 1)
             self.assertEqual(second.schedule.last_failure, "RuntimeError: provider unavailable")
-            self.assertEqual(second.schedule.last_failure_at, 6)
+            self.assertEqual(second.schedule.last_failure_at, 1.0)
             self.assertEqual(calls["count"], 2)
             self.assertEqual(runtime.schedule_store.load_due(15), [])
-            self.assertEqual(len(runtime.schedule_store.load_due(16)), 1)
+
+            retry = runtime.schedule_store.load_due(16)
+            self.assertEqual(len(retry), 1)
+            self.assertEqual(retry[0].failure_count, 2)
+            self.assertEqual(retry[0].last_failure, "RuntimeError: provider unavailable")
+            self.assertEqual(retry[0].last_failure_at, 6.0)
+            self.assertEqual(retry[0].next_due, 16.0)
         finally:
             directory.cleanup()
 
