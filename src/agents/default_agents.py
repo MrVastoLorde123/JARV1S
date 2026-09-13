@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from src.agents.coding_agent_policy import DEFAULT_CODING_AGENT_POLICY
+from src.agents.need_evaluator import AgentNeedPolicy
 from src.agents.permanent_agent import PermanentAgentDefinition
 
 
@@ -10,7 +11,7 @@ DEFAULT_CODING_AGENT = PermanentAgentDefinition(
     agent_id="coding-agent",
     name="Coding Agent",
     role=DEFAULT_CODING_AGENT_POLICY.role,
-    need_policy=__import__("src.agents.need_evaluator", fromlist=["AgentNeedPolicy"]).AgentNeedPolicy(
+    need_policy=AgentNeedPolicy(
         allowed_capabilities=frozenset({"read_repo", "write_repo", "run_tests"}),
         max_scope_keys=16,
     ),
