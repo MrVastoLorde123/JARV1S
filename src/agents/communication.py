@@ -98,6 +98,8 @@ class AgentNeed:
         object.__setattr__(self, "reason", _text(self.reason, "reason"))
         if not isinstance(self.status, AgentNeedStatus):
             raise TypeError("status must be an AgentNeedStatus")
+        if self.status in {AgentNeedStatus.GRANTED, AgentNeedStatus.DENIED, AgentNeedStatus.PARTIALLY_GRANTED}:
+            raise ValueError("agent messages cannot self-report JARVIS authorization status")
         object.__setattr__(self, "scope", _freeze_mapping(self.scope, "scope"))
     @property
     def pending(self) -> bool:
