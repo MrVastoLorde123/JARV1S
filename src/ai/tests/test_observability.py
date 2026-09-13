@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 
 from src.ai.errors import ProviderUnavailableError
@@ -10,7 +11,7 @@ from src.ai.evaluation import (
     ModelCandidate,
     ModelEvaluator,
 )
-from src.ai.models import AIResponse, AICapabilities
+from src.ai.models import AIResponse, AICapabilities, AIUsage
 from src.ai.observability import ExecutionTrace, TraceEventKind
 from src.ai.provider import AIProvider
 from src.ai.service import AIService
@@ -84,6 +85,22 @@ class ObservabilityTests(unittest.TestCase):
         self.assertEqual(payload["run_id"], "run-2")
         self.assertEqual(payload["events"][0]["kind"], "run_started")
         self.assertEqual(payload["events"][0]["model_id"], "qwen3:4b")
+
+    def test_trace_serializes_provider_usage_evidence(self) -> None:
+        trace = ExecutionTrace("run-3")
+        trace.add(
+            TraceEventKind.RESPONSE_RECEIVED,
+            "Provider response received.",
+            data={
+                "usage": AIUsage(input_tokens=12, output_tokens=34, total_tokens=46),
+            },
+        )
+
+        payload = trace.as_dict()
+        encoded = json.dumps(payload)
+
+        self.assertIn('"input_tokens": 12', encoded)
+        self.assertEqual(payload["events"][0]["data"]["usage"]["total_tokens"], 46)
 
 
 if __name__ == "__main__":
