@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceReceipt, AutonomousJobPersistenceService
+from src.runtime.autonomous_tool_authorization import build_tool_resume_authorization
 
 
 class AutonomousJobResumeKind(str, Enum):
@@ -72,7 +73,18 @@ class AutonomousJobResumeBoundary:
 
         next_job = job.resume()
         if request.kind is AutonomousJobResumeKind.TOOL:
-            next_job = next_job.with_working_context({_RUNTIME_RESUME_AUTHORIZATION_KEY: AutonomousJobResumeKind.TOOL.value})
+            pending = job.working_context.get("pending_tool_request")
+            if not isinstance(pending, Mapping):
+                raise ValueError("waiting tool task must retain its pending tool request before confirmation")
+            tool_name = pending.get("tool_name")
+            arguments = pending.get("arguments", {})
+            if not isinstance(tool_name, str) or not tool_name.strip():
+                raise ValueError("pending tool request must contain a valid tool name")
+            if not isinstance(arguments, Mapping):
+                raise ValueError("pending tool request arguments must be a mapping")
+            next_job = next_job.with_working_context(
+                {_RUNTIME_RESUME_AUTHORIZATION_KEY: build_tool_resume_authorization(tool_name, arguments)}
+            )
         if request.input_context is not None:
             next_job = next_job.with_working_context(request.input_context)
 
