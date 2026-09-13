@@ -16,11 +16,14 @@ from .coding_agent_policy import (
     CodingAgentPolicy,
     CodingWorkKind,
 )
+from .communication_service import AgentCommunicationRoute, AgentCommunicationService
 from .need_evaluator import AgentNeedDecision, AgentNeedEvaluator, AgentNeedPolicy
 
 __all__ = [
     "AgentCommunication",
     "AgentCommunicationGuide",
+    "AgentCommunicationRoute",
+    "AgentCommunicationService",
     "AgentDirective",
     "AgentDirectiveKind",
     "AgentMessageKind",
