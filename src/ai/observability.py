@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import field, fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
 from enum import Enum
 from time import monotonic
 from typing import Mapping
