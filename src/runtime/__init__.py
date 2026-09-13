@@ -31,6 +31,10 @@ from .autonomous_reasoning_action import (
     AutonomousReasoningActionValidationError,
     AutonomousReasoningDisposition,
 )
+from .autonomous_reasoning_feedback_pulse import (
+    AutonomousReasoningFeedbackPulse,
+    AutonomousReasoningFeedbackPulseResult,
+)
 from .autonomous_reasoning_tool_gate import (
     AutonomousReasoningToolGate,
     AutonomousReasoningToolGateResult,
@@ -66,6 +70,8 @@ __all__ = [
     "AutonomousReasoningAction",
     "AutonomousReasoningActionValidationError",
     "AutonomousReasoningDisposition",
+    "AutonomousReasoningFeedbackPulse",
+    "AutonomousReasoningFeedbackPulseResult",
     "AutonomousReasoningToolGate",
     "AutonomousReasoningToolGateResult",
     "AutonomousReasoningToolFeedbackCycle",
