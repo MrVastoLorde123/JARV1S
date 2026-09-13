@@ -80,8 +80,6 @@ def _thaw(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class AutonomousJobEvent:
-    """Immutable event describing one lifecycle transition or work cycle."""
-
     event_id: str
     job_id: str
     sequence: int
@@ -107,8 +105,6 @@ class AutonomousJobEvent:
 
 @dataclass(frozen=True)
 class AutonomousJobStep:
-    """Immutable record of one bounded work cycle."""
-
     step_id: str
     job_id: str
     sequence: int
@@ -138,8 +134,6 @@ class AutonomousJobStep:
 
 @dataclass(frozen=True)
 class AutonomousJob:
-    """Immutable lifecycle snapshot for one bounded long-running goal."""
-
     job_id: str
     goal: str
     status: AutonomousJobStatus = AutonomousJobStatus.QUEUED
@@ -251,40 +245,18 @@ class AutonomousJob:
 
     def complete(self, result: str, *, context_delta: Mapping[str, Any] | None = None) -> "AutonomousJob":
         self._require_running()
-        result_value = _text(result, "result", _MAX_RESULT_LENGTH)
-        return self._replace(
-            status=AutonomousJobStatus.COMPLETED,
-            waiting_reason=None,
-            result=result_value,
-            failure_reason=None,
-            working_context=self._merged_context(context_delta),
-            events=self._next_event(AutonomousJobEventKind.COMPLETED, "Job completed"),
-        )
+        return self._replace(status=AutonomousJobStatus.COMPLETED, waiting_reason=None, result=_text(result, "result", _MAX_RESULT_LENGTH), failure_reason=None, working_context=self._merged_context(context_delta), events=self._next_event(AutonomousJobEventKind.COMPLETED, "Job completed"))
 
     def fail(self, reason: str, *, context_delta: Mapping[str, Any] | None = None) -> "AutonomousJob":
         self._require_running()
         reason_value = _text(reason, "failure_reason", _MAX_REASON_LENGTH)
-        return self._replace(
-            status=AutonomousJobStatus.FAILED,
-            waiting_reason=None,
-            result=None,
-            failure_reason=reason_value,
-            working_context=self._merged_context(context_delta),
-            events=self._next_event(AutonomousJobEventKind.FAILED, f"Job failed: {reason_value}"),
-        )
+        return self._replace(status=AutonomousJobStatus.FAILED, waiting_reason=None, result=None, failure_reason=reason_value, working_context=self._merged_context(context_delta), events=self._next_event(AutonomousJobEventKind.FAILED, f"Job failed: {reason_value}"))
 
     def cancel(self, reason: str = "Job cancelled", *, context_delta: Mapping[str, Any] | None = None) -> "AutonomousJob":
         if self.terminal:
             raise AutonomousJobValidationError("terminal jobs cannot be cancelled")
         reason_value = _text(reason, "reason", _MAX_REASON_LENGTH)
-        return self._replace(
-            status=AutonomousJobStatus.CANCELLED,
-            waiting_reason=None,
-            result=None,
-            failure_reason=reason_value,
-            working_context=self._merged_context(context_delta),
-            events=self._next_event(AutonomousJobEventKind.CANCELLED, reason_value),
-        )
+        return self._replace(status=AutonomousJobStatus.CANCELLED, waiting_reason=None, result=None, failure_reason=reason_value, working_context=self._merged_context(context_delta), events=self._next_event(AutonomousJobEventKind.CANCELLED, reason_value))
 
     def with_working_context(self, values: Mapping[str, Any]) -> "AutonomousJob":
         if self.terminal:
@@ -301,26 +273,7 @@ class AutonomousJob:
         return context
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "job_id": self.job_id,
-            "goal": self.goal,
-            "status": self.status.value,
-            "step_count": self.step_count,
-            "max_steps": self.max_steps,
-            "capacity_remaining": self.capacity_remaining,
-            "steps": [step.to_dict() for step in self.steps],
-            "events": [event.to_dict() for event in self.events],
-            "working_context": _thaw(self.working_context),
-            "waiting_reason": self.waiting_reason,
-            "result": self.result,
-            "failure_reason": self.failure_reason,
-            "job_state_is_authorization": False,
-            "job_state_is_execution": False,
-            "authorization_granted": False,
-            "authority_granted": False,
-            "execution_requested": False,
-            "truth_guaranteed": False,
-        }
+        return {"job_id": self.job_id, "goal": self.goal, "status": self.status.value, "step_count": self.step_count, "max_steps": self.max_steps, "capacity_remaining": self.capacity_remaining, "steps": [step.to_dict() for step in self.steps], "events": [event.to_dict() for event in self.events], "working_context": _thaw(self.working_context), "waiting_reason": self.waiting_reason, "result": self.result, "failure_reason": self.failure_reason, "job_state_is_authorization": False, "job_state_is_execution": False, "authorization_granted": False, "authority_granted": False, "execution_requested": False, "truth_guaranteed": False}
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True, default=str)
@@ -338,3 +291,36 @@ class AutonomousJob:
         data = {"job_id": self.job_id, "goal": self.goal, "status": self.status, "step_count": self.step_count, "max_steps": self.max_steps, "steps": self.steps, "events": self.events, "working_context": self.working_context, "waiting_reason": self.waiting_reason, "result": self.result, "failure_reason": self.failure_reason}
         data.update(changes)
         return AutonomousJob(**data)
+
+    def _append_event(self, kind: AutonomousJobEventKind, summary: str, metadata: Mapping[str, Any] | None = None) -> "AutonomousJob":
+        return self._replace(events=self.events + (self._build_event(kind, summary, metadata=metadata),))
+
+    def _next_event(self, kind: AutonomousJobEventKind, summary: str, metadata: Mapping[str, Any] | None = None) -> tuple[AutonomousJobEvent, ...]:
+        return self.events + (self._build_event(kind, summary, metadata=metadata),)
+
+    def _build_event(self, kind: AutonomousJobEventKind, summary: str, metadata: Mapping[str, Any] | None = None) -> AutonomousJobEvent:
+        sequence = len(self.events) + 1
+        return AutonomousJobEvent(event_id=self._deterministic_event_id(sequence, kind, summary), job_id=self.job_id, sequence=sequence, kind=kind, summary=summary, metadata=metadata or {})
+
+    @staticmethod
+    def _deterministic_job_id(goal: str, max_steps: int) -> str:
+        payload = json.dumps({"goal": goal, "max_steps": max_steps}, sort_keys=True, separators=(",", ":"))
+        return f"autonomous-job-{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
+
+    def _deterministic_step_id(self, sequence: int, phase: str, summary: str, observation: str) -> str:
+        payload = json.dumps({"job_id": self.job_id, "sequence": sequence, "phase": phase, "summary": summary, "observation": observation}, sort_keys=True, separators=(",", ":"))
+        return f"autonomous-step-{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
+
+    def _deterministic_event_id(self, sequence: int, kind: AutonomousJobEventKind, summary: str) -> str:
+        payload = json.dumps({"job_id": self.job_id, "sequence": sequence, "kind": kind.value, "summary": summary}, sort_keys=True, separators=(",", ":"))
+        return f"autonomous-event-{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
+
+
+__all__ = [
+    "AutonomousJob",
+    "AutonomousJobEvent",
+    "AutonomousJobEventKind",
+    "AutonomousJobStatus",
+    "AutonomousJobStep",
+    "AutonomousJobValidationError",
+]
