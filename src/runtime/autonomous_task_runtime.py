@@ -161,26 +161,41 @@ class SQLiteAutonomousTaskRuntime(AutonomousTaskRuntime):
 
         tool_registry = registry or ToolRegistry()
         tool_service = ToolService(tool_registry)
-        persistence = AutonomousJobPersistenceService(
-            SQLiteAutonomousJobStore(connection_factory)
-        )
+        job_store = SQLiteAutonomousJobStore(connection_factory)
+        schedule_store = SQLiteAutonomousRuntimeScheduleStore(connection_factory)
+        persistence = AutonomousJobPersistenceService(job_store)
         worker = AutonomousReasoningWorker(reason)
         gate = AutonomousReasoningToolGate(tool_registry, tool_service)
         coordinator = AutonomousReasoningToolFeedbackCycleCoordinator(worker, gate)
         pulse = AutonomousReasoningFeedbackPulse(persistence, coordinator)
         run_loop = AutonomousReasoningRunLoop(pulse)
-        scheduler = AutonomousRuntimeScheduler(
-            SQLiteAutonomousRuntimeScheduleStore(connection_factory),
-            run_loop,
-        )
+        scheduler = AutonomousRuntimeScheduler(schedule_store, run_loop)
 
         super().__init__(persistence, scheduler)
+        self._job_store = job_store
+        self._schedule_store = schedule_store
         self._registry = tool_registry
+        self._tool_service = tool_service
 
     @property
     def registry(self) -> ToolRegistry:
         """Return the tool registry owned by this runtime."""
         return self._registry
+
+    @property
+    def job_store(self) -> SQLiteAutonomousJobStore:
+        """Return the durable job store owned by this runtime."""
+        return self._job_store
+
+    @property
+    def schedule_store(self) -> SQLiteAutonomousRuntimeScheduleStore:
+        """Return the durable scheduler store owned by this runtime."""
+        return self._schedule_store
+
+    @property
+    def tool_service(self) -> ToolService:
+        """Return the tool service owned by this runtime."""
+        return self._tool_service
 
 
 __all__ = [
