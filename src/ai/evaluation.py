@@ -71,7 +71,7 @@ class EvaluationObservation:
     response: AIResponse | None
     scores: Mapping[EvaluationDimension, float]
     passed: bool
-    outcome: EvaluationOutcome
+    outcome: EvaluationOutcome = EvaluationOutcome.MODEL_FAILURE
     error: str | None = None
     trace: ExecutionTrace | None = None
 
@@ -145,18 +145,11 @@ class ModelEvaluator:
         trace = trace or ExecutionTrace(f"eval-{uuid4().hex}")
         case_list = tuple(cases)
         observations: list[EvaluationObservation] = []
-
         trace.add(TraceEventKind.RUN_STARTED, "Model evaluation started.", model_id=candidate.model_id, provider_name=candidate.provider_name, data={"case_count": len(case_list)})
 
         for case in case_list:
             trace.add(TraceEventKind.CASE_STARTED, f"Started benchmark case '{case.name}'.", case_id=case.case_id, model_id=candidate.model_id, provider_name=candidate.provider_name)
-            request = AIRequest(
-                task=case.task,
-                context=case.context,
-                model=candidate.model_id,
-                generation_options=dict(case.generation_options),
-                metadata={"evaluation": True, "case_id": case.case_id, "candidate_model_id": candidate.model_id},
-            )
+            request = AIRequest(task=case.task, context=case.context, model=candidate.model_id, generation_options=dict(case.generation_options), metadata={"evaluation": True, "case_id": case.case_id, "candidate_model_id": candidate.model_id})
             trace.add(TraceEventKind.REQUEST_CREATED, "Provider-neutral AI request created.", case_id=case.case_id, model_id=candidate.model_id, provider_name=candidate.provider_name, data={"required_capabilities": case.required_capabilities, "generation_options": dict(case.generation_options)})
             trace.add(TraceEventKind.PROVIDER_SELECTED, "Selected provider for benchmark case.", case_id=case.case_id, model_id=candidate.model_id, provider_name=candidate.provider_name)
 
