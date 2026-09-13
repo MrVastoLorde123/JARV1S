@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
 
 from src.agents.communication import (
     AgentCommunication,
@@ -11,7 +10,7 @@ from src.agents.communication import (
     AgentDirectiveKind,
     AgentMessageKind,
 )
-from src.agents.need_evaluator import AgentNeedEvaluator
+from src.agents.permanent_agent import PermanentAgentRegistry
 
 
 @dataclass(frozen=True)
@@ -26,22 +25,18 @@ class AgentCommunicationRoute:
 class AgentCommunicationService:
     """Receive agent messages and apply JARVIS-owned communication policy."""
 
-    def __init__(self, evaluators: Mapping[str, AgentNeedEvaluator]) -> None:
-        if not isinstance(evaluators, Mapping) or not evaluators:
-            raise ValueError("evaluators must be a non-empty mapping")
-        if any(not isinstance(agent_id, str) or not agent_id.strip() for agent_id in evaluators):
-            raise ValueError("evaluator keys must be non-empty agent IDs")
-        if any(not isinstance(evaluator, AgentNeedEvaluator) for evaluator in evaluators.values()):
-            raise TypeError("evaluators must contain AgentNeedEvaluator values")
-        self._evaluators = dict(evaluators)
+    def __init__(self, registry: PermanentAgentRegistry) -> None:
+        if not isinstance(registry, PermanentAgentRegistry):
+            raise TypeError("registry must be a PermanentAgentRegistry")
+        self._registry = registry
 
     def handle(self, message: AgentCommunication) -> AgentCommunicationRoute:
         if not isinstance(message, AgentCommunication):
             raise TypeError("message must be an AgentCommunication")
 
         if message.kind in {AgentMessageKind.CAPABILITY_REQUEST, AgentMessageKind.TOOL_REQUEST}:
-            evaluator = self._evaluators.get(message.agent_id)
-            if evaluator is None:
+            definition = self._registry.get(message.agent_id)
+            if definition is None:
                 directive = AgentDirective(
                     AgentDirectiveKind.ESCALATE,
                     "No configured authority policy exists for this agent.",
@@ -49,7 +44,7 @@ class AgentCommunicationService:
                     reason="unknown agent identity or missing permanent-agent policy",
                 )
             else:
-                directive = evaluator.evaluate(message)
+                directive = definition.evaluator().evaluate(message)
         elif message.kind in {AgentMessageKind.QUESTION, AgentMessageKind.BLOCKER}:
             directive = AgentDirective(
                 AgentDirectiveKind.WAIT,
