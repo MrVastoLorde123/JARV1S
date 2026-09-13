@@ -50,6 +50,8 @@ class AutonomousTaskPlanStep:
             _text(self.reason, "reason", _MAX_REASON)
         if self.status is AutonomousTaskPlanStepStatus.BLOCKED and not self.reason:
             raise AutonomousTaskPlanValidationError("BLOCKED steps require a reason")
+        if self.status is AutonomousTaskPlanStepStatus.SKIPPED and not self.reason:
+            raise AutonomousTaskPlanValidationError("SKIPPED steps require a reason")
 
     @property
     def terminal(self) -> bool:
@@ -131,10 +133,10 @@ class AutonomousTaskPlan:
         return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.IN_PROGRESS))
 
     def complete_step(self, step_id: str, reason: str | None = None) -> "AutonomousTaskPlan":
-        return self._finish(step_id, AutonomousTaskPlanStepStatus.COMPLETED, reason, "complete")
+        return self._finish(step_id, AutonomousTaskPlanStepStatus.COMPLETED, reason, "completed")
 
     def skip_step(self, step_id: str, reason: str) -> "AutonomousTaskPlan":
-        return self._finish(step_id, AutonomousTaskPlanStepStatus.SKIPPED, reason, "skip")
+        return self._finish(step_id, AutonomousTaskPlanStepStatus.SKIPPED, reason, "skipped")
 
     def block(self, step_id: str, reason: str) -> "AutonomousTaskPlan":
         step = self._require(step_id)
@@ -145,7 +147,7 @@ class AutonomousTaskPlan:
     def _finish(self, step_id: str, status: AutonomousTaskPlanStepStatus, reason: str | None, operation: str) -> "AutonomousTaskPlan":
         step = self._require(step_id)
         if step.terminal:
-            raise AutonomousTaskPlanValidationError(f"terminal plan steps cannot be {operation}d")
+            raise AutonomousTaskPlanValidationError(f"terminal plan steps cannot be {operation}")
         if status is AutonomousTaskPlanStepStatus.SKIPPED and not reason:
             raise AutonomousTaskPlanValidationError("SKIPPED steps require a reason")
         return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=status, reason=reason))
