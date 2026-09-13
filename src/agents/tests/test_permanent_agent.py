@@ -36,7 +36,7 @@ class PermanentAgentRegistryTests(unittest.TestCase):
         evaluators = registry.evaluators()
         self.assertIn("coding-agent", evaluators)
         self.assertEqual(
-            evaluators["coding-agent"].evaluate.__self__._policy.allowed_capabilities,
+            evaluators["coding-agent"].policy.allowed_capabilities,
             frozenset({"read_repo", "write_repo", "run_tests"}),
         )
 
