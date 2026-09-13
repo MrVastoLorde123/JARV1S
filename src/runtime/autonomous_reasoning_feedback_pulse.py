@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_driver import AutonomousCycleDisposition
@@ -52,10 +53,14 @@ class AutonomousReasoningFeedbackPulse:
             return AutonomousReasoningFeedbackPulseResult(failed, None, receipt, True, None)
 
         runtime_resume_authorization = current.working_context.get(_RUNTIME_RESUME_AUTHORIZATION_KEY)
-        continuation_confirmed = confirmed or runtime_resume_authorization == "TOOL"
-        cycle = self._coordinator.run_cycle(current, confirmed=continuation_confirmed)
+        continuation_confirmed = confirmed and runtime_resume_authorization is None
+        cycle = self._coordinator.run_cycle(
+            current,
+            confirmed=continuation_confirmed,
+            authorization_token=runtime_resume_authorization if isinstance(runtime_resume_authorization, dict) else None,
+        )
         cycle_context = dict(cycle.cycle.context_delta)
-        if runtime_resume_authorization == "TOOL":
+        if runtime_resume_authorization is not None:
             cycle_context[_RUNTIME_RESUME_AUTHORIZATION_KEY] = None
         proposed_plan = cycle_context.pop("task_plan_proposal", None)
         if proposed_plan is not None:
