@@ -12,7 +12,6 @@ class AutonomousRuntimeSchedule:
     job_id: str
     next_due: float
     interval: float
-    max_pulses: int = 1
 
     def __post_init__(self) -> None:
         if not isinstance(self.job_id, str) or not self.job_id.strip():
@@ -21,8 +20,6 @@ class AutonomousRuntimeSchedule:
             raise TypeError("next_due must be numeric")
         if isinstance(self.interval, bool) or not isinstance(self.interval, (int, float)) or self.interval <= 0:
             raise ValueError("interval must be positive")
-        if isinstance(self.max_pulses, bool) or not isinstance(self.max_pulses, int) or self.max_pulses <= 0:
-            raise ValueError("max_pulses must be positive")
 
 
 class AutonomousRuntimeScheduleStore(Protocol):
@@ -47,8 +44,8 @@ class AutonomousRuntimeScheduler:
         self._store = store
         self._run_loop = run_loop
 
-    def schedule(self, job_id: str, *, next_due: float, interval: float, max_pulses: int = 1) -> AutonomousRuntimeSchedule:
-        schedule = AutonomousRuntimeSchedule(job_id, next_due, interval, max_pulses)
+    def schedule(self, job_id: str, *, next_due: float, interval: float) -> AutonomousRuntimeSchedule:
+        schedule = AutonomousRuntimeSchedule(job_id, next_due, interval)
         self._store.save(schedule)
         return schedule
 
@@ -60,14 +57,14 @@ class AutonomousRuntimeScheduler:
         due = self._store.load_due(now)[:max_jobs]
         results: list[AutonomousRuntimeScheduleResult] = []
         for schedule in due:
-            run = self._run_loop.run(schedule.job_id, max_pulses=schedule.max_pulses)
+            run = self._run_loop.run(schedule.job_id, max_pulses=1)
             terminal = run.job.status in {AutonomousJobStatus.COMPLETED, AutonomousJobStatus.FAILED, AutonomousJobStatus.CANCELLED}
             waiting = run.job.resumable
             removed = terminal or waiting
             if removed:
                 self._store.delete(schedule.job_id)
             else:
-                self._store.save(AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval, schedule.max_pulses))
+                self._store.save(AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval))
             results.append(AutonomousRuntimeScheduleResult(schedule, run, removed))
         return tuple(results)
 
