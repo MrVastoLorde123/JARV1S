@@ -74,23 +74,35 @@ class AutonomousTaskOwnershipState:
         return self.status is AutonomousJobStatus.COMPLETED
 
     @classmethod
-    def from_job(cls, job: AutonomousJob) -> "AutonomousTaskOwnershipState":
-        if not isinstance(job, AutonomousJob):
-            raise TypeError("job must be an AutonomousJob")
-
-        raw = job.working_context.get("task_ownership", {})
-        if not isinstance(raw, Mapping):
-            raise ValueError("task_ownership working context must be a mapping")
-
-        remaining = _remaining_work(raw.get("remaining_work", []))
-        next_action = raw.get("next_action")
-        blocker = raw.get("blocker")
-        waiting_reason = job.waiting_reason
-
+    def normalize_context(cls, payload: Mapping[str, Any] | None) -> dict[str, object]:
+        if payload is None:
+            return {"remaining_work": [], "next_action": None, "blocker": None}
+        if not isinstance(payload, Mapping):
+            raise ValueError("task_ownership must be a mapping")
+        remaining = _remaining_work(payload.get("remaining_work", []))
+        next_action = payload.get("next_action")
+        blocker = payload.get("blocker")
         if next_action is not None:
             next_action = _text(next_action, "next_action")
         if blocker is not None:
             blocker = _text(blocker, "blocker")
+        return {
+            "remaining_work": list(remaining),
+            "next_action": next_action,
+            "blocker": blocker,
+        }
+
+    @classmethod
+    def from_job(cls, job: AutonomousJob) -> "AutonomousTaskOwnershipState":
+        if not isinstance(job, AutonomousJob):
+            raise TypeError("job must be an AutonomousJob")
+
+        raw = job.working_context.get("task_ownership")
+        normalized = cls.normalize_context(raw if isinstance(raw, Mapping) else None)
+        remaining = tuple(normalized["remaining_work"])
+        next_action = normalized["next_action"]
+        blocker = normalized["blocker"]
+        waiting_reason = job.waiting_reason
 
         last_step = job.steps[-1] if job.steps else None
         return cls(
