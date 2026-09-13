@@ -26,6 +26,12 @@ from .autonomous_job_persistence import (
     AutonomousJobPersistenceValidationError,
     AutonomousJobStore,
 )
+from .autonomous_job_resume import (
+    AutonomousJobResumeBoundary,
+    AutonomousJobResumeKind,
+    AutonomousJobResumeRequest,
+    AutonomousJobResumeResult,
+)
 from .autonomous_reasoning_action import (
     AutonomousReasoningAction,
     AutonomousReasoningActionValidationError,
@@ -62,6 +68,10 @@ __all__ = [
     "AutonomousJobPersistenceReceipt",
     "AutonomousJobPersistenceService",
     "AutonomousJobPersistenceValidationError",
+    "AutonomousJobResumeBoundary",
+    "AutonomousJobResumeKind",
+    "AutonomousJobResumeRequest",
+    "AutonomousJobResumeResult",
     "AutonomousJobStatus",
     "AutonomousJobStep",
     "AutonomousJobStore",
