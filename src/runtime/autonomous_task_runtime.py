@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import sqlite3
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from src.database import get_connection
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceReceipt, AutonomousJobPersistenceService
 from src.runtime.autonomous_job_persistence_sqlite import SQLiteAutonomousJobStore
+from src.runtime.autonomous_job_resume import AutonomousJobResumeBoundary, AutonomousJobResumeKind, AutonomousJobResumeRequest
 from src.runtime.autonomous_reasoning_feedback_pulse import AutonomousReasoningFeedbackPulse
 from src.runtime.autonomous_reasoning_run_loop import AutonomousReasoningRunLoop
 from src.runtime.autonomous_reasoning_tool_feedback_cycle import AutonomousReasoningToolFeedbackCycleCoordinator
@@ -29,7 +30,6 @@ from src.tools.service import ToolService
 
 @dataclass(frozen=True)
 class AutonomousTaskSubmissionResult:
-    """Durable receipt for accepting a goal into autonomous work."""
     job: AutonomousJob
     persistence_receipt: AutonomousJobPersistenceReceipt
     schedule: AutonomousRuntimeSchedule
@@ -37,7 +37,6 @@ class AutonomousTaskSubmissionResult:
 
 @dataclass(frozen=True)
 class AutonomousTaskResumeResult:
-    """Durable receipt for explicitly re-arming a waiting task."""
     job: AutonomousJob
     persistence_receipt: AutonomousJobPersistenceReceipt
     schedule: AutonomousRuntimeSchedule
@@ -45,7 +44,6 @@ class AutonomousTaskResumeResult:
 
 @dataclass(frozen=True)
 class AutonomousTaskLifecycleResult:
-    """Durable receipt for an explicit pause or cancellation transition."""
     job: AutonomousJob
     persistence_receipt: AutonomousJobPersistenceReceipt
 
@@ -62,6 +60,7 @@ class AutonomousTaskRuntime:
         self._scheduler = scheduler
         self._ownership_controller = AutonomousTaskOwnershipController(self, persistence)
         self._plan_controller = AutonomousTaskPlanController(self, persistence)
+        self._resume_boundary = AutonomousJobResumeBoundary(persistence)
 
     def submit(self, goal: str, *, now: float, interval: float, job_id: str | None = None, max_steps: int = 32, working_context: dict[str, object] | None = None) -> AutonomousTaskSubmissionResult:
         candidate = AutonomousJob.create(goal, job_id=job_id, max_steps=max_steps, working_context=working_context)
@@ -121,16 +120,22 @@ class AutonomousTaskRuntime:
     def tick(self, now: float, *, max_jobs: int = 1, lease_seconds: float = 30.0, max_backoff_multiplier: int = 8) -> tuple[AutonomousRuntimeScheduleResult, ...]:
         return self._scheduler.tick(now, max_jobs=max_jobs, lease_seconds=lease_seconds, max_backoff_multiplier=max_backoff_multiplier)
 
-    def resume(self, job_id: str, *, now: float, interval: float) -> AutonomousTaskResumeResult:
+    def resume(self, job_id: str, *, now: float, interval: float, confirmed: bool = False, input_context: Mapping[str, Any] | None = None) -> AutonomousTaskResumeResult:
         job = self._persistence.restore(job_id)
         if job is None:
             raise LookupError(f"autonomous task not found: {job_id}")
-        if job.status not in {AutonomousJobStatus.WAITING_AUTHORIZATION, AutonomousJobStatus.WAITING_INPUT, AutonomousJobStatus.WAITING_TOOL, AutonomousJobStatus.PAUSED}:
+        kinds = {
+            AutonomousJobStatus.WAITING_AUTHORIZATION: AutonomousJobResumeKind.AUTHORIZATION,
+            AutonomousJobStatus.WAITING_INPUT: AutonomousJobResumeKind.INPUT,
+            AutonomousJobStatus.WAITING_TOOL: AutonomousJobResumeKind.TOOL,
+            AutonomousJobStatus.PAUSED: AutonomousJobResumeKind.PAUSE,
+        }
+        kind = kinds.get(job.status)
+        if kind is None:
             raise ValueError("only waiting or paused tasks can be resumed")
-        resumed = job.resume()
-        receipt = self._persistence.persist(resumed)
-        schedule = self._scheduler.schedule(resumed.job_id, next_due=now, interval=interval)
-        return AutonomousTaskResumeResult(resumed, receipt, schedule)
+        result = self._resume_boundary.resume(AutonomousJobResumeRequest(job_id=job_id, kind=kind, confirmed=confirmed, input_context=input_context))
+        schedule = self._scheduler.schedule(job_id, next_due=now, interval=interval)
+        return AutonomousTaskResumeResult(result.job, result.persistence_receipt, schedule)
 
     def is_working(self, job_id: str) -> bool:
         job = self._persistence.restore(job_id)
