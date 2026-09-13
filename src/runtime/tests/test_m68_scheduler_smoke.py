@@ -18,7 +18,7 @@ class Store:
         else: self.schedule=x
         return "r"
     def load(self,j): return self.jobs.get(j)
-    def load_due(self,n): return [] if self.schedule is None or self.schedule.next_due>n else [self.schedule]
+    def load_due(self,n): return [] if self.schedule is None or self.schedule.next_due>n else [self.schedule, self.schedule]
     def claim(self,schedule,now,lease_seconds):
         if self.claimed: return None
         self.claimed=True
@@ -39,5 +39,7 @@ class M68SchedulerSmoke(unittest.TestCase):
         s,store=self.build(AutonomousReasoningAction("a",AutonomousReasoningDisposition.COMPLETE,"done",result="ok")); s.schedule("j68",next_due=2,interval=5); self.assertEqual(s.tick(1),()); self.assertIsNotNone(store.schedule)
     def test_claim_pair_is_validated(self):
         with self.assertRaises(ValueError): AutonomousRuntimeSchedule("j69",1,5,claim_token="lease")
+    def test_duplicate_due_observation_executes_only_once(self):
+        s,_=self.build(AutonomousReasoningAction("a",AutonomousReasoningDisposition.COMPLETE,"done",result="ok")); s.schedule("j68",next_due=1,interval=5); out=s.tick(1,max_jobs=2); self.assertIsNotNone(out[0].run); self.assertIsNone(out[1].run)
 
 if __name__ == "__main__": unittest.main()
