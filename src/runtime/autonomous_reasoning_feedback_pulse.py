@@ -9,6 +9,9 @@ from src.runtime.autonomous_reasoning_tool_feedback_cycle import AutonomousReaso
 from src.runtime.autonomous_task_progress import AutonomousTaskProgressEvaluator, AutonomousTaskProgressResult, DeterministicAutonomousTaskProgressEvaluator
 
 
+_RUNTIME_RESUME_AUTHORIZATION_KEY = "_runtime_resume_authorization"
+
+
 @dataclass(frozen=True)
 class AutonomousReasoningFeedbackPulseResult:
     job: AutonomousJob
@@ -48,8 +51,12 @@ class AutonomousReasoningFeedbackPulse:
             receipt = self._persistence.persist(failed)
             return AutonomousReasoningFeedbackPulseResult(failed, None, receipt, True, None)
 
-        cycle = self._coordinator.run_cycle(current, confirmed=confirmed)
+        runtime_resume_authorization = current.working_context.get(_RUNTIME_RESUME_AUTHORIZATION_KEY)
+        continuation_confirmed = confirmed or runtime_resume_authorization == "TOOL"
+        cycle = self._coordinator.run_cycle(current, confirmed=continuation_confirmed)
         cycle_context = dict(cycle.cycle.context_delta)
+        if runtime_resume_authorization == "TOOL":
+            cycle_context[_RUNTIME_RESUME_AUTHORIZATION_KEY] = None
         proposed_plan = cycle_context.pop("task_plan_proposal", None)
         if proposed_plan is not None:
             if "task_plan" in current.working_context:
