@@ -74,12 +74,12 @@ class M73SchedulerFailureBackoffTests(unittest.TestCase):
         AutonomousJobPersistenceService(store).persist(AutonomousJob("j73", "inspect").start())
         return AutonomousRuntimeScheduler(store, run_loop), store
 
-    def test_first_failure_doubles_interval(self):
+    def test_first_failure_retries_after_base_interval(self):
         scheduler, store = self.build(FailingRunLoop())
         scheduler.schedule("j73", next_due=1, interval=5)
         out = scheduler.tick(1)[0]
         self.assertEqual(out.failure, "RuntimeError: worker crashed")
-        self.assertEqual(store.schedule.next_due, 11)
+        self.assertEqual(store.schedule.next_due, 6)
         self.assertEqual(store.schedule.failure_count, 1)
 
     def test_failure_backoff_grows_and_caps(self):
