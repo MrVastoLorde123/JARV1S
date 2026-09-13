@@ -43,9 +43,26 @@ class AutonomousReasoningFeedbackPulse:
         current = job.start() if job.status is AutonomousJobStatus.QUEUED else job
         if current.status is not AutonomousJobStatus.RUNNING:
             return AutonomousReasoningFeedbackPulseResult(current, None, None, current != job, None)
+        if current.step_count >= current.max_steps:
+            failed = current.fail("maximum autonomous step budget exhausted")
+            receipt = self._persistence.persist(failed)
+            return AutonomousReasoningFeedbackPulseResult(failed, None, receipt, True, None)
 
         cycle = self._coordinator.run_cycle(current, confirmed=confirmed)
-        next_job = current.record_step(phase=cycle.cycle.phase, summary=cycle.cycle.summary, observation=cycle.cycle.observation, context_delta=cycle.cycle.context_delta)
+        cycle_context = dict(cycle.cycle.context_delta)
+        proposed_plan = cycle_context.pop("task_plan_proposal", None)
+        if proposed_plan is not None:
+            if "task_plan" in current.working_context:
+                cycle_context["task_plan_proposal"] = proposed_plan
+            else:
+                cycle_context["task_plan"] = proposed_plan
+
+        next_job = current.record_step(
+            phase=cycle.cycle.phase,
+            summary=cycle.cycle.summary,
+            observation=cycle.cycle.observation,
+            context_delta=cycle_context,
+        )
         progress = self._progress_evaluator.evaluate(current, next_job, cycle.cycle)
         progress_context = {"task_progress": progress.to_context()}
         d = cycle.cycle.disposition
