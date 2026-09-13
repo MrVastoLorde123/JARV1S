@@ -144,6 +144,24 @@ class V1TaskOwnershipStateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             AutonomousTaskOwnershipState.normalize_context({"remaining_work": ["ok", ""]})
 
+    def test_remaining_work_requires_next_action(self) -> None:
+        with self.assertRaises(ValueError):
+            AutonomousTaskOwnershipState.normalize_context({"remaining_work": ["publish report"]})
+
+    def test_completed_job_cannot_project_remaining_work(self) -> None:
+        job = AutonomousJob.create(
+            "finish",
+            job_id="ownership-6",
+            working_context={
+                "task_ownership": {
+                    "remaining_work": ["invalid remainder"],
+                    "next_action": "invalid",
+                }
+            },
+        ).start()
+        with self.assertRaises(ValueError):
+            AutonomousTaskOwnershipState.from_job(job.complete("done"))
+
 
 if __name__ == "__main__":
     unittest.main()
