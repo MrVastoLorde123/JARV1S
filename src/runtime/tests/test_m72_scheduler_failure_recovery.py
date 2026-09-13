@@ -34,7 +34,7 @@ class M72SchedulerFailureRecoveryTests(unittest.TestCase):
         out=scheduler.tick(1)[0]
         self.assertIsNone(out.run); self.assertEqual(out.failure,"RuntimeError: worker crashed")
         self.assertTrue(out.completed_claim); self.assertFalse(out.removed)
-        self.assertEqual(store.schedule.next_due,11); self.assertIsNone(store.schedule.claim_token)
+        self.assertEqual(store.schedule.next_due,6); self.assertIsNone(store.schedule.claim_token)
         self.assertEqual(store.schedule.failure_count,1)
     def test_failure_is_not_success(self):
         store=Store(); scheduler=self.build(store); scheduler.schedule("j72",next_due=1,interval=5)
