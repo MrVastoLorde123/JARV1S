@@ -35,7 +35,7 @@ class AutonomousRuntimeScheduleStore(Protocol):
     def save(self, schedule: AutonomousRuntimeSchedule) -> None: ...
     def load_due(self, now: float) -> list[AutonomousRuntimeSchedule]: ...
     def claim(self, schedule: AutonomousRuntimeSchedule, now: float, lease_seconds: float) -> str | None: ...
-    def delete(self, job_id: str) -> None: ...
+    def complete_claim(self, schedule: AutonomousRuntimeSchedule, claim_token: str, replacement: AutonomousRuntimeSchedule | None) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -44,12 +44,13 @@ class AutonomousRuntimeScheduleResult:
     run: AutonomousReasoningRunResult | None
     removed: bool
     claim_token: str | None = None
+    completed_claim: bool = False
 
 
 class AutonomousRuntimeScheduler:
     def __init__(self, store: AutonomousRuntimeScheduleStore, run_loop: AutonomousReasoningRunLoop) -> None:
-        if not all(hasattr(store, name) for name in ("save", "load_due", "claim", "delete")):
-            raise TypeError("store must implement save, load_due, claim, and delete")
+        if not all(hasattr(store, name) for name in ("save", "load_due", "claim", "complete_claim")):
+            raise TypeError("store must implement save, load_due, claim, and complete_claim")
         if not isinstance(run_loop, AutonomousReasoningRunLoop):
             raise TypeError("run_loop must be an AutonomousReasoningRunLoop")
         self._store = store
@@ -72,17 +73,15 @@ class AutonomousRuntimeScheduler:
         for schedule in due:
             claim = self._store.claim(schedule, now, lease_seconds)
             if claim is None:
-                results.append(AutonomousRuntimeScheduleResult(schedule, None, False, None))
+                results.append(AutonomousRuntimeScheduleResult(schedule, None, False, None, False))
                 continue
             run = self._run_loop.run(schedule.job_id, max_pulses=1)
             terminal = run.job.status in {AutonomousJobStatus.COMPLETED, AutonomousJobStatus.FAILED, AutonomousJobStatus.CANCELLED}
             waiting = run.job.resumable
             removed = terminal or waiting
-            if removed:
-                self._store.delete(schedule.job_id)
-            else:
-                self._store.save(AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval))
-            results.append(AutonomousRuntimeScheduleResult(schedule, run, removed, claim))
+            replacement = None if removed else AutonomousRuntimeSchedule(schedule.job_id, now + schedule.interval, schedule.interval)
+            completed_claim = self._store.complete_claim(schedule, claim, replacement)
+            results.append(AutonomousRuntimeScheduleResult(schedule, run, removed, claim, completed_claim))
         return tuple(results)
 
 
