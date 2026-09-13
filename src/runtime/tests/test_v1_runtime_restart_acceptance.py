@@ -51,7 +51,7 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
         pulse = AutonomousReasoningFeedbackPulse(persistence, coordinator)
         run_loop = AutonomousReasoningRunLoop(pulse)
         scheduler = AutonomousRuntimeScheduler(schedule_store, run_loop)
-        return persistence, scheduler, pulse, tool
+        return persistence, scheduler, pulse, tool, schedule_store
 
     def test_runtime_continues_from_sqlite_state_after_restart(self):
         directory = tempfile.TemporaryDirectory()
@@ -75,7 +75,7 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
                     result="restart-safe completion",
                 )
 
-            persistence1, scheduler1, _, tool1 = self.make_runtime(directory, reason)
+            persistence1, scheduler1, _, tool1, _ = self.make_runtime(directory, reason)
             persistence1.persist(AutonomousJob.create("restart-safe goal", job_id="restart").start())
             scheduler1.schedule("restart", next_due=1, interval=5)
             first = scheduler1.tick(1)[0]
@@ -83,7 +83,7 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
             self.assertEqual(first.run.job.working_context["tool_result"]["tool_name"], "echo")
             self.assertEqual(tool1.executions, 1)
 
-            persistence2, scheduler2, _, tool2 = self.make_runtime(directory, reason)
+            persistence2, scheduler2, _, tool2, schedule_store2 = self.make_runtime(directory, reason)
             restored = persistence2.restore("restart")
             self.assertEqual(restored.status, AutonomousJobStatus.RUNNING)
             self.assertEqual(restored.step_count, 1)
@@ -95,7 +95,7 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
             self.assertEqual(second.run.job.step_count, 2)
             self.assertEqual(tool2.executions, 0)
             self.assertEqual(calls["count"], 2)
-            self.assertIsNone(SQLiteAutonomousRuntimeScheduleStore(lambda: sqlite3.connect(Path(directory.name) / "jarvis.db")).load_due(100))
+            self.assertEqual(schedule_store2.load_due(100), [])
         finally:
             directory.cleanup()
 
@@ -110,14 +110,14 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
                 arguments={"value": "protected"},
             )
 
-            persistence1, scheduler1, _, tool1 = self.make_runtime(directory, lambda job: action, requires_confirmation=True)
+            persistence1, scheduler1, _, tool1, _ = self.make_runtime(directory, lambda job: action, requires_confirmation=True)
             persistence1.persist(AutonomousJob.create("protected goal", job_id="protected").start())
             scheduler1.schedule("protected", next_due=1, interval=5)
             blocked = scheduler1.tick(1)[0]
             self.assertEqual(blocked.run.job.status, AutonomousJobStatus.WAITING_TOOL)
             self.assertEqual(tool1.executions, 0)
 
-            persistence2, scheduler2, pulse2, tool2 = self.make_runtime(directory, lambda job: action, requires_confirmation=True)
+            persistence2, scheduler2, pulse2, tool2, _ = self.make_runtime(directory, lambda job: action, requires_confirmation=True)
             restored = persistence2.restore("protected")
             self.assertEqual(restored.status, AutonomousJobStatus.WAITING_TOOL)
             self.assertEqual(tool2.executions, 0)
