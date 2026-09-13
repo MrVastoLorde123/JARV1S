@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from src.runtime.autonomous_reasoning_action import AutonomousReasoningAction, AutonomousReasoningDisposition
+from src.runtime.autonomous_reasoning_worker import AutonomousReasoningWorker
 from src.runtime.autonomous_task_plan import (
     AutonomousTaskPlan,
     AutonomousTaskPlanStepStatus,
@@ -39,6 +40,42 @@ class V1TaskPlanTests(unittest.TestCase):
         self.assertTrue(plan.blocked)
         self.assertFalse(plan.complete)
         self.assertEqual(plan.current.status, AutonomousTaskPlanStepStatus.BLOCKED)
+
+    def test_reasoning_proposed_plan_is_validated_into_cycle_context(self) -> None:
+        action = AutonomousReasoningAction(
+            "plan-1",
+            AutonomousReasoningDisposition.CONTINUE,
+            "collect the device list",
+            metadata={
+                "task_plan": {
+                    "steps": [
+                        {"step_id": "discover", "description": "discover devices"},
+                        {"step_id": "validate", "description": "validate uplinks"},
+                    ]
+                }
+            },
+        )
+        cycle = AutonomousReasoningWorker.action_to_cycle_result(action)
+        self.assertEqual(
+            cycle.context_delta["task_plan"],
+            {
+                "steps": [
+                    {"step_id": "discover", "description": "discover devices", "status": "PENDING", "reason": None},
+                    {"step_id": "validate", "description": "validate uplinks", "status": "PENDING", "reason": None},
+                ]
+            },
+        )
+
+    def test_malformed_reasoning_plan_fails_closed(self) -> None:
+        action = AutonomousReasoningAction(
+            "bad-plan",
+            AutonomousReasoningDisposition.CONTINUE,
+            "bad plan",
+            metadata={"task_plan": {"steps": [{"step_id": "", "description": ""}]}},
+        )
+        cycle = AutonomousReasoningWorker.action_to_cycle_result(action)
+        self.assertEqual(cycle.disposition.value, "FAIL")
+        self.assertIn("task_plan", cycle.reason)
 
     def test_runtime_persists_plan_and_restores_after_restart(self) -> None:
         directory = tempfile.TemporaryDirectory()
