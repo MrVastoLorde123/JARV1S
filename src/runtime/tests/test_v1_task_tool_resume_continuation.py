@@ -11,12 +11,13 @@ from src.tools.registry import ToolRegistry
 
 
 class _ConfirmedTool:
-    def __init__(self) -> None:
+    def __init__(self, name: str = "confirmed_probe") -> None:
         self.calls: list[dict[str, object]] = []
+        self.name = name
 
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
-            name="confirmed_probe",
+            name=self.name,
             description="Deterministic V1 continuation test tool",
             version="1.0.0",
             input_schema={"type": "object"},
@@ -36,6 +37,13 @@ class _ConfirmedTool:
 
 
 class V1TaskToolResumeContinuationTests(unittest.TestCase):
+    def make_runtime(self, path, registry, reason):
+        return SQLiteAutonomousTaskRuntime(
+            reason,
+            connection_factory=lambda: sqlite3.connect(path),
+            registry=registry,
+        )
+
     def test_confirmed_tool_resume_executes_once_then_continues_after_restart(self) -> None:
         directory = tempfile.TemporaryDirectory()
         try:
@@ -70,14 +78,7 @@ class V1TaskToolResumeContinuationTests(unittest.TestCase):
                     result="done",
                 )
 
-            def make_runtime():
-                return SQLiteAutonomousTaskRuntime(
-                    reason,
-                    connection_factory=lambda: sqlite3.connect(path),
-                    registry=registry,
-                )
-
-            runtime1 = make_runtime()
+            runtime1 = self.make_runtime(path, registry, reason)
             runtime1.submit("complete confirmed tool task", now=1, interval=5, job_id="tool-task")
 
             first = runtime1.tick(1)[0]
@@ -86,14 +87,16 @@ class V1TaskToolResumeContinuationTests(unittest.TestCase):
 
             resumed = runtime1.resume("tool-task", now=2, interval=5, confirmed=True)
             self.assertEqual(resumed.job.status, AutonomousJobStatus.RUNNING)
-            self.assertEqual(resumed.job.working_context["_runtime_resume_authorization"], "TOOL")
+            authorization = resumed.job.working_context["_runtime_resume_authorization"]
+            self.assertEqual(authorization["kind"], "TOOL")
+            self.assertTrue(authorization["request_fingerprint"])
 
             second = runtime1.tick(2)[0]
             self.assertEqual(second.run.job.status, AutonomousJobStatus.RUNNING)
             self.assertEqual(tool.calls, [{"probe": "v1"}])
             self.assertIsNone(second.run.job.working_context["_runtime_resume_authorization"])
 
-            runtime2 = make_runtime()
+            runtime2 = self.make_runtime(path, registry, reason)
             restored = runtime2.inspect("tool-task")
             self.assertIsNotNone(restored)
             self.assertEqual(restored.step_count, 2)
@@ -103,6 +106,49 @@ class V1TaskToolResumeContinuationTests(unittest.TestCase):
             self.assertEqual(third.run.job.status, AutonomousJobStatus.COMPLETED)
             self.assertEqual(third.run.job.result, "done")
             self.assertEqual(tool.calls, [{"probe": "v1"}])
+        finally:
+            directory.cleanup()
+
+    def test_confirmed_resume_cannot_authorize_a_changed_tool_request(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        try:
+            path = Path(directory.name) / "jarvis.db"
+            confirmed_tool = _ConfirmedTool("confirmed_probe")
+            other_tool = _ConfirmedTool("other_probe")
+            registry = ToolRegistry()
+            registry.register(confirmed_tool)
+            registry.register(other_tool)
+            calls = {"count": 0}
+
+            def reason(job):
+                calls["count"] += 1
+                if calls["count"] == 1:
+                    return AutonomousReasoningAction(
+                        "request-tool",
+                        AutonomousReasoningDisposition.TOOL_REQUEST,
+                        "inspect the confirmed probe",
+                        tool_name="confirmed_probe",
+                        arguments={"probe": "approved"},
+                    )
+                return AutonomousReasoningAction(
+                    "changed-tool",
+                    AutonomousReasoningDisposition.TOOL_REQUEST,
+                    "switch to another tool after resume",
+                    tool_name="other_probe",
+                    arguments={"probe": "changed"},
+                )
+
+            runtime = self.make_runtime(path, registry, reason)
+            runtime.submit("reject changed tool authorization", now=1, interval=5, job_id="changed-tool")
+            self.assertEqual(runtime.tick(1)[0].run.job.status, AutonomousJobStatus.WAITING_TOOL)
+
+            runtime.resume("changed-tool", now=2, interval=5, confirmed=True)
+            result = runtime.tick(2)[0]
+
+            self.assertEqual(result.run.job.status, AutonomousJobStatus.WAITING_TOOL)
+            self.assertEqual(confirmed_tool.calls, [])
+            self.assertEqual(other_tool.calls, [])
+            self.assertEqual(result.run.job.working_context.get("pending_tool_request", {}).get("tool_name"), "other_probe")
         finally:
             directory.cleanup()
 
