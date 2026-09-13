@@ -83,21 +83,15 @@ class AgentCommunicationTests(unittest.TestCase):
         self.assertEqual(denial.kind, AgentDirectiveKind.DENY)
         self.assertEqual(denial.denied_needs, ("browser.execute",))
 
-        self.assertEqual(
-            AgentCommunication.capability_request(
-                agent_id="ui-agent",
-                task_id="task-5",
-                summary="Repeat the browser request with a self-reported grant.",
-                needs=(
-                    AgentNeed(
-                        "browser.execute",
-                        "UI verification requires browser interaction.",
-                        AgentNeedStatus.GRANTED,
-                    ),
-                ),
-            ).pending_needs,
-            (),
-        )
+        with self.assertRaises(ValueError):
+            AgentNeed(
+                "browser.execute",
+                "UI verification requires browser interaction.",
+                AgentNeedStatus.GRANTED,
+            )
+
+        self.assertEqual(request.pending_needs, (need,))
+        self.assertEqual(need.status, AgentNeedStatus.REQUESTED)
         with self.assertRaises(AttributeError):
             object.__setattr__(need, "status", AgentNeedStatus.GRANTED)
 
