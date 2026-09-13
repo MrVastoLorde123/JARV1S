@@ -14,6 +14,7 @@ from src.agents.communication import (
     AgentDirective,
     AgentDirectiveKind,
     AgentMessageKind,
+    AgentNeedStatus,
 )
 
 
@@ -74,7 +75,8 @@ class AgentNeedEvaluator:
         granted: list[str] = []
         denied: list[str] = []
         for need in message.needs:
-            if need.status.value != "REQUESTED":
+            if need.status is not AgentNeedStatus.REQUESTED:
+                denied.append(need.name)
                 continue
             if self._policy.require_reason and not need.reason.strip():
                 denied.append(need.name)
@@ -100,13 +102,13 @@ class AgentNeedEvaluator:
                 "Only the allowlisted, bounded requests were granted.",
                 granted_needs=tuple(granted),
                 denied_needs=tuple(denied),
-                reason="least-privilege policy denied out-of-scope or insufficiently justified needs",
+                reason="least-privilege policy denied out-of-scope or self-reported authority claims",
             )
         return AgentDirective(
             AgentDirectiveKind.DENY,
             "No requested need satisfied the configured capability policy.",
             denied_needs=tuple(denied),
-            reason="request was outside the agent's configured authority boundary",
+            reason="request was outside the agent's configured authority boundary or claimed prior authorization",
         )
 
 
