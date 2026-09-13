@@ -66,24 +66,11 @@ class EchoTool(ToolHandler):
         self.executions = 0
 
     def definition(self):
-        return ToolDefinition(
-            "echo",
-            "Echo",
-            "1.0",
-            {},
-            {},
-            RiskLevel.LOW,
-            self.requires_confirmation,
-        )
+        return ToolDefinition("echo", "Echo", "1.0", {}, {}, RiskLevel.LOW, self.requires_confirmation)
 
     def execute(self, request):
         self.executions += 1
-        return ToolResult(
-            True,
-            request.tool_name,
-            request.arguments,
-            invocation_id=request.invocation_id,
-        )
+        return ToolResult(True, request.tool_name, request.arguments, invocation_id=request.invocation_id)
 
 
 class V1RuntimeAcceptanceTests(unittest.TestCase):
@@ -97,13 +84,7 @@ class V1RuntimeAcceptanceTests(unittest.TestCase):
         worker = AutonomousReasoningWorker(reason)
         coordinator = AutonomousReasoningToolFeedbackCycleCoordinator(worker, gate)
         pulse = AutonomousReasoningFeedbackPulse(persistence, coordinator)
-        return (
-            store,
-            persistence,
-            tool,
-            pulse,
-            AutonomousReasoningRunLoop(pulse),
-        )
+        return store, persistence, tool, pulse, AutonomousReasoningRunLoop(pulse)
 
     def test_goal_persists_schedules_executes_tool_learns_from_feedback_and_completes(self):
         calls = {"count": 0}
@@ -111,19 +92,8 @@ class V1RuntimeAcceptanceTests(unittest.TestCase):
         def reason(job):
             calls["count"] += 1
             if calls["count"] == 1:
-                return AutonomousReasoningAction(
-                    "a-v1-tool",
-                    AutonomousReasoningDisposition.TOOL_REQUEST,
-                    "inspect with echo",
-                    tool_name="echo",
-                    arguments={"goal": job.goal},
-                )
-            return AutonomousReasoningAction(
-                "a-v1-complete",
-                AutonomousReasoningDisposition.COMPLETE,
-                "tool feedback was incorporated",
-                result="V1 goal completed",
-            )
+                return AutonomousReasoningAction("a-v1-tool", AutonomousReasoningDisposition.TOOL_REQUEST, "inspect with echo", tool_name="echo", arguments={"goal": job.goal})
+            return AutonomousReasoningAction("a-v1-complete", AutonomousReasoningDisposition.COMPLETE, "tool feedback was incorporated", result="V1 goal completed")
 
         store, persistence, tool, _, run_loop = self.build_runtime(reason)
         persistence.persist(AutonomousJob.create("inspect system", job_id="v1").start())
@@ -134,7 +104,7 @@ class V1RuntimeAcceptanceTests(unittest.TestCase):
         self.assertIsNotNone(first.run)
         self.assertEqual(first.run.job.status, AutonomousJobStatus.RUNNING)
         self.assertEqual(first.run.job.step_count, 1)
-        self.assertEqual(first.run.job.working_context["tool_name"], "echo")
+        self.assertEqual(first.run.job.working_context["tool_result"]["tool_name"], "echo")
         self.assertEqual(tool.executions, 1)
         self.assertIsNotNone(store.schedule)
         self.assertEqual(store.jobs["v1"].status, AutonomousJobStatus.RUNNING)
@@ -149,14 +119,8 @@ class V1RuntimeAcceptanceTests(unittest.TestCase):
         self.assertEqual(calls["count"], 2)
 
     def test_confirmation_remains_an_explicit_authority_boundary(self):
-        action = AutonomousReasoningAction(
-            "a-v1-confirm",
-            AutonomousReasoningDisposition.TOOL_REQUEST,
-            "run confirmed tool",
-            tool_name="echo",
-            arguments={"value": "protected"},
-        )
-        store, persistence, tool, pulse, run_loop = self.build_runtime(lambda job: action, requires_confirmation=True)
+        action = AutonomousReasoningAction("a-v1-confirm", AutonomousReasoningDisposition.TOOL_REQUEST, "run confirmed tool", tool_name="echo", arguments={"value": "protected"})
+        _, persistence, tool, pulse, run_loop = self.build_runtime(lambda job: action, requires_confirmation=True)
         persistence.persist(AutonomousJob.create("protected action", job_id="confirm").start())
 
         blocked = run_loop.run("confirm", max_pulses=1)
@@ -166,13 +130,7 @@ class V1RuntimeAcceptanceTests(unittest.TestCase):
         self.assertFalse(persistence.restore("confirm").to_dict()["authority_granted"])
 
         handoff = AutonomousResumeReasoningHandoff(persistence, pulse)
-        resumed = handoff.resume_and_pulse(
-            AutonomousJobResumeRequest(
-                "confirm",
-                AutonomousJobResumeKind.TOOL,
-                confirmed=True,
-            )
-        )
+        resumed = handoff.resume_and_pulse(AutonomousJobResumeRequest("confirm", AutonomousJobResumeKind.TOOL, confirmed=True))
         self.assertTrue(resumed.pulse.cycle.tool_executed)
         self.assertEqual(resumed.job.status, AutonomousJobStatus.RUNNING)
         self.assertEqual(tool.executions, 1)
@@ -181,7 +139,6 @@ class V1RuntimeAcceptanceTests(unittest.TestCase):
         class FailingRunLoop(AutonomousReasoningRunLoop):
             def __init__(self):
                 pass
-
             def run(self, job_id, *, max_pulses=1):
                 raise RuntimeError("simulated worker failure")
 
