@@ -110,7 +110,7 @@ class AutonomousTaskPlan:
 
     @property
     def current(self) -> AutonomousTaskPlanStep | None:
-        for status in (AutonomousTaskPlanStepStatus.IN_PROGRESS, AutonomousTaskPlanStepStatus.PENDING, AutonomousTaskPlanStepStatus.BLOCKED):
+        for status in (AutonomousTaskPlanStepStatus.IN_PROGRESS, AutonomousTaskPlanStepStatus.BLOCKED, AutonomousTaskPlanStepStatus.PENDING):
             for step in self.steps:
                 if step.status is status:
                     return step
@@ -128,29 +128,30 @@ class AutonomousTaskPlan:
         step = self._require(step_id)
         if step.terminal:
             raise AutonomousTaskPlanValidationError("terminal plan steps cannot start")
-        if self.current is not None and self.current.step_id != step_id and self.current.status is AutonomousTaskPlanStepStatus.IN_PROGRESS:
-            raise AutonomousTaskPlanValidationError("another plan step is already in progress")
+        current = self.current
+        if current is not None and current.step_id != step_id:
+            raise AutonomousTaskPlanValidationError("another plan boundary is active")
         return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.IN_PROGRESS))
 
     def complete_step(self, step_id: str, reason: str | None = None) -> "AutonomousTaskPlan":
-        return self._finish(step_id, AutonomousTaskPlanStepStatus.COMPLETED, reason, "completed")
+        step = self._require(step_id)
+        if step.status is not AutonomousTaskPlanStepStatus.IN_PROGRESS:
+            raise AutonomousTaskPlanValidationError("only IN_PROGRESS plan steps can be completed")
+        return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.COMPLETED, reason=reason))
 
     def skip_step(self, step_id: str, reason: str) -> "AutonomousTaskPlan":
-        return self._finish(step_id, AutonomousTaskPlanStepStatus.SKIPPED, reason, "skipped")
+        step = self._require(step_id)
+        if step.terminal:
+            raise AutonomousTaskPlanValidationError("terminal plan steps cannot be skipped")
+        if not reason:
+            raise AutonomousTaskPlanValidationError("SKIPPED steps require a reason")
+        return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.SKIPPED, reason=reason))
 
     def block(self, step_id: str, reason: str) -> "AutonomousTaskPlan":
         step = self._require(step_id)
         if step.terminal:
             raise AutonomousTaskPlanValidationError("terminal plan steps cannot be blocked")
         return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=AutonomousTaskPlanStepStatus.BLOCKED, reason=reason))
-
-    def _finish(self, step_id: str, status: AutonomousTaskPlanStepStatus, reason: str | None, operation: str) -> "AutonomousTaskPlan":
-        step = self._require(step_id)
-        if step.terminal:
-            raise AutonomousTaskPlanValidationError(f"terminal plan steps cannot be {operation}")
-        if status is AutonomousTaskPlanStepStatus.SKIPPED and not reason:
-            raise AutonomousTaskPlanValidationError("SKIPPED steps require a reason")
-        return self._replace_step(step_id, AutonomousTaskPlanStep(step_id=step.step_id, description=step.description, status=status, reason=reason))
 
     def _require(self, step_id: str) -> AutonomousTaskPlanStep:
         _text(step_id, "step_id", _MAX_STEP_ID)
