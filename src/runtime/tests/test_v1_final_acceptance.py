@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import sqlite3
 import tempfile
 import unittest
@@ -66,13 +64,21 @@ class V1FinalAcceptanceTests(unittest.TestCase):
                     )
                 if calls["count"] == 2:
                     return AutonomousReasoningAction(
+                        "inventory-tool-again",
+                        AutonomousReasoningDisposition.TOOL_REQUEST,
+                        "inspect devices with the approved request",
+                        tool_name="inventory_probe",
+                        arguments={"site": "lab"},
+                    )
+                if calls["count"] == 3:
+                    return AutonomousReasoningAction(
                         "publish",
                         AutonomousReasoningDisposition.CONTINUE,
                         "publish inventory",
                         metadata={
                             "task_ownership": {
-                                "remaining_work": ["publish inventory"],
-                                "next_action": "publish inventory",
+                                "remaining_work": [],
+                                "next_action": None,
                             }
                         },
                     )
@@ -117,7 +123,7 @@ class V1FinalAcceptanceTests(unittest.TestCase):
             restored = runtime2.snapshot("v1-final")
             self.assertIsNotNone(restored)
             self.assertEqual(restored.job.step_count, 2)
-            self.assertEqual(restored.ownership.remaining_work, ("publish inventory",))
+            self.assertEqual(restored.ownership.remaining_work, ())
             self.assertEqual(restored.plan.current.step_id, "step-2")
 
             runtime2.start_plan_step("v1-final", "step-2")
@@ -130,10 +136,10 @@ class V1FinalAcceptanceTests(unittest.TestCase):
             self.assertTrue(runtime2.snapshot("v1-final").plan_complete)
             self.assertTrue(runtime2.snapshot("v1-final").ownership.complete)
             self.assertEqual(tool.calls, [{"site": "lab"}])
-            self.assertEqual(calls["count"], 3)
+            self.assertEqual(calls["count"], 4)
         finally:
             directory.cleanup()
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
