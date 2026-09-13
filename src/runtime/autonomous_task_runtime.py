@@ -29,6 +29,11 @@ from src.runtime.autonomous_task_ownership_controller import (
     AutonomousTaskOwnershipController,
     AutonomousTaskOwnershipUpdateResult,
 )
+from src.runtime.autonomous_task_plan import AutonomousTaskPlan
+from src.runtime.autonomous_task_plan_controller import (
+    AutonomousTaskPlanController,
+    AutonomousTaskPlanUpdateResult,
+)
 from src.tools.registry import ToolRegistry
 from src.tools.service import ToolService
 
@@ -66,6 +71,7 @@ class AutonomousTaskRuntime:
         self._persistence = persistence
         self._scheduler = scheduler
         self._ownership_controller = AutonomousTaskOwnershipController(self, persistence)
+        self._plan_controller = AutonomousTaskPlanController(self, persistence)
 
     def submit(
         self,
@@ -114,6 +120,40 @@ class AutonomousTaskRuntime:
             next_action=next_action,
             blocker=blocker,
         )
+
+    def plan(self, job_id: str) -> AutonomousTaskPlan | None:
+        """Return the durable structured work plan for one task."""
+        return self._plan_controller.inspect(job_id)
+
+    def set_plan(
+        self,
+        job_id: str,
+        plan: AutonomousTaskPlan,
+    ) -> AutonomousTaskPlanUpdateResult:
+        """Persist a validated structured work plan without executing it."""
+        return self._plan_controller.set_plan(job_id, plan)
+
+    def start_plan_step(self, job_id: str, step_id: str) -> AutonomousTaskPlanUpdateResult:
+        """Mark exactly one non-terminal plan step as the active work item."""
+        return self._plan_controller.start(job_id, step_id)
+
+    def complete_plan_step(
+        self,
+        job_id: str,
+        step_id: str,
+        reason: str | None = None,
+    ) -> AutonomousTaskPlanUpdateResult:
+        """Durably record completion of one plan step."""
+        return self._plan_controller.complete(job_id, step_id, reason=reason)
+
+    def block_plan_step(
+        self,
+        job_id: str,
+        step_id: str,
+        reason: str,
+    ) -> AutonomousTaskPlanUpdateResult:
+        """Durably record a blocker for one plan step."""
+        return self._plan_controller.block(job_id, step_id, reason)
 
     def tick(
         self,
@@ -228,5 +268,7 @@ __all__ = [
     "AutonomousTaskRuntime",
     "AutonomousTaskSubmissionResult",
     "AutonomousTaskResumeResult",
+    "AutonomousTaskPlanUpdateResult",
+    "AutonomousTaskOwnershipUpdateResult",
     "SQLiteAutonomousTaskRuntime",
 ]
