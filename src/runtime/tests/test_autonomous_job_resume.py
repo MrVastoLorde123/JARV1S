@@ -105,11 +105,11 @@ class M65Tests(unittest.TestCase):
 
 
 class M66Tests(unittest.TestCase):
-    def handoff(self):
+    def handoff(self, confirm=True):
         store = MemoryStore()
         persistence = AutonomousJobPersistenceService(store)
         registry = ToolRegistry()
-        registry.register(EchoTool(True))
+        registry.register(EchoTool(confirm))
         gate = AutonomousReasoningToolGate(registry, ToolService(registry))
         action = AutonomousReasoningAction("a66", AutonomousReasoningDisposition.TOOL_REQUEST, "inspect", tool_name="echo", arguments={"x": 1})
         coordinator = AutonomousReasoningToolFeedbackCycleCoordinator(AutonomousReasoningWorker(lambda job: action), gate)
@@ -117,14 +117,14 @@ class M66Tests(unittest.TestCase):
         return AutonomousResumeReasoningHandoff(persistence, pulse), persistence
 
     def test_confirmed_tool_resume_reenters_one_pulse(self):
-        handoff, persistence = self.handoff()
+        handoff, persistence = self.handoff(confirm=True)
         persistence.persist(AutonomousJob("j66", "inspect").start().wait_for_tool("confirmation"))
         out = handoff.resume_and_pulse(AutonomousJobResumeRequest("j66", AutonomousJobResumeKind.TOOL, confirmed=True))
         self.assertTrue(out.pulse.cycle.tool_executed)
         self.assertEqual(out.job.status, AutonomousJobStatus.RUNNING)
 
     def test_input_resume_reenters_one_pulse(self):
-        handoff, persistence = self.handoff()
+        handoff, persistence = self.handoff(confirm=False)
         persistence.persist(AutonomousJob("j66", "inspect").start().wait_for_input("detail"))
         out = handoff.resume_and_pulse(AutonomousJobResumeRequest("j66", AutonomousJobResumeKind.INPUT, input_context={"answer": "ready"}))
         self.assertIsNotNone(out.pulse.cycle)
