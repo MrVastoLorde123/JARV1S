@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import fields, is_dataclass
 from enum import Enum
 from time import monotonic
 from typing import Mapping
@@ -28,6 +28,26 @@ class EvaluationOutcome(str, Enum):
     EVALUATION_ERROR = "evaluation_error"
 
 
+def _json_safe(value: object) -> object:
+    """Convert trace evidence into values accepted by JSON encoders."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Enum):
+        return _json_safe(value.value)
+    if is_dataclass(value) and not isinstance(value, type):
+        return {
+            field.name: _json_safe(getattr(value, field.name))
+            for field in fields(value)
+        }
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    raise TypeError(
+        f"trace data contains unsupported non-JSON value: {type(value).__name__}"
+    )
+
+
 @dataclass(frozen=True)
 class TraceEvent:
     sequence: int
@@ -37,7 +57,7 @@ class TraceEvent:
     model_id: str | None = None
     provider_name: str | None = None
     outcome: EvaluationOutcome | None = None
-    data: Mapping[str, object] = field(default_factory=dict)
+    data: Mapping[str, object] = {}
     elapsed_ms: float | None = None
 
     def __post_init__(self) -> None:
@@ -99,7 +119,7 @@ class ExecutionTrace:
                     "model_id": event.model_id,
                     "provider_name": event.provider_name,
                     "outcome": event.outcome.value if event.outcome else None,
-                    "data": dict(event.data),
+                    "data": _json_safe(event.data),
                     "elapsed_ms": event.elapsed_ms,
                 }
                 for event in self._events
