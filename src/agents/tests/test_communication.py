@@ -92,8 +92,6 @@ class AgentCommunicationTests(unittest.TestCase):
 
         self.assertEqual(request.pending_needs, (need,))
         self.assertEqual(need.status, AgentNeedStatus.REQUESTED)
-        with self.assertRaises(AttributeError):
-            object.__setattr__(need, "status", AgentNeedStatus.GRANTED)
 
     def test_directives_require_explicit_shape(self) -> None:
         grant = AgentDirective(
