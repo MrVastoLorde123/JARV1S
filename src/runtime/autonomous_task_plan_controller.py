@@ -6,14 +6,8 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from src.runtime.autonomous_job import AutonomousJob
-from src.runtime.autonomous_job_persistence import (
-    AutonomousJobPersistenceReceipt,
-    AutonomousJobPersistenceService,
-)
-from src.runtime.autonomous_task_plan import (
-    AutonomousTaskPlan,
-    AutonomousTaskPlanStepStatus,
-)
+from src.runtime.autonomous_job_persistence import AutonomousJobPersistenceReceipt, AutonomousJobPersistenceService
+from src.runtime.autonomous_task_plan import AutonomousTaskPlan
 
 
 class _TaskRuntime(Protocol):
@@ -32,11 +26,7 @@ class AutonomousTaskPlanUpdateResult:
 class AutonomousTaskPlanController:
     """Read and mutate durable task plans without owning execution authority."""
 
-    def __init__(
-        self,
-        runtime: _TaskRuntime,
-        persistence: AutonomousJobPersistenceService,
-    ) -> None:
+    def __init__(self, runtime: _TaskRuntime, persistence: AutonomousJobPersistenceService) -> None:
         if not hasattr(runtime, "inspect") or not callable(runtime.inspect):
             raise TypeError("runtime must provide inspect(job_id)")
         if not isinstance(persistence, AutonomousJobPersistenceService):
@@ -53,24 +43,22 @@ class AutonomousTaskPlanController:
             return None
         return AutonomousTaskPlan.from_mapping(payload)
 
-    def set_plan(
-        self,
-        job_id: str,
-        plan: AutonomousTaskPlan,
-    ) -> AutonomousTaskPlanUpdateResult:
+    def set_plan(self, job_id: str, plan: AutonomousTaskPlan) -> AutonomousTaskPlanUpdateResult:
+        if not isinstance(plan, AutonomousTaskPlan):
+            raise TypeError("plan must be an AutonomousTaskPlan")
         return self._persist(job_id, plan)
 
     def start(self, job_id: str, step_id: str) -> AutonomousTaskPlanUpdateResult:
-        plan = self._require_plan(job_id)
-        return self._persist(job_id, plan.start(step_id))
+        return self._persist(job_id, self._require_plan(job_id).start(step_id))
 
     def complete(self, job_id: str, step_id: str, reason: str | None = None) -> AutonomousTaskPlanUpdateResult:
-        plan = self._require_plan(job_id)
-        return self._persist(job_id, plan.complete_step(step_id, reason=reason))
+        return self._persist(job_id, self._require_plan(job_id).complete_step(step_id, reason=reason))
+
+    def skip(self, job_id: str, step_id: str, reason: str) -> AutonomousTaskPlanUpdateResult:
+        return self._persist(job_id, self._require_plan(job_id).skip_step(step_id, reason))
 
     def block(self, job_id: str, step_id: str, reason: str) -> AutonomousTaskPlanUpdateResult:
-        plan = self._require_plan(job_id)
-        return self._persist(job_id, plan.block(step_id, reason))
+        return self._persist(job_id, self._require_plan(job_id).block(step_id, reason))
 
     def _require_plan(self, job_id: str) -> AutonomousTaskPlan:
         plan = self.inspect(job_id)
