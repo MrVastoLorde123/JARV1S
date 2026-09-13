@@ -7,9 +7,9 @@ from pathlib import Path
 
 from src.runtime.autonomous_reasoning_action import AutonomousReasoningAction, AutonomousReasoningDisposition
 from src.runtime.autonomous_task_plan import AutonomousTaskPlan
-from src.runtime.autonomous_task_snapshot import AutonomousTaskSnapshot
-from src.runtime.autonomous_task_runtime import SQLiteAutonomousTaskRuntime
 from src.runtime.autonomous_task_progress import AutonomousTaskProgressVerdict
+from src.runtime.autonomous_task_runtime import SQLiteAutonomousTaskRuntime
+from src.runtime.autonomous_task_snapshot import AutonomousTaskSnapshot
 
 
 class V1TaskSnapshotTests(unittest.TestCase):
@@ -28,15 +28,20 @@ class V1TaskSnapshotTests(unittest.TestCase):
             )
             runtime.submit("finish task", now=1, interval=5, job_id="snapshot-1")
             runtime.set_plan("snapshot-1", AutonomousTaskPlan.from_descriptions(["collect", "publish"]))
+            runtime.start_plan_step("snapshot-1", "step-1")
+            runtime.complete_plan_step("snapshot-1", "step-1", reason="collected")
+            runtime.start_plan_step("snapshot-1", "step-2")
+            runtime.complete_plan_step("snapshot-1", "step-2", reason="published")
             runtime.tick(1)
 
             job = runtime.inspect("snapshot-1")
             snapshot = AutonomousTaskSnapshot.from_job(job)
             self.assertTrue(snapshot.terminal)
             self.assertTrue(snapshot.plan is not None)
+            self.assertTrue(snapshot.plan.complete)
             self.assertTrue(snapshot.progress is not None)
             self.assertEqual(snapshot.progress.verdict, AutonomousTaskProgressVerdict.COMPLETED)
-            self.assertEqual(snapshot.plan.current.step_id, "step-1")
+            self.assertIsNone(snapshot.plan.current)
             encoded = snapshot.to_dict()
             self.assertEqual(encoded["job"]["status"], "COMPLETED")
             self.assertEqual(encoded["progress"]["verdict"], "COMPLETED")
