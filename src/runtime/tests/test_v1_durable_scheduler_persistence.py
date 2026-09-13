@@ -16,10 +16,10 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             return sqlite3.connect(path)
 
         store = SQLiteAutonomousRuntimeScheduleStore(connection_factory)
-        return directory, store
+        return directory, connection_factory, store
 
     def test_save_then_new_store_loads_persisted_schedule(self):
-        directory, store = self.make_store()
+        directory, connection_factory, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule(
                 "job-1",
@@ -31,13 +31,13 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             )
             store.save(schedule)
 
-            reopened = SQLiteAutonomousRuntimeScheduleStore(store._connection_factory)
+            reopened = SQLiteAutonomousRuntimeScheduleStore(connection_factory)
             self.assertEqual(reopened.load_due(10.0), [schedule])
         finally:
             directory.cleanup()
 
     def test_save_replaces_existing_job_without_duplicate_rows(self):
-        directory, store = self.make_store()
+        directory, _, store = self.make_store()
         try:
             first = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             second = AutonomousRuntimeSchedule("job-1", 20.0, 7.0)
@@ -48,14 +48,14 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             directory.cleanup()
 
     def test_claim_persists_lease_across_store_instances(self):
-        directory, store = self.make_store()
+        directory, connection_factory, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             store.save(schedule)
             claim = store.claim(schedule, now=10.0, lease_seconds=30.0)
             self.assertIsNotNone(claim)
 
-            reopened = SQLiteAutonomousRuntimeScheduleStore(store._connection_factory)
+            reopened = SQLiteAutonomousRuntimeScheduleStore(connection_factory)
             persisted = reopened.load_due(10.0)[0]
             self.assertEqual(persisted.claim_token, claim)
             self.assertEqual(persisted.lease_until, 40.0)
@@ -63,7 +63,7 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             directory.cleanup()
 
     def test_active_lease_blocks_second_claim(self):
-        directory, store = self.make_store()
+        directory, _, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             store.save(schedule)
@@ -75,7 +75,7 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             directory.cleanup()
 
     def test_expired_lease_can_be_reclaimed(self):
-        directory, store = self.make_store()
+        directory, _, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             store.save(schedule)
@@ -88,7 +88,7 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             directory.cleanup()
 
     def test_matching_claim_can_complete_and_remove_schedule(self):
-        directory, store = self.make_store()
+        directory, _, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             store.save(schedule)
@@ -99,7 +99,7 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             directory.cleanup()
 
     def test_matching_claim_can_complete_and_replace_schedule(self):
-        directory, store = self.make_store()
+        directory, _, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             store.save(schedule)
@@ -118,7 +118,7 @@ class V1DurableSchedulerPersistenceTests(unittest.TestCase):
             directory.cleanup()
 
     def test_stale_claim_cannot_overwrite_reclaimed_schedule(self):
-        directory, store = self.make_store()
+        directory, _, store = self.make_store()
         try:
             schedule = AutonomousRuntimeSchedule("job-1", 10.0, 5.0)
             store.save(schedule)
