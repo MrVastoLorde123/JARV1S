@@ -15,6 +15,12 @@ from .autonomous_job_driver import (
     AutonomousJobDriverValidationError,
     AutonomousJobWorker,
 )
+from .autonomous_job_persistence import (
+    AutonomousJobPersistenceReceipt,
+    AutonomousJobPersistenceService,
+    AutonomousJobPersistenceValidationError,
+    AutonomousJobStore,
+)
 
 __all__ = [
     "AutonomousCycleDisposition",
@@ -24,8 +30,12 @@ __all__ = [
     "AutonomousJobDriverValidationError",
     "AutonomousJobEvent",
     "AutonomousJobEventKind",
+    "AutonomousJobPersistenceReceipt",
+    "AutonomousJobPersistenceService",
+    "AutonomousJobPersistenceValidationError",
     "AutonomousJobStatus",
     "AutonomousJobStep",
+    "AutonomousJobStore",
     "AutonomousJobValidationError",
     "AutonomousJobWorker",
 ]
