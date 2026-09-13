@@ -134,6 +134,44 @@ class V1RuntimeRestartAcceptanceTests(unittest.TestCase):
         finally:
             directory.cleanup()
 
+    def test_retry_metadata_survives_restart_and_retries_when_due(self):
+        directory = tempfile.TemporaryDirectory()
+        try:
+            class FailingRunLoop(AutonomousReasoningRunLoop):
+                def __init__(self):
+                    pass
+
+                def run(self, job_id, *, max_pulses=1):
+                    raise RuntimeError("simulated restart failure")
+
+            path = Path(directory.name) / "jarvis.db"
+            persistence1 = AutonomousJobPersistenceService(SQLiteAutonomousJobStore(lambda: sqlite3.connect(path)))
+            schedule_store1 = SQLiteAutonomousRuntimeScheduleStore(lambda: sqlite3.connect(path))
+            persistence1.persist(AutonomousJob.create("retry goal", job_id="retry").start())
+            scheduler1 = AutonomousRuntimeScheduler(schedule_store1, FailingRunLoop())
+            scheduler1.schedule("retry", next_due=10, interval=5)
+            failed = scheduler1.tick(10)[0]
+            self.assertEqual(failed.failure, "RuntimeError: simulated restart failure")
+            self.assertEqual(schedule_store1.load_due(10)[0].failure_count, 1)
+            self.assertEqual(schedule_store1.load_due(10)[0].next_due, 15)
+
+            def complete(_job):
+                return AutonomousReasoningAction(
+                    "retry-complete",
+                    AutonomousReasoningDisposition.COMPLETE,
+                    "retry succeeded",
+                    result="retried successfully",
+                )
+
+            persistence2, scheduler2, _, _, schedule_store2 = self.make_runtime(directory, complete)
+            self.assertEqual(schedule_store2.load_due(14), [])
+            retry = scheduler2.tick(15)[0]
+            self.assertTrue(retry.removed)
+            self.assertEqual(retry.run.job.status, AutonomousJobStatus.COMPLETED)
+            self.assertEqual(retry.run.job.result, "retried successfully")
+        finally:
+            directory.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
