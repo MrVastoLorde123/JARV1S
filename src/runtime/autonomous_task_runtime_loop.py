@@ -6,7 +6,6 @@ import time
 from typing import Callable
 
 from src.runtime.autonomous_runtime_scheduler import AutonomousRuntimeScheduleResult
-from src.runtime.autonomous_task_runtime import AutonomousTaskRuntime
 
 
 class AutonomousTaskRuntimeLoop:
@@ -14,13 +13,13 @@ class AutonomousTaskRuntimeLoop:
 
     def __init__(
         self,
-        runtime: AutonomousTaskRuntime,
+        runtime,
         *,
         now: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
-        if not isinstance(runtime, AutonomousTaskRuntime):
-            raise TypeError("runtime must be an AutonomousTaskRuntime")
+        if not hasattr(runtime, "tick") or not callable(runtime.tick):
+            raise TypeError("runtime must provide a callable tick method")
         if not callable(now):
             raise TypeError("now must be callable")
         if not callable(sleep):
