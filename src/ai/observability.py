@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import fields, is_dataclass
+from dataclasses import field, fields, is_dataclass
 from enum import Enum
 from time import monotonic
 from typing import Mapping
@@ -57,7 +57,7 @@ class TraceEvent:
     model_id: str | None = None
     provider_name: str | None = None
     outcome: EvaluationOutcome | None = None
-    data: Mapping[str, object] = {}
+    data: Mapping[str, object] = field(default_factory=dict)
     elapsed_ms: float | None = None
 
     def __post_init__(self) -> None:
