@@ -25,6 +25,7 @@ class FencedStore:
             self.jobs[value.job_id] = value
         else:
             self.schedule = value
+        return "revision"
 
     def load(self, job_id):
         return self.jobs.get(job_id)
@@ -114,7 +115,7 @@ class M71SchedulerLeaseFencingTests(unittest.TestCase):
 
     def test_store_contract_requires_claim_completion_boundary(self):
         class LegacyStore:
-            def save(self, schedule): pass
+            def save(self, schedule): return "revision"
             def load_due(self, now): return []
             def claim(self, schedule, now, lease_seconds): return None
 
@@ -127,5 +128,4 @@ class M71SchedulerLeaseFencingTests(unittest.TestCase):
             AutonomousRuntimeScheduler(LegacyStore(), AutonomousReasoningRunLoop(pulse))
 
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()
