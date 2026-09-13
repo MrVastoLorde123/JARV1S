@@ -99,6 +99,7 @@ class AgentCommunicationServiceTests(unittest.TestCase):
         route = self.service.handle(message)
         self.assertEqual(route.directive.kind, AgentDirectiveKind.DENY)
         self.assertEqual(route.directive.granted_needs, ())
+        self.assertEqual(route.directive.denied_needs, ("disable_security",))
 
 
 if __name__ == "__main__":
