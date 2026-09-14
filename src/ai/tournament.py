@@ -45,6 +45,24 @@ class TournamentEntry:
             self.candidate.model_id,
         )
 
+    @property
+    def case_evidence(self) -> tuple[dict[str, object], ...]:
+        return tuple(
+            {
+                "case_id": observation.case_id,
+                "passed": observation.passed,
+                "outcome": observation.outcome.value,
+                "scores": {
+                    dimension.value: score
+                    for dimension, score in observation.scores.items()
+                },
+                "error": observation.error,
+                "latency_ms": observation.latency_ms,
+                "response_preview": observation.response_preview,
+            }
+            for observation in self.report.observations
+        )
+
     def as_dict(self) -> dict[str, object]:
         return {
             "model_id": self.candidate.model_id,
@@ -62,6 +80,7 @@ class TournamentEntry:
                 dimension.value: score
                 for dimension, score in self.report.dimension_scores.items()
             },
+            "case_evidence": list(self.case_evidence),
             "suitable_role_count": self.suitable_role_count,
             "role_fitness": {
                 role_id: {
