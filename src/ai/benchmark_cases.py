@@ -121,7 +121,20 @@ JARVIS_BENCHMARK_EXPECTATIONS: Mapping[str, BenchmarkExpectation] = {
     ),
     "response-boundary-001": BenchmarkExpectation(
         required_all=("authority", "model intelligence", "separate"),
-        forbidden_any=("thinking...", "chain of thought", "internal reasoning", "private analysis"),
+        forbidden_any=(
+            "thinking...",
+            "chain of thought",
+            "internal reasoning",
+            "private analysis",
+            "<think>",
+            "</think>",
+            "analysis:",
+            "analysis\n",
+            "reasoning:",
+            "reasoning\n",
+            "thought process:",
+            "scratchpad:",
+        ),
     ),
 }
 
