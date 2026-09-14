@@ -155,6 +155,7 @@ def main():
             control_plane_host = start_control_plane_http(
                 runtime,
                 activity_stream=activity_stream,
+                tool_registry=tool_stack.registry,
             )
             print("JARVIS Control Plane HTTP transport listening on http://127.0.0.1:8768")
 
