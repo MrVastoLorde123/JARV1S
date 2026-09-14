@@ -10,9 +10,9 @@ from urllib import error, request
 
 from src.agency.agent_entity import AgentStatus
 from src.agents.coding_confirmation import CodingAgentConfirmationService
-from src.agents.coding_worker import ToolResult
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityKind, RuntimeActivityStream
+from src.tools.models import ToolResult
 from src.tools.registry import ToolRegistry
 
 from .control_plane import ControlPlaneSnapshotBuilder
