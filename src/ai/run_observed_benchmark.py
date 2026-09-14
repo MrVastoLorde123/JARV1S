@@ -16,7 +16,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run an evidence-bearing JARVIS local-model benchmark through Ollama.")
     parser.add_argument("model")
     parser.add_argument("--base-url", default="http://127.0.0.1:11434")
-    parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--trace-json", type=Path)
     parser.add_argument("--report-json", type=Path)
     parser.add_argument("--full-responses", action="store_true")
