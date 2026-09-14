@@ -11,6 +11,8 @@ from typing import Any, Callable, Mapping
 from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
 from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityKind, RuntimeActivityStream
 
+from .control_plane_store import ControlPlaneActivityStore
+
 
 class ControlPlaneError(RuntimeError):
     """Raised when a control-plane snapshot cannot be constructed safely."""
@@ -127,12 +129,23 @@ class ControlPlaneActivityRecorder:
         "operation_status",
     })
 
-    def __init__(self, stream: RuntimeActivityStream) -> None:
+    def __init__(
+        self,
+        stream: RuntimeActivityStream,
+        *,
+        durable_store: ControlPlaneActivityStore | None = None,
+    ) -> None:
         if type(stream) is not RuntimeActivityStream:
             raise TypeError("stream must be a RuntimeActivityStream")
+        if durable_store is not None and type(durable_store) is not ControlPlaneActivityStore:
+            raise TypeError("durable_store must be a ControlPlaneActivityStore or None")
         self._stream = stream
-        self._event_counter = 0
+        self._durable_store = durable_store
         self._lock = RLock()
+        if durable_store is not None and stream.size == 0:
+            for event in durable_store.load_events():
+                stream.publish(event)
+        self._event_counter = stream.size
 
     def record_request(self, *, request_id: str, session_id: str) -> RuntimeActivityEvent:
         return self._publish(
@@ -210,6 +223,8 @@ class ControlPlaneActivityRecorder:
                 summary=summary,
                 metadata=metadata,
             )
+            if self._durable_store is not None:
+                self._durable_store.append(event)
             self._stream.publish(event)
             return event
 
@@ -312,4 +327,4 @@ class ControlPlaneSnapshotBuilder:
         }
 
 
-__all__ = ["ControlPlaneActivityRecorder", "ControlPlaneError", "ControlPlaneSnapshot", "ControlPlaneSnapshotBuilder"]
+__all__ = ["ControlPlaneActivityRecorder", "ControlPlaneActivityStore", "ControlPlaneError", "ControlPlaneSnapshot", "ControlPlaneSnapshotBuilder"]
