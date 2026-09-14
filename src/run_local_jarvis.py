@@ -12,12 +12,13 @@ from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis_runtime import JARVISRuntime
-from src.core.runtime_activity_stream import InterfaceRuntimeActivityRecorder, RuntimeActivityStream
+from src.core.runtime_activity_stream import RuntimeActivityStream
 from src.database_bootstrap import bootstrap_database
 from src.interface.capability_host import start_capability_http
 from src.interface.http_capabilities import CapabilityHTTPConfig
 from src.interface.command_host import start_command_http
 from src.interface.control_host import start_control_plane_http
+from src.interface.control_plane import ControlPlaneActivityRecorder
 from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
@@ -122,7 +123,7 @@ def main():
     )
 
     activity_stream = RuntimeActivityStream()
-    activity_recorder = InterfaceRuntimeActivityRecorder(activity_stream)
+    activity_recorder = ControlPlaneActivityRecorder(activity_stream)
 
     world_host = None
     if enable_world_http:
