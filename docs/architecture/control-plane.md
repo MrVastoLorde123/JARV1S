@@ -21,14 +21,25 @@ The snapshot contains:
 - task state and progress;
 - active agents;
 - pending approvals;
-- tool activity/results;
-- model/provider state;
+- tool inventory and risk/confirmation declarations;
+- model/provider state backed by a live local `/v1/models` observation;
 - blockers and errors;
 - verification state and evidence references;
 - bounded operational events;
 - a monotonic observation cursor.
 
 Some fields may temporarily report `NOT_REPORTED` or an empty collection while their deeper runtime projection is not yet wired. Empty data is not a claim that the underlying system has no such state.
+
+## Current runtime projections
+
+The local runtime currently projects:
+
+- concrete active `AgentEntity` instances from `JARVISRuntime.world_runtime`;
+- the registered `ToolDefinition` catalog from the runtime's `ToolRegistry`;
+- pending coding authorization state from `CodingAgentConfirmationService`;
+- local model/provider health from the configured OpenAI-compatible `/v1/models` endpoint.
+
+The task and verification projections remain explicitly `NOT_REPORTED` until their authoritative runtime contracts are wired. They are not inferred from model output, approval existence, or tool inventory.
 
 ## Action lifecycle
 
