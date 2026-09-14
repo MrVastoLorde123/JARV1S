@@ -45,12 +45,14 @@ def local_model_projection(
         )
         with opener(response_request, timeout=1) as response:
             payload = json.loads(response.read().decode("utf-8"))
+        if not isinstance(payload, dict) or not isinstance(payload.get("data", ()), list):
+            raise ValueError("/v1/models response must contain a list-valued data field")
         model_ids = tuple(
             str(item.get("id"))
-            for item in payload.get("data", ())
+            for item in payload["data"]
             if isinstance(item, dict) and item.get("id")
         )
-    except (OSError, ValueError, TypeError, json.JSONDecodeError, error.URLError):
+    except (OSError, ValueError, TypeError, error.URLError):
         return {
             "provider": "local",
             "model": normalized_model,
