@@ -139,6 +139,11 @@ class CodingAgentService:
         context_composer = RepositoryContextComposer(tool_invoker)
         return cls(planner, worker, context_composer)
 
+    def bind_tool_invoker(self, tool_invoker) -> None:
+        """Bind the worker execution/observation delegate after canonical construction."""
+        self._worker.bind_tool_invoker(tool_invoker)
+        self._context_composer = RepositoryContextComposer(tool_invoker)
+
     def bind_consequence_authorization(self, authorization_service: ExplicitAuthorizationService, *, authority_target: str = "coding_confirmation") -> None:
         self._consequence_authorization_service = ConsequenceAuthorizationService(authorization_service, authority_target=authority_target)
 
