@@ -3,34 +3,22 @@ import threading
 import unittest
 from urllib.request import Request, urlopen
 
-from src.core.interface_backend import InterfaceOperation, InterfaceRequest, InterfaceResponse, InterfaceResponseStatus
-from src.core.runtime_activity_stream import InterfaceRuntimeActivityRecorder, RuntimeActivityStream
-from src.interface.control_plane import ControlPlaneSnapshotBuilder
+from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
+from src.core.runtime_activity_stream import RuntimeActivityStream
+from src.interface.control_plane import ControlPlaneActivityRecorder, ControlPlaneSnapshotBuilder
 from src.interface.http_control_plane import ControlPlaneHTTPConfig, create_control_plane_server
 
 
 class ControlPlaneSnapshotTests(unittest.TestCase):
     def setUp(self):
         self.stream = RuntimeActivityStream()
-        recorder = InterfaceRuntimeActivityRecorder(self.stream)
-        request = InterfaceRequest(
+        recorder = ControlPlaneActivityRecorder(self.stream)
+        recorder.record_request(request_id="req-1", session_id="desktop")
+        recorder.record_response(
             request_id="req-1",
             session_id="desktop",
-            actor_id="user",
-            operation=InterfaceOperation.STATUS,
-            payload={},
-            metadata={},
-        )
-        recorder.record_request(request)
-        recorder.record_response(
-            request,
-            InterfaceResponse(
-                request_id="req-1",
-                operation=InterfaceOperation.STATUS,
-                status=InterfaceResponseStatus.ACCEPTED,
-                payload={"ok": True},
-                metadata={"artifact_type": "STATUS"},
-            ),
+            status=InterfaceResponseStatus.ACCEPTED,
+            metadata={"artifact_type": "STATUS"},
         )
         self.builder = ControlPlaneSnapshotBuilder(
             world_supplier=lambda: {"landscape": "SURINAME", "authority_granted": False},
@@ -56,12 +44,21 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual(payload["events"][0]["kind"], "REQUEST_RECEIVED")
         self.assertEqual(payload["events"][1]["kind"], "RESPONSE_EMITTED")
         self.assertEqual(payload["cursor"], 2)
+        self.assertEqual(payload["runtime"]["read_only"], True)
         json.loads(snapshot.to_json())
 
     def test_cursor_filters_already_consumed_events(self):
         snapshot = self.builder.build(after_cursor=1)
         self.assertEqual([event["sequence"] for event in snapshot.events], [2])
         self.assertEqual(snapshot.cursor, 2)
+
+    def test_default_clock_produces_nonempty_timestamp(self):
+        builder = ControlPlaneSnapshotBuilder(
+            world_supplier=lambda: {"landscape": "TEST"},
+            activity_stream=self.stream,
+        )
+        snapshot = builder.build()
+        self.assertTrue(snapshot.generated_at)
 
     def test_invalid_supplier_shape_is_rejected(self):
         builder = ControlPlaneSnapshotBuilder(
@@ -71,6 +68,20 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(Exception, "world supplier"):
             builder.build()
+
+    def test_activity_recorder_is_sequential_and_runtime_owned(self):
+        stream = RuntimeActivityStream()
+        recorder = ControlPlaneActivityRecorder(stream)
+        first = recorder.record_request(request_id="req-a", session_id="desktop")
+        second = recorder.record_response(
+            request_id="req-a",
+            session_id="desktop",
+            status=InterfaceResponseStatus.FAILED,
+        )
+        self.assertEqual(first.sequence, 1)
+        self.assertEqual(second.sequence, 2)
+        self.assertEqual(second.kind.value, "REQUEST_FAILED")
+        self.assertEqual(second.operation, InterfaceOperation.PROPOSE)
 
 
 class ControlPlaneHTTPTests(unittest.TestCase):
@@ -102,6 +113,35 @@ class ControlPlaneHTTPTests(unittest.TestCase):
         self.assertEqual(payload["schema"], "control-plane.v1")
         self.assertTrue(payload["runtime"]["read_only"])
         self.assertEqual(payload["runtime"]["world"]["landscape"], "TEST")
+
+    def test_cursor_query_is_forwarded_into_snapshot(self):
+        stream = RuntimeActivityStream()
+        recorder = ControlPlaneActivityRecorder(stream)
+        recorder.record_request(request_id="req-1", session_id="desktop")
+        builder = ControlPlaneSnapshotBuilder(
+            world_supplier=lambda: {"landscape": "TEST"},
+            activity_stream=stream,
+            clock=lambda: "now",
+        )
+        server = create_control_plane_server(
+            builder,
+            config=ControlPlaneHTTPConfig(host="127.0.0.1", port=0, path="/api/control-plane"),
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = Request(
+                f"http://127.0.0.1:{server.server_port}/api/control-plane?after_cursor=1",
+                headers={"Accept": "application/json"},
+            )
+            with urlopen(request, timeout=2) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(payload["events"], [])
+            self.assertEqual(payload["metadata"]["after_cursor"], 1)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     def test_unknown_route_is_not_a_control_plane_endpoint(self):
         request = Request(f"http://127.0.0.1:{self.server.server_port}/api/control-plane/other", headers={"Accept": "application/json"})
