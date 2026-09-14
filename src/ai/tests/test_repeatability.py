@@ -12,11 +12,12 @@ class RepeatabilityTests(unittest.TestCase):
     candidate = ModelCandidate("test-model", "fake", "Test Model")
 
     def _report(self, score: float, outcome: EvaluationOutcome, latency: float = 100.0) -> ModelEvaluationReport:
+        is_infrastructure = outcome in {EvaluationOutcome.INFRASTRUCTURE_ERROR, EvaluationOutcome.TIMEOUT}
         observation = EvaluationObservation(
             case_id="case-001",
             model_id="test-model",
-            response=AIResponse(content="ok", provider="fake", model="test-model") if outcome is not EvaluationOutcome.INFRASTRUCTURE_ERROR else None,
-            scores={EvaluationDimension.CORRECTNESS: score} if outcome is not EvaluationOutcome.INFRASTRUCTURE_ERROR else {},
+            response=AIResponse(content="ok", provider="fake", model="test-model") if not is_infrastructure else None,
+            scores={EvaluationDimension.CORRECTNESS: score} if not is_infrastructure else {},
             passed=outcome is EvaluationOutcome.PASS,
             outcome=outcome,
             latency_ms=latency,
@@ -36,11 +37,25 @@ class RepeatabilityTests(unittest.TestCase):
         case = summary.cases["case-001"]
         self.assertEqual(summary.trial_count, 3)
         self.assertEqual(summary.trials_with_infrastructure_failures, 1)
+        self.assertEqual(summary.evaluable_observation_count, 2)
+        self.assertEqual(summary.model_failure_rate, 0.5)
+        self.assertEqual(summary.infrastructure_failure_rate, 1 / 3)
         self.assertEqual(case.pass_count, 1)
         self.assertEqual(case.model_failure_count, 1)
         self.assertEqual(case.infrastructure_failure_count, 1)
         self.assertEqual(case.observed_scores, (1.0, 0.0))
         self.assertIsNotNone(case.score_stddev)
+
+    def test_infrastructure_failures_do_not_inflate_model_failure_rate(self) -> None:
+        summary = aggregate_reports(
+            (
+                self._report(0.0, EvaluationOutcome.MODEL_FAILURE),
+                self._report(0.0, EvaluationOutcome.INFRASTRUCTURE_ERROR),
+                self._report(0.0, EvaluationOutcome.INFRASTRUCTURE_ERROR),
+            )
+        )
+        self.assertEqual(summary.model_failure_rate, 1.0)
+        self.assertEqual(summary.infrastructure_failure_rate, 2 / 3)
 
     def test_mixed_models_are_rejected(self) -> None:
         other = ModelEvaluationReport(
@@ -54,6 +69,7 @@ class RepeatabilityTests(unittest.TestCase):
         summary = aggregate_reports((self._report(1.0, EvaluationOutcome.PASS),))
         payload = repeatability_as_dict(summary)
         self.assertEqual(payload["trial_count"], 1)
+        self.assertEqual(payload["evaluable_observation_count"], 1)
         self.assertEqual(payload["cases"]["case-001"]["pass_count"], 1)
 
 
