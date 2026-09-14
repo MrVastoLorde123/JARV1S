@@ -128,6 +128,15 @@ class CodingConfirmationStore:
         finally:
             connection.close()
 
+    def clear(self) -> None:
+        connection = self._connect()
+        try:
+            connection.execute("DELETE FROM coding_confirmation_consumed_invocations")
+            connection.execute("DELETE FROM coding_confirmation_operations")
+            connection.commit()
+        finally:
+            connection.close()
+
     def load_operations(self) -> tuple[CodingPendingOperation, ...]:
         connection = self._connect()
         try:
@@ -138,16 +147,9 @@ class CodingConfirmationStore:
                 ORDER BY created_at, operation_id
                 """
             ).fetchall()
-            consumed = connection.execute(
-                """
-                SELECT operation_id, invocation_id
-                FROM coding_confirmation_consumed_invocations
-                """
-            ).fetchall()
         finally:
             connection.close()
 
-        consumed_set = {(str(operation_id), str(invocation_id)) for operation_id, invocation_id in consumed}
         operations: list[CodingPendingOperation] = []
         for row in rows:
             task_payload = json.loads(row[1])
@@ -187,7 +189,6 @@ class CodingConfirmationStore:
                     metadata=dict(metadata) if isinstance(metadata, dict) else {},
                 )
             )
-        self._loaded_consumed_invocations = consumed_set
         return tuple(operations)
 
     def load_consumed_invocations(self) -> set[tuple[str, str]]:
