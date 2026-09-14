@@ -30,12 +30,7 @@ class ControlPlaneHostHandle:
         self.thread.join(timeout=2.0)
 
 
-def local_model_projection(
-    *,
-    base_url: str,
-    model_id: str,
-    opener=request.urlopen,
-) -> dict[str, object]:
+def local_model_projection(*, base_url: str, model_id: str, opener=request.urlopen) -> dict[str, object]:
     """Return an evidence-backed local model/provider observation."""
     normalized_base = base_url.rstrip("/")
     normalized_model = model_id.strip() or "unknown"
@@ -49,19 +44,9 @@ def local_model_projection(
             payload = json.loads(response.read().decode("utf-8"))
         if not isinstance(payload, dict) or not isinstance(payload.get("data", ()), list):
             raise ValueError("/v1/models response must contain a list-valued data field")
-        model_ids = tuple(
-            str(item.get("id"))
-            for item in payload["data"]
-            if isinstance(item, dict) and item.get("id")
-        )
+        model_ids = tuple(str(item.get("id")) for item in payload["data"] if isinstance(item, dict) and item.get("id"))
     except (OSError, ValueError, TypeError, error.URLError):
-        return {
-            "provider": "local",
-            "model": normalized_model,
-            "state": "UNAVAILABLE",
-            "observed_model_ids": (),
-            "evidence": "local_server_models_unreachable",
-        }
+        return {"provider": "local", "model": normalized_model, "state": "UNAVAILABLE", "observed_model_ids": (), "evidence": "local_server_models_unreachable"}
 
     if normalized_model in model_ids:
         state = "AVAILABLE"
@@ -70,13 +55,7 @@ def local_model_projection(
     else:
         state = "UNAVAILABLE"
 
-    return {
-        "provider": "local",
-        "model": normalized_model,
-        "state": state,
-        "observed_model_ids": model_ids,
-        "evidence": "local_server_models_observed",
-    }
+    return {"provider": "local", "model": normalized_model, "state": state, "observed_model_ids": model_ids, "evidence": "local_server_models_observed"}
 
 
 def _latest_coding_observation(activity_stream: RuntimeActivityStream) -> dict[str, object] | None:
@@ -107,16 +86,7 @@ def _task_projection(activity_stream: RuntimeActivityStream) -> dict[str, object
         state = "REPORTED"
 
     projection: dict[str, object] = {"state": state, "source": "coding_agent_response"}
-    for key in (
-        "task_id",
-        "operation_id",
-        "plan_fingerprint",
-        "edit_count",
-        "coding_status",
-        "edits_attempted",
-        "edits_applied",
-        "blocked_tool",
-    ):
+    for key in ("task_id", "operation_id", "plan_fingerprint", "edit_count", "coding_status", "edits_attempted", "edits_applied", "blocked_tool"):
         if key in observation:
             projection[key] = observation[key]
     if "success" in observation:
@@ -133,10 +103,7 @@ def _verification_projection(activity_stream: RuntimeActivityStream) -> dict[str
     verification = observation.get("verification")
     if isinstance(verification, ToolResult):
         state = "PASSED" if verification.success else "FAILED"
-        evidence: dict[str, object] = {
-            "tool_name": verification.tool_name,
-            "success": verification.success,
-        }
+        evidence: dict[str, object] = {"tool_name": verification.tool_name, "success": verification.success}
         if verification.error is not None:
             evidence["error_code"] = verification.error.code
             evidence["error"] = verification.error.message
@@ -150,22 +117,51 @@ def _verification_projection(activity_stream: RuntimeActivityStream) -> dict[str
         state = "PASSED" if verification.get("passed") is True else "FAILED"
     if state is None and "success" in verification:
         state = "PASSED" if verification.get("success") is True else "FAILED"
-    evidence = {
-        key: verification[key]
-        for key in ("runner", "exit_code", "passed", "error")
-        if key in verification
-    }
+    evidence = {key: verification[key] for key in ("runner", "exit_code", "passed", "error") if key in verification}
     return {"state": str(state or "REPORTED"), "evidence": [evidence] if evidence else []}
 
 
-def start_control_plane_http(
-    runtime: JARVISRuntime,
-    *,
-    activity_stream: RuntimeActivityStream,
-    tool_registry: ToolRegistry | None = None,
-    confirmation_service: CodingAgentConfirmationService | None = None,
-    config: ControlPlaneHTTPConfig | None = None,
-) -> ControlPlaneHostHandle:
+def _blockers_projection(activity_stream: RuntimeActivityStream) -> tuple[Mapping[str, object], ...]:
+    """Project only explicitly observed execution blockers; never infer authority."""
+    observation = _latest_coding_observation(activity_stream)
+    if observation is None:
+        return ()
+
+    task_id = observation.get("task_id")
+    operation_id = observation.get("operation_id")
+    stage = str(observation.get("stage", "UNKNOWN"))
+    blocked_tool = observation.get("blocked_tool")
+
+    if blocked_tool:
+        blocker: dict[str, object] = {"type": "TOOL_BLOCKED", "severity": "HIGH", "tool": blocked_tool, "source": "coding_agent_response"}
+    elif stage == "CONFIRMATION":
+        blocker = {"type": "AWAITING_APPROVAL", "severity": "MEDIUM", "source": "coding_agent_response"}
+    elif stage == "EXECUTION" and observation.get("success") is False:
+        blocker = {"type": "EXECUTION_FAILED", "severity": "HIGH", "source": "coding_agent_response"}
+    else:
+        verification = observation.get("verification")
+        if isinstance(verification, Mapping):
+            verification_failed = verification.get("passed") is False or verification.get("success") is False or verification.get("state") == "FAILED" or verification.get("status") == "FAILED"
+            if not verification_failed:
+                return ()
+            blocker = {"type": "VERIFICATION_FAILED", "severity": "HIGH", "source": "coding_agent_response"}
+            if verification.get("error"):
+                blocker["error"] = verification["error"]
+        elif isinstance(verification, ToolResult) and not verification.success:
+            blocker = {"type": "VERIFICATION_FAILED", "severity": "HIGH", "source": "coding_agent_response"}
+            if verification.error is not None:
+                blocker["error"] = verification.error.message
+        else:
+            return ()
+
+    if task_id is not None:
+        blocker["task_id"] = task_id
+    if operation_id is not None:
+        blocker["operation_id"] = operation_id
+    return (blocker,)
+
+
+def start_control_plane_http(runtime: JARVISRuntime, *, activity_stream: RuntimeActivityStream, tool_registry: ToolRegistry | None = None, confirmation_service: CodingAgentConfirmationService | None = None, config: ControlPlaneHTTPConfig | None = None) -> ControlPlaneHostHandle:
     if not isinstance(runtime, JARVISRuntime):
         raise TypeError("runtime must be a JARVISRuntime")
     if type(activity_stream) is not RuntimeActivityStream:
@@ -183,26 +179,12 @@ def start_control_plane_http(
     def agents_supplier():
         if runtime.world_runtime is None:
             return ()
-        return tuple(
-            agent.to_context()
-            for agent in runtime.world_runtime.agents
-            if agent.status is not AgentStatus.RETIRED
-        )
+        return tuple(agent.to_context() for agent in runtime.world_runtime.agents if agent.status is not AgentStatus.RETIRED)
 
     def tools_supplier():
         if tool_registry is None:
             return ()
-        return tuple(
-            {
-                "name": definition.name,
-                "description": definition.description,
-                "version": definition.version,
-                "risk_level": definition.risk_level.value,
-                "requires_confirmation": definition.requires_confirmation,
-                "metadata": dict(definition.metadata),
-            }
-            for definition in tool_registry.list_definitions()
-        )
+        return tuple({"name": definition.name, "description": definition.description, "version": definition.version, "risk_level": definition.risk_level.value, "requires_confirmation": definition.requires_confirmation, "metadata": dict(definition.metadata)} for definition in tool_registry.list_definitions())
 
     def approvals_supplier():
         if confirmation_service is None:
@@ -211,24 +193,10 @@ def start_control_plane_http(
         if operation is None:
             return ()
         metadata = dict(operation.metadata)
-        return (
-            {
-                "operation_id": operation.operation_id,
-                "status": operation.status.value,
-                "task_id": operation.task.task_id,
-                "objective": operation.task.objective,
-                "created_at": operation.created_at,
-                "plan_fingerprint": metadata.get("plan_fingerprint"),
-                "edit_count": len(operation.plan.edits),
-                "verification_runner": operation.plan.verification.runner,
-            },
-        )
+        return ({"operation_id": operation.operation_id, "status": operation.status.value, "task_id": operation.task.task_id, "objective": operation.task.objective, "created_at": operation.created_at, "plan_fingerprint": metadata.get("plan_fingerprint"), "edit_count": len(operation.plan.edits), "verification_runner": operation.plan.verification.runner},)
 
     def model_supplier():
-        return local_model_projection(
-            base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"),
-            model_id=os.environ.get("JARVIS_LOCAL_MODEL", "unknown"),
-        )
+        return local_model_projection(base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"), model_id=os.environ.get("JARVIS_LOCAL_MODEL", "unknown"))
 
     builder = ControlPlaneSnapshotBuilder(
         world_supplier=world_supplier,
@@ -238,18 +206,11 @@ def start_control_plane_http(
         approvals_supplier=approvals_supplier,
         tools_supplier=tools_supplier,
         model_supplier=model_supplier,
-        blockers_supplier=lambda: (),
+        blockers_supplier=lambda: _blockers_projection(activity_stream),
         verification_supplier=lambda: _verification_projection(activity_stream),
     )
-    server = create_control_plane_server(
-        builder,
-        config=config or ControlPlaneHTTPConfig(),
-    )
-    thread = Thread(
-        target=server.serve_forever,
-        name="jarvis-control-plane-http",
-        daemon=True,
-    )
+    server = create_control_plane_server(builder, config=config or ControlPlaneHTTPConfig())
+    thread = Thread(target=server.serve_forever, name="jarvis-control-plane-http", daemon=True)
     thread.start()
     return ControlPlaneHostHandle(server=server, thread=thread)
 
