@@ -36,16 +36,25 @@ class RepeatabilityReport:
     cases: Mapping[str, CaseRepeatability]
 
     @property
+    def evaluable_observation_count(self) -> int:
+        return sum(
+            item.pass_count + item.model_failure_count
+            for item in self.cases.values()
+        )
+
+    @property
     def model_failure_rate(self) -> float:
-        observations = sum(item.model_failure_count for item in self.cases.values())
-        trials = sum(item.trial_count for item in self.cases.values())
-        return observations / trials if trials else 0.0
+        """Model failure rate among observations that actually reached model evaluation."""
+        failures = sum(item.model_failure_count for item in self.cases.values())
+        evaluable = self.evaluable_observation_count
+        return failures / evaluable if evaluable else 0.0
 
     @property
     def infrastructure_failure_rate(self) -> float:
-        observations = sum(item.infrastructure_failure_count for item in self.cases.values())
+        """Infrastructure failure rate across all attempted observations."""
+        failures = sum(item.infrastructure_failure_count for item in self.cases.values())
         trials = sum(item.trial_count for item in self.cases.values())
-        return observations / trials if trials else 0.0
+        return failures / trials if trials else 0.0
 
 
 def _case_summary(reports: tuple[ModelEvaluationReport, ...]) -> dict[str, CaseRepeatability]:
@@ -133,6 +142,7 @@ def repeatability_as_dict(report: RepeatabilityReport) -> dict[str, object]:
         "trial_count": report.trial_count,
         "successful_trials": report.successful_trials,
         "trials_with_infrastructure_failures": report.trials_with_infrastructure_failures,
+        "evaluable_observation_count": report.evaluable_observation_count,
         "overall_scores": list(report.overall_scores),
         "average_overall_score": report.average_overall_score,
         "overall_score_stddev": report.overall_score_stddev,
