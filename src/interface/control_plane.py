@@ -1,17 +1,14 @@
-"""Runtime-owned control-plane projection for the JARVIS cockpit.
-
-The control plane is deliberately a read-only projection boundary. It composes
-existing runtime observations and activity into one immutable snapshot without
-introducing a second authority mechanism or allowing the UI to fabricate state.
-"""
+"""Runtime-owned control-plane projection for the JARVIS cockpit."""
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
-from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityStream
+from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
+from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityKind, RuntimeActivityStream
 
 
 class ControlPlaneError(RuntimeError):
@@ -33,7 +30,7 @@ def _plain(value: Any) -> Any:
         return {str(k): _plain(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [_plain(v) for v in value]
-    if hasattr(value, "value") and type(value.__class__.__module__) is not str:
+    if hasattr(value, "value"):
         try:
             return value.value
         except Exception:
@@ -108,6 +105,70 @@ class ControlPlaneSnapshot:
         return json.dumps(self.to_dict(), sort_keys=True, default=str)
 
 
+class ControlPlaneActivityRecorder:
+    """Translate browser command lifecycle into the shared runtime activity stream."""
+
+    def __init__(self, stream: RuntimeActivityStream) -> None:
+        if type(stream) is not RuntimeActivityStream:
+            raise TypeError("stream must be a RuntimeActivityStream")
+        self._stream = stream
+        self._event_counter = 0
+
+    def record_request(self, *, request_id: str, session_id: str) -> RuntimeActivityEvent:
+        return self._publish(
+            session_id=session_id,
+            request_id=request_id,
+            kind=RuntimeActivityKind.REQUEST_RECEIVED,
+            status=None,
+            stage="COMMAND_HTTP",
+            summary="UI command request received",
+            metadata={"event_source": "command_http"},
+        )
+
+    def record_response(
+        self,
+        *,
+        request_id: str,
+        session_id: str,
+        status: InterfaceResponseStatus,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> RuntimeActivityEvent:
+        kind = (
+            RuntimeActivityKind.RESPONSE_EMITTED
+            if status is InterfaceResponseStatus.ACCEPTED
+            else RuntimeActivityKind.REQUEST_REJECTED
+            if status is InterfaceResponseStatus.REJECTED
+            else RuntimeActivityKind.REQUEST_FAILED
+        )
+        return self._publish(
+            session_id=session_id,
+            request_id=request_id,
+            kind=kind,
+            status=status,
+            stage="COMMAND_HTTP",
+            summary=f"UI command {status.value.lower()}",
+            metadata={"event_source": "command_http", **dict(metadata or {})},
+        )
+
+    def _publish(self, *, session_id: str, request_id: str, kind: RuntimeActivityKind, status: InterfaceResponseStatus | None, stage: str, summary: str, metadata: Mapping[str, Any]) -> RuntimeActivityEvent:
+        self._event_counter += 1
+        event = RuntimeActivityEvent(
+            event_id=f"control-event-{self._event_counter}",
+            sequence=self._stream.size + 1,
+            session_id=session_id,
+            actor_id="ui",
+            request_id=request_id,
+            operation=InterfaceOperation.PROPOSE,
+            kind=kind,
+            status=status,
+            stage=stage,
+            summary=summary,
+            metadata=metadata,
+        )
+        self._stream.publish(event)
+        return event
+
+
 WorldSupplier = Callable[[], Mapping[str, Any]]
 
 
@@ -141,7 +202,7 @@ class ControlPlaneSnapshotBuilder:
         self._model_supplier = model_supplier or (lambda: {})
         self._blockers_supplier = blockers_supplier or (lambda: ())
         self._verification_supplier = verification_supplier or (lambda: {})
-        self._clock = clock or (lambda: "")
+        self._clock = clock or (lambda: datetime.now(timezone.utc).isoformat())
 
     def build(self, *, after_cursor: int = 0, limit: int = 50) -> ControlPlaneSnapshot:
         if type(after_cursor) is not int or after_cursor < 0:
@@ -206,4 +267,4 @@ class ControlPlaneSnapshotBuilder:
         }
 
 
-__all__ = ["ControlPlaneError", "ControlPlaneSnapshot", "ControlPlaneSnapshotBuilder"]
+__all__ = ["ControlPlaneActivityRecorder", "ControlPlaneError", "ControlPlaneSnapshot", "ControlPlaneSnapshotBuilder"]
