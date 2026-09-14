@@ -153,6 +153,12 @@ class CodingAgentWorker:
         self._planner = planner
         self._tool_invoker = tool_invoker
 
+    def bind_tool_invoker(self, tool_invoker: CodingAgentToolInvoker) -> None:
+        """Replace only the worker's observation/execution delegate."""
+        if not callable(getattr(tool_invoker, "invoke", None)):
+            raise TypeError("tool_invoker must provide invoke(request)")
+        self._tool_invoker = tool_invoker
+
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
         """Generate a bounded proposal without invoking any repository tool."""
         if not isinstance(task, CodingAgentTask):
