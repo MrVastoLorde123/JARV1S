@@ -37,9 +37,12 @@ The local runtime currently projects:
 - concrete active `AgentEntity` instances from `JARVISRuntime.world_runtime`;
 - the registered `ToolDefinition` catalog from the runtime's `ToolRegistry`;
 - pending coding authorization state from `CodingAgentConfirmationService`;
-- local model/provider health from the configured OpenAI-compatible `/v1/models` endpoint.
+- local model/provider health from the configured OpenAI-compatible `/v1/models` endpoint;
+- coding task lifecycle from observed coding-agent response metadata;
+- bounded verification outcome/evidence from observed verification results;
+- explicit coding execution blockers such as pending approval, blocked tools, execution failure, and verification failure.
 
-The task and verification projections remain explicitly `NOT_REPORTED` until their authoritative runtime contracts are wired. They are not inferred from model output, approval existence, or tool inventory.
+These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence.
 
 ## Action lifecycle
 
