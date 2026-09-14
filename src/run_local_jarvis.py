@@ -156,6 +156,7 @@ def main():
                 runtime,
                 activity_stream=activity_stream,
                 tool_registry=tool_stack.registry,
+                confirmation_service=coding_confirmation_service,
             )
             print("JARVIS Control Plane HTTP transport listening on http://127.0.0.1:8768")
 
