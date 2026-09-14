@@ -46,8 +46,9 @@ def main() -> int:
     print(f"Average overall score: {summary.average_overall_score:.3f}")
     print(f"Overall score stddev: {summary.overall_score_stddev if summary.overall_score_stddev is not None else 0.0:.3f}")
     print(f"Trials with infrastructure failures: {summary.trials_with_infrastructure_failures}")
-    print(f"Model failure rate: {summary.model_failure_rate:.3f}")
-    print(f"Infrastructure failure rate: {summary.infrastructure_failure_rate:.3f}")
+    print(f"Evaluable observations: {summary.evaluable_observation_count}")
+    print(f"Model failure rate (evaluable only): {summary.model_failure_rate:.3f}")
+    print(f"Infrastructure failure rate (all attempts): {summary.infrastructure_failure_rate:.3f}")
     print()
 
     for case_id, case in summary.cases.items():
