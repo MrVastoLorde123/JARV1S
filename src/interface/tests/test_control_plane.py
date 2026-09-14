@@ -108,6 +108,14 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
                     "requires_confirmation": True,
                 },
             ),
+            approvals_supplier=lambda: (
+                {
+                    "operation_id": "op-1",
+                    "status": "PENDING",
+                    "task_id": "task-1",
+                    "objective": "Verify the proposed repository change",
+                },
+            ),
             clock=lambda: "2026-09-14T00:00:00Z",
         )
         payload = builder.build().to_dict()
@@ -116,6 +124,8 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual([tool["name"] for tool in payload["tools"]], ["read_file", "write_file"])
         self.assertEqual(payload["tools"][1]["risk_level"], "high")
         self.assertTrue(payload["tools"][1]["requires_confirmation"])
+        self.assertEqual(payload["approvals"][0]["operation_id"], "op-1")
+        self.assertEqual(payload["approvals"][0]["status"], "PENDING")
 
     def test_local_model_projection_reports_unavailable_when_server_is_unreachable(self):
         def raising_opener(*_args, **_kwargs):
@@ -128,6 +138,24 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(projection["state"], "UNAVAILABLE")
         self.assertEqual(projection["evidence"], "local_server_models_unreachable")
+
+    def test_local_model_projection_reports_unavailable_for_malformed_payload(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return b'{"data": {"id": "not-a-list"}}'
+
+        projection = local_model_projection(
+            base_url="http://127.0.0.1:8080",
+            model_id="qwen3-4b-local",
+            opener=lambda *_args, **_kwargs: FakeResponse(),
+        )
+        self.assertEqual(projection["state"], "UNAVAILABLE")
 
     def test_local_model_projection_reports_available_from_observed_models(self):
         class FakeResponse:
