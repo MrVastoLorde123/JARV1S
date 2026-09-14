@@ -103,8 +103,9 @@ def main():
     )
     coding_agent_service = CodingAgentService.from_ai_service(
         ai_service,
-        coding_tool_invoker,
+        tool_stack.gate,
     )
+    coding_agent_service.bind_tool_invoker(coding_tool_invoker)
 
     def processor_factory(session_id, conversation_id):
         base_context_runtime = WorkingContextRuntime(
