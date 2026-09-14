@@ -5,8 +5,10 @@ import os
 from dataclasses import dataclass
 from threading import Thread
 
+from src.agency.agent_entity import AgentStatus
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
+from src.tools.registry import ToolRegistry
 
 from .control_plane import ControlPlaneSnapshotBuilder
 from .http_control_plane import ControlPlaneHTTPConfig, create_control_plane_server
@@ -27,25 +29,52 @@ def start_control_plane_http(
     runtime: JARVISRuntime,
     *,
     activity_stream: RuntimeActivityStream,
+    tool_registry: ToolRegistry | None = None,
     config: ControlPlaneHTTPConfig | None = None,
 ) -> ControlPlaneHostHandle:
     if not isinstance(runtime, JARVISRuntime):
         raise TypeError("runtime must be a JARVISRuntime")
     if type(activity_stream) is not RuntimeActivityStream:
         raise TypeError("activity_stream must be a RuntimeActivityStream")
+    if tool_registry is not None and type(tool_registry) is not ToolRegistry:
+        raise TypeError("tool_registry must be a ToolRegistry or None")
 
     def world_supplier():
         if runtime.world_runtime is None:
             return {"available": False}
         return runtime.observe_world().to_context()
 
+    def agents_supplier():
+        if runtime.world_runtime is None:
+            return ()
+        return tuple(
+            agent.to_context()
+            for agent in runtime.world_runtime.agents
+            if agent.status is not AgentStatus.RETIRED
+        )
+
+    def tools_supplier():
+        if tool_registry is None:
+            return ()
+        return tuple(
+            {
+                "name": definition.name,
+                "description": definition.description,
+                "version": definition.version,
+                "risk_level": definition.risk_level.value,
+                "requires_confirmation": definition.requires_confirmation,
+                "metadata": dict(definition.metadata),
+            }
+            for definition in tool_registry.list_definitions()
+        )
+
     builder = ControlPlaneSnapshotBuilder(
         world_supplier=world_supplier,
         activity_stream=activity_stream,
         task_supplier=lambda: {"state": "NOT_REPORTED", "source": "task_projection_not_wired"},
-        agents_supplier=lambda: (),
+        agents_supplier=agents_supplier,
         approvals_supplier=lambda: (),
-        tools_supplier=lambda: (),
+        tools_supplier=tools_supplier,
         model_supplier=lambda: {
             "provider": "local",
             "model": os.environ.get("JARVIS_LOCAL_MODEL", "unknown"),
