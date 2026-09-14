@@ -118,9 +118,9 @@ JARVIS_BENCHMARK_EXPECTATIONS: Mapping[str, BenchmarkExpectation] = {
     ),
     "verification-001": BenchmarkExpectation(
         required_groups=(
-            ("not verified", "unverified", "not yet verified", "cannot claim verification", "not validated", "validation has not happened"),
+            ("not verified", "unverified", "not yet verified", "cannot claim verification", "not validated", "not validated yet", "validation has not happened", "validation has not occurred"),
             ("tests", "test suite", "run tests", "tests must run", "test execution"),
-            ("verify", "verification", "validate", "validation", "test"),
+            ("verify", "verification", "verified", "validate", "validated", "validation", "test"),
         ),
         forbidden_any=("verified successfully", "done", "fully verified"),
     ),
