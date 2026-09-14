@@ -19,8 +19,10 @@ class ControlPlaneHTTPConfig:
     def __post_init__(self) -> None:
         if not isinstance(self.host, str) or not self.host.strip():
             raise ValueError("host must be a non-empty string")
-        if type(self.port) is not int or not 1 <= self.port <= 65535:
-            raise ValueError("port must be an integer from 1 to 65535")
+        # Port 0 is intentionally supported for OS-assigned ephemeral test servers.
+        # The production/default transport remains pinned to 8768.
+        if type(self.port) is not int or not 0 <= self.port <= 65535:
+            raise ValueError("port must be an integer from 0 to 65535")
         if not isinstance(self.path, str) or not self.path.startswith("/"):
             raise ValueError("path must start with '/'")
         if not isinstance(self.allow_origin, str) or not self.allow_origin.strip():
