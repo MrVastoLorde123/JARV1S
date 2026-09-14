@@ -41,9 +41,10 @@ The local runtime currently projects:
 - coding task lifecycle from observed coding-agent response metadata;
 - bounded verification outcome/evidence from observed verification results;
 - explicit coding execution blockers such as pending approval, blocked tools, execution failure, and verification failure;
-- sanitized control-plane activity events through a durable SQLite journal, reloaded into the runtime activity stream on restart.
+- sanitized control-plane activity events through a durable SQLite journal, reloaded into the runtime activity stream on restart;
+- exact coding confirmation task/plan state and consumed invocation IDs through a durable SQLite confirmation store, restored before the command/control transports start.
 
-These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence. Durable activity persistence also stores only the already-sanitized control-plane representation; private model rationale and raw verification logs are excluded before persistence.
+These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence. Durable persistence stores only runtime-owned records; control-plane activity is sanitized before it is journaled, and private model rationale/raw verification logs are excluded from that surface.
 
 ## Action lifecycle
 
@@ -68,6 +69,8 @@ The UI may display operational events such as request received, authorization de
 ## Persistence
 
 The local control-plane activity stream is optionally backed by `ControlPlaneActivityStore`. The real launcher enables this store against the JARVIS SQLite data directory. On startup, previously persisted sanitized events are reloaded into the in-memory activity stream and the observation cursor continues monotonically from the restored sequence. Unit tests may omit the store to remain fully ephemeral and isolated.
+
+The coding confirmation service is also optionally backed by `CodingConfirmationStore`. When enabled by the local launcher, pending/confirmed/cancelled exact coding operations and one-shot consumed invocation IDs survive process restart. The persisted operation binds the original task and exact plan fingerprint; the service still performs the same runtime authorization checks after restoration.
 
 ## Transport
 
