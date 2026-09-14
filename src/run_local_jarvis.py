@@ -84,7 +84,8 @@ def main():
     )
 
     coding_confirmation_store = CodingConfirmationStore(database_path)
-    coding_confirmation_service = CodingAgentConfirmationService(coding_confirmation_store)
+    coding_confirmation_service = CodingAgentConfirmationService()
+    coding_confirmation_service.bind_store(coding_confirmation_store)
     coding_confirmation_provider = CodingAgentConfirmationProvider(
         coding_confirmation_service,
     )
