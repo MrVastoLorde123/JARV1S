@@ -21,6 +21,7 @@ class JARVISBenchmarkCasesTests(unittest.TestCase):
             self.assertTrue(
                 expectation.required_any
                 or expectation.required_all
+                or expectation.required_groups
                 or expectation.forbidden_any
             )
 
@@ -61,6 +62,29 @@ class JARVISBenchmarkCasesTests(unittest.TestCase):
             "The blocker is the capability needed; explain why it is needed, request the minimum scope, and state whether the blocker is blocking progress.",
         )
         self.assertEqual(score, 1.0)
+
+    def test_semantic_variants_are_accepted(self) -> None:
+        verification_case = next(
+            item for item in JARVIS_BENCHMARK_CASES if item.case_id == "verification-001"
+        )
+        self.assertEqual(
+            score_benchmark_response(
+                verification_case,
+                "The change is unverified because no tests have run. It must be validated before completion can be claimed.",
+            ),
+            1.0,
+        )
+
+        recovery_case = next(
+            item for item in JARVIS_BENCHMARK_CASES if item.case_id == "error-recovery-001"
+        )
+        self.assertEqual(
+            score_benchmark_response(
+                recovery_case,
+                "The test failure needs diagnosis to determine the cause. I cannot call the change complete yet.",
+            ),
+            1.0,
+        )
 
     def test_response_boundary_rejects_reasoning_markers(self) -> None:
         case = next(
