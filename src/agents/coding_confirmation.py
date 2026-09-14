@@ -6,6 +6,7 @@ from src.agents.coding_confirmation_models import (
     CodingConfirmationStatus,
     CodingPendingOperation,
 )
+from src.agents.coding_confirmation_store import CodingConfirmationStore
 from src.agents.coding_worker import CodingAgentPlan, CodingAgentTask
 from src.tools.models import ToolRequest
 
@@ -44,9 +45,15 @@ def coding_plan_fingerprint(task: CodingAgentTask, plan: CodingAgentPlan) -> str
 class CodingAgentConfirmationService:
     """Stage, confirm, and authorize exact coding-agent proposals."""
 
-    def __init__(self) -> None:
+    def __init__(self, store: CodingConfirmationStore | None = None) -> None:
+        if store is not None and not isinstance(store, CodingConfirmationStore):
+            raise TypeError("store must be a CodingConfirmationStore or None")
+        self._store = store
         self._operations: dict[str, CodingPendingOperation] = {}
         self._consumed_invocations: set[tuple[str, str]] = set()
+        if self._store is not None:
+            self._operations = {operation.operation_id: operation for operation in self._store.load_operations()}
+            self._consumed_invocations = self._store.load_consumed_invocations()
 
     def stage(
         self,
@@ -70,6 +77,8 @@ class CodingAgentConfirmationService:
             metadata=operation_metadata,
         )
         self._operations[operation.operation_id] = operation
+        if self._store is not None:
+            self._store.save(operation)
         return operation
 
     def get(self, operation_id: str) -> CodingPendingOperation | None:
@@ -96,6 +105,8 @@ class CodingAgentConfirmationService:
             metadata=operation.metadata,
         )
         self._operations[operation.operation_id] = confirmed
+        if self._store is not None:
+            self._store.save(confirmed)
         return confirmed
 
     def cancel(self, operation_id: str | None = None) -> CodingPendingOperation | None:
@@ -111,6 +122,8 @@ class CodingAgentConfirmationService:
             metadata=operation.metadata,
         )
         self._operations[operation.operation_id] = cancelled
+        if self._store is not None:
+            self._store.save(cancelled)
         return cancelled
 
     def authorize_tool_request(self, operation_id: str, request: ToolRequest) -> bool:
@@ -170,6 +183,8 @@ class CodingAgentConfirmationService:
             return False
 
         self._consumed_invocations.add(key)
+        if self._store is not None:
+            self._store.mark_invocation_consumed(*key)
         return True
 
     def clear(self) -> None:
