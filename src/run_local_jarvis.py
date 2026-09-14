@@ -12,10 +12,12 @@ from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis_runtime import JARVISRuntime
+from src.core.runtime_activity_stream import InterfaceRuntimeActivityRecorder, RuntimeActivityStream
 from src.database_bootstrap import bootstrap_database
 from src.interface.capability_host import start_capability_http
 from src.interface.http_capabilities import CapabilityHTTPConfig
 from src.interface.command_host import start_command_http
+from src.interface.control_host import start_control_plane_http
 from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
@@ -45,6 +47,10 @@ def main():
     ).strip().lower() in {"1", "true", "yes", "on"}
     enable_capability_http = os.environ.get(
         "JARVIS_CAPABILITY_HTTP",
+        "1" if enable_world_http else "0",
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    enable_control_plane_http = os.environ.get(
+        "JARVIS_CONTROL_PLANE_HTTP",
         "1" if enable_world_http else "0",
     ).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -115,6 +121,9 @@ def main():
         world_runtime=world_runtime,
     )
 
+    activity_stream = RuntimeActivityStream()
+    activity_recorder = InterfaceRuntimeActivityRecorder(activity_stream)
+
     world_host = None
     if enable_world_http:
         world_host = start_world_http(runtime)
@@ -125,6 +134,7 @@ def main():
         command_host = start_command_http(
             runtime,
             config=CommandHTTPConfig(port=8766),
+            activity_recorder=activity_recorder,
         )
         print("JARVIS Command HTTP transport listening on http://127.0.0.1:8766")
 
@@ -135,6 +145,17 @@ def main():
             config=CapabilityHTTPConfig(port=8767),
         )
         print("JARVIS Capability HTTP transport listening on http://127.0.0.1:8767")
+
+    control_plane_host = None
+    if enable_control_plane_http:
+        if not enable_world_http:
+            print("JARVIS Control Plane requires the world runtime; enable JARVIS_WORLD_HTTP=1.")
+        else:
+            control_plane_host = start_control_plane_http(
+                runtime,
+                activity_stream=activity_stream,
+            )
+            print("JARVIS Control Plane HTTP transport listening on http://127.0.0.1:8768")
 
     session_identity = PersistentSessionIdentity(
         data_dir / "active_session.json",
@@ -150,6 +171,8 @@ def main():
     try:
         operator.run()
     finally:
+        if control_plane_host is not None:
+            control_plane_host.close()
         if capability_host is not None:
             capability_host.close()
         if command_host is not None:
