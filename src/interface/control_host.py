@@ -10,7 +10,7 @@ from urllib import error, request
 from src.agency.agent_entity import AgentStatus
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.core.jarvis_runtime import JARVISRuntime
-from src.core.runtime_activity_stream import RuntimeActivityStream
+from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityKind, RuntimeActivityStream
 from src.tools.registry import ToolRegistry
 
 from .control_plane import ControlPlaneSnapshotBuilder
@@ -75,6 +75,71 @@ def local_model_projection(
         "observed_model_ids": model_ids,
         "evidence": "local_server_models_observed",
     }
+
+
+def _latest_coding_observation(activity_stream: RuntimeActivityStream) -> dict[str, object] | None:
+    """Return only the latest sanitized coding-agent response metadata."""
+    for event in reversed(activity_stream.snapshot()):
+        if event.kind is not RuntimeActivityKind.RESPONSE_EMITTED:
+            continue
+        metadata = dict(event.metadata)
+        if metadata.get("route") == "CODING_AGENT":
+            return metadata
+    return None
+
+
+def _task_projection(activity_stream: RuntimeActivityStream) -> dict[str, object]:
+    observation = _latest_coding_observation(activity_stream)
+    if observation is None:
+        return {"state": "NOT_REPORTED", "source": "coding_agent_response_not_observed"}
+
+    stage = str(observation.get("stage", "UNKNOWN"))
+    success = observation.get("success")
+    if stage == "PLANNING":
+        state = "PLANNING"
+    elif stage == "CONFIRMATION":
+        state = "WAITING_APPROVAL"
+    elif stage == "EXECUTION":
+        state = "COMPLETED" if success is True else "FAILED"
+    else:
+        state = "REPORTED"
+
+    projection: dict[str, object] = {"state": state, "source": "coding_agent_response"}
+    for key in (
+        "task_id",
+        "operation_id",
+        "plan_fingerprint",
+        "edit_count",
+        "coding_status",
+        "edits_attempted",
+        "edits_applied",
+        "blocked_tool",
+    ):
+        if key in observation:
+            projection[key] = observation[key]
+    if "success" in observation:
+        projection["success"] = observation["success"]
+    return projection
+
+
+def _verification_projection(activity_stream: RuntimeActivityStream) -> dict[str, object]:
+    observation = _latest_coding_observation(activity_stream)
+    if observation is None or "verification" not in observation:
+        return {"state": "NOT_REPORTED", "evidence": []}
+
+    verification = observation.get("verification")
+    if not isinstance(verification, dict):
+        return {"state": "REPORTED", "evidence": []}
+
+    state = verification.get("state") or verification.get("status")
+    if state is None and "success" in verification:
+        state = "PASSED" if verification.get("success") is True else "FAILED"
+    evidence = {
+        key: verification[key]
+        for key in ("runner", "exit_code", "passed", "error")
+        if key in verification
+    }
+    return {"state": str(state or "REPORTED"), "evidence": [evidence] if evidence else []}
 
 
 def start_control_plane_http(
@@ -152,13 +217,13 @@ def start_control_plane_http(
     builder = ControlPlaneSnapshotBuilder(
         world_supplier=world_supplier,
         activity_stream=activity_stream,
-        task_supplier=lambda: {"state": "NOT_REPORTED", "source": "task_projection_not_wired"},
+        task_supplier=lambda: _task_projection(activity_stream),
         agents_supplier=agents_supplier,
         approvals_supplier=approvals_supplier,
         tools_supplier=tools_supplier,
         model_supplier=model_supplier,
         blockers_supplier=lambda: (),
-        verification_supplier=lambda: {"state": "NOT_REPORTED", "evidence": []},
+        verification_supplier=lambda: _verification_projection(activity_stream),
     )
     server = create_control_plane_server(
         builder,
