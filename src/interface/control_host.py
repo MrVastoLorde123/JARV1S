@@ -8,6 +8,7 @@ from threading import Thread
 from urllib import error, request
 
 from src.agency.agent_entity import AgentStatus
+from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
 from src.tools.registry import ToolRegistry
@@ -79,6 +80,7 @@ def start_control_plane_http(
     *,
     activity_stream: RuntimeActivityStream,
     tool_registry: ToolRegistry | None = None,
+    confirmation_service: CodingAgentConfirmationService | None = None,
     config: ControlPlaneHTTPConfig | None = None,
 ) -> ControlPlaneHostHandle:
     if not isinstance(runtime, JARVISRuntime):
@@ -87,6 +89,8 @@ def start_control_plane_http(
         raise TypeError("activity_stream must be a RuntimeActivityStream")
     if tool_registry is not None and type(tool_registry) is not ToolRegistry:
         raise TypeError("tool_registry must be a ToolRegistry or None")
+    if confirmation_service is not None and type(confirmation_service) is not CodingAgentConfirmationService:
+        raise TypeError("confirmation_service must be a CodingAgentConfirmationService or None")
 
     def world_supplier():
         if runtime.world_runtime is None:
@@ -117,6 +121,26 @@ def start_control_plane_http(
             for definition in tool_registry.list_definitions()
         )
 
+    def approvals_supplier():
+        if confirmation_service is None:
+            return ()
+        operation = confirmation_service.get_pending()
+        if operation is None:
+            return ()
+        metadata = dict(operation.metadata)
+        return (
+            {
+                "operation_id": operation.operation_id,
+                "status": operation.status.value,
+                "task_id": operation.task.task_id,
+                "objective": operation.task.objective,
+                "created_at": operation.created_at,
+                "plan_fingerprint": metadata.get("plan_fingerprint"),
+                "edit_count": len(operation.plan.edits),
+                "verification_runner": operation.plan.verification.runner,
+            },
+        )
+
     def model_supplier():
         return local_model_projection(
             base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"),
@@ -128,7 +152,7 @@ def start_control_plane_http(
         activity_stream=activity_stream,
         task_supplier=lambda: {"state": "NOT_REPORTED", "source": "task_projection_not_wired"},
         agents_supplier=agents_supplier,
-        approvals_supplier=lambda: (),
+        approvals_supplier=approvals_supplier,
         tools_supplier=tools_supplier,
         model_supplier=model_supplier,
         blockers_supplier=lambda: (),
