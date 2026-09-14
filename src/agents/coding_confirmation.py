@@ -190,6 +190,8 @@ class CodingAgentConfirmationService:
     def clear(self) -> None:
         self._operations.clear()
         self._consumed_invocations.clear()
+        if self._store is not None:
+            self._store.clear()
 
     def _resolve_pending(self, operation_id: str | None) -> CodingPendingOperation | None:
         if operation_id is not None:
