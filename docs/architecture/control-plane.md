@@ -41,10 +41,11 @@ The local runtime currently projects:
 - coding task lifecycle from observed coding-agent response metadata;
 - bounded verification outcome/evidence from observed verification results;
 - explicit coding execution blockers such as pending approval, blocked tools, execution failure, and verification failure;
+- explicit tool/verification lifecycle events (`TOOL_EXECUTION_STARTED`, `TOOL_EXECUTION_COMPLETED`, `VERIFICATION_STARTED`, `VERIFICATION_COMPLETED`) from the bounded coding execution path;
 - sanitized control-plane activity events through a durable SQLite journal, reloaded into the runtime activity stream on restart;
 - exact coding confirmation task/plan state and consumed invocation IDs through a durable SQLite confirmation store, restored before the command/control transports start.
 
-These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence. Durable persistence stores only runtime-owned records; control-plane activity is sanitized before it is journaled, and private model rationale/raw verification logs are excluded from that surface.
+These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence. Durable persistence stores only runtime-owned records; control-plane activity is sanitized before it is journaled, and private model rationale/raw verification logs are excluded from that surface. Tool/verification activity records include only bounded identity and outcome metadata, never raw tool arguments or file contents.
 
 ## Action lifecycle
 
@@ -64,7 +65,7 @@ The model never collapses these stages into a single success claim. A response f
 
 ## Event visibility
 
-The UI may display operational events such as request received, authorization decisions, tool start/completion/failure, model response received, verification started/completed/failed, pauses, resumes, cancellations, and runtime errors. Private chain-of-thought is not a required dependency of the control plane.
+The UI may display operational events such as request received, authorization decisions, tool start/completion/failure, model response received, verification started/completed/failed, pauses, resumes, cancellations, and runtime errors. Coding tool and verification lifecycle observations are emitted by a wrapper around the existing tool invoker; the wrapper does not own authorization and cannot expand the underlying tool surface. Private chain-of-thought is not a required dependency of the control plane.
 
 ## Persistence
 
