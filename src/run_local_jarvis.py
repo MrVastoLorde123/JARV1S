@@ -19,6 +19,7 @@ from src.interface.http_capabilities import CapabilityHTTPConfig
 from src.interface.command_host import start_command_http
 from src.interface.control_host import start_control_plane_http
 from src.interface.control_plane import ControlPlaneActivityRecorder
+from src.interface.control_plane_store import ControlPlaneActivityStore
 from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
@@ -123,7 +124,13 @@ def main():
     )
 
     activity_stream = RuntimeActivityStream()
-    activity_recorder = ControlPlaneActivityRecorder(activity_stream)
+    control_plane_store = ControlPlaneActivityStore(
+        data_dir / "processed" / "jarvis.db",
+    )
+    activity_recorder = ControlPlaneActivityRecorder(
+        activity_stream,
+        durable_store=control_plane_store,
+    )
 
     world_host = None
     if enable_world_http:
