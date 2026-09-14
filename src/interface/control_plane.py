@@ -109,6 +109,24 @@ class ControlPlaneSnapshot:
 class ControlPlaneActivityRecorder:
     """Translate browser command lifecycle into the shared runtime activity stream."""
 
+    _OBSERVABLE_RESPONSE_KEYS = frozenset({
+        "route",
+        "stage",
+        "success",
+        "task_id",
+        "operation_id",
+        "plan_fingerprint",
+        "edit_count",
+        "verification_runner",
+        "verification_arguments",
+        "coding_status",
+        "edits_attempted",
+        "edits_applied",
+        "blocked_tool",
+        "verification",
+        "operation_status",
+    })
+
     def __init__(self, stream: RuntimeActivityStream) -> None:
         if type(stream) is not RuntimeActivityStream:
             raise TypeError("stream must be a RuntimeActivityStream")
@@ -142,15 +160,39 @@ class ControlPlaneActivityRecorder:
             if status is InterfaceResponseStatus.REJECTED
             else RuntimeActivityKind.REQUEST_FAILED
         )
+        safe_metadata = {"event_source": "command_http", **self._sanitize_response_metadata(metadata or {})}
         return self._publish(
             session_id=session_id,
             request_id=request_id,
             kind=kind,
             status=status,
-            stage="COMMAND_HTTP",
+            stage=str(safe_metadata.get("stage", "COMMAND_HTTP")),
             summary=f"UI command {status.value.lower()}",
-            metadata={"event_source": "command_http", **dict(metadata or {})},
+            metadata=safe_metadata,
         )
+
+    @classmethod
+    def _sanitize_response_metadata(cls, metadata: Mapping[str, Any]) -> dict[str, Any]:
+        if not isinstance(metadata, Mapping):
+            raise TypeError("metadata must be a mapping")
+        sanitized: dict[str, Any] = {}
+        for key in cls._OBSERVABLE_RESPONSE_KEYS:
+            if key not in metadata:
+                continue
+            value = metadata[key]
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                sanitized[key] = value
+            elif isinstance(value, (list, tuple)):
+                sanitized[key] = tuple(item for item in value if isinstance(item, (str, int, float, bool)) or item is None)
+            elif key == "verification" and isinstance(value, Mapping):
+                safe_verification = {}
+                for verification_key in ("state", "status", "success", "runner", "exit_code", "passed", "error"):
+                    if verification_key in value:
+                        item = value[verification_key]
+                        if isinstance(item, (str, int, float, bool)) or item is None:
+                            safe_verification[verification_key] = item
+                sanitized[key] = safe_verification
+        return sanitized
 
     def _publish(self, *, session_id: str, request_id: str, kind: RuntimeActivityKind, status: InterfaceResponseStatus | None, stage: str, summary: str, metadata: Mapping[str, Any]) -> RuntimeActivityEvent:
         with self._lock:
