@@ -1,7 +1,7 @@
 """M18 personal continuity over the M17 human operating layer."""
 
 from .boundary import InterfaceBoundary, InterfaceChannel, InterfaceRequest, InterfaceResponse
-from .control_plane import ControlPlaneError, ControlPlaneSnapshot, ControlPlaneSnapshotBuilder
+from .control_plane import ControlPlaneActivityRecorder, ControlPlaneError, ControlPlaneSnapshot, ControlPlaneSnapshotBuilder
 from .events import InterfaceEvent, InterfaceEventKind, InterfaceEventRuntime, InterfaceEventStream
 from .hitl import (
     DecisionOption,
@@ -37,6 +37,7 @@ from .world_observation import WorldObservationFrame, WorldObservationInterfaceA
 __all__ = [
     "ConversationSession",
     "ConversationTurn",
+    "ControlPlaneActivityRecorder",
     "ControlPlaneError",
     "ControlPlaneHTTPConfig",
     "ControlPlaneSnapshot",
