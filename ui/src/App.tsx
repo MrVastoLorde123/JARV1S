@@ -18,14 +18,7 @@ type WorldFrame = {
 type Envelope = { content?: string; request_id?: string; error?: string; detail?: string };
 type Capability = { name: string; description: string; version: string; risk_level: string; requires_confirmation: boolean };
 type CapabilityFrame = { schema?: string; capabilities?: Capability[] };
-type ControlEvent = {
-  sequence: number;
-  kind: string;
-  status: string | null;
-  stage: string;
-  summary: string;
-  request_id: string;
-};
+type ControlEvent = { sequence: number; kind: string; status: string | null; stage: string; summary: string; request_id: string };
 type ControlPlaneFrame = {
   schema?: string;
   generated_at?: string;
@@ -34,7 +27,7 @@ type ControlPlaneFrame = {
   agents?: Array<{ id?: string; state?: string }>;
   approvals?: Array<Record<string, unknown>>;
   tools?: Array<Record<string, unknown>>;
-  model?: { provider?: string; state?: string };
+  model?: { provider?: string; model?: string; state?: string };
   blockers?: Array<{ message?: string; severity?: string }>;
   verification?: { state?: string; evidence?: unknown[] };
   events?: ControlEvent[];
@@ -128,7 +121,9 @@ function App() {
   const explicitAuthority = controlWorld?.authority_granted === true || world?.authority_granted === true;
   const explicitPermissions = controlWorld?.permissions_granted === true || world?.permissions_granted === true;
   const landscape = controlWorld?.current_landscape ?? world?.current_landscape ?? "UNKNOWN";
-  const activeAgents = controlPlane?.agents?.length ?? world?.active_agent_count ?? 0;
+  const reportedAgentCount = controlWorld?.active_agent_count ?? world?.active_agent_count ?? 0;
+  const listedAgents = controlPlane?.agents?.length ?? 0;
+  const activeAgents = listedAgents > 0 ? listedAgents : reportedAgentCount;
   const shellReady = controlState === "READY" && (worldState === "READY" || controlPlane?.runtime?.available === true);
   const serviceRows = useMemo(() => [
     { name: "CONTROL PLANE", state: controlState, detail: controlError },
@@ -178,7 +173,7 @@ function App() {
 
         <section className={`panel space-panel ${activeSpace === "CHAT" ? "chat-shell" : ""}`}>
           {activeSpace === "CHAT" && <ChatSpace command={command} busy={busy} result={commandResult} commandState={commandState} onCommandChange={setCommand} onSubmit={submitCommand} />}
-          {activeSpace === "CONTROL" && <ControlSpace control={controlPlane} explicitAuthority={explicitAuthority} explicitPermissions={explicitPermissions} capabilities={capabilities} />}
+          {activeSpace === "CONTROL" && <ControlSpace control={controlPlane} explicitAuthority={explicitAuthority} explicitPermissions={explicitPermissions} capabilities={capabilities} activeAgents={activeAgents} />}
           {activeSpace === "MIND" && <MindSpace frame={frame} control={controlPlane} landscape={landscape} activeAgents={activeAgents} lastRefresh={lastRefresh} worldError={worldError} />}
           {activeSpace === "CAPABILITIES" && <CapabilitiesSpace capabilities={capabilities} error={capabilityError} />}
         </section>
@@ -195,7 +190,7 @@ function ChatSpace({ command, busy, result, commandState, onCommandChange, onSub
     <section className="result-card"><div className="panel-label">LATEST RESPONSE</div><pre>{result}</pre></section></div>;
 }
 
-function ControlSpace({ control, explicitAuthority, explicitPermissions, capabilities }: { control: ControlPlaneFrame | null; explicitAuthority: boolean; explicitPermissions: boolean; capabilities: Capability[]; }) {
+function ControlSpace({ control, explicitAuthority, explicitPermissions, capabilities, activeAgents }: { control: ControlPlaneFrame | null; explicitAuthority: boolean; explicitPermissions: boolean; capabilities: Capability[]; activeAgents: number; }) {
   const task = control?.task;
   const model = control?.model;
   const verification = control?.verification;
@@ -203,7 +198,7 @@ function ControlSpace({ control, explicitAuthority, explicitPermissions, capabil
   const blockers = control?.blockers ?? [];
   return <div className="space-content mission-control"><div className="space-heading"><div><div className="panel-label">CONTROL</div><h2>Runtime truth and action lifecycle.</h2><p>The cockpit consumes one runtime-owned snapshot; it does not manufacture state.</p></div><StatusPill label="AUTHORITY" state={explicitAuthority ? "READY" : "UNAVAILABLE"} /></div>
     <div className="pipeline-grid"><BoundaryCard label="AUTHORITY" value={explicitAuthority ? "GRANTED" : "NOT GRANTED"} /><BoundaryCard label="PERMISSIONS" value={explicitPermissions ? "GRANTED" : "NOT GRANTED"} /><BoundaryCard label="TASK" value={task?.state ?? "UNKNOWN"} /><BoundaryCard label="PROGRESS" value={typeof task?.progress === "number" ? `${Math.round(task.progress * 100)}%` : "UNKNOWN"} /></div>
-    <div className="pipeline-grid"><BoundaryCard label="ACTIVE AGENTS" value={String(control?.agents?.length ?? 0)} /><BoundaryCard label="TOOLS" value={String(control?.tools?.length ?? 0)} /><BoundaryCard label="MODEL" value={model?.provider ?? "UNKNOWN"} /><BoundaryCard label="VERIFY" value={verification?.state ?? "UNKNOWN"} /></div>
+    <div className="pipeline-grid"><BoundaryCard label="ACTIVE AGENTS" value={String(activeAgents)} /><BoundaryCard label="TOOLS" value={String(control?.tools?.length ?? 0)} /><BoundaryCard label="MODEL" value={model?.model ?? model?.provider ?? "UNKNOWN"} /><BoundaryCard label="VERIFY" value={verification?.state ?? "UNKNOWN"} /></div>
     {blockers.length > 0 && <section className="mind-context-banner"><div className="panel-label">BLOCKERS</div>{blockers.map((blocker, index) => <p key={`${blocker.message}-${index}`}>{blocker.severity ? `[${blocker.severity}] ` : ""}{blocker.message ?? "Unspecified blocker"}</p>)}</section>}
     <section className="result-card"><div className="panel-label">RUNTIME ACTIVITY · CURSOR {control?.cursor ?? 0}</div>{events.length === 0 ? <pre>No runtime activity recorded yet.</pre> : events.slice().reverse().map((event) => <div className="service-row" key={`${event.sequence}-${event.request_id}`}><StatusDot state={event.status === "FAILED" ? "UNAVAILABLE" : "READY"} /><div className="service-copy"><strong>{event.kind} · {event.stage}</strong><span>{event.summary} · {event.request_id}</span></div></div>)}</section>
     <div className="control-note"><strong>Boundary:</strong> capability discovery, model availability, and interface connectivity are observations. Execution and authority remain runtime-owned.</div><div className="control-note"><strong>Capabilities visible:</strong> {capabilities.length}</div></div>;
@@ -211,8 +206,8 @@ function ControlSpace({ control, explicitAuthority, explicitPermissions, capabil
 
 function MindSpace({ frame, control, landscape, activeAgents, lastRefresh, worldError }: { frame: WorldFrame | null; control: ControlPlaneFrame | null; landscape: string; activeAgents: number; lastRefresh: Date | null; worldError: string | null; }) {
   return <div className="space-content mind-core-panel"><div className="space-heading"><div><div className="panel-label">MIND</div><h2>World, runtime, and verification.</h2><p>Observation lineage and operational context.</p></div><StatusPill label="CONTROL" state={control ? "READY" : "UNAVAILABLE"} /></div>
-    <div className="mind-grid"><BoundaryCard label="LANDSCAPE" value={landscape} /><BoundaryCard label="ACTIVE AGENTS" value={String(control?.agents?.length ?? activeAgents)} /><BoundaryCard label="SESSION" value={frame?.session_id ?? "desktop"} /><BoundaryCard label="REQUEST" value={frame?.request_id ?? "UNAVAILABLE"} /></div>
-    <div className="mind-grid"><BoundaryCard label="MODEL" value={control?.model?.provider ?? "UNKNOWN"} /><BoundaryCard label="MODEL STATE" value={control?.model?.state ?? "UNKNOWN"} /><BoundaryCard label="VERIFICATION" value={control?.verification?.state ?? "UNKNOWN"} /><BoundaryCard label="CURSOR" value={String(control?.cursor ?? 0)} /></div>
+    <div className="mind-grid"><BoundaryCard label="LANDSCAPE" value={landscape} /><BoundaryCard label="ACTIVE AGENTS" value={String(activeAgents)} /><BoundaryCard label="SESSION" value={frame?.session_id ?? "desktop"} /><BoundaryCard label="REQUEST" value={frame?.request_id ?? "UNAVAILABLE"} /></div>
+    <div className="mind-grid"><BoundaryCard label="MODEL" value={control?.model?.model ?? control?.model?.provider ?? "UNKNOWN"} /><BoundaryCard label="MODEL STATE" value={control?.model?.state ?? "UNKNOWN"} /><BoundaryCard label="VERIFICATION" value={control?.verification?.state ?? "UNKNOWN"} /><BoundaryCard label="CURSOR" value={String(control?.cursor ?? 0)} /></div>
     <div className="mind-context-banner"><div className="panel-label">LAST RUNTIME OBSERVATION</div><p>{worldError ?? `Control-plane snapshot generated ${control?.generated_at ?? "UNAVAILABLE"}.`}</p><span>{lastRefresh ? lastRefresh.toLocaleString() : "No successful observation yet."}</span></div></div>;
 }
 
