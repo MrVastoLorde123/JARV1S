@@ -1,9 +1,11 @@
 """Process bootstrap for the runtime-owned control-plane transport."""
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from threading import Thread
+from urllib import error, request
 
 from src.agency.agent_entity import AgentStatus
 from src.core.jarvis_runtime import JARVISRuntime
@@ -23,6 +25,53 @@ class ControlPlaneHostHandle:
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2.0)
+
+
+def local_model_projection(
+    *,
+    base_url: str,
+    model_id: str,
+    opener=request.urlopen,
+) -> dict[str, object]:
+    """Return an evidence-backed local model/provider observation."""
+    normalized_base = base_url.rstrip("/")
+    normalized_model = model_id.strip() or "unknown"
+    try:
+        response_request = request.Request(
+            f"{normalized_base}/v1/models",
+            headers={"Accept": "application/json"},
+            method="GET",
+        )
+        with opener(response_request, timeout=1) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        model_ids = tuple(
+            str(item.get("id"))
+            for item in payload.get("data", ())
+            if isinstance(item, dict) and item.get("id")
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError, error.URLError):
+        return {
+            "provider": "local",
+            "model": normalized_model,
+            "state": "UNAVAILABLE",
+            "observed_model_ids": (),
+            "evidence": "local_server_models_unreachable",
+        }
+
+    if normalized_model in model_ids:
+        state = "AVAILABLE"
+    elif len(model_ids) == 1:
+        state = "MODEL_MISMATCH"
+    else:
+        state = "UNAVAILABLE"
+
+    return {
+        "provider": "local",
+        "model": normalized_model,
+        "state": state,
+        "observed_model_ids": model_ids,
+        "evidence": "local_server_models_observed",
+    }
 
 
 def start_control_plane_http(
@@ -68,6 +117,12 @@ def start_control_plane_http(
             for definition in tool_registry.list_definitions()
         )
 
+    def model_supplier():
+        return local_model_projection(
+            base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"),
+            model_id=os.environ.get("JARVIS_LOCAL_MODEL", "unknown"),
+        )
+
     builder = ControlPlaneSnapshotBuilder(
         world_supplier=world_supplier,
         activity_stream=activity_stream,
@@ -75,11 +130,7 @@ def start_control_plane_http(
         agents_supplier=agents_supplier,
         approvals_supplier=lambda: (),
         tools_supplier=tools_supplier,
-        model_supplier=lambda: {
-            "provider": "local",
-            "model": os.environ.get("JARVIS_LOCAL_MODEL", "unknown"),
-            "state": "AVAILABLE",
-        },
+        model_supplier=model_supplier,
         blockers_supplier=lambda: (),
         verification_supplier=lambda: {"state": "NOT_REPORTED", "evidence": []},
     )
@@ -96,4 +147,4 @@ def start_control_plane_http(
     return ControlPlaneHostHandle(server=server, thread=thread)
 
 
-__all__ = ["ControlPlaneHostHandle", "start_control_plane_http"]
+__all__ = ["ControlPlaneHostHandle", "local_model_projection", "start_control_plane_http"]
