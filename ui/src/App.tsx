@@ -40,13 +40,23 @@ type ControlTool = {
   requires_confirmation?: boolean;
   metadata?: Record<string, unknown>;
 };
+type ControlApproval = {
+  operation_id?: string;
+  status?: string;
+  task_id?: string;
+  objective?: string;
+  created_at?: string;
+  plan_fingerprint?: string;
+  edit_count?: number;
+  verification_runner?: string;
+};
 type ControlPlaneFrame = {
   schema?: string;
   generated_at?: string;
   runtime?: { available?: boolean; read_only?: boolean; world?: WorldFrame["world"] };
   task?: { state?: string; progress?: number; source?: string };
   agents?: ControlAgent[];
-  approvals?: Array<Record<string, unknown>>;
+  approvals?: ControlApproval[];
   tools?: ControlTool[];
   model?: { provider?: string; model?: string; state?: string };
   blockers?: Array<{ message?: string; severity?: string }>;
@@ -219,14 +229,16 @@ function ControlSpace({ control, explicitAuthority, explicitPermissions, capabil
   const blockers = control?.blockers ?? [];
   const agents = control?.agents ?? [];
   const tools = control?.tools ?? [];
+  const approvals = control?.approvals ?? [];
   return <div className="space-content mission-control"><div className="space-heading"><div><div className="panel-label">CONTROL</div><h2>Runtime truth and action lifecycle.</h2><p>The cockpit consumes one runtime-owned snapshot; it does not manufacture state.</p></div><StatusPill label="AUTHORITY" state={explicitAuthority ? "READY" : "UNAVAILABLE"} /></div>
     <div className="pipeline-grid"><BoundaryCard label="AUTHORITY" value={explicitAuthority ? "GRANTED" : "NOT GRANTED"} /><BoundaryCard label="PERMISSIONS" value={explicitPermissions ? "GRANTED" : "NOT GRANTED"} /><BoundaryCard label="TASK" value={task?.state ?? "UNKNOWN"} /><BoundaryCard label="PROGRESS" value={typeof task?.progress === "number" ? `${Math.round(task.progress * 100)}%` : "UNKNOWN"} /></div>
     <div className="pipeline-grid"><BoundaryCard label="ACTIVE AGENTS" value={String(activeAgents)} /><BoundaryCard label="TOOLS" value={String(tools.length)} /><BoundaryCard label="MODEL" value={model?.model ?? model?.provider ?? "UNKNOWN"} /><BoundaryCard label="VERIFY" value={verification?.state ?? "UNKNOWN"} /></div>
+    <section className="result-card"><div className="panel-label">APPROVALS · RUNTIME AUTHORIZATION STATE</div>{approvals.length === 0 ? <pre>No pending approval is currently projected.</pre> : <div className="service-list">{approvals.map((approval) => <div className="service-row" key={approval.operation_id ?? approval.task_id}><StatusDot state={approval.status === "CONFIRMED" ? "READY" : "UNKNOWN"} /><div className="service-copy"><strong>{approval.status ?? "UNKNOWN"} · {approval.operation_id ?? "UNIDENTIFIED OPERATION"}</strong><span>{approval.objective ?? approval.task_id ?? "No task objective reported."}{typeof approval.edit_count === "number" ? ` · ${approval.edit_count} edit(s)` : ""}{approval.verification_runner ? ` · verify ${approval.verification_runner}` : ""}</span></div></div>)}</div>}</section>
     <section className="result-card"><div className="panel-label">AGENTS · RUNTIME LIFECYCLE</div>{agents.length === 0 ? <pre>No active runtime agents are currently projected.</pre> : <div className="service-list">{agents.map((agent) => <div className="service-row" key={agent.agent_id ?? agent.assignment_id ?? agent.display_name}><StatusDot state="READY" /><div className="service-copy"><strong>{agent.display_name ?? agent.agent_id ?? "UNNAMED AGENT"} · {agent.status ?? "UNKNOWN"}</strong><span>{agent.archetype ?? "UNKNOWN ARCHETYPE"}{agent.model_id ? ` · model ${agent.model_id}` : ""}{agent.landscape ? ` · ${agent.landscape}` : ""}</span></div></div>)}</div>}</section>
     <section className="result-card"><div className="panel-label">TOOLS · RISK AND AUTHORIZATION SIGNALS</div>{tools.length === 0 ? <pre>No tool definitions are currently projected.</pre> : <div className="capability-grid">{tools.map((tool) => <article className="capability-card" key={tool.name}><div className="capability-header"><span className={`state-dot ${tool.requires_confirmation ? "offline" : "online"}`} /><strong>{tool.name ?? "UNKNOWN TOOL"}</strong><span>{tool.version ?? "—"}</span></div><p>{tool.description ?? "No description reported."}</p><footer><span>{(tool.risk_level ?? "UNKNOWN").toUpperCase()}</span><span>{tool.requires_confirmation ? "CONFIRMATION REQUIRED" : "NO CONFIRMATION DECLARED"}</span></footer></article>)}</div>}</section>
     {blockers.length > 0 && <section className="mind-context-banner"><div className="panel-label">BLOCKERS</div>{blockers.map((blocker, index) => <p key={`${blocker.message}-${index}`}>{blocker.severity ? `[${blocker.severity}] ` : ""}{blocker.message ?? "Unspecified blocker"}</p>)}</section>}
     <section className="result-card"><div className="panel-label">RUNTIME ACTIVITY · CURSOR {control?.cursor ?? 0}</div>{events.length === 0 ? <pre>No runtime activity recorded yet.</pre> : events.slice().reverse().map((event) => <div className="service-row" key={`${event.sequence}-${event.request_id}`}><StatusDot state={event.status === "FAILED" ? "UNAVAILABLE" : "READY"} /><div className="service-copy"><strong>{event.kind} · {event.stage}</strong><span>{event.summary} · {event.request_id}</span></div></div>)}</section>
-    <div className="control-note"><strong>Boundary:</strong> capability discovery, model availability, and interface connectivity are observations. Execution and authority remain runtime-owned.</div><div className="control-note"><strong>Capabilities visible:</strong> {capabilities.length} catalog entries · {tools.length} runtime tool definitions</div></div>;
+    <div className="control-note"><strong>Boundary:</strong> capability discovery, model availability, and interface connectivity are observations. Execution and authority remain runtime-owned.</div><div className="control-note"><strong>Capabilities visible:</strong> {capabilities.length} catalog entries · {tools.length} runtime tool definitions · {approvals.length} approval projection(s)</div></div>;
 }
 
 function MindSpace({ frame, control, landscape, activeAgents, lastRefresh, worldError }: { frame: WorldFrame | null; control: ControlPlaneFrame | null; landscape: string; activeAgents: number; lastRefresh: Date | null; worldError: string | null; }) {
