@@ -24,6 +24,10 @@ class RuntimeActivityKind(str, Enum):
     RESPONSE_EMITTED = "RESPONSE_EMITTED"
     REQUEST_REJECTED = "REQUEST_REJECTED"
     REQUEST_FAILED = "REQUEST_FAILED"
+    TOOL_EXECUTION_STARTED = "TOOL_EXECUTION_STARTED"
+    TOOL_EXECUTION_COMPLETED = "TOOL_EXECUTION_COMPLETED"
+    VERIFICATION_STARTED = "VERIFICATION_STARTED"
+    VERIFICATION_COMPLETED = "VERIFICATION_COMPLETED"
 
 
 def _freeze(value: Any) -> Any:
@@ -125,7 +129,7 @@ class InterfaceRuntimeActivityRecorder:
 
     def record_request(self, request: InterfaceRequest) -> RuntimeActivityEvent:
         if type(request) is not InterfaceRequest:
-            raise TypeError("request must be an interface request")
+            raise TypeError("request must be an InterfaceRequest")
         event = self._next_event(
             session_id=request.session_id,
             actor_id=request.actor_id,
@@ -140,31 +144,31 @@ class InterfaceRuntimeActivityRecorder:
         self._stream.publish(event)
         return event
 
-    def record_response(self, request: InterfaceRequest, response: InterfaceResponse) -> RuntimeActivityEvent:
+    def record_response(
+        self,
+        request: InterfaceRequest,
+        response: InterfaceResponse,
+    ) -> RuntimeActivityEvent:
         if type(request) is not InterfaceRequest:
-            raise TypeError("request must be an interface request")
+            raise TypeError("request must be an InterfaceRequest")
         if type(response) is not InterfaceResponse:
-            raise TypeError("response must be an interface response")
-        if response.request_id != request.request_id or response.operation is not request.operation:
-            raise RuntimeActivityError("response identity does not match request")
-        kind = (
-            RuntimeActivityKind.RESPONSE_EMITTED
-            if response.status is InterfaceResponseStatus.ACCEPTED
-            else RuntimeActivityKind.REQUEST_REJECTED
-            if response.status is InterfaceResponseStatus.REJECTED
-            else RuntimeActivityKind.REQUEST_FAILED
-        )
-        stage = str(response.metadata.get("artifact_type", request.operation.value))
+            raise TypeError("response must be an InterfaceResponse")
         event = self._next_event(
             session_id=request.session_id,
             actor_id=request.actor_id,
             request_id=request.request_id,
-            operation=request.operation,
-            kind=kind,
+            operation=response.operation,
+            kind=(
+                RuntimeActivityKind.RESPONSE_EMITTED
+                if response.status is InterfaceResponseStatus.ACCEPTED
+                else RuntimeActivityKind.REQUEST_REJECTED
+                if response.status is InterfaceResponseStatus.REJECTED
+                else RuntimeActivityKind.REQUEST_FAILED
+            ),
             status=response.status,
-            stage=stage,
-            summary=f"interface response {response.status.value.lower()} for {request.operation.value}",
-            metadata={"event_source": "interface_backend", **dict(response.metadata)},
+            stage="INTERFACE_BACKEND",
+            summary=f"interface response {response.status.value.lower()}",
+            metadata={"event_source": "interface_backend"},
         )
         self._stream.publish(event)
         return event
@@ -186,7 +190,7 @@ class InterfaceRuntimeActivityRecorder:
             self._sequence += 1
             return RuntimeActivityEvent(
                 event_id=f"runtime-event-{self._sequence}",
-                sequence=self._sequence,
+                sequence=self._stream.size + 1,
                 session_id=session_id,
                 actor_id=actor_id,
                 request_id=request_id,
@@ -197,47 +201,3 @@ class InterfaceRuntimeActivityRecorder:
                 summary=summary,
                 metadata=metadata,
             )
-
-
-class ObservableInterfaceOrchestration:
-    """Wrap any interface orchestration port with observational activity recording."""
-
-    def __init__(self, orchestration: Any, recorder: InterfaceRuntimeActivityRecorder) -> None:
-        if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
-            raise TypeError("orchestration must provide callable dispatch")
-        if type(recorder) is not InterfaceRuntimeActivityRecorder:
-            raise TypeError("recorder must be an interface runtime activity recorder")
-        self._orchestration = orchestration
-        self._recorder = recorder
-
-    def dispatch(self, request: InterfaceRequest) -> InterfaceResponse:
-        if type(request) is not InterfaceRequest:
-            raise TypeError("request must be an interface request")
-        self._recorder.record_request(request)
-        try:
-            response = self._orchestration.dispatch(request)
-        except Exception:
-            self._recorder.record_response(
-                request,
-                InterfaceResponse(
-                    request_id=request.request_id,
-                    operation=request.operation,
-                    status=InterfaceResponseStatus.FAILED,
-                    payload={},
-                    metadata={"event_source": "interface_backend", "exception": "orchestration"},
-                ),
-            )
-            raise
-        self._recorder.record_response(request, response)
-        return response
-
-
-__all__ = [
-    "RuntimeActivityError",
-    "RuntimeActivityKind",
-    "RuntimeActivityEvent",
-    "RuntimeActivitySink",
-    "RuntimeActivityStream",
-    "InterfaceRuntimeActivityRecorder",
-    "ObservableInterfaceOrchestration",
-]
