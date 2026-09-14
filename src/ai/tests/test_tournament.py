@@ -79,11 +79,33 @@ class TournamentTests(unittest.TestCase):
             role_profiles=self.roles,
         )
         payload = report.as_dict()
+        entry = payload["entries"][0]
         self.assertEqual(payload["winner"], "good")
-        self.assertEqual(payload["entries"][0]["model_id"], "good")
-        self.assertIn("dimension_scores", payload["entries"][0])
-        self.assertIn("role_fitness", payload["entries"][0])
-        self.assertNotIn("observations", payload["entries"][0])
+        self.assertEqual(entry["model_id"], "good")
+        self.assertIn("dimension_scores", entry)
+        self.assertIn("role_fitness", entry)
+        self.assertIn("case_evidence", entry)
+        self.assertEqual(len(entry["case_evidence"]), len(JARVIS_BENCHMARK_CASES))
+        self.assertNotIn("observations", entry)
+        self.assertNotIn("response", entry)
+
+    def test_case_evidence_preserves_failure_and_preview(self) -> None:
+        class FailingProvider(_Provider):
+            def generate(self, request):
+                raise RuntimeError("simulated provider failure")
+
+        service = AIService()
+        service.register_provider(FailingProvider({"failed": "unused"}))
+        report = evaluate_model_tournament(
+            service,
+            (ModelCandidate("failed", "fake"),),
+            cases=JARVIS_BENCHMARK_CASES[:1],
+            role_profiles=self.roles,
+        )
+        evidence = report.as_dict()["entries"][0]["case_evidence"][0]
+        self.assertFalse(evidence["passed"])
+        self.assertEqual(evidence["error"], "RuntimeError: simulated provider failure")
+        self.assertIsNone(evidence["response_preview"])
 
 
 if __name__ == "__main__":
