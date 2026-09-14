@@ -83,6 +83,39 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual(second.kind.value, "REQUEST_FAILED")
         self.assertEqual(second.operation, InterfaceOperation.PROPOSE)
 
+    def test_agent_and_tool_records_are_preserved_as_runtime_projections(self):
+        stream = RuntimeActivityStream()
+        builder = ControlPlaneSnapshotBuilder(
+            world_supplier=lambda: {"landscape": "TEST"},
+            activity_stream=stream,
+            agents_supplier=lambda: (
+                {
+                    "agent_id": "coding-1",
+                    "status": "EXECUTING",
+                    "authority_granted": False,
+                },
+            ),
+            tools_supplier=lambda: (
+                {
+                    "name": "read_file",
+                    "risk_level": "low",
+                    "requires_confirmation": False,
+                },
+                {
+                    "name": "write_file",
+                    "risk_level": "high",
+                    "requires_confirmation": True,
+                },
+            ),
+            clock=lambda: "2026-09-14T00:00:00Z",
+        )
+        payload = builder.build().to_dict()
+        self.assertEqual(payload["agents"][0]["agent_id"], "coding-1")
+        self.assertFalse(payload["agents"][0]["authority_granted"])
+        self.assertEqual([tool["name"] for tool in payload["tools"]], ["read_file", "write_file"])
+        self.assertEqual(payload["tools"][1]["risk_level"], "high")
+        self.assertTrue(payload["tools"][1]["requires_confirmation"])
+
 
 class ControlPlaneHTTPTests(unittest.TestCase):
     def setUp(self):
