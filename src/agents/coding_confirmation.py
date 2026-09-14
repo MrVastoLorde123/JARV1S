@@ -48,12 +48,19 @@ class CodingAgentConfirmationService:
     def __init__(self, store: CodingConfirmationStore | None = None) -> None:
         if store is not None and not isinstance(store, CodingConfirmationStore):
             raise TypeError("store must be a CodingConfirmationStore or None")
-        self._store = store
+        self._store = None
         self._operations: dict[str, CodingPendingOperation] = {}
         self._consumed_invocations: set[tuple[str, str]] = set()
-        if self._store is not None:
-            self._operations = {operation.operation_id: operation for operation in self._store.load_operations()}
-            self._consumed_invocations = self._store.load_consumed_invocations()
+        if store is not None:
+            self.bind_store(store)
+
+    def bind_store(self, store: CodingConfirmationStore) -> None:
+        """Attach durable state while preserving the no-argument construction contract."""
+        if not isinstance(store, CodingConfirmationStore):
+            raise TypeError("store must be a CodingConfirmationStore")
+        self._store = store
+        self._operations = {operation.operation_id: operation for operation in store.load_operations()}
+        self._consumed_invocations = store.load_consumed_invocations()
 
     def stage(
         self,
