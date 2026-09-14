@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from threading import Thread
 
 from src.core.jarvis_runtime import JARVISRuntime
-from src.core.runtime_activity_stream import InterfaceRuntimeActivityRecorder
 
+from .control_plane import ControlPlaneActivityRecorder
 from .http_command import CommandHTTPConfig, create_command_server
 
 
@@ -26,12 +26,12 @@ def start_command_http(
     runtime: JARVISRuntime,
     *,
     config: CommandHTTPConfig | None = None,
-    activity_recorder: InterfaceRuntimeActivityRecorder | None = None,
+    activity_recorder: ControlPlaneActivityRecorder | None = None,
 ) -> CommandHostHandle:
     if not isinstance(runtime, JARVISRuntime):
         raise TypeError("runtime must be a JARVISRuntime")
-    if activity_recorder is not None and type(activity_recorder) is not InterfaceRuntimeActivityRecorder:
-        raise TypeError("activity_recorder must be an InterfaceRuntimeActivityRecorder or None")
+    if activity_recorder is not None and type(activity_recorder) is not ControlPlaneActivityRecorder:
+        raise TypeError("activity_recorder must be a ControlPlaneActivityRecorder or None")
     server = create_command_server(runtime, config=config, activity_recorder=activity_recorder)
     thread = Thread(
         target=server.serve_forever,
