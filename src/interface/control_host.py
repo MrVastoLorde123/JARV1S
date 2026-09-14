@@ -11,6 +11,7 @@ from src.agency.agent_entity import AgentStatus
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityKind, RuntimeActivityStream
+from src.tools.models import ToolResult
 from src.tools.registry import ToolRegistry
 
 from .control_plane import ControlPlaneSnapshotBuilder
@@ -123,15 +124,29 @@ def _task_projection(activity_stream: RuntimeActivityStream) -> dict[str, object
 
 
 def _verification_projection(activity_stream: RuntimeActivityStream) -> dict[str, object]:
+    """Expose bounded verification outcome/evidence, never raw verification logs."""
     observation = _latest_coding_observation(activity_stream)
     if observation is None or "verification" not in observation:
         return {"state": "NOT_REPORTED", "evidence": []}
 
     verification = observation.get("verification")
+    if isinstance(verification, ToolResult):
+        state = "PASSED" if verification.success else "FAILED"
+        evidence: dict[str, object] = {
+            "tool_name": verification.tool_name,
+            "success": verification.success,
+        }
+        if verification.error is not None:
+            evidence["error_code"] = verification.error.code
+            evidence["error"] = verification.error.message
+        return {"state": state, "evidence": [evidence]}
+
     if not isinstance(verification, dict):
         return {"state": "REPORTED", "evidence": []}
 
     state = verification.get("state") or verification.get("status")
+    if state is None and "passed" in verification:
+        state = "PASSED" if verification.get("passed") is True else "FAILED"
     if state is None and "success" in verification:
         state = "PASSED" if verification.get("success") is True else "FAILED"
     evidence = {
