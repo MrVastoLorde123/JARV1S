@@ -2,7 +2,8 @@
 
 The browser sends plain interface content into JARVISRuntime.receive(). This
 module owns transport only; interpretation, authority, authorization, and any
-future execution remain backend-owned.
+future execution remain backend-owned. Optional control-plane activity
+recording makes the same command lifecycle visible to the cockpit.
 """
 
 from __future__ import annotations
@@ -13,8 +14,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from uuid import uuid4
 
+from src.core.interface_backend import InterfaceResponseStatus
 from src.core.jarvis_runtime import JARVISRuntime
 from src.interface.boundary import InterfaceChannel
+from src.interface.control_plane import ControlPlaneActivityRecorder
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,7 @@ class _CommandHandler(BaseHTTPRequestHandler):
     server_version = "JARVISCommand/1.0"
     runtime: JARVISRuntime
     config: CommandHTTPConfig
+    activity_recorder: ControlPlaneActivityRecorder | None = None
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         if self.path != self.config.path:
@@ -81,8 +85,10 @@ class _CommandHandler(BaseHTTPRequestHandler):
             self._json_error(400, "content must be a non-empty string")
             return
 
-        session_id = self.headers.get("X-JARVIS-Session-ID")
+        session_id = self.headers.get("X-JARVIS-Session-ID") or "http-ui"
         request_id = self.headers.get("X-JARVIS-Request-ID") or f"command-{uuid4().hex}"
+        if self.activity_recorder is not None:
+            self.activity_recorder.record_request(request_id=request_id, session_id=session_id)
 
         try:
             result = self.runtime.receive(
@@ -94,7 +100,21 @@ class _CommandHandler(BaseHTTPRequestHandler):
             )
             response = self.runtime.respond(result)
             body = response.to_json().encode("utf-8")
+            if self.activity_recorder is not None:
+                self.activity_recorder.record_response(
+                    request_id=request_id,
+                    session_id=session_id,
+                    status=InterfaceResponseStatus.ACCEPTED,
+                    metadata=dict(response.metadata),
+                )
         except Exception as exc:  # pragma: no cover - transport safety boundary
+            if self.activity_recorder is not None:
+                self.activity_recorder.record_response(
+                    request_id=request_id,
+                    session_id=session_id,
+                    status=InterfaceResponseStatus.FAILED,
+                    metadata={"exception": type(exc).__name__},
+                )
             self._json_error(500, "JARVIS command processing failed", detail=str(exc))
             return
 
@@ -132,14 +152,18 @@ def create_command_server(
     runtime: JARVISRuntime,
     *,
     config: CommandHTTPConfig | None = None,
+    activity_recorder: ControlPlaneActivityRecorder | None = None,
 ) -> ThreadingHTTPServer:
     if not isinstance(runtime, JARVISRuntime):
         raise TypeError("runtime must be a JARVISRuntime")
+    if activity_recorder is not None and type(activity_recorder) is not ControlPlaneActivityRecorder:
+        raise TypeError("activity_recorder must be a ControlPlaneActivityRecorder or None")
 
     resolved_config = config or CommandHTTPConfig()
     handler_type = type("JARVISCommandHandler", (_CommandHandler,), {})
     handler_type.runtime = runtime
     handler_type.config = resolved_config
+    handler_type.activity_recorder = activity_recorder
     return ThreadingHTTPServer((resolved_config.host, resolved_config.port), handler_type)
 
 

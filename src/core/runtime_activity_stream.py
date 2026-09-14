@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from threading import RLock
 from types import MappingProxyType
-from typing import Any, Iterable, Mapping, Protocol
+from typing import Any, Mapping, Protocol
 
 from src.core.interface_backend import (
     InterfaceOperation,
@@ -24,6 +24,10 @@ class RuntimeActivityKind(str, Enum):
     RESPONSE_EMITTED = "RESPONSE_EMITTED"
     REQUEST_REJECTED = "REQUEST_REJECTED"
     REQUEST_FAILED = "REQUEST_FAILED"
+    TOOL_EXECUTION_STARTED = "TOOL_EXECUTION_STARTED"
+    TOOL_EXECUTION_COMPLETED = "TOOL_EXECUTION_COMPLETED"
+    VERIFICATION_STARTED = "VERIFICATION_STARTED"
+    VERIFICATION_COMPLETED = "VERIFICATION_COMPLETED"
 
 
 def _freeze(value: Any) -> Any:

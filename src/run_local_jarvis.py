@@ -4,6 +4,7 @@ from pathlib import Path
 from src.agency.world_bootstrap import create_local_world_runtime
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_confirmation_provider import CodingAgentConfirmationProvider
+from src.agents.coding_confirmation_store import CodingConfirmationStore
 from src.agents.coding_service import CodingAgentService
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
@@ -12,10 +13,15 @@ from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis_runtime import JARVISRuntime
+from src.core.runtime_activity_stream import RuntimeActivityStream
 from src.database_bootstrap import bootstrap_database
 from src.interface.capability_host import start_capability_http
-from src.interface.http_capabilities import CapabilityHTTPConfig
+from src.interface.coding_execution_activity import CodingExecutionActivityRecorder, ObservingToolInvoker
 from src.interface.command_host import start_command_http
+from src.interface.control_host import start_control_plane_http
+from src.interface.control_plane import ControlPlaneActivityRecorder
+from src.interface.control_plane_store import ControlPlaneActivityStore
+from src.interface.http_capabilities import CapabilityHTTPConfig
 from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
@@ -47,6 +53,10 @@ def main():
         "JARVIS_CAPABILITY_HTTP",
         "1" if enable_world_http else "0",
     ).strip().lower() in {"1", "true", "yes", "on"}
+    enable_control_plane_http = os.environ.get(
+        "JARVIS_CONTROL_PLANE_HTTP",
+        "1" if enable_world_http else "0",
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     bootstrap_database()
 
@@ -65,7 +75,17 @@ def main():
     )
     personalization_runtime = PersonalizationRuntime()
 
+    database_path = data_dir / "processed" / "jarvis.db"
+    control_plane_store = ControlPlaneActivityStore(database_path)
+    activity_stream = RuntimeActivityStream()
+    activity_recorder = ControlPlaneActivityRecorder(
+        activity_stream,
+        durable_store=control_plane_store,
+    )
+
+    coding_confirmation_store = CodingConfirmationStore(database_path)
     coding_confirmation_service = CodingAgentConfirmationService()
+    coding_confirmation_service.bind_store(coding_confirmation_store)
     coding_confirmation_provider = CodingAgentConfirmationProvider(
         coding_confirmation_service,
     )
@@ -73,10 +93,19 @@ def main():
         workspace_dir,
         confirmation_provider=coding_confirmation_provider,
     )
+    coding_execution_recorder = CodingExecutionActivityRecorder(
+        activity_stream,
+        durable_store=control_plane_store,
+    )
+    coding_tool_invoker = ObservingToolInvoker(
+        tool_stack.gate,
+        coding_execution_recorder,
+    )
     coding_agent_service = CodingAgentService.from_ai_service(
         ai_service,
         tool_stack.gate,
     )
+    coding_agent_service.bind_tool_invoker(coding_tool_invoker)
 
     def processor_factory(session_id, conversation_id):
         base_context_runtime = WorkingContextRuntime(
@@ -96,14 +125,14 @@ def main():
             conversation_id=conversation_id,
             enable_memory_formation=True,
             working_context_runtime=personalized_context_runtime,
-            tool_invoker=tool_stack.gate,
+            tool_invoker=coding_tool_invoker,
             coding_agent_service=coding_agent_service,
             coding_confirmation_service=coding_confirmation_service,
         )
 
     default_processor = CodingAgentJARVIS(
         ai_service=ai_service,
-        tool_invoker=tool_stack.gate,
+        tool_invoker=coding_tool_invoker,
         coding_agent_service=coding_agent_service,
         coding_confirmation_service=coding_confirmation_service,
     )
@@ -125,6 +154,7 @@ def main():
         command_host = start_command_http(
             runtime,
             config=CommandHTTPConfig(port=8766),
+            activity_recorder=activity_recorder,
         )
         print("JARVIS Command HTTP transport listening on http://127.0.0.1:8766")
 
@@ -135,6 +165,19 @@ def main():
             config=CapabilityHTTPConfig(port=8767),
         )
         print("JARVIS Capability HTTP transport listening on http://127.0.0.1:8767")
+
+    control_plane_host = None
+    if enable_control_plane_http:
+        if not enable_world_http:
+            print("JARVIS Control Plane requires the world runtime; enable JARVIS_WORLD_HTTP=1.")
+        else:
+            control_plane_host = start_control_plane_http(
+                runtime,
+                activity_stream=activity_stream,
+                tool_registry=tool_stack.registry,
+                confirmation_service=coding_confirmation_service,
+            )
+            print("JARVIS Control Plane HTTP transport listening on http://127.0.0.1:8768")
 
     session_identity = PersistentSessionIdentity(
         data_dir / "active_session.json",
@@ -150,6 +193,8 @@ def main():
     try:
         operator.run()
     finally:
+        if control_plane_host is not None:
+            control_plane_host.close()
         if capability_host is not None:
             capability_host.close()
         if command_host is not None:

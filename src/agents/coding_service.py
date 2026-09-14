@@ -90,28 +90,7 @@ from src.tools.execution_attempt import ToolExecutor
 class CodingAgentService:
     """Compose JARVIS context, planning, execution, evidence, eligibility, handoff, authorization, preparation, attempt, outcome, feedback, evaluation, learning decision, learning-write request, persistence, persistence verification, learning-state consumption, application request, and application."""
 
-    def __init__(
-        self,
-        planner,
-        worker: CodingAgentWorker,
-        context_composer=None,
-        claim_evidence_adapter: CodingClaimEvidenceAdapter | None = None,
-        consequence_policy: EvidenceGatedConsequencePolicy | None = None,
-        authority_handoff_policy: AuthorityHandoffPolicy | None = None,
-        consequence_authorization_service: ConsequenceAuthorizationService | None = None,
-        consequence_execution_preparation_service: ConsequenceExecutionPreparationService | None = None,
-        consequence_execution_attempt_service: ConsequenceExecutionAttemptService | None = None,
-        consequence_execution_outcome_service: ConsequenceExecutionOutcomeService | None = None,
-        consequence_execution_feedback_service: ConsequenceExecutionFeedbackService | None = None,
-        consequence_feedback_evaluation_service: ConsequenceFeedbackEvaluationService | None = None,
-        consequence_learning_decision_service: ConsequenceLearningDecisionService | None = None,
-        consequence_learning_write_request_service: ConsequenceLearningWriteRequestService | None = None,
-        consequence_learning_state_persistence_service: ConsequenceLearningStatePersistenceService | None = None,
-        consequence_learning_state_persistence_verification_service: ConsequenceLearningStatePersistenceVerificationService | None = None,
-        consequence_learning_state_consumption_service: ConsequenceLearningStateConsumptionService | None = None,
-        consequence_learning_state_application_request_service: ConsequenceLearningStateApplicationRequestService | None = None,
-        consequence_learning_state_application_service: ConsequenceLearningStateApplicationService | None = None,
-    ) -> None:
+    def __init__(self, planner, worker: CodingAgentWorker, context_composer=None, claim_evidence_adapter: CodingClaimEvidenceAdapter | None = None, consequence_policy: EvidenceGatedConsequencePolicy | None = None, authority_handoff_policy: AuthorityHandoffPolicy | None = None, consequence_authorization_service: ConsequenceAuthorizationService | None = None, consequence_execution_preparation_service: ConsequenceExecutionPreparationService | None = None, consequence_execution_attempt_service: ConsequenceExecutionAttemptService | None = None, consequence_execution_outcome_service: ConsequenceExecutionOutcomeService | None = None, consequence_execution_feedback_service: ConsequenceExecutionFeedbackService | None = None, consequence_feedback_evaluation_service: ConsequenceFeedbackEvaluationService | None = None, consequence_learning_decision_service: ConsequenceLearningDecisionService | None = None, consequence_learning_write_request_service: ConsequenceLearningWriteRequestService | None = None, consequence_learning_state_persistence_service: ConsequenceLearningStatePersistenceService | None = None, consequence_learning_state_persistence_verification_service: ConsequenceLearningStatePersistenceVerificationService | None = None, consequence_learning_state_consumption_service: ConsequenceLearningStateConsumptionService | None = None, consequence_learning_state_application_request_service: ConsequenceLearningStateApplicationRequestService | None = None, consequence_learning_state_application_service: ConsequenceLearningStateApplicationService | None = None) -> None:
         self._planner = planner
         self._worker = worker
         self._context_composer = context_composer
@@ -138,6 +117,13 @@ class CodingAgentService:
         worker = CodingAgentWorker(planner, tool_invoker)
         context_composer = RepositoryContextComposer(tool_invoker)
         return cls(planner, worker, context_composer)
+
+    def bind_tool_invoker(self, tool_invoker) -> None:
+        """Bind the worker execution/observation delegate after canonical construction."""
+        binder = getattr(self._worker, "bind_tool_invoker", None)
+        if callable(binder):
+            binder(tool_invoker)
+            self._context_composer = RepositoryContextComposer(tool_invoker)
 
     def bind_consequence_authorization(self, authorization_service: ExplicitAuthorizationService, *, authority_target: str = "coding_confirmation") -> None:
         self._consequence_authorization_service = ConsequenceAuthorizationService(authorization_service, authority_target=authority_target)
@@ -170,12 +156,7 @@ class CodingAgentService:
     def bind_consequence_learning_write_request(self, request_service: ConsequenceLearningWriteRequestService | None = None) -> None:
         self._consequence_learning_write_request_service = request_service or ConsequenceLearningWriteRequestService()
 
-    def bind_consequence_learning_state_persistence(
-        self,
-        writer: ConsequenceLearningStateWriter | None = None,
-        *,
-        persistence_service: ConsequenceLearningStatePersistenceService | None = None,
-    ) -> None:
+    def bind_consequence_learning_state_persistence(self, writer: ConsequenceLearningStateWriter | None = None, *, persistence_service: ConsequenceLearningStatePersistenceService | None = None) -> None:
         if writer is not None and persistence_service is not None:
             raise ValueError("provide either writer or persistence_service, not both")
         if persistence_service is not None:
@@ -185,12 +166,7 @@ class CodingAgentService:
             raise ValueError("writer or persistence_service is required")
         self._consequence_learning_state_persistence_service = ConsequenceLearningStatePersistenceService(writer)
 
-    def bind_consequence_learning_state_persistence_verification(
-        self,
-        reader: ConsequenceLearningStateReader | None = None,
-        *,
-        verification_service: ConsequenceLearningStatePersistenceVerificationService | None = None,
-    ) -> None:
+    def bind_consequence_learning_state_persistence_verification(self, reader: ConsequenceLearningStateReader | None = None, *, verification_service: ConsequenceLearningStatePersistenceVerificationService | None = None) -> None:
         if reader is not None and verification_service is not None:
             raise ValueError("provide either reader or verification_service, not both")
         if verification_service is not None:
@@ -200,28 +176,17 @@ class CodingAgentService:
             raise ValueError("reader or verification_service is required")
         self._consequence_learning_state_persistence_verification_service = ConsequenceLearningStatePersistenceVerificationService(reader)
 
-    def bind_consequence_learning_state_consumption(
-        self,
-        consumption_service: ConsequenceLearningStateConsumptionService | None = None,
-    ) -> None:
+    def bind_consequence_learning_state_consumption(self, consumption_service: ConsequenceLearningStateConsumptionService | None = None) -> None:
         if consumption_service is None:
             raise ValueError("consumption_service is required")
         self._consequence_learning_state_consumption_service = consumption_service
 
-    def bind_consequence_learning_state_application_request(
-        self,
-        application_request_service: ConsequenceLearningStateApplicationRequestService | None = None,
-    ) -> None:
+    def bind_consequence_learning_state_application_request(self, application_request_service: ConsequenceLearningStateApplicationRequestService | None = None) -> None:
         if application_request_service is None:
             raise ValueError("application_request_service is required")
         self._consequence_learning_state_application_request_service = application_request_service
 
-    def bind_consequence_learning_state_application(
-        self,
-        applicator: ConsequenceLearningStateApplicator | None = None,
-        *,
-        application_service: ConsequenceLearningStateApplicationService | None = None,
-    ) -> None:
+    def bind_consequence_learning_state_application(self, applicator: ConsequenceLearningStateApplicator | None = None, *, application_service: ConsequenceLearningStateApplicationService | None = None) -> None:
         if applicator is not None and application_service is not None:
             raise ValueError("provide either applicator or application_service, not both")
         if application_service is not None:
@@ -237,11 +202,7 @@ class CodingAgentService:
         if self._context_composer is None or isinstance(task.metadata.get("repository_context"), str):
             return task
         repository_context = self._context_composer.compose()
-        return CodingAgentTask(
-            objective=task.objective,
-            task_id=task.task_id,
-            metadata={**dict(task.metadata), "repository_context": repository_context.render()},
-        )
+        return CodingAgentTask(objective=task.objective, task_id=task.task_id, metadata={**dict(task.metadata), "repository_context": repository_context.render()})
 
     @staticmethod
     def _apply_verification_authority(plan: CodingAgentPlan) -> CodingAgentPlan:
@@ -311,44 +272,27 @@ class CodingAgentService:
             raise RuntimeError("consequence learning-write-request service is not bound")
         return self._consequence_learning_write_request_service.create(decision)
 
-    def persist_consequence_learning_write_request(
-        self,
-        request: ConsequenceLearningWriteRequest,
-    ) -> ConsequenceLearningStatePersistenceReceipt:
+    def persist_consequence_learning_write_request(self, request: ConsequenceLearningWriteRequest) -> ConsequenceLearningStatePersistenceReceipt:
         if self._consequence_learning_state_persistence_service is None:
             raise RuntimeError("consequence learning-state persistence service is not bound")
         return self._consequence_learning_state_persistence_service.persist(request)
 
-    def verify_consequence_learning_state_persistence(
-        self,
-        request: ConsequenceLearningWriteRequest,
-        receipt: ConsequenceLearningStatePersistenceReceipt,
-    ) -> ConsequenceLearningStatePersistenceVerification:
+    def verify_consequence_learning_state_persistence(self, request: ConsequenceLearningWriteRequest, receipt: ConsequenceLearningStatePersistenceReceipt) -> ConsequenceLearningStatePersistenceVerification:
         if self._consequence_learning_state_persistence_verification_service is None:
             raise RuntimeError("consequence learning-state persistence-verification service is not bound")
         return self._consequence_learning_state_persistence_verification_service.verify(request, receipt)
 
-    def consume_consequence_learning_state(
-        self,
-        request: ConsequenceLearningWriteRequest,
-        verification: ConsequenceLearningStatePersistenceVerification,
-    ) -> ConsequenceLearningStateConsumption:
+    def consume_consequence_learning_state(self, request: ConsequenceLearningWriteRequest, verification: ConsequenceLearningStatePersistenceVerification) -> ConsequenceLearningStateConsumption:
         if self._consequence_learning_state_consumption_service is None:
             raise RuntimeError("consequence learning-state consumption service is not bound")
         return self._consequence_learning_state_consumption_service.consume(request, verification)
 
-    def request_consequence_learning_state_application(
-        self,
-        consumption: ConsequenceLearningStateConsumption,
-    ) -> ConsequenceLearningStateApplicationRequest:
+    def request_consequence_learning_state_application(self, consumption: ConsequenceLearningStateConsumption) -> ConsequenceLearningStateApplicationRequest:
         if self._consequence_learning_state_application_request_service is None:
             raise RuntimeError("consequence learning-state application-request service is not bound")
         return self._consequence_learning_state_application_request_service.create(consumption)
 
-    def apply_consequence_learning_state(
-        self,
-        request: ConsequenceLearningStateApplicationRequest,
-    ) -> ConsequenceLearningStateApplicationReceipt:
+    def apply_consequence_learning_state(self, request: ConsequenceLearningStateApplicationRequest) -> ConsequenceLearningStateApplicationReceipt:
         if self._consequence_learning_state_application_service is None:
             raise RuntimeError("consequence learning-state application service is not bound")
         return self._consequence_learning_state_application_service.apply(request)

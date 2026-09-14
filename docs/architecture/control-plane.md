@@ -1,0 +1,100 @@
+# JARVIS Control Plane
+
+The control plane is the deterministic boundary between intelligence proposals and system authority. Models, agents, UI components, and external inputs may propose work or report observations; the control plane owns what is actually authorized, executed, verified, persisted, and presented as fact.
+
+## Goals
+
+- Present one coherent operational state across interface, runtime, agents, tools, models, and verification.
+- Keep authority, permission, execution, and completion claims outside the model.
+- Make consequential work traceable through proposal, authorization, execution, observation, verification, and final claim.
+- Keep agents and models replaceable without changing JARVIS authority semantics.
+- Keep operational state restart-safe and durable.
+- Expose useful backend activity without exposing private model chain-of-thought.
+
+## Runtime boundary
+
+The cockpit consumes a read-only `control-plane.v1` snapshot. It does not write state into that snapshot and it must not infer authority from connectivity, model availability, or capability inventory.
+
+The snapshot contains:
+
+- runtime availability and world observation;
+- task state and progress;
+- active agents;
+- pending approvals;
+- tool inventory and risk/confirmation declarations;
+- model/provider state backed by a live local `/v1/models` observation;
+- blockers and errors;
+- verification state and evidence references;
+- bounded operational events;
+- a monotonic observation cursor.
+
+Some fields may temporarily report `NOT_REPORTED` or an empty collection while their deeper runtime projection is not yet wired. Empty data is not a claim that the underlying system has no such state.
+
+## Current runtime projections
+
+The local runtime currently projects:
+
+- concrete active `AgentEntity` instances from `JARVISRuntime.world_runtime`;
+- the registered `ToolDefinition` catalog from the runtime's `ToolRegistry`;
+- pending coding authorization state from `CodingAgentConfirmationService`;
+- local model/provider health from the configured OpenAI-compatible `/v1/models` endpoint;
+- coding task lifecycle from observed coding-agent response metadata;
+- bounded verification outcome/evidence from observed verification results;
+- explicit coding execution blockers such as pending approval, blocked tools, execution failure, and verification failure;
+- explicit tool/verification lifecycle events (`TOOL_EXECUTION_STARTED`, `TOOL_EXECUTION_COMPLETED`, `VERIFICATION_STARTED`, `VERIFICATION_COMPLETED`) from the bounded coding execution path;
+- sanitized control-plane activity events through a durable SQLite journal, reloaded into the runtime activity stream on restart;
+- exact coding confirmation task/plan state and consumed invocation IDs through a durable SQLite confirmation store, restored before the command/control transports start.
+
+These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence. Durable persistence stores only runtime-owned records; control-plane activity is sanitized before it is journaled, and private model rationale/raw verification logs are excluded from that surface. Tool/verification activity records include only bounded identity and outcome metadata, never raw tool arguments or file contents.
+
+## Action lifecycle
+
+```text
+intent
+  -> interpretation
+  -> proposal
+  -> authorization decision
+  -> capability/tool execution
+  -> observed result
+  -> verification
+  -> durable state update
+  -> user-visible claim
+```
+
+The model never collapses these stages into a single success claim. A response from a model is not evidence that a tool ran, permission exists, or a task completed.
+
+## Event visibility
+
+The UI may display operational events such as request received, authorization decisions, tool start/completion/failure, model response received, verification started/completed/failed, pauses, resumes, cancellations, and runtime errors. Coding tool and verification lifecycle observations are emitted by a wrapper around the existing tool invoker; the wrapper does not own authorization and cannot expand the underlying tool surface. Private chain-of-thought is not a required dependency of the control plane.
+
+## Persistence
+
+The local control-plane activity stream is optionally backed by `ControlPlaneActivityStore`. The real launcher enables this store against the JARVIS SQLite data directory. On startup, previously persisted sanitized events are reloaded into the in-memory activity stream and the observation cursor continues monotonically from the restored sequence. Unit tests may omit the store to remain fully ephemeral and isolated.
+
+The coding confirmation service is also optionally backed by `CodingConfirmationStore`. When enabled by the local launcher, pending/confirmed/cancelled exact coding operations and one-shot consumed invocation IDs survive process restart. The persisted operation binds the original task and exact plan fingerprint; the service still performs the same runtime authorization checks after restoration.
+
+## Transport
+
+The local runtime exposes the control plane as a read-only HTTP resource:
+
+`GET /api/control-plane`
+
+Optional query parameters:
+
+- `after_cursor`: return events after a previously consumed cursor;
+- `limit`: bound the returned event window.
+
+The local launcher uses port `8768` for the control-plane transport. The existing world, command, and capability transports remain separate boundaries.
+
+## Acceptance criteria
+
+The control plane is mature when:
+
+- the UI renders runtime-owned truth without local fabrication;
+- users can see what JARVIS is doing, waiting for, blocked by, and verifying;
+- execution results are distinguishable from model claims;
+- authority is never implied by observation or capability discovery;
+- the event cursor supports incremental observation;
+- restart/reload preserves durable state owned by the runtime;
+- models can be swapped without changing authority or persistence semantics;
+- deterministic tests can exercise the boundary without requiring an LLM.
