@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import builtins
-
 from src.ai.providers.local_provider import LocalProvider
 
 
