@@ -1,10 +1,12 @@
 """HTTP transport for the runtime-owned control-plane snapshot."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from .control_plane import ControlPlaneSnapshotBuilder
 from uuid import uuid4
+
+from .control_plane import ControlPlaneSnapshotBuilder
 
 
 @dataclass(frozen=True)
@@ -50,7 +52,9 @@ class _ControlPlaneHandler(BaseHTTPRequestHandler):
             snapshot = self.builder.build(after_cursor=after_cursor, limit=limit)
             body = snapshot.to_json().encode("utf-8")
         except Exception as exc:  # pragma: no cover - transport boundary
-            body = (f'{"error":"control-plane unavailable","detail":{_quote(str(exc))}}').encode("utf-8")
+            body = json.dumps(
+                {"error": "control-plane unavailable", "detail": str(exc)}
+            ).encode("utf-8")
             self.send_response(500)
             self._cors()
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -110,12 +114,6 @@ def _parse_query(query: str) -> dict[str, str]:
 
     parsed = parse_qs(query, keep_blank_values=False)
     return {key: values[-1] for key, values in parsed.items() if values}
-
-
-def _quote(value: str) -> str:
-    import json
-
-    return json.dumps(value)
 
 
 __all__ = ["ControlPlaneHTTPConfig", "create_control_plane_server", "serve_control_plane"]
