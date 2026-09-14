@@ -1,7 +1,6 @@
 import json
 import threading
 import unittest
-from unittest.mock import patch
 from urllib.request import Request, urlopen
 
 from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
