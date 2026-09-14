@@ -16,11 +16,12 @@ from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
 from src.database_bootstrap import bootstrap_database
 from src.interface.capability_host import start_capability_http
-from src.interface.http_capabilities import CapabilityHTTPConfig
+from src.interface.coding_execution_activity import CodingExecutionActivityRecorder, ObservingToolInvoker
 from src.interface.command_host import start_command_http
 from src.interface.control_host import start_control_plane_http
 from src.interface.control_plane import ControlPlaneActivityRecorder
 from src.interface.control_plane_store import ControlPlaneActivityStore
+from src.interface.http_capabilities import CapabilityHTTPConfig
 from src.interface.http_command import CommandHTTPConfig
 from src.interface.human_operating_layer import HumanOperatingLayer
 from src.interface.session_identity import PersistentSessionIdentity
@@ -75,6 +76,13 @@ def main():
     personalization_runtime = PersonalizationRuntime()
 
     database_path = data_dir / "processed" / "jarvis.db"
+    control_plane_store = ControlPlaneActivityStore(database_path)
+    activity_stream = RuntimeActivityStream()
+    activity_recorder = ControlPlaneActivityRecorder(
+        activity_stream,
+        durable_store=control_plane_store,
+    )
+
     coding_confirmation_store = CodingConfirmationStore(database_path)
     coding_confirmation_service = CodingAgentConfirmationService(coding_confirmation_store)
     coding_confirmation_provider = CodingAgentConfirmationProvider(
@@ -84,9 +92,17 @@ def main():
         workspace_dir,
         confirmation_provider=coding_confirmation_provider,
     )
+    coding_execution_recorder = CodingExecutionActivityRecorder(
+        activity_stream,
+        durable_store=control_plane_store,
+    )
+    coding_tool_invoker = ObservingToolInvoker(
+        tool_stack.gate,
+        coding_execution_recorder,
+    )
     coding_agent_service = CodingAgentService.from_ai_service(
         ai_service,
-        tool_stack.gate,
+        coding_tool_invoker,
     )
 
     def processor_factory(session_id, conversation_id):
@@ -107,14 +123,14 @@ def main():
             conversation_id=conversation_id,
             enable_memory_formation=True,
             working_context_runtime=personalized_context_runtime,
-            tool_invoker=tool_stack.gate,
+            tool_invoker=coding_tool_invoker,
             coding_agent_service=coding_agent_service,
             coding_confirmation_service=coding_confirmation_service,
         )
 
     default_processor = CodingAgentJARVIS(
         ai_service=ai_service,
-        tool_invoker=tool_stack.gate,
+        tool_invoker=coding_tool_invoker,
         coding_agent_service=coding_agent_service,
         coding_confirmation_service=coding_confirmation_service,
     )
@@ -124,13 +140,6 @@ def main():
         conversation_store=conversation_store,
         durable_processor_factory=processor_factory,
         world_runtime=world_runtime,
-    )
-
-    activity_stream = RuntimeActivityStream()
-    control_plane_store = ControlPlaneActivityStore(database_path)
-    activity_recorder = ControlPlaneActivityRecorder(
-        activity_stream,
-        durable_store=control_plane_store,
     )
 
     world_host = None
