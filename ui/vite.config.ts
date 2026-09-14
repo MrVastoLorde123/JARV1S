@@ -19,6 +19,10 @@ export default defineConfig({
         target: 'http://127.0.0.1:8767',
         changeOrigin: true,
       },
+      '/api/control-plane': {
+        target: 'http://127.0.0.1:8768',
+        changeOrigin: true,
+      },
     },
   },
 });
