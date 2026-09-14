@@ -1,10 +1,12 @@
 import json
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.request import Request, urlopen
 
 from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
 from src.core.runtime_activity_stream import RuntimeActivityStream
+from src.interface.control_host import local_model_projection
 from src.interface.control_plane import ControlPlaneActivityRecorder, ControlPlaneSnapshotBuilder
 from src.interface.http_control_plane import ControlPlaneHTTPConfig, create_control_plane_server
 
@@ -115,6 +117,55 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual([tool["name"] for tool in payload["tools"]], ["read_file", "write_file"])
         self.assertEqual(payload["tools"][1]["risk_level"], "high")
         self.assertTrue(payload["tools"][1]["requires_confirmation"])
+
+    def test_local_model_projection_reports_unavailable_when_server_is_unreachable(self):
+        def raising_opener(*_args, **_kwargs):
+            raise OSError("server offline")
+
+        projection = local_model_projection(
+            base_url="http://127.0.0.1:8080",
+            model_id="qwen3-4b-local",
+            opener=raising_opener,
+        )
+        self.assertEqual(projection["state"], "UNAVAILABLE")
+        self.assertEqual(projection["evidence"], "local_server_models_unreachable")
+
+    def test_local_model_projection_reports_available_from_observed_models(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return b'{"data":[{"id":"qwen3-4b-local"}]}'
+
+        projection = local_model_projection(
+            base_url="http://127.0.0.1:8080",
+            model_id="qwen3-4b-local",
+            opener=lambda *_args, **_kwargs: FakeResponse(),
+        )
+        self.assertEqual(projection["state"], "AVAILABLE")
+        self.assertEqual(projection["observed_model_ids"], ("qwen3-4b-local",))
+
+    def test_local_model_projection_reports_mismatch_when_one_other_model_is_observed(self):
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return b'{"data":[{"id":"different-model"}]}'
+
+        projection = local_model_projection(
+            base_url="http://127.0.0.1:8080",
+            model_id="qwen3-4b-local",
+            opener=lambda *_args, **_kwargs: FakeResponse(),
+        )
+        self.assertEqual(projection["state"], "MODEL_MISMATCH")
 
 
 class ControlPlaneHTTPTests(unittest.TestCase):
