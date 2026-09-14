@@ -4,8 +4,8 @@ import unittest
 from urllib.request import Request, urlopen
 
 from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
-from src.core.runtime_activity_stream import RuntimeActivityStream
-from src.interface.control_host import local_model_projection
+from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityKind, RuntimeActivityStream
+from src.interface.control_host import _task_projection, _verification_projection, local_model_projection
 from src.interface.control_plane import ControlPlaneActivityRecorder, ControlPlaneSnapshotBuilder
 from src.interface.http_control_plane import ControlPlaneHTTPConfig, create_control_plane_server
 
@@ -83,6 +83,73 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual(second.sequence, 2)
         self.assertEqual(second.kind.value, "REQUEST_FAILED")
         self.assertEqual(second.operation, InterfaceOperation.PROPOSE)
+
+    def test_activity_recorder_filters_model_rationale_from_projection(self):
+        recorder = ControlPlaneActivityRecorder(RuntimeActivityStream())
+        event = recorder.record_response(
+            request_id="req-safe",
+            session_id="desktop",
+            status=InterfaceResponseStatus.ACCEPTED,
+            metadata={
+                "route": "CODING_AGENT",
+                "stage": "CONFIRMATION",
+                "task_id": "task-1",
+                "plan_fingerprint": "abc123",
+                "rationale": "PRIVATE MODEL REASONING MUST NOT SURFACE",
+            },
+        )
+        self.assertEqual(event.metadata["route"], "CODING_AGENT")
+        self.assertNotIn("rationale", event.metadata)
+        self.assertEqual(_task_projection(recorder._stream)["state"], "WAITING_APPROVAL")
+
+    def test_task_projection_reports_completed_execution(self):
+        stream = RuntimeActivityStream()
+        recorder = ControlPlaneActivityRecorder(stream)
+        recorder.record_response(
+            request_id="req-exec",
+            session_id="desktop",
+            status=InterfaceResponseStatus.ACCEPTED,
+            metadata={
+                "route": "CODING_AGENT",
+                "stage": "EXECUTION",
+                "success": True,
+                "task_id": "task-2",
+                "operation_id": "op-2",
+                "coding_status": "COMPLETED",
+                "edits_attempted": 1,
+                "edits_applied": 1,
+            },
+        )
+        task = _task_projection(stream)
+        self.assertEqual(task["state"], "COMPLETED")
+        self.assertEqual(task["task_id"], "task-2")
+        self.assertEqual(task["edits_applied"], 1)
+
+    def test_verification_projection_exposes_bounded_evidence_only(self):
+        stream = RuntimeActivityStream()
+        recorder = ControlPlaneActivityRecorder(stream)
+        recorder.record_response(
+            request_id="req-verify",
+            session_id="desktop",
+            status=InterfaceResponseStatus.ACCEPTED,
+            metadata={
+                "route": "CODING_AGENT",
+                "stage": "EXECUTION",
+                "success": True,
+                "verification": {
+                    "state": "PASSED",
+                    "runner": "python",
+                    "exit_code": 0,
+                    "passed": True,
+                    "error": "",
+                    "stdout": "PRIVATE VERIFICATION LOG",
+                },
+            },
+        )
+        verification = _verification_projection(stream)
+        self.assertEqual(verification["state"], "PASSED")
+        self.assertEqual(verification["evidence"][0]["runner"], "python")
+        self.assertNotIn("stdout", verification["evidence"][0])
 
     def test_agent_and_tool_records_are_preserved_as_runtime_projections(self):
         stream = RuntimeActivityStream()
