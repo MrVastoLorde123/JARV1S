@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from threading import RLock
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
@@ -113,6 +114,7 @@ class ControlPlaneActivityRecorder:
             raise TypeError("stream must be a RuntimeActivityStream")
         self._stream = stream
         self._event_counter = 0
+        self._lock = RLock()
 
     def record_request(self, *, request_id: str, session_id: str) -> RuntimeActivityEvent:
         return self._publish(
@@ -151,22 +153,23 @@ class ControlPlaneActivityRecorder:
         )
 
     def _publish(self, *, session_id: str, request_id: str, kind: RuntimeActivityKind, status: InterfaceResponseStatus | None, stage: str, summary: str, metadata: Mapping[str, Any]) -> RuntimeActivityEvent:
-        self._event_counter += 1
-        event = RuntimeActivityEvent(
-            event_id=f"control-event-{self._event_counter}",
-            sequence=self._stream.size + 1,
-            session_id=session_id,
-            actor_id="ui",
-            request_id=request_id,
-            operation=InterfaceOperation.PROPOSE,
-            kind=kind,
-            status=status,
-            stage=stage,
-            summary=summary,
-            metadata=metadata,
-        )
-        self._stream.publish(event)
-        return event
+        with self._lock:
+            self._event_counter += 1
+            event = RuntimeActivityEvent(
+                event_id=f"control-event-{self._event_counter}",
+                sequence=self._stream.size + 1,
+                session_id=session_id,
+                actor_id="ui",
+                request_id=request_id,
+                operation=InterfaceOperation.PROPOSE,
+                kind=kind,
+                status=status,
+                stage=stage,
+                summary=summary,
+                metadata=metadata,
+            )
+            self._stream.publish(event)
+            return event
 
 
 WorldSupplier = Callable[[], Mapping[str, Any]]
