@@ -40,9 +40,10 @@ The local runtime currently projects:
 - local model/provider health from the configured OpenAI-compatible `/v1/models` endpoint;
 - coding task lifecycle from observed coding-agent response metadata;
 - bounded verification outcome/evidence from observed verification results;
-- explicit coding execution blockers such as pending approval, blocked tools, execution failure, and verification failure.
+- explicit coding execution blockers such as pending approval, blocked tools, execution failure, and verification failure;
+- sanitized control-plane activity events through a durable SQLite journal, reloaded into the runtime activity stream on restart.
 
-These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence.
+These blocker projections only reflect explicit runtime observations. They do not infer authority, permission, capability, or intent from model connectivity or catalog presence. Durable activity persistence also stores only the already-sanitized control-plane representation; private model rationale and raw verification logs are excluded before persistence.
 
 ## Action lifecycle
 
@@ -63,6 +64,10 @@ The model never collapses these stages into a single success claim. A response f
 ## Event visibility
 
 The UI may display operational events such as request received, authorization decisions, tool start/completion/failure, model response received, verification started/completed/failed, pauses, resumes, cancellations, and runtime errors. Private chain-of-thought is not a required dependency of the control plane.
+
+## Persistence
+
+The local control-plane activity stream is optionally backed by `ControlPlaneActivityStore`. The real launcher enables this store against the JARVIS SQLite data directory. On startup, previously persisted sanitized events are reloaded into the in-memory activity stream and the observation cursor continues monotonically from the restored sequence. Unit tests may omit the store to remain fully ephemeral and isolated.
 
 ## Transport
 
