@@ -3,16 +3,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Callable
-from uuid import uuid4
-
 from .control_plane import ControlPlaneSnapshotBuilder
+from uuid import uuid4
 
 
 @dataclass(frozen=True)
 class ControlPlaneHTTPConfig:
     host: str = "127.0.0.1"
-    port: int = 8766
+    port: int = 8768
     path: str = "/api/control-plane"
     allow_origin: str = "http://localhost:5173"
 
@@ -52,7 +50,7 @@ class _ControlPlaneHandler(BaseHTTPRequestHandler):
             snapshot = self.builder.build(after_cursor=after_cursor, limit=limit)
             body = snapshot.to_json().encode("utf-8")
         except Exception as exc:  # pragma: no cover - transport boundary
-            body = (f'{{"error":"control-plane unavailable","detail":{_quote(str(exc))}}}').encode("utf-8")
+            body = (f'{"error":"control-plane unavailable","detail":{_quote(str(exc))}}').encode("utf-8")
             self.send_response(500)
             self._cors()
             self.send_header("Content-Type", "application/json; charset=utf-8")
