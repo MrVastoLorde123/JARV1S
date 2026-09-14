@@ -4,6 +4,7 @@ from pathlib import Path
 from src.agency.world_bootstrap import create_local_world_runtime
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_confirmation_provider import CodingAgentConfirmationProvider
+from src.agents.coding_confirmation_store import CodingConfirmationStore
 from src.agents.coding_service import CodingAgentService
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
@@ -73,7 +74,9 @@ def main():
     )
     personalization_runtime = PersonalizationRuntime()
 
-    coding_confirmation_service = CodingAgentConfirmationService()
+    database_path = data_dir / "processed" / "jarvis.db"
+    coding_confirmation_store = CodingConfirmationStore(database_path)
+    coding_confirmation_service = CodingAgentConfirmationService(coding_confirmation_store)
     coding_confirmation_provider = CodingAgentConfirmationProvider(
         coding_confirmation_service,
     )
@@ -124,9 +127,7 @@ def main():
     )
 
     activity_stream = RuntimeActivityStream()
-    control_plane_store = ControlPlaneActivityStore(
-        data_dir / "processed" / "jarvis.db",
-    )
+    control_plane_store = ControlPlaneActivityStore(database_path)
     activity_recorder = ControlPlaneActivityRecorder(
         activity_stream,
         durable_store=control_plane_store,
