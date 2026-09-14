@@ -148,8 +148,9 @@ def score_benchmark_response(case: EvaluationCase, response_text: str) -> float:
         )
 
     if expectation.required_all:
-        matched = sum(token.casefold() in normalized for token in expectation.required_all)
-        components.append(matched / len(expectation.required_all))
+        components.append(
+            1.0 if all(token.casefold() in normalized for token in expectation.required_all) else 0.0
+        )
 
     return sum(components) / len(components) if components else 1.0
 
