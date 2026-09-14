@@ -44,7 +44,7 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual(payload["events"][0]["kind"], "REQUEST_RECEIVED")
         self.assertEqual(payload["events"][1]["kind"], "RESPONSE_EMITTED")
         self.assertEqual(payload["cursor"], 2)
-        self.assertEqual(payload["runtime"]["read_only"], True)
+        self.assertTrue(payload["runtime"]["read_only"])
         json.loads(snapshot.to_json())
 
     def test_cursor_filters_already_consumed_events(self):
@@ -103,6 +103,9 @@ class ControlPlaneHTTPTests(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)
+
+    def test_default_transport_port_does_not_conflict_with_command(self):
+        self.assertEqual(ControlPlaneHTTPConfig().port, 8768)
 
     def test_http_endpoint_exposes_read_only_snapshot(self):
         request = Request(f"http://127.0.0.1:{self.server.server_port}/api/control-plane", headers={"Accept": "application/json"})
