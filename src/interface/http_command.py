@@ -105,7 +105,7 @@ class _CommandHandler(BaseHTTPRequestHandler):
                     request_id=request_id,
                     session_id=session_id,
                     status=InterfaceResponseStatus.ACCEPTED,
-                    metadata={"interface_response": "emitted"},
+                    metadata=dict(response.metadata),
                 )
         except Exception as exc:  # pragma: no cover - transport safety boundary
             if self.activity_recorder is not None:
