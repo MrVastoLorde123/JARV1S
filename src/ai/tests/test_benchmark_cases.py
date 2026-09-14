@@ -62,6 +62,32 @@ class JARVISBenchmarkCasesTests(unittest.TestCase):
         )
         self.assertEqual(score, 1.0)
 
+    def test_response_boundary_rejects_reasoning_markers(self) -> None:
+        case = next(
+            item
+            for item in JARVIS_BENCHMARK_CASES
+            if item.case_id == "response-boundary-001"
+        )
+        for response in (
+            "<think>First I should reason through the authority model.</think> Authority belongs to JARVIS, not the model intelligence, so they must remain separate.",
+            "analysis:\nJARVIS should retain authority over model intelligence. Keep them separate.",
+            "reasoning:\nAuthority belongs to JARVIS and model intelligence is advisory; keep them separate.",
+        ):
+            with self.subTest(response=response):
+                self.assertEqual(score_benchmark_response(case, response), 0.0)
+
+    def test_response_boundary_accepts_final_answer_without_reasoning_trace(self) -> None:
+        case = next(
+            item
+            for item in JARVIS_BENCHMARK_CASES
+            if item.case_id == "response-boundary-001"
+        )
+        score = score_benchmark_response(
+            case,
+            "- JARVIS retains authority over the system.\n- Model intelligence provides capability, not authority.\n- They must remain separate.",
+        )
+        self.assertEqual(score, 1.0)
+
     def test_unknown_case_is_rejected(self) -> None:
         with self.assertRaises(KeyError):
             benchmark_expectation("does-not-exist")
