@@ -1,6 +1,7 @@
 """Process bootstrap for the runtime-owned control-plane transport."""
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from threading import Thread
 
@@ -41,17 +42,21 @@ def start_control_plane_http(
     builder = ControlPlaneSnapshotBuilder(
         world_supplier=world_supplier,
         activity_stream=activity_stream,
-        task_supplier=lambda: {"state": "UNKNOWN", "source": "runtime_boundary_pending"},
+        task_supplier=lambda: {"state": "NOT_REPORTED", "source": "task_projection_not_wired"},
         agents_supplier=lambda: (),
         approvals_supplier=lambda: (),
         tools_supplier=lambda: (),
-        model_supplier=lambda: {"provider": "local", "state": "AVAILABLE"},
+        model_supplier=lambda: {
+            "provider": "local",
+            "model": os.environ.get("JARVIS_LOCAL_MODEL", "unknown"),
+            "state": "AVAILABLE",
+        },
         blockers_supplier=lambda: (),
         verification_supplier=lambda: {"state": "NOT_REPORTED", "evidence": []},
     )
     server = create_control_plane_server(
         builder,
-        config=config or ControlPlaneHTTPConfig(port=8768),
+        config=config or ControlPlaneHTTPConfig(),
     )
     thread = Thread(
         target=server.serve_forever,
