@@ -15,7 +15,7 @@ class OllamaProvider(LocalProvider):
         self,
         base_url: str = "http://127.0.0.1:11434",
         model: str = "qwen3:4b",
-        timeout: int = 120,
+        timeout: int = 300,
         api_key: str = "ollama",
     ) -> None:
         super().__init__(

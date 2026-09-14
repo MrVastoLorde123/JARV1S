@@ -1,3 +1,4 @@
+import builtins
 import json
 from typing import Mapping
 from urllib import error, request
@@ -297,7 +298,7 @@ class LocalProvider(AIProvider):
                 "llama-server."
             ) from exc
 
-        except TimeoutError as exc:
+        except builtins.TimeoutError as exc:
             raise TimeoutError(
                 "Local AI request timed out."
             ) from exc
