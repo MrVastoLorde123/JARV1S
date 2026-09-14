@@ -7,7 +7,7 @@ from typing import Mapping
 
 from src.core.interface_backend import InterfaceOperation, InterfaceResponseStatus
 from src.core.runtime_activity_stream import RuntimeActivityEvent, RuntimeActivityKind, RuntimeActivityStream
-from src.tools.models import ToolRequest, ToolResult
+from src.tools.models import ToolError, ToolRequest, ToolResult
 
 
 @dataclass
@@ -119,15 +119,13 @@ class ObservingToolInvoker:
         try:
             result = self._delegate.invoke(request)
         except Exception as exc:
-            self._recorder.publish_completed(
-                request,
-                ToolResult(
-                    tool_name=request.tool_name,
-                    invocation_id=request.invocation_id,
-                    success=False,
-                    error=None,
-                ),
+            result = ToolResult(
+                tool_name=request.tool_name,
+                invocation_id=request.invocation_id,
+                success=False,
+                error=ToolError(code="executor_exception", message=str(exc) or exc.__class__.__name__),
             )
+            self._recorder.publish_completed(request, result)
             raise
         self._recorder.publish_completed(request, result)
         return result
