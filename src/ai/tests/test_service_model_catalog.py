@@ -69,11 +69,17 @@ class AIServiceModelCatalogTests(unittest.TestCase):
         decision = self.service.route_model(ModelRole.DIAGNOSTIC)
         self.assertEqual(decision.model_id, "qwen3-14b")
 
-    def test_catalog_observation_does_not_change_provider_execution_authority(self) -> None:
-        request = AIRequest(task="Diagnose", context="test")
-        response = self.service.generate_for_role(request, ModelRole.DIAGNOSTIC) if False else None
-        self.assertIsNone(response)
+    def test_catalog_observation_does_not_execute_a_provider(self) -> None:
+        self.service.observe_models(["qwen3-14b"])
+        self.service.route_model(ModelRole.DIAGNOSTIC)
         self.assertEqual(self.provider.requests, [])
+
+    def test_generate_for_role_uses_current_catalog_selection(self) -> None:
+        self.service.observe_models(["qwen3-14b"])
+        request = AIRequest(task="Diagnose", context="test")
+        response = self.service.generate_for_role(request, ModelRole.DIAGNOSTIC)
+        self.assertEqual(response.model, "qwen3-14b")
+        self.assertEqual(self.provider.requests[0].model, "qwen3-14b")
 
     def test_observation_requires_catalog(self) -> None:
         service = AIService()
