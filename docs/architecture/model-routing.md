@@ -41,6 +41,10 @@ The current local evidence suggests differentiated roles are more useful than a 
 
 These are roster observations, not authority rules. Actual runtime availability and deployment configuration remain authoritative.
 
+## Routed runtime callers
+
+AI-backed cognitive callers should select an explicit model role through `AIService.generate_for_role()` rather than silently inheriting provider-default model selection. The M23 runtime migration includes autonomous reasoning, whose bounded reasoning cycle uses the `GENERAL` role because it produces provider-neutral reasoning actions; routing does not grant tool authority or execute those actions.
+
 ## Next boundary
 
 This contract intentionally stops before provider execution. The next integration boundary may connect `ModelRouter` to `AIService`, then expose the resulting runtime-selected model as an observation in the control plane. Neither integration should allow a model selection to mutate authority or tool permissions.
