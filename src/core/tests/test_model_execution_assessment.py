@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock
 
 from src.ai.models import AIResponse
+from src.ai.model_routing import ModelRole
 from src.ai.service import AIService
 from src.core.execution_assessment import ExecutionAssessmentService
 from src.core.execution_executor_models import (
@@ -30,7 +31,7 @@ class ModelExecutionAssessmentTests(unittest.TestCase):
         )
 
     def _response(self, content: str):
-        self.ai_service.generate.return_value = AIResponse(
+        self.ai_service.generate_for_role.return_value = AIResponse(
             content=content,
             provider="fake",
             model="fake-model",
@@ -75,11 +76,24 @@ class ModelExecutionAssessmentTests(unittest.TestCase):
 
         self.service.assess(self.state)
 
-        request = self.ai_service.generate.call_args.args[0]
+        request = self.ai_service.generate_for_role.call_args.args[0]
         self.assertEqual(request.context["type"], "execution_assessment")
         self.assertIn("permission denied", str(request.task))
         self.assertIn("deterministic_assessment", request.context)
         self.assertEqual(request.metadata["purpose"], "execution_state_reasoning")
+
+    def test_assessment_uses_general_model_role(self):
+        self._response(
+            '{"situation":"blocked","completed":[],"remaining":["modify"],'
+            '"blockers":["permission denied"],"recommended_next_action":"CORRECT",'
+            '"confidence":0.7}'
+        )
+
+        self.service.assess(self.state)
+
+        _, kwargs = self.ai_service.generate_for_role.call_args
+        self.assertIs(kwargs["role"], ModelRole.GENERAL)
+        self.assertIsNone(kwargs["provider_name"])
 
     def test_invalid_json_is_rejected(self):
         self._response("not json")
