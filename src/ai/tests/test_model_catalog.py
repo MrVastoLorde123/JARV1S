@@ -37,6 +37,20 @@ class ModelCatalogTests(unittest.TestCase):
         self.assertEqual(observed, ("granite-8b", "unknown-model"))
         self.assertEqual(self.catalog.observed_model_ids(), ("granite-8b", "unknown-model"))
         self.assertFalse(self.catalog.profile("qwen3-14b").available)
+        with self.assertRaisesRegex(KeyError, "unknown model"):
+            self.catalog.profile("unknown-model")
+
+    def test_unknown_observations_follow_latest_provider_snapshot(self) -> None:
+        self.catalog.observe_openai_models(
+            {"data": [{"id": "granite-8b"}, {"id": "old-unknown-model"}]}
+        )
+        self.catalog.observe_openai_models(
+            {"data": [{"id": "granite-8b"}, {"id": "new-unknown-model"}]}
+        )
+        self.assertEqual(
+            self.catalog.observed_model_ids(),
+            ("granite-8b", "new-unknown-model"),
+        )
 
     def test_observation_does_not_grant_authority(self) -> None:
         self.catalog.observe(ModelObservation("granite-8b", observed=True))

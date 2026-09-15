@@ -34,12 +34,22 @@ class ModelCatalog:
         self._observations[observation.model_id] = observation
 
     def observe_ids(self, model_ids: Iterable[str]) -> None:
-        seen = {model_id for model_id in model_ids if str(model_id).strip()}
+        """Replace the latest provider observation without inventing profiles."""
+        seen = {
+            model_id
+            for model_id in model_ids
+            if isinstance(model_id, str) and model_id.strip()
+        }
+        self._observations = {
+            model_id: ModelObservation(model_id=model_id, observed=True)
+            for model_id in seen
+        }
         for model_id in self._profiles:
-            self._observations[model_id] = ModelObservation(
-                model_id=model_id,
-                observed=model_id in seen,
-            )
+            if model_id not in seen:
+                self._observations[model_id] = ModelObservation(
+                    model_id=model_id,
+                    observed=False,
+                )
 
     def observe_openai_models(self, payload: Mapping[str, Any]) -> tuple[str, ...]:
         """Observe IDs from an OpenAI-compatible /v1/models response."""
