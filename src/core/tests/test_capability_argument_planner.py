@@ -45,15 +45,8 @@ def capability():
 
 
 class CapabilityArgumentPlannerTests(unittest.TestCase):
-    def test_ai_proposal_is_parsed_as_arguments(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider(json.dumps({"path": "README.md"})))
-        planner = AIRequestArgumentPlanner(ai)
-        candidate = CapabilityCandidate(capability(), 3.0, "match")
-        self.assertEqual(planner.propose("open the README", candidate), {"path": "README.md"})
-
-    def test_argument_proposal_requests_general_model_role(self):
-        provider = FakeAIProvider(json.dumps({"path": "README.md"}))
+    def _ai(self, content):
+        provider = FakeAIProvider(content)
         router = ModelRouter(
             [
                 ModelProfile(
@@ -65,6 +58,16 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
         )
         ai = AIService(default_provider="fake", model_router=router)
         ai.register_provider(provider)
+        return ai, provider
+
+    def test_ai_proposal_is_parsed_as_arguments(self):
+        ai, _ = self._ai(json.dumps({"path": "README.md"}))
+        planner = AIRequestArgumentPlanner(ai)
+        candidate = CapabilityCandidate(capability(), 3.0, "match")
+        self.assertEqual(planner.propose("open the README", candidate), {"path": "README.md"})
+
+    def test_argument_proposal_requests_general_model_role(self):
+        ai, provider = self._ai(json.dumps({"path": "README.md"}))
         planner = AIRequestArgumentPlanner(ai)
         candidate = CapabilityCandidate(capability(), 3.0, "match")
 
@@ -73,32 +76,28 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
         self.assertEqual(provider.last_request.model, "fake-model")
 
     def test_invalid_json_is_rejected(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider("not json"))
+        ai, _ = self._ai("not json")
         planner = AIRequestArgumentPlanner(ai)
         candidate = CapabilityCandidate(capability(), 3.0, "match")
         with self.assertRaises(ValueError):
             planner.propose("open the README", candidate)
 
     def test_json_array_is_rejected(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider("[]"))
+        ai, _ = self._ai("[]")
         planner = AIRequestArgumentPlanner(ai)
         candidate = CapabilityCandidate(capability(), 3.0, "match")
         with self.assertRaises(ValueError):
             planner.propose("open the README", candidate)
 
     def test_empty_intent_is_rejected(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider("{}"))
+        ai, _ = self._ai("{}")
         planner = AIRequestArgumentPlanner(ai)
         candidate = CapabilityCandidate(capability(), 3.0, "match")
         with self.assertRaises(ValueError):
             planner.propose(" ", candidate)
 
     def test_invocation_service_validates_model_output(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider(json.dumps({"path": "README.md"})))
+        ai, _ = self._ai(json.dumps({"path": "README.md"}))
         service = CapabilityInvocationService(AIRequestArgumentPlanner(ai))
         request = service.build_request(
             "open the README",
@@ -108,8 +107,7 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
         self.assertEqual(request.arguments, {"path": "README.md"})
 
     def test_invocation_service_rejects_bad_model_arguments(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider(json.dumps({"path": 123})))
+        ai, _ = self._ai(json.dumps({"path": 123}))
         service = CapabilityInvocationService(AIRequestArgumentPlanner(ai))
         with self.assertRaises(ValueError):
             service.build_request(
@@ -118,8 +116,7 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
             )
 
     def test_invocation_service_never_invokes_tool(self):
-        ai = AIService(default_provider="fake")
-        ai.register_provider(FakeAIProvider(json.dumps({"path": "README.md"})))
+        ai, _ = self._ai(json.dumps({"path": "README.md"}))
         service = CapabilityInvocationService(AIRequestArgumentPlanner(ai))
         request = service.build_request(
             "open the README",
