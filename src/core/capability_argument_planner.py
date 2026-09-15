@@ -6,6 +6,7 @@ import json
 from collections.abc import Mapping
 from typing import Any, Protocol, runtime_checkable
 
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.core.capability_invocation import CapabilityInvocationBuilder, CapabilityInvocationError
@@ -57,15 +58,24 @@ class AIRequestArgumentPlanner:
 
         definition = capability.capability
         prompt = self._prompt(intent, definition)
-        response = self._ai_service.generate(
-            AIRequest(
-                task=prompt,
-                context=None,
-                generation_options={"temperature": 0},
-                metadata={"purpose": "capability_argument_proposal"},
-            ),
-            provider_name=self._provider_name,
+        request = AIRequest(
+            task=prompt,
+            context=None,
+            generation_options={"temperature": 0},
+            metadata={"purpose": "capability_argument_proposal"},
         )
+        generate_for_role = getattr(self._ai_service, "generate_for_role", None)
+        if callable(generate_for_role):
+            response = generate_for_role(
+                request,
+                role=ModelRole.GENERAL,
+                provider_name=self._provider_name,
+            )
+        else:
+            response = self._ai_service.generate(
+                request,
+                provider_name=self._provider_name,
+            )
 
         try:
             parsed = json.loads(str(response.content))
