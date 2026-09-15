@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
-from src.ai.model_routing import ModelProfile, ModelRole
+from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
 
 
 @dataclass(frozen=True)
@@ -74,8 +74,18 @@ class ModelCatalog:
     def profiles(self) -> tuple[ModelProfile, ...]:
         return tuple(self.profile(model_id) for model_id in self._profiles)
 
+    def router(self) -> ModelRouter:
+        """Build a deterministic router from the latest observed profiles."""
+        return ModelRouter(self.profiles())
+
     def observed_model_ids(self) -> tuple[str, ...]:
-        return tuple(sorted(model_id for model_id, item in self._observations.items() if item.observed))
+        return tuple(
+            sorted(
+                model_id
+                for model_id, item in self._observations.items()
+                if item.observed
+            )
+        )
 
     @staticmethod
     def roles_for(*roles: ModelRole) -> frozenset[ModelRole]:
