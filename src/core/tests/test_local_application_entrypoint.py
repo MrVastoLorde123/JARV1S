@@ -7,6 +7,7 @@ from unittest.mock import ANY, patch
 from src import run_local_jarvis
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_service import CodingAgentService
+from src.ai.model_routing import ModelRole
 from src.ai.model_routing_runtime import ModelRoutingRuntime
 
 
@@ -91,7 +92,7 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         self.assertIsInstance(routing_runtime, ModelRoutingRuntime)
         self.assertEqual(
             routing_runtime.policy.rule("qwen3-coder:30b").roles,
-            frozenset({run_local_jarvis.ModelRole.CODING}),
+            frozenset({ModelRole.CODING}),
         )
         ai_service.register_provider.assert_called_once_with(provider)
         conversation_store_cls.assert_called_once_with()
