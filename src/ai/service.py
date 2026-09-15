@@ -36,6 +36,11 @@ class AIService:
         self._model_router = model_router or ModelRouter()
         self._model_catalog = None
         self._model_routing_runtime = None
+        self._model_routing_configured = (
+            model_router is not None
+            or model_catalog is not None
+            or model_routing_runtime is not None
+        )
         if model_catalog is not None:
             self.set_model_catalog(model_catalog)
         if model_routing_runtime is not None:
@@ -72,6 +77,7 @@ class AIService:
         """Register an observed model profile for deterministic routing."""
         if self._model_routing_runtime is not None:
             raise InvalidRequestError("register_model() is unavailable with model routing runtime")
+        self._model_routing_configured = True
         self._model_router.register(profile)
 
     def set_model_router(self, model_router: ModelRouter) -> None:
@@ -81,6 +87,7 @@ class AIService:
         self._model_router = model_router
         self._model_catalog = None
         self._model_routing_runtime = None
+        self._model_routing_configured = True
 
     def set_model_catalog(self, model_catalog: ModelCatalog) -> None:
         """Bind a runtime observation catalog as the routing availability source."""
@@ -90,6 +97,7 @@ class AIService:
             raise InvalidRequestError("model catalog cannot replace model routing runtime")
         self._model_catalog = model_catalog
         self._model_router = model_catalog.router()
+        self._model_routing_configured = True
 
     def set_model_routing_runtime(self, model_routing_runtime: ModelRoutingRuntime) -> None:
         """Bind observation, role policy, and routing as one runtime boundary."""
@@ -98,6 +106,7 @@ class AIService:
         self._model_routing_runtime = model_routing_runtime
         self._model_catalog = model_routing_runtime.catalog
         self._model_router = ModelRouter()
+        self._model_routing_configured = True
 
     def list_models(self):
         """Return registered model profiles or current runtime/catalog profiles."""
@@ -203,9 +212,22 @@ class AIService:
         """
         if not isinstance(request, AIRequest):
             raise InvalidRequestError("generate_for_role() requires an AIRequest.")
+
+        explicit_model = preferred_model or request.model
+        if (
+            role == ModelRole.GENERAL
+            and explicit_model is None
+            and not self._model_routing_configured
+        ):
+            return self.generate(
+                request,
+                provider_name=provider_name,
+                required_capabilities=required_capabilities,
+            )
+
         decision = self.route_model(
             role=role,
-            preferred_model=preferred_model or request.model,
+            preferred_model=explicit_model,
         )
         routed_request = replace(request, model=decision.model_id)
         return self.generate(

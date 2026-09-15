@@ -1,3 +1,4 @@
+from src.ai.model_routing import ModelRole
 from src.ai.service import AIService
 from src.commands.parser import CommandParser
 from src.commands.registry import CommandRegistry
@@ -395,7 +396,15 @@ class JARVIS:
             conversation_state=user_snapshot if self.context_options.include_state else None,
         )
         request = self.working_context_consumption_boundary.consume(working_context)
-        ai_response = self.ai_service.generate(request, provider_name=provider_name)
+        generate_for_role = getattr(self.ai_service, "generate_for_role", None)
+        if callable(generate_for_role):
+            ai_response = generate_for_role(
+                request,
+                role=ModelRole.GENERAL,
+                provider_name=provider_name,
+            )
+        else:
+            ai_response = self.ai_service.generate(request, provider_name=provider_name)
         response_content = str(ai_response.content)
         self.conversation.add_turn("assistant", response_content)
         assistant_snapshot = self.conversation.snapshot()
