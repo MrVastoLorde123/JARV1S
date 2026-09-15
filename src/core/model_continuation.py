@@ -1,5 +1,6 @@
 import json
 
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.core.execution_loop import ExecutionObservation
@@ -65,7 +66,7 @@ class ModelContinuationPlanner:
             f"Accumulated execution progress: {json.dumps(progress_context, default=str)}\n"
         )
 
-        response = self.ai_service.generate(
+        response = self.ai_service.generate_for_role(
             AIRequest(
                 task=prompt,
                 context={
@@ -78,6 +79,7 @@ class ModelContinuationPlanner:
                 },
                 metadata={"purpose": "execution_correction"},
             ),
+            ModelRole.GENERAL,
             provider_name=self.provider_name,
         )
 
