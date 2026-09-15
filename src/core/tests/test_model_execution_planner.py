@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
+from src.ai.model_routing import ModelProfile, ModelRole
 from src.ai.models import AICapabilities, AIRequest, AIResponse
 from src.ai.provider import AIProvider
 from src.ai.service import AIService
@@ -9,6 +10,7 @@ from src.core.execution_plan_models import ExecutionPlan
 from src.core.execution_progress import ExecutionProgress
 from src.core.execution_state import ExecutionState
 from src.core.model_execution_planner import ModelExecutionPlanner
+from src.core.multi_step_planner import MultiStepExecutionPlanner
 from src.core.remaining_work import RemainingWork
 from src.core.task_models import TaskRequest, TaskType
 from src.core.execution_executor_models import PlanExecutionStatus
@@ -24,7 +26,7 @@ class PlanningProvider(AIProvider):
         return AIResponse(
             content=self.content,
             provider="planning",
-            model="test-model",
+            model=request.model or "test-model",
         )
 
     def capabilities(self):
@@ -39,6 +41,12 @@ class ModelExecutionPlannerTests(unittest.TestCase):
         ai = AIService(default_provider="planning")
         provider = PlanningProvider(content)
         ai.register_provider(provider)
+        ai.register_model(
+            ModelProfile(
+                model_id="test-model",
+                roles=frozenset({ModelRole.GENERAL}),
+            )
+        )
         planner = ModelExecutionPlanner(
             ai,
             capability_realization_service=capability_realizer,
@@ -191,6 +199,16 @@ class ModelExecutionPlannerTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             planner.plan(TaskRequest("different objective", TaskType.ACTION), progress=progress)
+
+    def test_planner_uses_general_model_role(self):
+        planner, provider = self._service(
+            '{"steps":[{"task":"inspect workspace","task_type":"INFORMATION"}]}'
+        )
+
+        planner.plan(TaskRequest("inspect workspace", TaskType.INFORMATION))
+
+        self.assertEqual(len(provider.requests), 1)
+        self.assertEqual(provider.requests[0].model, "test-model")
 
 
 if __name__ == "__main__":

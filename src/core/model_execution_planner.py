@@ -1,5 +1,6 @@
 import json
 
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.core.capability_realization import CapabilityRealizationService
@@ -92,7 +93,7 @@ class ModelExecutionPlanner:
             f"Grounded remaining work: {remaining_context}\n"
         )
 
-        response = self.ai_service.generate(
+        response = self.ai_service.generate_for_role(
             AIRequest(
                 task=prompt,
                 context={
@@ -103,6 +104,7 @@ class ModelExecutionPlanner:
                 },
                 metadata={"purpose": "multi_step_planning"},
             ),
+            ModelRole.GENERAL,
             provider_name=self.provider_name,
         )
 
