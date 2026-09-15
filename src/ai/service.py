@@ -127,6 +127,18 @@ class AIService:
         self._model_router = self._model_catalog.router()
         return observed
 
+    def observe_provider_models(self, provider_name=None) -> tuple[str, ...]:
+        """Observe a provider's model inventory without executing a generation request."""
+        provider = self.get_provider(provider_name)
+        list_models = getattr(provider, "list_models", None)
+        if not callable(list_models):
+            raise InvalidRequestError(
+                f"Provider '{provider.provider_name()}' does not expose model observation."
+            )
+        model_ids = tuple(list_models())
+        self.observe_models(model_ids)
+        return model_ids
+
     def route_model(self, role: ModelRole, preferred_model=None):
         """Select a cognitive model without granting any runtime authority."""
         if self._model_routing_runtime is not None:
