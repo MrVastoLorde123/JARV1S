@@ -38,7 +38,7 @@ class ModelContinuationIntegrationTests(unittest.TestCase):
 
     def test_model_correction_reenters_guarded_loop(self):
         ai_service = Mock(spec=AIService)
-        ai_service.generate.return_value = AIResponse(
+        ai_service.generate_for_role.return_value = AIResponse(
             content='{"task":"retry","task_type":"INFORMATION"}',
             provider="fake",
             model="fake-model",
@@ -96,7 +96,7 @@ class ModelContinuationIntegrationTests(unittest.TestCase):
         self.assertEqual(result.iterations, 2)
         self.assertEqual(planner.plan.call_count, 2)
         self.assertEqual(executor.execute.call_count, 2)
-        self.assertEqual(ai_service.generate.call_count, 1)
+        self.assertEqual(ai_service.generate_for_role.call_count, 1)
 
 
 if __name__ == "__main__":
