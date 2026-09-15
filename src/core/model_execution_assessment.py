@@ -1,5 +1,6 @@
 import json
 
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.core.execution_assessment import ExecutionAssessment, ExecutionAssessmentService
@@ -24,7 +25,8 @@ class ModelExecutionAssessmentService:
         if not isinstance(ai_service, AIService):
             raise TypeError("ai_service must be an AIService.")
         if deterministic_service is not None and not isinstance(
-            deterministic_service, ExecutionAssessmentService
+            deterministic_service,
+            ExecutionAssessmentService,
         ):
             raise TypeError(
                 "deterministic_service must be an ExecutionAssessmentService or None."
@@ -50,19 +52,28 @@ class ModelExecutionAssessmentService:
             f"Deterministic baseline assessment: {json.dumps(baseline.to_context(), default=str)}\n"
         )
 
-        response = self.ai_service.generate(
-            AIRequest(
-                task=prompt,
-                context={
-                    "type": "execution_assessment",
-                    "goal": state.goal,
-                    "execution_state": state.to_context(),
-                    "deterministic_assessment": baseline.to_context(),
-                },
-                metadata={"purpose": "execution_state_reasoning"},
-            ),
-            provider_name=self.provider_name,
+        request = AIRequest(
+            task=prompt,
+            context={
+                "type": "execution_assessment",
+                "goal": state.goal,
+                "execution_state": state.to_context(),
+                "deterministic_assessment": baseline.to_context(),
+            },
+            metadata={"purpose": "execution_state_reasoning"},
         )
+        generate_for_role = getattr(self.ai_service, "generate_for_role", None)
+        if callable(generate_for_role):
+            response = generate_for_role(
+                request,
+                role=ModelRole.GENERAL,
+                provider_name=self.provider_name,
+            )
+        else:
+            response = self.ai_service.generate(
+                request,
+                provider_name=self.provider_name,
+            )
 
         parsed = self._parse(response.content)
         return ExecutionAssessment(
