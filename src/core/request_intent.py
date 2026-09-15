@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 
@@ -60,24 +61,34 @@ class AIRequestIntentClassifier:
         if not text.strip():
             raise ValueError("text cannot be empty")
 
-        response = self._ai_service.generate(
-            AIRequest(
-                task=(
-                    "Classify the user's request. Return ONLY a JSON object with "
-                    "kind, content, reasoning, and optional confidence. "
-                    "kind must be exactly one of: conversation, question, task, tool. "
-                    "Use tool when the user is asking JARVIS to operate a capability; "
-                    "use task for a broader action that may later require planning; "
-                    "use question for information-seeking requests; use conversation "
-                    "for ordinary dialogue. Do not execute anything.\n\n"
-                    f"User input: {text}"
-                ),
-                context=None,
-                generation_options={"temperature": 0},
-                metadata={"purpose": "request_intent_classification"},
+        request = AIRequest(
+            task=(
+                "Classify the user's request. Return ONLY a JSON object with "
+                "kind, content, reasoning, and optional confidence. "
+                "kind must be exactly one of: conversation, question, task, tool. "
+                "Use tool when the user is asking JARVIS to operate a capability; "
+                "use task for a broader action that may later require planning; "
+                "use question for information-seeking requests; use conversation "
+                "for ordinary dialogue. Do not execute anything.\n\n"
+                f"User input: {text}"
             ),
-            provider_name=self._provider_name,
+            context=None,
+            generation_options={"temperature": 0},
+            metadata={"purpose": "request_intent_classification"},
         )
+
+        generate_for_role = getattr(self._ai_service, "generate_for_role", None)
+        if callable(generate_for_role):
+            response = generate_for_role(
+                request,
+                role=ModelRole.GENERAL,
+                provider_name=self._provider_name,
+            )
+        else:
+            response = self._ai_service.generate(
+                request,
+                provider_name=self._provider_name,
+            )
 
         try:
             parsed = json.loads(str(response.content))
