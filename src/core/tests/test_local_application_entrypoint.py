@@ -7,6 +7,7 @@ from unittest.mock import ANY, patch
 from src import run_local_jarvis
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_service import CodingAgentService
+from src.ai.model_routing_runtime import ModelRoutingRuntime
 
 
 class _FakeToolInvoker:
@@ -82,7 +83,16 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
             model="qwen3-4b-local",
             timeout=120,
         )
-        ai_service_cls.assert_called_once_with(default_provider="local")
+        ai_service_cls.assert_called_once_with(
+            default_provider="local",
+            model_routing_runtime=ANY,
+        )
+        routing_runtime = ai_service_cls.call_args.kwargs["model_routing_runtime"]
+        self.assertIsInstance(routing_runtime, ModelRoutingRuntime)
+        self.assertEqual(
+            routing_runtime.policy.rule("qwen3-coder:30b").roles,
+            frozenset({run_local_jarvis.ModelRole.CODING}),
+        )
         ai_service.register_provider.assert_called_once_with(provider)
         conversation_store_cls.assert_called_once_with()
         confirmation_service_cls.assert_called_once_with()
