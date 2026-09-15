@@ -5,12 +5,14 @@ import unittest
 from src.agents.ai_coding_planner import AICodingAgentPlanner
 from src.agents.coding_worker import CodingAgentTask
 from src.ai.models import AICapabilities, AIResponse
+from src.ai.model_routing import ModelRole
 
 
 class FakeAIService:
     def __init__(self, content) -> None:
         self.content = content
         self.calls = []
+        self.role_calls = []
 
     def generate(self, request, provider_name=None, required_capabilities=None):
         self.calls.append((request, provider_name, required_capabilities))
@@ -18,6 +20,29 @@ class FakeAIService:
             content=self.content,
             provider=provider_name or "fake",
             model=request.model or "fake-model",
+        )
+
+    def generate_for_role(
+        self,
+        request,
+        role,
+        provider_name=None,
+        preferred_model=None,
+        required_capabilities=None,
+    ):
+        self.role_calls.append(
+            (
+                request,
+                role,
+                provider_name,
+                preferred_model,
+                required_capabilities,
+            )
+        )
+        return AIResponse(
+            content=self.content,
+            provider=provider_name or "fake",
+            model="role-selected-model",
         )
 
 
@@ -52,8 +77,10 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
         self.assertEqual(plan.verification.runner, "npm_build")
         self.assertEqual(plan.verification.timeout_seconds, 120)
 
-        request, provider_name, required_capabilities = service.calls[0]
+        request, role, provider_name, preferred_model, required_capabilities = service.role_calls[0]
+        self.assertEqual(role, ModelRole.CODING)
         self.assertEqual(provider_name, "local")
+        self.assertIsNone(preferred_model)
         self.assertEqual(required_capabilities, ("structured_output",))
         self.assertEqual(request.generation_options["temperature"], 0)
         self.assertEqual(request.generation_options["max_output_tokens"], 768)
@@ -66,6 +93,24 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
             {"enable_thinking": False},
         )
         self.assertIn("Improve the interface", request.task)
+
+    def test_planner_falls_back_to_legacy_generation_surface(self) -> None:
+        class LegacyAIService:
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, request, provider_name=None, required_capabilities=None):
+                self.calls.append((request, provider_name, required_capabilities))
+                return AIResponse(
+                    content={"edits": [], "verification": {"runner": "npm_build", "arguments": []}},
+                    provider="legacy",
+                    model="legacy-model",
+                )
+
+        service = LegacyAIService()
+        AICodingAgentPlanner(service).plan(CodingAgentTask(objective="Legacy compatibility"))
+        self.assertEqual(len(service.calls), 1)
+        self.assertEqual(service.calls[0][2], ("structured_output",))
 
     def test_planner_defaults_python_unittest_to_canonical_prefix(self) -> None:
         service = FakeAIService(
@@ -122,7 +167,7 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
 
         AICodingAgentPlanner(service).plan(task)
 
-        request, _, _ = service.calls[0]
+        request, _, _, _, _ = service.role_calls[0]
         self.assertIn("JARVIS OBSERVED REPOSITORY CONTEXT:", request.task)
         self.assertIn("ui/index.html", request.task)
         self.assertIn("Do not invent directories or filenames", request.task)

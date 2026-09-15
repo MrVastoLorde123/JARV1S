@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, Mapping
 
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 
@@ -36,25 +37,37 @@ class AICodingAgentPlanner:
         if not isinstance(task, CodingAgentTask):
             raise TypeError("task must be a CodingAgentTask")
 
-        response = self._ai_service.generate(
-            AIRequest(
-                task=self._build_prompt(task),
-                context=None,
-                model=self._model,
-                generation_options={
-                    "temperature": 0,
-                    "max_output_tokens": self._MAX_OUTPUT_TOKENS,
-                    "response_format": {"type": "json_object"},
-                    "chat_template_kwargs": {"enable_thinking": False},
-                },
-                metadata={
-                    "actor": "coding_agent_planner",
-                    "task_id": task.task_id,
-                },
-            ),
-            provider_name=self._provider_name,
-            required_capabilities=("structured_output",),
+        request = AIRequest(
+            task=self._build_prompt(task),
+            context=None,
+            model=self._model,
+            generation_options={
+                "temperature": 0,
+                "max_output_tokens": self._MAX_OUTPUT_TOKENS,
+                "response_format": {"type": "json_object"},
+                "chat_template_kwargs": {"enable_thinking": False},
+            },
+            metadata={
+                "actor": "coding_agent_planner",
+                "task_id": task.task_id,
+            },
         )
+
+        generate_for_role = getattr(self._ai_service, "generate_for_role", None)
+        if callable(generate_for_role):
+            response = generate_for_role(
+                request,
+                role=ModelRole.CODING,
+                provider_name=self._provider_name,
+                preferred_model=self._model,
+                required_capabilities=("structured_output",),
+            )
+        else:
+            response = self._ai_service.generate(
+                request,
+                provider_name=self._provider_name,
+                required_capabilities=("structured_output",),
+            )
 
         payload = self._parse_response(response.content)
         return self._decode_plan(payload)
