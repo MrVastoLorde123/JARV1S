@@ -107,6 +107,14 @@ class AIService:
             return self._model_catalog.profiles()
         return self._model_router.list_profiles()
 
+    def observed_model_ids(self) -> tuple[str, ...]:
+        """Return the latest provider-observed model identifiers."""
+        if self._model_routing_runtime is not None:
+            return self._model_routing_runtime.observed_model_ids()
+        if self._model_catalog is not None:
+            return self._model_catalog.observed_model_ids()
+        return ()
+
     def observe_models(self, model_ids) -> None:
         """Refresh model availability from an explicit provider observation."""
         if self._model_routing_runtime is not None:
