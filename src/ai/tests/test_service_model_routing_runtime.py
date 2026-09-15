@@ -1,5 +1,6 @@
 import unittest
 
+from src.ai.errors import InvalidRequestError
 from src.ai.model_role_policy import ModelRolePolicy, ModelRolePolicyRule
 from src.ai.model_routing import ModelRole
 from src.ai.model_routing_runtime import ModelRoutingRuntime
@@ -48,7 +49,7 @@ class AIServiceModelRoutingRuntimeTests(unittest.TestCase):
         self.assertEqual(self.service.route_model(ModelRole.GENERAL).model_id, "granite-8b")
 
     def test_register_model_is_rejected_when_runtime_policy_is_bound(self) -> None:
-        with self.assertRaisesRegex(Exception, "register_model\(\) is unavailable"):
+        with self.assertRaisesRegex(InvalidRequestError, "register_model\(\) is unavailable"):
             self.service.register_model(object())
 
     def test_runtime_policy_does_not_add_authority_fields(self) -> None:
