@@ -6,6 +6,8 @@ from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_confirmation_provider import CodingAgentConfirmationProvider
 from src.agents.coding_confirmation_store import CodingConfirmationStore
 from src.agents.coding_service import CodingAgentService
+from src.ai.local_model_policy import build_local_model_role_policy
+from src.ai.model_routing_runtime import ModelRoutingRuntime
 from src.ai.providers.local_provider import LocalProvider
 from src.ai.service import AIService
 from src.context.memory_context_source_provider import MemoryContextSourceProvider
@@ -66,7 +68,11 @@ def main():
         timeout=120,
     )
 
-    ai_service = AIService(default_provider="local")
+    model_routing_runtime = ModelRoutingRuntime(build_local_model_role_policy())
+    ai_service = AIService(
+        default_provider="local",
+        model_routing_runtime=model_routing_runtime,
+    )
     ai_service.register_provider(provider)
 
     conversation_store = ConversationStore()
@@ -173,6 +179,7 @@ def main():
         else:
             control_plane_host = start_control_plane_http(
                 runtime,
+                ai_service=ai_service,
                 activity_stream=activity_stream,
                 tool_registry=tool_stack.registry,
                 confirmation_service=coding_confirmation_service,

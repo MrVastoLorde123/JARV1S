@@ -10,6 +10,9 @@ from urllib import error, request
 
 from src.agency.agent_entity import AgentStatus
 from src.agents.coding_confirmation import CodingAgentConfirmationService
+from src.ai.errors import InvalidRequestError
+from src.ai.model_routing import ModelRole
+from src.ai.service import AIService
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityKind, RuntimeActivityStream
 from src.tools.models import ToolResult
@@ -56,6 +59,46 @@ def local_model_projection(*, base_url: str, model_id: str, opener=request.urlop
         state = "UNAVAILABLE"
 
     return {"provider": "local", "model": normalized_model, "state": state, "observed_model_ids": model_ids, "evidence": "local_server_models_observed"}
+
+
+def _model_routing_projection(*, ai_service: AIService, observation: Mapping[str, object]) -> dict[str, object]:
+    """Project observed model inventory and deterministic role selection without execution."""
+    observed_ids = tuple(item for item in observation.get("observed_model_ids", ()) if isinstance(item, str))
+    if observed_ids:
+        ai_service.observe_models(observed_ids)
+
+    profiles = []
+    for profile in ai_service.list_models():
+        profiles.append(
+            {
+                "model_id": profile.model_id,
+                "roles": tuple(role.value for role in profile.roles),
+                "priority": profile.priority,
+                "available": profile.available,
+                "notes": profile.notes,
+            }
+        )
+
+    selections: dict[str, object] = {}
+    for role in ModelRole:
+        try:
+            decision = ai_service.route_model(role)
+        except LookupError:
+            selections[role.value] = {"state": "NO_AVAILABLE_MODEL"}
+            continue
+        selections[role.value] = {
+            "state": "SELECTED",
+            "model_id": decision.model_id,
+            "reason": decision.reason,
+            "candidates_considered": decision.candidates_considered,
+        }
+
+    return {
+        "observed_model_ids": ai_service.observed_model_ids(),
+        "profiles": tuple(profiles),
+        "role_selections": selections,
+        "routing_read_only": True,
+    }
 
 
 def _latest_coding_observation(activity_stream: RuntimeActivityStream) -> dict[str, object] | None:
@@ -161,9 +204,11 @@ def _blockers_projection(activity_stream: RuntimeActivityStream) -> tuple[Mappin
     return (blocker,)
 
 
-def start_control_plane_http(runtime: JARVISRuntime, *, activity_stream: RuntimeActivityStream, tool_registry: ToolRegistry | None = None, confirmation_service: CodingAgentConfirmationService | None = None, config: ControlPlaneHTTPConfig | None = None) -> ControlPlaneHostHandle:
+def start_control_plane_http(runtime: JARVISRuntime, *, ai_service: AIService | None = None, activity_stream: RuntimeActivityStream, tool_registry: ToolRegistry | None = None, confirmation_service: CodingAgentConfirmationService | None = None, config: ControlPlaneHTTPConfig | None = None) -> ControlPlaneHostHandle:
     if not isinstance(runtime, JARVISRuntime):
         raise TypeError("runtime must be a JARVISRuntime")
+    if ai_service is not None and not isinstance(ai_service, AIService):
+        raise TypeError("ai_service must be an AIService or None")
     if type(activity_stream) is not RuntimeActivityStream:
         raise TypeError("activity_stream must be a RuntimeActivityStream")
     if tool_registry is not None and type(tool_registry) is not ToolRegistry:
@@ -196,7 +241,16 @@ def start_control_plane_http(runtime: JARVISRuntime, *, activity_stream: Runtime
         return ({"operation_id": operation.operation_id, "status": operation.status.value, "task_id": operation.task.task_id, "objective": operation.task.objective, "created_at": operation.created_at, "plan_fingerprint": metadata.get("plan_fingerprint"), "edit_count": len(operation.plan.edits), "verification_runner": operation.plan.verification.runner},)
 
     def model_supplier():
-        return local_model_projection(base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"), model_id=os.environ.get("JARVIS_LOCAL_MODEL", "unknown"))
+        base_projection = local_model_projection(
+            base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"),
+            model_id=os.environ.get("JARVIS_LOCAL_MODEL", "unknown"),
+        )
+        if ai_service is None:
+            return base_projection
+        try:
+            return {**base_projection, **_model_routing_projection(ai_service=ai_service, observation=base_projection)}
+        except InvalidRequestError:
+            return {**base_projection, "routing_state": "UNCONFIGURED"}
 
     builder = ControlPlaneSnapshotBuilder(
         world_supplier=world_supplier,
