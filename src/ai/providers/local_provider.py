@@ -53,6 +53,48 @@ class LocalProvider(AIProvider):
             embeddings=False,
         )
 
+    def list_models(self):
+        """Observe models exposed by the local OpenAI-compatible server."""
+        endpoint = f"{self.base_url}/v1/models"
+        http_request = request.Request(
+            endpoint,
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            },
+            method="GET",
+        )
+        try:
+            with request.urlopen(http_request, timeout=self.timeout) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            if exc.code in (401, 403):
+                raise AuthenticationError("Local AI server rejected model observation.") from exc
+            raise ProviderUnavailableError(
+                f"Local AI server returned HTTP {exc.code} while listing models."
+            ) from exc
+        except error.URLError as exc:
+            raise ProviderUnavailableError(
+                "Unable to connect to llama-server while listing models."
+            ) from exc
+        except TimeoutError as exc:
+            raise TimeoutError("Local AI model observation timed out.") from exc
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ProviderUnavailableError(
+                "Local AI server model observation failed."
+            ) from exc
+
+        if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
+            raise GenerationError("Local AI server returned an invalid /v1/models response.")
+
+        model_ids = []
+        for item in payload["data"]:
+            if isinstance(item, Mapping):
+                model_id = item.get("id")
+                if isinstance(model_id, str) and model_id.strip():
+                    model_ids.append(model_id)
+        return tuple(model_ids)
+
     def _build_context_text(self, context):
         if context is None:
             return ""
