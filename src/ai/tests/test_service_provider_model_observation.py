@@ -41,6 +41,7 @@ class AIServiceProviderModelObservationTests(unittest.TestCase):
                 ]
             )
         )
+        self.runtime = runtime
         self.service = AIService(default_provider="observable", model_routing_runtime=runtime)
         self.service.register_provider(_ObservableProvider(["qwen3-coder:30b", "unknown-model"]))
 
@@ -55,7 +56,7 @@ class AIServiceProviderModelObservationTests(unittest.TestCase):
             self.service.route_model(ModelRole.GENERAL)
 
     def test_non_observable_provider_is_rejected(self) -> None:
-        service = AIService(default_provider="plain", model_routing_runtime=self.service._model_routing_runtime)
+        service = AIService(default_provider="plain", model_routing_runtime=self.runtime)
         service.register_provider(_NonObservableProvider())
         with self.assertRaisesRegex(InvalidRequestError, "does not expose model observation"):
             service.observe_provider_models()
