@@ -1,6 +1,7 @@
 import json
 import unittest
 
+from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
 from src.ai.models import AIResponse, AICapabilities
 from src.ai.service import AIService
 from src.core.capability_argument_planner import AIRequestArgumentPlanner
@@ -25,7 +26,7 @@ class FakeAIProvider:
         return AICapabilities(text_generation=True, structured_output=False)
 
     def generate(self, request):
-        return AIResponse(content=self._content, provider="fake", model="fake-model")
+        return AIResponse(content=self._content, provider="fake", model=request.model or "fake-model")
 
 
 def capability():
@@ -61,9 +62,23 @@ def snapshot():
 
 
 class CapabilityRequestProposalTests(unittest.TestCase):
+    def _ai(self, content):
+        provider = FakeAIProvider(content)
+        router = ModelRouter(
+            [
+                ModelProfile(
+                    "fake-model",
+                    frozenset({ModelRole.GENERAL}),
+                    priority=10,
+                )
+            ]
+        )
+        ai = AIService(default_provider="fake", model_router=router)
+        ai.register_provider(provider)
+        return ai
+
     def setUp(self):
-        self.ai = AIService(default_provider="fake")
-        self.ai.register_provider(FakeAIProvider(json.dumps({"path": "README.md"})))
+        self.ai = self._ai(json.dumps({"path": "README.md"}))
         self.planner = AIRequestArgumentPlanner(self.ai)
         self.service = CapabilityRequestProposalService(self.planner)
 
@@ -117,8 +132,7 @@ class CapabilityRequestProposalTests(unittest.TestCase):
             self.service.propose(empty_snapshot)
 
     def test_bad_arguments_are_rejected_before_request_materialization(self):
-        bad_ai = AIService(default_provider="fake")
-        bad_ai.register_provider(FakeAIProvider(json.dumps({"path": 123})))
+        bad_ai = self._ai(json.dumps({"path": 123}))
         service = CapabilityRequestProposalService(AIRequestArgumentPlanner(bad_ai))
 
         with self.assertRaises(ValueError):
