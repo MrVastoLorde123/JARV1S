@@ -11,6 +11,7 @@ from src.ai.model_routing import (
     ModelRouter,
     RoutingRequest,
 )
+from src.ai.model_routing_runtime import ModelRoutingRuntime
 from src.ai.models import (
     AIRequest,
     AIResponse,
@@ -27,13 +28,18 @@ class AIService:
     permissions, tools, execution rights, or verification truth.
     """
 
-    def __init__(self, default_provider=None, model_router=None, model_catalog=None):
+    def __init__(self, default_provider=None, model_router=None, model_catalog=None, model_routing_runtime=None):
+        if model_routing_runtime is not None and (model_router is not None or model_catalog is not None):
+            raise TypeError("provide model_routing_runtime or model_router/model_catalog, not both")
         self._providers = {}
         self._default_provider = default_provider
         self._model_router = model_router or ModelRouter()
         self._model_catalog = None
+        self._model_routing_runtime = None
         if model_catalog is not None:
             self.set_model_catalog(model_catalog)
+        if model_routing_runtime is not None:
+            self.set_model_routing_runtime(model_routing_runtime)
 
     def register_provider(self, provider: AIProvider):
         """Register an AI provider under its normalized provider name."""
@@ -64,6 +70,8 @@ class AIService:
 
     def register_model(self, profile: ModelProfile) -> None:
         """Register an observed model profile for deterministic routing."""
+        if self._model_routing_runtime is not None:
+            raise InvalidRequestError("register_model() is unavailable with model routing runtime")
         self._model_router.register(profile)
 
     def set_model_router(self, model_router: ModelRouter) -> None:
@@ -72,22 +80,38 @@ class AIService:
             raise TypeError("model_router must be a ModelRouter")
         self._model_router = model_router
         self._model_catalog = None
+        self._model_routing_runtime = None
 
     def set_model_catalog(self, model_catalog: ModelCatalog) -> None:
         """Bind a runtime observation catalog as the routing availability source."""
         if not isinstance(model_catalog, ModelCatalog):
             raise TypeError("model_catalog must be a ModelCatalog")
+        if self._model_routing_runtime is not None:
+            raise InvalidRequestError("model catalog cannot replace model routing runtime")
         self._model_catalog = model_catalog
         self._model_router = model_catalog.router()
 
+    def set_model_routing_runtime(self, model_routing_runtime: ModelRoutingRuntime) -> None:
+        """Bind observation, role policy, and routing as one runtime boundary."""
+        if not isinstance(model_routing_runtime, ModelRoutingRuntime):
+            raise TypeError("model_routing_runtime must be a ModelRoutingRuntime")
+        self._model_routing_runtime = model_routing_runtime
+        self._model_catalog = model_routing_runtime.catalog
+        self._model_router = ModelRouter()
+
     def list_models(self):
-        """Return registered model profiles or current catalog profiles."""
+        """Return registered model profiles or current runtime/catalog profiles."""
+        if self._model_routing_runtime is not None:
+            return self._model_routing_runtime.list_models()
         if self._model_catalog is not None:
             return self._model_catalog.profiles()
         return self._model_router.list_profiles()
 
     def observe_models(self, model_ids) -> None:
         """Refresh model availability from an explicit provider observation."""
+        if self._model_routing_runtime is not None:
+            self._model_routing_runtime.observe_models(model_ids)
+            return
         if self._model_catalog is None:
             raise InvalidRequestError("No model catalog has been configured.")
         self._model_catalog.observe_ids(model_ids)
@@ -95,6 +119,8 @@ class AIService:
 
     def observe_openai_models(self, payload) -> tuple[str, ...]:
         """Refresh model availability from an OpenAI-compatible /v1/models payload."""
+        if self._model_routing_runtime is not None:
+            return self._model_routing_runtime.observe_openai_models(payload)
         if self._model_catalog is None:
             raise InvalidRequestError("No model catalog has been configured.")
         observed = self._model_catalog.observe_openai_models(payload)
@@ -103,6 +129,8 @@ class AIService:
 
     def route_model(self, role: ModelRole, preferred_model=None):
         """Select a cognitive model without granting any runtime authority."""
+        if self._model_routing_runtime is not None:
+            return self._model_routing_runtime.route(role, preferred_model=preferred_model)
         return self._model_router.route(
             RoutingRequest(role=role, preferred_model=preferred_model)
         )
