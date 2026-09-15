@@ -1,6 +1,7 @@
 import json
 import unittest
 
+from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
 from src.ai.models import AICapabilities, AIResponse
 from src.ai.service import AIService
 from src.core.request_intent import AIRequestIntentClassifier, IntentKind, RequestIntent, RequestIntentClassifier
@@ -9,6 +10,7 @@ from src.core.request_intent import AIRequestIntentClassifier, IntentKind, Reque
 class FakeAIProvider:
     def __init__(self, content):
         self.content = content
+        self.last_request = None
 
     def provider_name(self):
         return "fake"
@@ -17,49 +19,64 @@ class FakeAIProvider:
         return AICapabilities(text_generation=True)
 
     def generate(self, request):
-        return AIResponse(content=self.content, provider="fake", model="fake-model")
+        self.last_request = request
+        return AIResponse(content=self.content, provider="fake", model=request.model or "fake-model")
 
 
 class RequestIntentTests(unittest.TestCase):
     def _classifier(self, payload):
-        service = AIService(default_provider="fake")
-        service.register_provider(FakeAIProvider(json.dumps(payload)))
-        return AIRequestIntentClassifier(service)
+        provider = FakeAIProvider(json.dumps(payload) if not isinstance(payload, str) else payload)
+        router = ModelRouter(
+            [
+                ModelProfile(
+                    "fake-model",
+                    frozenset({ModelRole.GENERAL}),
+                    priority=10,
+                )
+            ]
+        )
+        service = AIService(default_provider="fake", model_router=router)
+        service.register_provider(provider)
+        return AIRequestIntentClassifier(service), provider
 
     def test_classifier_implements_contract(self):
-        classifier = self._classifier({"kind": "question", "content": "What is JARVIS?"})
+        classifier, _ = self._classifier({"kind": "question", "content": "What is JARVIS?"})
         self.assertIsInstance(classifier, RequestIntentClassifier)
 
     def test_question_is_classified(self):
-        classifier = self._classifier({"kind": "question", "content": "What is JARVIS?", "confidence": 0.9})
+        classifier, _ = self._classifier({"kind": "question", "content": "What is JARVIS?", "confidence": 0.9})
         result = classifier.classify("What is JARVIS?")
         self.assertEqual(IntentKind.QUESTION, result.kind)
         self.assertEqual("What is JARVIS?", result.content)
         self.assertEqual(0.9, result.confidence)
 
     def test_tool_is_classified(self):
-        classifier = self._classifier({"kind": "tool", "content": "Find my README"})
+        classifier, _ = self._classifier({"kind": "tool", "content": "Find my README"})
         self.assertEqual(IntentKind.TOOL, classifier.classify("Find my README").kind)
 
+    def test_request_uses_general_model_role(self):
+        classifier, provider = self._classifier({"kind": "conversation", "content": "hello"})
+        classifier.classify("hello")
+        self.assertIsNotNone(provider.last_request)
+        self.assertEqual(provider.last_request.model, "fake-model")
+
     def test_invalid_json_is_rejected(self):
-        service = AIService(default_provider="fake")
-        service.register_provider(FakeAIProvider("not json"))
-        classifier = AIRequestIntentClassifier(service)
+        classifier, _ = self._classifier("not json")
         with self.assertRaises(ValueError):
             classifier.classify("hello")
 
     def test_unknown_kind_is_rejected(self):
-        classifier = self._classifier({"kind": "magic", "content": "hello"})
+        classifier, _ = self._classifier({"kind": "magic", "content": "hello"})
         with self.assertRaises(ValueError):
             classifier.classify("hello")
 
     def test_invalid_confidence_is_rejected(self):
-        classifier = self._classifier({"kind": "conversation", "content": "hello", "confidence": 2})
+        classifier, _ = self._classifier({"kind": "conversation", "content": "hello", "confidence": 2})
         with self.assertRaises(ValueError):
             classifier.classify("hello")
 
     def test_empty_text_is_rejected(self):
-        classifier = self._classifier({"kind": "conversation", "content": "hello"})
+        classifier, _ = self._classifier({"kind": "conversation", "content": "hello"})
         with self.assertRaises(ValueError):
             classifier.classify(" ")
 
