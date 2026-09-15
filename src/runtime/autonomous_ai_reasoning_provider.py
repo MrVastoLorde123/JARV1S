@@ -1,8 +1,12 @@
+from src.ai.model_routing import ModelRole
 from src.ai.models import AIRequest
 from src.ai.service import AIService
 from src.runtime.autonomous_job import AutonomousJob
 
+
 class AutonomousAIReasoningProvider:
+    """Adapt AIService into one bounded autonomous reasoning cycle."""
+
     def __init__(self, ai_service: AIService, provider_name=None):
         if not isinstance(ai_service, AIService):
             raise TypeError("ai_service must be an AIService")
@@ -24,4 +28,9 @@ class AutonomousAIReasoningProvider:
             },
             metadata={"runtime": "autonomous_reasoning", "job_id": job.job_id},
         )
-        return self._ai_service.generate(request, provider_name=self._provider_name, required_capabilities=("structured_output",)).content
+        return self._ai_service.generate_for_role(
+            request,
+            role=ModelRole.GENERAL,
+            provider_name=self._provider_name,
+            required_capabilities=("structured_output",),
+        ).content
