@@ -162,6 +162,18 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             builder.build(malformed, {})
 
+    def test_invocation_builder_rejects_unknown_property_type(self):
+        builder = CapabilityInvocationBuilder()
+        malformed = ToolDefinition(
+            name="bad_type",
+            description="bad schema",
+            version="1.0.0",
+            input_schema={"type": "object", "properties": {"path": {"type": "mystery"}}},
+            output_schema={"type": "object"},
+        )
+        with self.assertRaises(ValueError):
+            builder.build(malformed, {})
+
     def test_invocation_builder_rejects_non_string_argument_names(self):
         builder = CapabilityInvocationBuilder()
         with self.assertRaises(ValueError):
