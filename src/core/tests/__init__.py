@@ -20,7 +20,7 @@ def _register_provider_with_test_general_model(self, provider):
         ModelProfile(
             model_id=f"core-test:{provider.provider_name()}",
             roles=frozenset({ModelRole.GENERAL}),
-            priority=0,
+            priority=-100,
         )
     )
 
