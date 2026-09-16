@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -92,6 +93,51 @@ class ToolAuthorizationEvidenceStoreTests(unittest.TestCase):
             self.store.get("")
         with self.assertRaises(ValueError):
             self.store.list_for_step("")
+
+    def test_get_rejects_tampered_row(self) -> None:
+        stored = self.store.save(self.evidence)
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute(
+                "UPDATE tool_authorization_evidence SET reason = ? WHERE evidence_id = ?",
+                ("tampered", stored.evidence_id),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        with self.assertRaisesRegex(ValueError, "integrity validation"):
+            self.store.get(stored.evidence_id)
+
+    def test_all_rejects_tampered_row(self) -> None:
+        stored = self.store.save(self.evidence)
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute(
+                "UPDATE tool_authorization_evidence SET authorized = ? WHERE evidence_id = ?",
+                (0, stored.evidence_id),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        with self.assertRaisesRegex(ValueError, "integrity validation"):
+            self.store.all()
+
+    def test_step_query_rejects_tampered_row(self) -> None:
+        stored = self.store.save(self.evidence)
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute(
+                "UPDATE tool_authorization_evidence SET tool_name = ? WHERE evidence_id = ?",
+                ("other_tool", stored.evidence_id),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        with self.assertRaisesRegex(ValueError, "integrity validation"):
+            self.store.list_for_step("step-1")
 
 
 if __name__ == "__main__":
