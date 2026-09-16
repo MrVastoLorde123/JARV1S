@@ -12,6 +12,15 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
         Path("src/ai/service.py"),
     }
 
+    @classmethod
+    def _parse_tree(cls, path: Path):
+        """Parse repository Python sources while tolerating legacy UTF-8 BOMs."""
+        try:
+            source = path.read_text(encoding="utf-8-sig")
+            return ast.parse(source, filename=str(path))
+        except SyntaxError as exc:
+            raise AssertionError(f"Could not parse {path}: {exc}") from exc
+
     def test_production_callers_do_not_directly_generate_from_ai_service(self):
         violations = []
         for path in sorted(self._SOURCE_ROOT.rglob("*.py")):
@@ -21,10 +30,7 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
             if any(part in self._EXCLUDED_PARTS for part in path.parts):
                 continue
 
-            try:
-                tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            except SyntaxError as exc:
-                self.fail(f"Could not parse {path}: {exc}")
+            tree = self._parse_tree(path)
 
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
@@ -50,7 +56,7 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
             if any(part in self._EXCLUDED_PARTS for part in path.parts):
                 continue
 
-            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            tree = self._parse_tree(path)
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
                     continue
