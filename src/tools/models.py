@@ -35,12 +35,32 @@ def _is_mapping(value: Any) -> bool:
     return isinstance(value, Mapping)
 
 
+class _FrozenList(list[Any]):
+    """List-shaped immutable snapshot preserving JSON-array semantics."""
+
+    def _immutable(self, *_args: Any, **_kwargs: Any) -> None:
+        raise TypeError("frozen tool contract data cannot be mutated")
+
+    __setitem__ = _immutable
+    __delitem__ = _immutable
+    __iadd__ = _immutable
+    __imul__ = _immutable
+    append = _immutable
+    clear = _immutable
+    extend = _immutable
+    insert = _immutable
+    pop = _immutable
+    remove = _immutable
+    reverse = _immutable
+    sort = _immutable
+
+
 def _freeze(value: Any) -> Any:
     """Recursively snapshot common mutable containers into immutable values."""
     if isinstance(value, Mapping):
         return MappingProxyType({key: _freeze(item) for key, item in value.items()})
     if isinstance(value, list):
-        return tuple(_freeze(item) for item in value)
+        return _FrozenList(_freeze(item) for item in value)
     if isinstance(value, tuple):
         return tuple(_freeze(item) for item in value)
     if isinstance(value, set):
@@ -50,27 +70,7 @@ def _freeze(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class ToolDefinition:
-    """Static description of a tool's capability surface.
-
-    Attributes:
-        name: Stable, unique tool identifier (e.g. ``"read_file"``).
-            Comparisons/lookups elsewhere are done on the *normalized*
-            form of this name (see ``registry.normalize_name``); the
-            definition itself stores the name as provided.
-        description: Human-readable summary of what the tool does.
-        version: Free-form version string for the tool implementation
-            (e.g. ``"1.0.0"``).
-        input_schema: JSON-schema-like mapping describing accepted
-            arguments.
-        output_schema: JSON-schema-like mapping describing the shape
-            of successful result content.
-        risk_level: Declared ``RiskLevel`` for this tool.
-        requires_confirmation: Whether JARVIS must obtain user
-            confirmation before invoking this tool. This is a
-            declaration only; enforcement is out of scope here.
-        metadata: Optional free-form metadata (author, tags, docs
-            link, etc.). Must not contain executable behavior.
-    """
+    """Static description of a tool's capability surface."""
 
     name: str
     description: str
