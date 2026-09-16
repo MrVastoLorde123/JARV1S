@@ -49,6 +49,20 @@ class ConversationGeneralModelRoleTests(unittest.TestCase):
         self.assertEqual(role, ModelRole.GENERAL)
         self.assertEqual(provider_name, "local")
 
+    def test_conversation_does_not_fall_back_to_legacy_generation(self):
+        class LegacyOnlyAIService:
+            def generate(self, request, provider_name=None):
+                return AIResponse(
+                    content="legacy-response",
+                    provider=provider_name or "legacy",
+                    model="legacy-model",
+                )
+
+        jarvis = JARVIS(LegacyOnlyAIService())
+
+        with self.assertRaises(AttributeError):
+            jarvis.ask("hello there")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
