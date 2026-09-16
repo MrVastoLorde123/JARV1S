@@ -241,6 +241,8 @@ class AIService:
         """
         if not isinstance(request, AIRequest):
             raise InvalidRequestError("generate_for_role() requires an AIRequest.")
+        if not self._model_routing_configured:
+            raise LookupError("model routing must be configured before role generation")
 
         explicit_model = preferred_model or request.model
         decision = self.route_model(
