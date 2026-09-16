@@ -22,14 +22,17 @@ class ModelCatalog:
     """Maintain observed model availability without granting model authority."""
 
     def __init__(self, profiles: Iterable[ModelProfile] = ()) -> None:
-        self._profiles: dict[str, ModelProfile] = {
-            profile.model_id: profile for profile in profiles
-        }
+        self._profiles: dict[str, ModelProfile] = {}
         self._observations: dict[str, ModelObservation] = {}
+        for profile in profiles:
+            self.register_profile(profile)
 
     def register_profile(self, profile: ModelProfile) -> None:
         if not isinstance(profile, ModelProfile):
             raise TypeError("profile must be a ModelProfile")
+        existing = self._profiles.get(profile.model_id)
+        if existing is not None and existing != profile:
+            raise ValueError(f"conflicting profile for model_id: {profile.model_id}")
         self._profiles[profile.model_id] = profile
 
     def observe(self, observation: ModelObservation) -> None:
