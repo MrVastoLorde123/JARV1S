@@ -114,7 +114,7 @@ class CapabilityRequestProposalTests(unittest.TestCase):
         with self.assertRaises(AttributeError):
             result.arguments["options"]["paths"].append("other.txt")  # type: ignore[union-attr]
         self.assertEqual(result.arguments["options"]["recursive"], True)
-        self.assertEqual(result.request.arguments["options"]["paths"], ("README.md",))
+        self.assertEqual(result.request.arguments["options"]["paths"], ["README.md"])
 
     def test_proposal_is_bound_to_discovery_snapshot(self):
         result = self.service.propose(snapshot())
