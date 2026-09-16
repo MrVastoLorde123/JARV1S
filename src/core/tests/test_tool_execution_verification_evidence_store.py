@@ -2,13 +2,29 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 from src.core.tool_execution_verification import ToolExecutionVerification, ToolVerificationStatus
 from src.core.tool_execution_verification_evidence_store import (
     ToolExecutionVerificationEvidenceStore,
 )
 from src.tools.models import ToolRequest, ToolResult
+
+
+@contextmanager
+def _database_connection(path: Path) -> Iterator[sqlite3.Connection]:
+    """Mirror production connection lifecycle so Windows releases the DB lock."""
+    connection = sqlite3.connect(path)
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 class ToolExecutionVerificationEvidenceStoreTests(unittest.TestCase):
@@ -101,7 +117,7 @@ class ToolExecutionVerificationEvidenceStoreTests(unittest.TestCase):
 
     def test_persistence_is_json_native(self):
         stored = self.store.save(self.verification)
-        with sqlite3.connect(self.database_path) as connection:
+        with _database_connection(self.database_path) as connection:
             row = connection.execute(
                 "SELECT request_json, result_json FROM tool_execution_verification_evidence WHERE evidence_id = ?",
                 (stored.evidence_id,),
@@ -112,7 +128,7 @@ class ToolExecutionVerificationEvidenceStoreTests(unittest.TestCase):
 
     def test_tampered_row_is_rejected(self):
         stored = self.store.save(self.verification)
-        with sqlite3.connect(self.database_path) as connection:
+        with _database_connection(self.database_path) as connection:
             connection.execute(
                 "UPDATE tool_execution_verification_evidence SET reason = ? WHERE evidence_id = ?",
                 ("tampered", stored.evidence_id),
@@ -122,7 +138,7 @@ class ToolExecutionVerificationEvidenceStoreTests(unittest.TestCase):
 
     def test_all_rejects_tampered_row(self):
         stored = self.store.save(self.verification)
-        with sqlite3.connect(self.database_path) as connection:
+        with _database_connection(self.database_path) as connection:
             connection.execute(
                 "UPDATE tool_execution_verification_evidence SET evidence = ? WHERE evidence_id = ?",
                 ("tampered", stored.evidence_id),
@@ -132,7 +148,7 @@ class ToolExecutionVerificationEvidenceStoreTests(unittest.TestCase):
 
     def test_invocation_query_rejects_tampered_row(self):
         stored = self.store.save(self.verification)
-        with sqlite3.connect(self.database_path) as connection:
+        with _database_connection(self.database_path) as connection:
             connection.execute(
                 "UPDATE tool_execution_verification_evidence SET status = ? WHERE evidence_id = ?",
                 ("FAILED", stored.evidence_id),
