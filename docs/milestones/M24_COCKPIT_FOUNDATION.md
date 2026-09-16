@@ -1,6 +1,6 @@
 # M24 — Cockpit Foundation
 
-**Status:** implementation complete; awaiting user verification receipt.
+**Status:** VERIFIED / COMPLETE.
 
 M24 establishes the first durable visual contract for JARVIS's operational cockpit. The interface is a presentation surface over runtime-owned state; it does not become a second authority system.
 
@@ -20,21 +20,25 @@ M24 is intentionally bulked around **visibility**, not around backend execution.
 
 No new execution authority is introduced by M24.
 
-## Verification
+## Verification receipt
 
-Run:
+Verified on the user's local workspace from remote head `a2d63752a51628de77abb03a92701f98c815868d`:
 
 ```text
 python scripts/verify_m24_cockpit.py
-```
+M24 cockpit contract: PASS
 
-Then run the UI build:
+python -m unittest discover -s src.core.tests -p "test_*.py"
+Ran 3276 tests in 6.789s
+OK
 
-```text
 cd ui
 npm run build
+vite v8.3.0 building client environment for production...
+✓ 17 modules transformed.
+✓ built in 193ms
 ```
 
-Finally, run the established core/tools/AI regression baselines from the M23 V1 closure receipt.
+The remote M24 branch is 9 commits ahead and 0 behind the verified M23 baseline, and PR #377 remains draft/open/unmerged by design.
 
-M24 closes only when all requested gates are green.
+M24 is **VERIFIED / COMPLETE**. M25 may begin from this verified head.
