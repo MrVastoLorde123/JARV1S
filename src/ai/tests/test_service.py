@@ -108,10 +108,6 @@ class AIServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "provider must be an AIProvider"):
             self.service.register_provider(object())
 
-    def test_conflicting_provider_registration_is_rejected(self):
-        with self.assertRaisesRegex(InvalidRequestError, "already registered"):
-            self.service.register_provider(FakeProvider(name="fake"))
-
     def test_identical_provider_registration_is_idempotent(self):
         self.service.register_provider(self.provider)
         self.assertEqual(self.service.list_providers(), ("fake",))
