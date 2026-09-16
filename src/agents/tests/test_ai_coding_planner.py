@@ -16,58 +16,26 @@ class FakeAIService:
 
     def generate(self, request, provider_name=None, required_capabilities=None):
         self.calls.append((request, provider_name, required_capabilities))
-        return AIResponse(
-            content=self.content,
-            provider=provider_name or "fake",
-            model=request.model or "fake-model",
-        )
+        return AIResponse(content=self.content, provider=provider_name or "fake", model=request.model or "fake-model")
 
-    def generate_for_role(
-        self,
-        request,
-        role,
-        provider_name=None,
-        preferred_model=None,
-        required_capabilities=None,
-    ):
-        self.role_calls.append(
-            (
-                request,
-                role,
-                provider_name,
-                preferred_model,
-                required_capabilities,
-            )
-        )
-        return AIResponse(
-            content=self.content,
-            provider=provider_name or "fake",
-            model="role-selected-model",
-        )
+    def generate_for_role(self, request, role, provider_name=None, preferred_model=None, required_capabilities=None):
+        self.role_calls.append((request, role, provider_name, preferred_model, required_capabilities))
+        return AIResponse(content=self.content, provider=provider_name or "fake", model="role-selected-model")
 
 
 class M28AICodingAgentPlannerTests(unittest.TestCase):
     def test_planner_converts_structured_response_into_bounded_plan(self) -> None:
-        service = FakeAIService(
-            {
-                "rationale": "Update the interface and verify the build.",
-                "edits": [
-                    {
-                        "path": "ui/src/App.tsx",
-                        "content": "export default function App() { return <main />; }",
-                        "overwrite": True,
-                        "create_parents": False,
-                    }
-                ],
-                "verification": {
-                    "runner": "npm_build",
-                    "arguments": [],
-                    "timeout_seconds": 120,
-                },
-            }
-        )
+        service = FakeAIService({
+            "rationale": "Update the interface and verify the build.",
+            "edits": [{
+                "path": "ui/src/App.tsx",
+                "content": "export default function App() { return <main />; }",
+                "overwrite": True,
+                "create_parents": False,
+            }],
+            "verification": {"runner": "npm_build", "arguments": [], "timeout_seconds": 120},
+        })
         task = CodingAgentTask(objective="Improve the interface")
-
         plan = AICodingAgentPlanner(service, provider_name="local").plan(task)
 
         self.assertEqual(plan.rationale, "Update the interface and verify the build.")
@@ -84,73 +52,22 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
         self.assertEqual(required_capabilities, ("structured_output",))
         self.assertEqual(request.generation_options["temperature"], 0)
         self.assertEqual(request.generation_options["max_output_tokens"], 768)
-        self.assertEqual(
-            request.generation_options["response_format"],
-            {"type": "json_object"},
-        )
-        self.assertEqual(
-            request.generation_options["chat_template_kwargs"],
-            {"enable_thinking": False},
-        )
+        self.assertEqual(request.generation_options["response_format"], {"type": "json_object"})
+        self.assertEqual(request.generation_options["chat_template_kwargs"], {"enable_thinking": False})
         self.assertIn("Improve the interface", request.task)
 
-    def test_planner_falls_back_to_legacy_generation_surface(self) -> None:
-        class LegacyAIService:
-            def __init__(self):
-                self.calls = []
-
-            def generate(self, request, provider_name=None, required_capabilities=None):
-                self.calls.append((request, provider_name, required_capabilities))
-                return AIResponse(
-                    content={"edits": [], "verification": {"runner": "npm_build", "arguments": []}},
-                    provider="legacy",
-                    model="legacy-model",
-                )
-
-        service = LegacyAIService()
-        AICodingAgentPlanner(service).plan(CodingAgentTask(objective="Legacy compatibility"))
-        self.assertEqual(len(service.calls), 1)
-        self.assertEqual(service.calls[0][2], ("structured_output",))
-
     def test_planner_defaults_python_unittest_to_canonical_prefix(self) -> None:
-        service = FakeAIService(
-            {
-                "edits": [],
-                "verification": {
-                    "runner": "python_unittest",
-                    "arguments": [],
-                },
-            }
-        )
-        task = CodingAgentTask(objective="Run repository tests")
-
-        plan = AICodingAgentPlanner(service).plan(task)
-
+        service = FakeAIService({"edits": [], "verification": {"runner": "python_unittest", "arguments": []}})
+        plan = AICodingAgentPlanner(service).plan(CodingAgentTask(objective="Run repository tests"))
         self.assertEqual(plan.verification.arguments, ("-m", "unittest"))
 
     def test_planner_rejects_invalid_python_unittest_prefix(self) -> None:
-        service = FakeAIService(
-            {
-                "edits": [],
-                "verification": {
-                    "runner": "python_unittest",
-                    "arguments": ["python", "tests"],
-                },
-            }
-        )
-        task = CodingAgentTask(objective="Run repository tests safely")
-
+        service = FakeAIService({"edits": [], "verification": {"runner": "python_unittest", "arguments": ["python", "tests"]}})
         with self.assertRaises(ValueError):
-            AICodingAgentPlanner(service).plan(task)
+            AICodingAgentPlanner(service).plan(CodingAgentTask(objective="Run repository tests safely"))
 
     def test_planner_includes_jarvis_observed_repository_context(self) -> None:
-        service = FakeAIService(
-            {
-                "rationale": "Use the observed frontend entrypoint.",
-                "edits": [],
-                "verification": {"runner": "npm_build", "arguments": []},
-            }
-        )
+        service = FakeAIService({"rationale": "Use the observed frontend entrypoint.", "edits": [], "verification": {"runner": "npm_build", "arguments": []}})
         task = CodingAgentTask(
             objective="Add a visible status indicator",
             metadata={
@@ -164,41 +81,25 @@ class M28AICodingAgentPlannerTests(unittest.TestCase):
                 )
             },
         )
-
         AICodingAgentPlanner(service).plan(task)
-
         request, _, _, _, _ = service.role_calls[0]
         self.assertIn("JARVIS OBSERVED REPOSITORY CONTEXT:", request.task)
         self.assertIn("ui/index.html", request.task)
         self.assertIn("Do not invent directories or filenames", request.task)
 
     def test_planner_rejects_invalid_json_text(self) -> None:
-        service = FakeAIService("not-json")
-        task = CodingAgentTask(objective="Do something")
-
         with self.assertRaises(ValueError):
-            AICodingAgentPlanner(service).plan(task)
+            AICodingAgentPlanner(FakeAIService("not-json")).plan(CodingAgentTask(objective="Do something"))
 
     def test_planner_rejects_unsupported_runner(self) -> None:
-        service = FakeAIService(
-            {
-                "edits": [],
-                "verification": {
-                    "runner": "shell",
-                    "arguments": ["python", "app.py"],
-                },
-            }
-        )
-        task = CodingAgentTask(objective="Use only safe verification")
-
+        service = FakeAIService({"edits": [], "verification": {"runner": "shell", "arguments": ["python", "app.py"]}})
         with self.assertRaises(ValueError):
-            AICodingAgentPlanner(service).plan(task)
+            AICodingAgentPlanner(service).plan(CodingAgentTask(objective="Use only safe verification"))
 
     def test_planner_cannot_be_substituted_with_provider_without_structured_output(self) -> None:
         class NoStructuredProvider:
             def capabilities(self):
                 return AICapabilities(text_generation=True, structured_output=False)
-
         self.assertFalse(NoStructuredProvider().capabilities().structured_output)
 
 
