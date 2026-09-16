@@ -4,10 +4,12 @@ from src.ai.errors import InvalidRequestError
 from src.ai.model_role_policy import ModelRolePolicy, ModelRolePolicyRule
 from src.ai.model_routing import ModelRole
 from src.ai.model_routing_runtime import ModelRoutingRuntime
+from src.ai.models import AICapabilities, AIRequest, AIResponse
+from src.ai.provider import AIProvider
 from src.ai.service import AIService
 
 
-class _ObservableProvider:
+class _ObservableProvider(AIProvider):
     def __init__(self, model_ids):
         self.model_ids = tuple(model_ids)
 
@@ -17,10 +19,22 @@ class _ObservableProvider:
     def list_models(self):
         return self.model_ids
 
+    def generate(self, request: AIRequest) -> AIResponse:
+        return AIResponse(content="unused", provider="observable", model=request.model or "unused")
 
-class _NonObservableProvider:
+    def capabilities(self):
+        return AICapabilities(text_generation=True)
+
+
+class _NonObservableProvider(AIProvider):
     def provider_name(self):
         return "plain"
+
+    def generate(self, request: AIRequest) -> AIResponse:
+        return AIResponse(content="unused", provider="plain", model=request.model or "unused")
+
+    def capabilities(self):
+        return AICapabilities(text_generation=True)
 
 
 class AIServiceProviderModelObservationTests(unittest.TestCase):
