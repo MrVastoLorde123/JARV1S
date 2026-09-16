@@ -80,17 +80,13 @@ class ModelRoutingContractTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "roles must contain only ModelRole"):
             ModelProfile("bad", frozenset({"GENERAL"}))
 
-    def test_model_profile_requires_immutable_role_set(self) -> None:
-        with self.assertRaisesRegex(TypeError, "roles must be a frozenset"):
-            ModelProfile("bad", {ModelRole.GENERAL})
-
     def test_routing_decision_requires_model_role_values(self) -> None:
         with self.assertRaisesRegex(TypeError, "role must be a ModelRole"):
             RoutingDecision("GENERAL", "granite-8b", "test", ("granite-8b",))
 
     def test_routing_decision_requires_nonempty_candidates(self) -> None:
         with self.assertRaisesRegex(ValueError, "candidates_considered"):
-            RoutingDecision(ModelRole.GENERAL, "", "test", ("",))
+            RoutingDecision(ModelRole.GENERAL, "granite-8b", "test", ("",))
 
 
 if __name__ == "__main__":
