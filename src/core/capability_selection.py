@@ -7,6 +7,7 @@ ToolRequest and therefore cannot cross the execution safety boundary.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Protocol, Sequence, runtime_checkable
 
 from src.tools.models import ToolDefinition
@@ -20,6 +21,20 @@ class CapabilityCandidate:
     score: float
     reason: str
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.capability, ToolDefinition):
+            raise TypeError("capability must be a ToolDefinition")
+        if isinstance(self.score, bool) or not isinstance(self.score, (int, float)):
+            raise TypeError("score must be a real number")
+        if not math.isfinite(float(self.score)):
+            raise ValueError("score must be finite")
+        if float(self.score) < 0:
+            raise ValueError("score cannot be negative")
+        if not isinstance(self.reason, str) or not self.reason.strip():
+            raise ValueError("reason must be a non-empty string")
+        object.__setattr__(self, "score", float(self.score))
+        object.__setattr__(self, "reason", self.reason.strip())
+
 
 @dataclass(frozen=True)
 class CapabilitySelection:
@@ -27,6 +42,15 @@ class CapabilitySelection:
 
     query: str
     candidates: tuple[CapabilityCandidate, ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.query, str) or not self.query.strip():
+            raise ValueError("query must be a non-empty string")
+        if not isinstance(self.candidates, tuple):
+            raise TypeError("candidates must be a tuple")
+        if not all(isinstance(candidate, CapabilityCandidate) for candidate in self.candidates):
+            raise TypeError("candidates must contain only CapabilityCandidate values")
+        object.__setattr__(self, "query", self.query.strip())
 
     @property
     def best(self) -> CapabilityCandidate | None:

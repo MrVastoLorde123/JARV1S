@@ -3,7 +3,10 @@ import unittest
 from src.core.execution_plan_models import PlanStep
 from src.core.execution_planner import ExecutionPlanner
 from src.core.task_models import TaskRequest, TaskType
-from src.core.tool_execution import ToolPlanStepHandler
+from src.core.tool_execution import (
+    ToolExecutionConfirmation,
+    ToolPlanStepHandler,
+)
 from src.tools.models import ToolError, ToolRequest, ToolResult
 
 
@@ -41,6 +44,7 @@ class ToolExecutionBridgeTests(unittest.TestCase):
         task = TaskRequest(
             content="Do something with a tool",
             task_type=TaskType.TOOL,
+            metadata={"arguments": {}},
         )
 
         with self.assertRaises(ValueError):
@@ -90,6 +94,27 @@ class ToolExecutionBridgeTests(unittest.TestCase):
         self.assertEqual("read_file", invoker.requests[0].tool_name)
         self.assertEqual({"path": "README.md"}, invoker.requests[0].arguments)
         self.assertEqual("step-1", invoker.requests[0].invocation_id)
+
+    def test_request_preserves_authorization_metadata(self):
+        step = PlanStep(
+            step_id="step-auth-1",
+            description="Run diagnostic",
+            action="USE_TOOL",
+            order=0,
+            metadata={
+                "tool_name": "ping_host",
+                "arguments": {"host": "127.0.0.1"},
+                "scope": "diagnostics",
+                "capability_class": "diagnostic",
+            },
+        )
+
+        request = ToolPlanStepHandler.build_request(step)
+
+        self.assertEqual(
+            {"scope": "diagnostics", "capability_class": "diagnostic"},
+            dict(request.metadata),
+        )
 
     def test_explicit_invocation_id_is_preserved(self):
         invoker = FakeToolInvoker(
@@ -147,11 +172,7 @@ class ToolExecutionBridgeTests(unittest.TestCase):
 
     def test_handler_rejects_wrong_action(self):
         invoker = FakeToolInvoker(
-            ToolResult(
-                success=True,
-                tool_name="read_file",
-                content="ok",
-            )
+            ToolResult(success=True, tool_name="read_file", content="ok")
         )
         handler = ToolPlanStepHandler(invoker)
         step = PlanStep(
@@ -166,11 +187,7 @@ class ToolExecutionBridgeTests(unittest.TestCase):
 
     def test_handler_rejects_missing_tool_name(self):
         invoker = FakeToolInvoker(
-            ToolResult(
-                success=True,
-                tool_name="read_file",
-                content="ok",
-            )
+            ToolResult(success=True, tool_name="read_file", content="ok")
         )
         handler = ToolPlanStepHandler(invoker)
         step = PlanStep(
@@ -186,11 +203,7 @@ class ToolExecutionBridgeTests(unittest.TestCase):
 
     def test_handler_rejects_non_mapping_arguments(self):
         invoker = FakeToolInvoker(
-            ToolResult(
-                success=True,
-                tool_name="read_file",
-                content="ok",
-            )
+            ToolResult(success=True, tool_name="read_file", content="ok")
         )
         handler = ToolPlanStepHandler(invoker)
         step = PlanStep(
@@ -206,6 +219,112 @@ class ToolExecutionBridgeTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             handler(step)
+
+    def test_confirmation_required_step_cannot_bypass_confirmation(self):
+        invoker = FakeToolInvoker(
+            ToolResult(success=True, tool_name="read_file", content="ok")
+        )
+        handler = ToolPlanStepHandler(invoker)
+        step = PlanStep(
+            step_id="step-confirm-1",
+            description="Read README",
+            action="USE_TOOL",
+            order=0,
+            requires_confirmation=True,
+            metadata={"tool_name": "read_file", "arguments": {"path": "README.md"}},
+        )
+
+        with self.assertRaises(PermissionError):
+            handler(step)
+
+        self.assertEqual([], invoker.requests)
+
+    def test_confirmation_must_be_bound_to_exact_request_and_step(self):
+        invoker = FakeToolInvoker(
+            ToolResult(success=True, tool_name="read_file", content="ok")
+        )
+        handler = ToolPlanStepHandler(invoker)
+        step = PlanStep(
+            step_id="step-confirm-1",
+            description="Read README",
+            action="USE_TOOL",
+            order=0,
+            requires_confirmation=True,
+            metadata={
+                "tool_name": "read_file",
+                "arguments": {"path": "README.md"},
+            },
+        )
+        stale_confirmation = ToolExecutionConfirmation(
+            step_id="step-confirm-1",
+            request=ToolRequest(
+                tool_name="read_file",
+                arguments={"path": "OTHER.md"},
+                invocation_id="step-confirm-1",
+            ),
+        )
+
+        with self.assertRaises(PermissionError):
+            handler(step, stale_confirmation)
+
+        self.assertEqual([], invoker.requests)
+
+    def test_confirmed_step_executes_once_with_exact_confirmation(self):
+        invoker = FakeToolInvoker(
+            ToolResult(success=True, tool_name="read_file", content="ok")
+        )
+        handler = ToolPlanStepHandler(invoker)
+        step = PlanStep(
+            step_id="step-confirm-1",
+            description="Read README",
+            action="USE_TOOL",
+            order=0,
+            requires_confirmation=True,
+            metadata={
+                "tool_name": "read_file",
+                "arguments": {"path": "README.md"},
+            },
+        )
+        request = ToolRequest(
+            tool_name="read_file",
+            arguments={"path": "README.md"},
+            invocation_id="step-confirm-1",
+        )
+        confirmation = ToolExecutionConfirmation(
+            step_id=step.step_id,
+            request=request,
+        )
+
+        self.assertEqual("ok", handler(step, confirmation))
+        self.assertEqual([request], invoker.requests)
+
+    def test_rejected_confirmation_never_executes(self):
+        invoker = FakeToolInvoker(
+            ToolResult(success=True, tool_name="read_file", content="ok")
+        )
+        handler = ToolPlanStepHandler(invoker)
+        step = PlanStep(
+            step_id="step-confirm-1",
+            description="Read README",
+            action="USE_TOOL",
+            order=0,
+            requires_confirmation=True,
+            metadata={"tool_name": "read_file", "arguments": {"path": "README.md"}},
+        )
+        confirmation = ToolExecutionConfirmation(
+            step_id="step-confirm-1",
+            request=ToolRequest(
+                tool_name="read_file",
+                arguments={"path": "README.md"},
+                invocation_id="step-confirm-1",
+            ),
+            confirmed=False,
+        )
+
+        with self.assertRaises(PermissionError):
+            handler(step, confirmation)
+
+        self.assertEqual([], invoker.requests)
 
 
 if __name__ == "__main__":

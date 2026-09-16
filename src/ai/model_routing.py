@@ -28,10 +28,14 @@ class ModelProfile:
     notes: str = ""
 
     def __post_init__(self) -> None:
-        if not self.model_id.strip():
+        if not isinstance(self.model_id, str) or not self.model_id.strip():
             raise ValueError("model_id cannot be empty")
+        if not isinstance(self.roles, frozenset):
+            raise TypeError("roles must be a frozenset of ModelRole values")
         if not self.roles:
             raise ValueError("roles cannot be empty")
+        if not all(isinstance(role, ModelRole) for role in self.roles):
+            raise TypeError("roles must contain only ModelRole values")
         if self.priority < 0:
             raise ValueError("priority cannot be negative")
 
@@ -53,6 +57,18 @@ class RoutingDecision:
     model_id: str
     reason: str
     candidates_considered: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.role, ModelRole):
+            raise TypeError("role must be a ModelRole")
+        if not isinstance(self.model_id, str) or not self.model_id.strip():
+            raise ValueError("model_id cannot be empty")
+        if not isinstance(self.reason, str) or not self.reason.strip():
+            raise ValueError("reason cannot be empty")
+        if not isinstance(self.candidates_considered, tuple):
+            raise TypeError("candidates_considered must be a tuple")
+        if not all(isinstance(model_id, str) and model_id.strip() for model_id in self.candidates_considered):
+            raise ValueError("candidates_considered must contain non-empty model IDs")
 
 
 class ModelRouter:

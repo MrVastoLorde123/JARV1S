@@ -8,11 +8,11 @@ JARVIS is **the system**. AI models, tools, plugins, workers, storage systems, a
 
 ## Current Milestone
 
-**M21.2 — Proactive Proposal Boundary: IMPLEMENTED / AWAITING LOCAL RECEIPT**
+**M23 — Workforce Intelligence / Execution Authority Closure: IMPLEMENTED / AWAITING FINAL V1 VERIFICATION RECEIPT**
 
-M21.1 Proactive Initiative Boundary is VERIFIED / COMPLETE.
+The current branch completes the concrete tool-authority chain from request materialization through authorization, durable authorization evidence, confirmation, execution, raw observation, independent verification, durable verification evidence, and an inert learning-signal boundary.
 
-M20 Long-Horizon Task Management is VERIFIED / COMPLETE.
+Earlier milestone work remains the architectural foundation. Repository documentation may lag live branch implementation; the live feature branch, code, tests, and verified receipts remain authoritative.
 
 ## Cognitive Architecture
 
@@ -118,6 +118,8 @@ Capability ≠ Permission
 Planning ≠ Execution
 Recovery ≠ Execution
 Proposal ≠ Authorization
+Authorization ≠ Verification
+Execution Result ≠ Verified Effect
 ```
 
 ## Model Boundary
@@ -130,6 +132,32 @@ Interface ≠ JARVIS
 Plugin ≠ JARVIS
 Worker ≠ JARVIS
 ```
+
+## Current Tool Execution Authority Chain
+
+```text
+PlanStep
+   ↓
+ToolRequest
+   ↓
+Authorization Policy
+   ↓
+Durable Authorization Evidence
+   ↓
+Confirmation (when required)
+   ↓
+Tool Execution
+   ↓
+Raw ToolResult Observation
+   ↓
+Independent Verification
+   ↓
+Durable Verification Evidence
+   ↓
+Inert Learning Signal
+```
+
+The chain is deliberately composed from replaceable boundaries. Authorization evidence proves that a policy decision existed; execution proves only that an invocation was attempted; verification determines whether the intended effect has explicit evidence. Learning receives evidence and cannot grant authority.
 
 ## Milestone Roadmap
 
@@ -149,14 +177,14 @@ M17 Human Operating Layer           ✅
 M18 Personal Continuity             ✅
 M19 Deep Personalization            ✅ VERIFIED
 M20 Long-Horizon Task Management    ✅ VERIFIED
-M21 Proactive JARVIS                → M21.2
-M22 Capability / Plugin Ecosystem   →
-M23 Workforce Intelligence          →
+M21 Proactive JARVIS                ✅ VERIFIED / COMPLETE
+M22 Capability / Plugin Ecosystem   → ACTIVE / CORE BOUNDARIES VERIFIED
+M23 Workforce Intelligence          → CURRENT: EXECUTION AUTHORITY CLOSURE
 M24 Continuous Self-Improvement     →
 M25+ Personal Intelligence Evolution→
 ```
 
-M21+ will progressively connect the cognitive substrate, personal world model, long-horizon planning, proactive initiative, and controlled self-development while preserving the existing authority chain.
+M23 progressively connects the cognitive substrate, capability execution, authority, verification, and learning surfaces while preserving the existing authority chain.
 
 ## Documentation
 

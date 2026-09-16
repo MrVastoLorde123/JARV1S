@@ -5,6 +5,7 @@ from src.ai.errors import (
     InvalidRequestError,
 )
 
+from src.ai.model_catalog import ModelCatalog
 from src.ai.models import (
     AIRequest,
     AIResponse,
@@ -28,6 +29,9 @@ class FakeProvider(AIProvider):
         )
 
         self.generate_count = 0
+        self.return_invalid_response = False
+        self.return_wrong_provider = False
+        self.return_empty_model = False
 
     def generate(
         self,
@@ -35,14 +39,16 @@ class FakeProvider(AIProvider):
     ) -> AIResponse:
 
         self.generate_count += 1
+        if self.return_invalid_response:
+            return "not an AIResponse"
 
         return AIResponse(
             content=(
                 f"Fake response: "
                 f"{request.task}"
             ),
-            provider=self._name,
-            model="fake-model",
+            provider="wrong-provider" if self.return_wrong_provider else self._name,
+            model="" if self.return_empty_model else "fake-model",
             finish_reason="completed",
         )
 
@@ -58,6 +64,21 @@ class FakeProvider(AIProvider):
     def provider_name(self):
 
         return self._name
+
+
+class InvalidCapabilitiesProvider(FakeProvider):
+    def capabilities(self):
+        return "invalid-capabilities"
+
+
+class InvalidInventoryProvider(FakeProvider):
+    def list_models(self):
+        return ("valid-model", "", 123)
+
+
+class ValidInventoryProvider(FakeProvider):
+    def list_models(self):
+        return ("valid-model", "second-model")
 
 
 class AIServiceTests(unittest.TestCase):
@@ -82,6 +103,14 @@ class AIServiceTests(unittest.TestCase):
             self.service.list_providers(),
             ("fake",)
         )
+
+    def test_non_provider_registration_is_rejected(self):
+        with self.assertRaisesRegex(TypeError, "provider must be an AIProvider"):
+            self.service.register_provider(object())
+
+    def test_identical_provider_registration_is_idempotent(self):
+        self.service.register_provider(self.provider)
+        self.assertEqual(self.service.list_providers(), ("fake",))
 
     def test_default_provider_is_selected(self):
 
@@ -143,9 +172,16 @@ class AIServiceTests(unittest.TestCase):
             self.service.get_capabilities()
         )
 
+        self.assertIsInstance(capabilities, AICapabilities)
         self.assertTrue(
             capabilities.text_generation
         )
+
+    def test_invalid_provider_capabilities_are_rejected(self):
+        service = AIService(default_provider="invalid")
+        service.register_provider(InvalidCapabilitiesProvider(name="invalid"))
+        with self.assertRaisesRegex(InvalidRequestError, "must return AICapabilities"):
+            service.get_capabilities()
 
     def test_required_capability_is_checked(self):
 
@@ -196,6 +232,58 @@ class AIServiceTests(unittest.TestCase):
                 ]
             )
 
+    def test_invalid_required_capability_name_is_rejected(self):
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "required_capabilities"):
+            self.service.generate(request, required_capabilities=[""])
+
+    def test_unknown_required_capability_is_rejected(self):
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "Unknown provider capability"):
+            self.service.generate(request, required_capabilities=["not_a_capability"])
+
+    def test_provider_response_type_is_enforced(self):
+        self.provider.return_invalid_response = True
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "must return AIResponse"):
+            self.service.generate(request)
+
+    def test_provider_response_provenance_is_enforced(self):
+        self.provider.return_wrong_provider = True
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "expected 'fake'"):
+            self.service.generate(request)
+
+    def test_provider_response_requires_model_identifier(self):
+        self.provider.return_empty_model = True
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "response model cannot be empty"):
+            self.service.generate(request)
+
+    def test_provider_model_inventory_is_validated(self):
+        service = AIService(
+            default_provider="inventory",
+            model_catalog=ModelCatalog(),
+        )
+        service.register_provider(ValidInventoryProvider(name="inventory"))
+        self.assertEqual(
+            service.observe_provider_models(),
+            ("valid-model", "second-model"),
+        )
+
+    def test_invalid_provider_model_inventory_is_rejected(self):
+        service = AIService(
+            default_provider="inventory",
+            model_catalog=ModelCatalog(),
+        )
+        service.register_provider(InvalidInventoryProvider(name="inventory"))
+        with self.assertRaisesRegex(InvalidRequestError, "invalid model inventory"):
+            service.observe_provider_models()
+
+    def test_provider_without_model_observation_is_rejected(self):
+        with self.assertRaisesRegex(InvalidRequestError, "does not expose model observation"):
+            self.service.observe_provider_models()
+
     def test_unknown_provider_is_rejected(self):
 
         with self.assertRaises(
@@ -227,6 +315,11 @@ class AIServiceTests(unittest.TestCase):
             self.service.generate(
                 request
             )
+
+    def test_non_string_task_is_rejected(self):
+        request = AIRequest(task=123, context=None)
+        with self.assertRaises(InvalidRequestError):
+            self.service.generate(request)
 
     def test_invalid_request_type_is_rejected(self):
 

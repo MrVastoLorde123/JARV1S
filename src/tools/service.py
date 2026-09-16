@@ -26,8 +26,8 @@ Error handling policy (see also ``errors.py``):
     * A handler that fails the registry's contract check would have
       been rejected at *registration* time; if a handler nonetheless
       returns something other than a ``ToolResult`` (or a result for
-      the wrong tool), that is treated as a handler bug and raises
-      ``InvalidResultError``.
+      the wrong tool / invocation), that is treated as a handler bug
+      and raises ``InvalidResultError``.
     * An exception raised *during* ``handler.execute(...)`` is treated
       as a normal (if unhappy) execution outcome and is converted into
       a failed ``ToolResult`` rather than propagated. This is the one
@@ -47,6 +47,10 @@ class ToolService:
     """Validates, resolves, and invokes tools via a ``ToolRegistry``."""
 
     def __init__(self, registry: ToolRegistry) -> None:
+        if not isinstance(registry, ToolRegistry):
+            raise TypeError(
+                f"ToolService.registry must be a ToolRegistry, got {type(registry).__name__}"
+            )
         self._registry = registry
 
     def invoke(self, request: ToolRequest) -> ToolResult:
@@ -113,4 +117,9 @@ class ToolService:
             raise InvalidResultError(
                 f"Tool '{request.tool_name}' handler returned a result for "
                 f"'{result.tool_name}' instead"
+            )
+        if result.invocation_id != request.invocation_id:
+            raise InvalidResultError(
+                f"Tool '{request.tool_name}' handler returned invocation_id "
+                f"'{result.invocation_id}' for request invocation_id '{request.invocation_id}'"
             )

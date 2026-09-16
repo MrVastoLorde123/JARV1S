@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import fields, replace
 
 from src.ai.errors import (
     CapabilityError,
@@ -48,8 +48,10 @@ class AIService:
 
     def register_provider(self, provider: AIProvider):
         """Register an AI provider under its normalized provider name."""
+        if not isinstance(provider, AIProvider):
+            raise TypeError("provider must be an AIProvider")
         name = provider.provider_name()
-        if not name:
+        if not isinstance(name, str) or not name.strip():
             raise InvalidRequestError("Provider name cannot be empty.")
         self._providers[name] = provider
 
@@ -152,12 +154,23 @@ class AIService:
             raise InvalidRequestError(
                 f"Provider '{provider.provider_name()}' does not expose model observation."
             )
-        model_ids = tuple(list_models())
-        self.observe_models(model_ids)
-        return model_ids
+        try:
+            observed = tuple(list_models())
+        except TypeError as exc:
+            raise InvalidRequestError(
+                f"Provider '{provider.provider_name()}' returned a non-iterable model inventory."
+            ) from exc
+        if any(not isinstance(model_id, str) or not model_id.strip() for model_id in observed):
+            raise InvalidRequestError(
+                f"Provider '{provider.provider_name()}' returned an invalid model inventory."
+            )
+        self.observe_models(observed)
+        return observed
 
     def route_model(self, role: ModelRole, preferred_model=None):
         """Select a cognitive model without granting any runtime authority."""
+        if not self._model_routing_configured:
+            raise LookupError("model routing must be configured before role routing")
         if self._model_routing_runtime is not None:
             return self._model_routing_runtime.route(role, preferred_model=preferred_model)
         return self._model_router.route(
@@ -166,16 +179,25 @@ class AIService:
 
     def get_capabilities(self, provider_name=None) -> AICapabilities:
         provider = self.get_provider(provider_name)
-        return provider.capabilities()
+        capabilities = provider.capabilities()
+        if not isinstance(capabilities, AICapabilities):
+            raise InvalidRequestError("Provider capabilities() must return AICapabilities.")
+        return capabilities
 
     def _check_capabilities(self, provider, required_capabilities):
         """Verify that a provider supports required request capabilities."""
         if not required_capabilities:
             return
-        capabilities = provider.capabilities()
+        capabilities = self.get_capabilities(provider.provider_name())
+        declared_capabilities = {item.name for item in fields(AICapabilities)}
         for capability in required_capabilities:
-            supported = getattr(capabilities, capability, False)
-            if not supported:
+            if not isinstance(capability, str) or not capability.strip():
+                raise InvalidRequestError("required_capabilities must contain non-empty strings.")
+            if capability not in declared_capabilities:
+                raise InvalidRequestError(f"Unknown provider capability '{capability}'.")
+            if not isinstance(getattr(capabilities, capability), bool):
+                raise InvalidRequestError(f"Provider capability '{capability}' is not boolean.")
+            if not getattr(capabilities, capability):
                 raise CapabilityError(
                     f"Provider '{provider.provider_name()}' "
                     f"does not support capability '{capability}'."
@@ -190,11 +212,20 @@ class AIService:
         """Execute an AI request through the selected provider."""
         if not isinstance(request, AIRequest):
             raise InvalidRequestError("generate() requires an AIRequest.")
-        if not request.task.strip():
+        if not isinstance(request.task, str) or not request.task.strip():
             raise InvalidRequestError("AIRequest task cannot be empty.")
         provider = self.get_provider(provider_name)
         self._check_capabilities(provider, required_capabilities)
-        return provider.generate(request)
+        response = provider.generate(request)
+        if not isinstance(response, AIResponse):
+            raise InvalidRequestError("AI provider generate() must return AIResponse.")
+        if response.provider != provider.provider_name():
+            raise InvalidRequestError(
+                f"AI provider response names '{response.provider}', expected '{provider.provider_name()}'."
+            )
+        if not isinstance(response.model, str) or not response.model.strip():
+            raise InvalidRequestError("AI provider response model cannot be empty.")
+        return response
 
     def generate_for_role(
         self,
@@ -212,6 +243,8 @@ class AIService:
         """
         if not isinstance(request, AIRequest):
             raise InvalidRequestError("generate_for_role() requires an AIRequest.")
+        if not self._model_routing_configured:
+            raise LookupError("model routing must be configured before role generation")
 
         explicit_model = preferred_model or request.model
         decision = self.route_model(

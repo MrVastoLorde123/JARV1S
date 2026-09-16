@@ -3,16 +3,18 @@ import unittest
 
 from src.ai.models import AIResponse
 from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
+from src.ai.provider import AIProvider
 from src.ai.service import AIService
 from src.core.capability_argument_planner import (
     AIRequestArgumentPlanner,
     CapabilityInvocationService,
 )
+from src.core.capability_invocation import CapabilityInvocationBuilder
 from src.core.capability_selection import CapabilityCandidate
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
 
 
-class FakeAIProvider:
+class FakeAIProvider(AIProvider):
     def __init__(self, content):
         self._content = content
         self.last_request = None
@@ -75,6 +77,18 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
         self.assertIsNotNone(provider.last_request)
         self.assertEqual(provider.last_request.model, "fake-model")
 
+    def test_immutable_input_schema_is_serialized_for_model_prompt(self):
+        ai, provider = self._ai(json.dumps({"path": "README.md"}))
+        planner = AIRequestArgumentPlanner(ai)
+        candidate = CapabilityCandidate(capability(), 3.0, "match")
+
+        planner.propose("open the README", candidate)
+
+        self.assertIsNotNone(provider.last_request)
+        self.assertIn('"properties"', provider.last_request.task)
+        self.assertIn('"path"', provider.last_request.task)
+        self.assertIn('"required"', provider.last_request.task)
+
     def test_invalid_json_is_rejected(self):
         ai, _ = self._ai("not json")
         planner = AIRequestArgumentPlanner(ai)
@@ -123,3 +137,48 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
             CapabilityCandidate(capability(), 3.0, "match"),
         )
         self.assertEqual(request.tool_name, "read_file")
+
+    def test_invocation_builder_rejects_malformed_required_declaration(self):
+        builder = CapabilityInvocationBuilder()
+        malformed = ToolDefinition(
+            name="bad_required",
+            description="bad schema",
+            version="1.0.0",
+            input_schema={"type": "object", "required": ["", 7]},
+            output_schema={"type": "object"},
+        )
+        with self.assertRaises(ValueError):
+            builder.build(malformed, {})
+
+    def test_invocation_builder_rejects_malformed_property_declaration(self):
+        builder = CapabilityInvocationBuilder()
+        malformed = ToolDefinition(
+            name="bad_properties",
+            description="bad schema",
+            version="1.0.0",
+            input_schema={"type": "object", "properties": {"path": "string"}},
+            output_schema={"type": "object"},
+        )
+        with self.assertRaises(ValueError):
+            builder.build(malformed, {})
+
+    def test_invocation_builder_rejects_unknown_property_type(self):
+        builder = CapabilityInvocationBuilder()
+        malformed = ToolDefinition(
+            name="bad_type",
+            description="bad schema",
+            version="1.0.0",
+            input_schema={"type": "object", "properties": {"path": {"type": "mystery"}}},
+            output_schema={"type": "object"},
+        )
+        with self.assertRaises(ValueError):
+            builder.build(malformed, {})
+
+    def test_invocation_builder_rejects_non_string_argument_names(self):
+        builder = CapabilityInvocationBuilder()
+        with self.assertRaises(ValueError):
+            builder.build(capability(), {7: "README.md"})  # type: ignore[dict-item]
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

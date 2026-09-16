@@ -3,6 +3,7 @@ import unittest
 
 from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
 from src.ai.models import AIResponse, AICapabilities
+from src.ai.provider import AIProvider
 from src.ai.service import AIService
 from src.core.capability_argument_planner import AIRequestArgumentPlanner
 from src.core.capability_catalog import CapabilityCatalog
@@ -15,7 +16,7 @@ from src.core.capability_selection_service import CapabilitySelectionService
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
 
 
-class FakeAIProvider:
+class FakeAIProvider(AIProvider):
     def __init__(self, content):
         self._content = content
 
@@ -90,6 +91,30 @@ class CapabilityRequestProposalTests(unittest.TestCase):
         self.assertEqual(result.request.tool_name, "read_file")
         self.assertEqual(result.request.arguments, {"path": "README.md"})
         self.assertEqual(result.request.invocation_id, "inv-1")
+
+    def test_proposal_arguments_are_immutable(self):
+        result = self.service.propose(snapshot())
+
+        with self.assertRaises(TypeError):
+            result.arguments["path"] = "other.txt"  # type: ignore[index]
+        self.assertEqual(result.arguments["path"], "README.md")
+        self.assertEqual(result.request.arguments["path"], "README.md")
+
+    def test_proposal_nested_arguments_are_immutable(self):
+        nested_arguments = {
+            "path": "README.md",
+            "options": {"recursive": True, "paths": ["README.md"]},
+        }
+        original = self._ai(json.dumps(nested_arguments))
+        service = CapabilityRequestProposalService(AIRequestArgumentPlanner(original))
+        result = service.propose(snapshot())
+
+        with self.assertRaises(TypeError):
+            result.arguments["options"]["recursive"] = False  # type: ignore[index]
+        with self.assertRaises(AttributeError):
+            result.arguments["options"]["paths"].append("other.txt")  # type: ignore[union-attr]
+        self.assertEqual(result.arguments["options"]["recursive"], True)
+        self.assertEqual(result.request.arguments["options"]["paths"], ["README.md"])
 
     def test_proposal_is_bound_to_discovery_snapshot(self):
         result = self.service.propose(snapshot())

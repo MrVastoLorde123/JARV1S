@@ -63,6 +63,29 @@ class ModelCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "data.*sequence"):
             self.catalog.observe_openai_models({"data": {"id": "granite-8b"}})
 
+    def test_non_mapping_models_payload_is_rejected(self) -> None:
+        with self.assertRaisesRegex(TypeError, "payload must be a mapping"):
+            self.catalog.observe_openai_models([])
+
+    def test_observation_requires_nonempty_model_id(self) -> None:
+        with self.assertRaisesRegex(ValueError, "model_id cannot be empty"):
+            ModelObservation("   ")
+
+    def test_roles_for_requires_model_role_values(self) -> None:
+        with self.assertRaisesRegex(TypeError, "roles must contain only ModelRole"):
+            ModelCatalog.roles_for("GENERAL")
+
+    def test_identical_profile_registration_is_idempotent(self) -> None:
+        profile = ModelProfile("granite-8b", frozenset({ModelRole.GENERAL}), priority=100)
+        catalog = ModelCatalog([profile])
+        catalog.register_profile(profile)
+        self.assertEqual(catalog.profile("granite-8b"), profile)
+
+    def test_conflicting_profile_registration_is_rejected(self) -> None:
+        profile = ModelProfile("granite-8b", frozenset({ModelRole.GENERAL}), priority=100)
+        with self.assertRaisesRegex(ValueError, "conflicting profile"):
+            self.catalog.register_profile(profile)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,7 @@ from src.tools.tests.support import (
     EchoHandler,
     MalformedResultHandler,
     RaisingHandler,
+    WrongInvocationIdHandler,
     WrongToolNameHandler,
 )
 
@@ -47,6 +48,12 @@ class TestSuccessfulExecution(ServiceTestCase):
         result = self.service.invoke(request)
 
         self.assertTrue(result.success)
+
+
+class TestConstruction(ServiceTestCase):
+    def test_non_registry_is_rejected(self) -> None:
+        with self.assertRaises(TypeError):
+            ToolService(object())  # type: ignore[arg-type]
 
 
 class TestInvalidRequests(ServiceTestCase):
@@ -98,6 +105,13 @@ class TestMalformedHandlerResults(ServiceTestCase):
     def test_result_for_wrong_tool_raises(self) -> None:
         self.registry.register(WrongToolNameHandler(name="impersonator"))
         request = ToolRequest(tool_name="impersonator")
+
+        with self.assertRaises(InvalidResultError):
+            self.service.invoke(request)
+
+    def test_result_for_wrong_invocation_raises(self) -> None:
+        self.registry.register(WrongInvocationIdHandler())
+        request = ToolRequest(tool_name="wrong_invocation", invocation_id="req-1")
 
         with self.assertRaises(InvalidResultError):
             self.service.invoke(request)

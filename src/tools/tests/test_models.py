@@ -79,6 +79,26 @@ class TestToolDefinition(unittest.TestCase):
         with self.assertRaises(Exception):
             definition.name = "renamed"  # type: ignore[misc]
 
+    def test_nested_contract_data_is_immutable(self) -> None:
+        schema = {"type": "object", "properties": {"path": {"type": "string"}}}
+        metadata = {"tags": ["filesystem", "read"], "nested": {"safe": True}}
+        definition = ToolDefinition(
+            name="read_file",
+            description="Reads a file.",
+            version="1.0.0",
+            input_schema=schema,
+            output_schema={"type": "object"},
+            metadata=metadata,
+        )
+        with self.assertRaises(TypeError):
+            definition.input_schema["new"] = True  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            definition.input_schema["properties"]["path"]["type"] = "integer"  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            definition.metadata["nested"]["safe"] = False  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            definition.metadata["tags"] += ("write",)  # type: ignore[index]
+
 
 class TestToolRequest(unittest.TestCase):
     def test_valid_request_defaults(self) -> None:
@@ -111,6 +131,17 @@ class TestToolRequest(unittest.TestCase):
         with self.assertRaises(ToolLayerError):
             ToolRequest(tool_name="echo", invocation_id=123)  # type: ignore[arg-type]
 
+    def test_nested_request_data_is_immutable(self) -> None:
+        request = ToolRequest(
+            tool_name="echo",
+            arguments={"payload": {"items": [1, 2]}},
+            metadata={"trace": {"source": "test"}},
+        )
+        with self.assertRaises(TypeError):
+            request.arguments["payload"]["items"] = (3,)  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            request.metadata["trace"]["source"] = "mutated"  # type: ignore[index]
+
 
 class TestToolResult(unittest.TestCase):
     def test_valid_success_result(self) -> None:
@@ -137,6 +168,18 @@ class TestToolResult(unittest.TestCase):
                 with self.assertRaises(ToolLayerError):
                     ToolResult(success=True, tool_name=bad_name)
 
+    def test_nested_result_data_is_immutable(self) -> None:
+        result = ToolResult(
+            success=True,
+            tool_name="echo",
+            content={"payload": {"items": [1, 2]}},
+            metadata={"trace": {"source": "test"}},
+        )
+        with self.assertRaises(TypeError):
+            result.content["payload"]["items"] = (3,)  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            result.metadata["trace"]["source"] = "mutated"  # type: ignore[index]
+
 
 class TestToolError(unittest.TestCase):
     def test_valid_error(self) -> None:
@@ -148,6 +191,15 @@ class TestToolError(unittest.TestCase):
             with self.subTest(bad_code=bad_code):
                 with self.assertRaises(ToolLayerError):
                     ToolError(code=bad_code, message="msg")
+
+    def test_nested_error_details_are_immutable(self) -> None:
+        error = ToolError(
+            code="timeout",
+            message="Operation timed out",
+            details={"context": {"attempts": [1, 2]}},
+        )
+        with self.assertRaises(TypeError):
+            error.details["context"]["attempts"] = (3,)  # type: ignore[index]
 
 
 if __name__ == "__main__":

@@ -1,12 +1,41 @@
-"""Bridge explicit tool plans to the tool-layer capability boundary."""
+"""Orchestrate tool invocation behind explicit plan-step boundaries.
+
+``ToolService`` remains the low-level tool boundary: it validates a
+``ToolRequest``, resolves a registered tool, invokes it, and validates the
+result. This module adds the plan-step adapter above that boundary.
+
+The plan-step adapter deliberately does not own policy or authority. A step
+that declares ``requires_confirmation=True`` must carry a separate,
+request-bound ``ToolExecutionConfirmation`` artifact before this adapter will
+invoke the tool. Confirmation is an execution precondition only; it is not
+permission, authorization, or verification truth.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
+
+
+@dataclass(frozen=True)
+class ToolExecutionConfirmation:
+    """Explicit confirmation bound to one immutable plan/request identity."""
+
+    step_id: str
+    request: ToolRequest
+    confirmed: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.step_id, str) or not self.step_id.strip():
+            raise ValueError("step_id must be a non-empty string")
+        if not isinstance(self.request, ToolRequest):
+            raise TypeError("request must be a ToolRequest")
+        if not isinstance(self.confirmed, bool):
+            raise TypeError("confirmed must be a bool")
 
 
 @runtime_checkable
@@ -21,26 +50,32 @@ class ToolInvoker(Protocol):
 class ToolCapabilityGateway(ToolInvoker, Protocol):
     """Capability boundary used by JARVIS to discover and invoke tools."""
 
-    def list_definitions(self) -> Sequence[ToolDefinition]:
-        """Return the currently available tool capability definitions."""
+    def list_definitions(self) -> tuple[ToolDefinition, ...]:
         ...
 
 
 class ToolPlanStepHandler:
-    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker."""
+    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker.
+
+    This adapter performs structural request validation and enforces the
+    plan's explicit confirmation requirement. It never decides policy and
+    never turns confirmation into authority.
+    """
 
     ACTION = "USE_TOOL"
+    REQUEST_METADATA_KEYS = ("scope", "capability_class")
 
     def __init__(self, invoker: ToolInvoker) -> None:
         if not isinstance(invoker, ToolInvoker):
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
 
-    def __call__(self, step: PlanStep) -> object:
+    @staticmethod
+    def build_request(step: PlanStep) -> ToolRequest:
+        """Materialize the exact deterministic request represented by a step."""
         if not isinstance(step, PlanStep):
             raise TypeError("step must be a PlanStep")
-
-        if step.action.strip().upper() != self.ACTION:
+        if step.action.strip().upper() != ToolPlanStepHandler.ACTION:
             raise ValueError(
                 f"ToolPlanStepHandler cannot execute action {step.action!r}"
             )
@@ -57,24 +92,74 @@ class ToolPlanStepHandler:
         if invocation_id is not None and not isinstance(invocation_id, str):
             raise ValueError("tool plan step 'invocation_id' must be a string or None")
 
-        result = self._invoker.invoke(
-            ToolRequest(
-                tool_name=tool_name,
-                arguments=dict(arguments),
-                invocation_id=invocation_id or step.step_id,
-            )
+        request_metadata = {
+            key: step.metadata[key]
+            for key in ToolPlanStepHandler.REQUEST_METADATA_KEYS
+            if key in step.metadata
+        }
+
+        return ToolRequest(
+            tool_name=tool_name,
+            arguments=dict(arguments),
+            metadata=request_metadata,
+            invocation_id=invocation_id or step.step_id,
         )
+
+    def invoke(
+        self,
+        step: PlanStep,
+        confirmation: ToolExecutionConfirmation | None = None,
+    ) -> tuple[ToolRequest, ToolResult]:
+        """Invoke a validated step and return the raw execution observation."""
+        request = self.build_request(step)
+
+        if step.requires_confirmation:
+            self._require_confirmation(step, request, confirmation)
+
+        result = self._invoker.invoke(request)
 
         if not isinstance(result, ToolResult):
             raise TypeError(
                 f"Tool invoker returned {type(result).__name__}, expected ToolResult"
             )
 
+        return request, result
+
+    def __call__(
+        self,
+        step: PlanStep,
+        confirmation: ToolExecutionConfirmation | None = None,
+    ) -> object:
+        request, result = self.invoke(step, confirmation)
+
         if not result.success:
             assert result.error is not None
             raise RuntimeError(
-                f"tool '{tool_name}' failed: "
+                f"tool '{request.tool_name}' failed: "
                 f"{result.error.code}: {result.error.message}"
             )
 
         return result.content
+
+    @staticmethod
+    def _require_confirmation(
+        step: PlanStep,
+        request: ToolRequest,
+        confirmation: ToolExecutionConfirmation | None,
+    ) -> None:
+        if confirmation is None:
+            raise PermissionError(
+                f"tool plan step '{step.step_id}' requires explicit confirmation"
+            )
+        if not isinstance(confirmation, ToolExecutionConfirmation):
+            raise TypeError(
+                "confirmation must be a ToolExecutionConfirmation or None"
+            )
+        if not confirmation.confirmed:
+            raise PermissionError(
+                f"tool plan step '{step.step_id}' was not confirmed"
+            )
+        if confirmation.step_id != step.step_id or confirmation.request != request:
+            raise PermissionError(
+                "confirmation does not match the requested plan step execution"
+            )

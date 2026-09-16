@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any
 
 from src.core.capability_argument_planner import CapabilityArgumentPlanner
@@ -18,6 +19,21 @@ from src.core.capability_invocation import CapabilityInvocationBuilder
 from src.core.capability_selection import CapabilityCandidate
 from src.core.capability_selection_service import CapabilityDiscoverySelection
 from src.tools.models import ToolRequest
+
+
+def _freeze_mapping(value: Mapping[str, Any]) -> Mapping[str, Any]:
+    def freeze(item: Any) -> Any:
+        if isinstance(item, Mapping):
+            return MappingProxyType({key: freeze(child) for key, child in item.items()})
+        if isinstance(item, list):
+            return tuple(freeze(child) for child in item)
+        if isinstance(item, tuple):
+            return tuple(freeze(child) for child in item)
+        if isinstance(item, set):
+            return frozenset(freeze(child) for child in item)
+        return item
+
+    return MappingProxyType({key: freeze(item) for key, item in value.items()})
 
 
 @dataclass(frozen=True)
@@ -47,6 +63,7 @@ class CapabilityRequestProposal:
             raise ValueError("request tool_name must match candidate capability")
         if dict(self.request.arguments) != dict(self.arguments):
             raise ValueError("request arguments must match proposed arguments")
+        object.__setattr__(self, "arguments", _freeze_mapping(self.arguments))
 
     def to_context(self) -> dict[str, object]:
         return {
