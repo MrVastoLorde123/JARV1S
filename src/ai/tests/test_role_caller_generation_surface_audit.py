@@ -21,6 +21,10 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
         except SyntaxError as exc:
             raise AssertionError(f"Could not parse {path}: {exc}") from exc
 
+    @staticmethod
+    def _is_ai_service_receiver(node):
+        return isinstance(node, ast.Attribute) and node.attr in {"ai_service", "_ai_service"}
+
     def test_production_callers_do_not_directly_generate_from_ai_service(self):
         violations = []
         for path in sorted(self._SOURCE_ROOT.rglob("*.py")):
@@ -37,8 +41,7 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
                     continue
                 if node.func.attr != "generate":
                     continue
-                receiver = node.func.value
-                if isinstance(receiver, ast.Attribute) and receiver.attr in {"ai_service", "_ai_service"}:
+                if self._is_ai_service_receiver(node.func.value):
                     violations.append(f"{path}:{node.lineno} calls {ast.unparse(node.func)}()")
 
         self.assertEqual(
@@ -69,6 +72,35 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
             violations,
             [],
             "Production callers must depend on the explicit role-routing contract rather than compatibility probing.\n"
+            + "\n".join(violations),
+        )
+
+    def test_production_callers_do_not_dynamically_generate_from_ai_service(self):
+        violations = []
+        for path in sorted(self._SOURCE_ROOT.rglob("*.py")):
+            relative_path = path.relative_to(self._SOURCE_ROOT.parent.parent)
+            if relative_path in self._EXCLUDED_FILES:
+                continue
+            if any(part in self._EXCLUDED_PARTS for part in path.parts):
+                continue
+
+            tree = self._parse_tree(path)
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+                    continue
+                if node.func.id != "getattr" or len(node.args) < 2:
+                    continue
+                receiver = node.args[0]
+                attribute = node.args[1]
+                if not self._is_ai_service_receiver(receiver):
+                    continue
+                if isinstance(attribute, ast.Constant) and attribute.value == "generate":
+                    violations.append(f"{path}:{node.lineno} dynamically probes for generate with getattr()")
+
+        self.assertEqual(
+            violations,
+            [],
+            "Production callers must not bypass role routing by dynamically resolving AIService.generate().\n"
             + "\n".join(violations),
         )
 
