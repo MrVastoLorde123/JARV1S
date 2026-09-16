@@ -214,17 +214,6 @@ class AIService:
             raise InvalidRequestError("generate_for_role() requires an AIRequest.")
 
         explicit_model = preferred_model or request.model
-        if (
-            role == ModelRole.GENERAL
-            and explicit_model is None
-            and not self._model_routing_configured
-        ):
-            return self.generate(
-                request,
-                provider_name=provider_name,
-                required_capabilities=required_capabilities,
-            )
-
         decision = self.route_model(
             role=role,
             preferred_model=explicit_model,
