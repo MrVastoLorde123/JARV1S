@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from types import MappingProxyType
 from typing import Any, Mapping, Optional
 
 from .errors import InvalidToolDefinitionError, InvalidRequestError
@@ -32,6 +33,19 @@ class RiskLevel(str, Enum):
 
 def _is_mapping(value: Any) -> bool:
     return isinstance(value, Mapping)
+
+
+def _freeze(value: Any) -> Any:
+    """Recursively snapshot common mutable containers into immutable values."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(item) for item in value)
+    return value
 
 
 @dataclass(frozen=True)
@@ -90,22 +104,14 @@ class ToolDefinition:
             )
         if not _is_mapping(self.metadata):
             raise InvalidToolDefinitionError("ToolDefinition.metadata must be a mapping")
+        object.__setattr__(self, "input_schema", _freeze(self.input_schema))
+        object.__setattr__(self, "output_schema", _freeze(self.output_schema))
+        object.__setattr__(self, "metadata", _freeze(self.metadata))
 
 
 @dataclass(frozen=True)
 class ToolRequest:
-    """A single request to invoke one tool.
-
-    Attributes:
-        tool_name: Name of the tool to invoke, as it will be looked up
-            in the ``ToolRegistry`` (normalization happens there).
-        arguments: Arguments for the invocation.
-        metadata: Optional request-scoped metadata (e.g. tracing info,
-            originating conversation id). Never used for control flow
-            by the service itself.
-        invocation_id: Optional caller-supplied identifier for
-            correlating this request with its result.
-    """
+    """A single request to invoke one tool."""
 
     tool_name: str
     arguments: Mapping[str, Any] = field(default_factory=dict)
@@ -121,6 +127,8 @@ class ToolRequest:
             raise InvalidRequestError("ToolRequest.metadata must be a mapping")
         if self.invocation_id is not None and not isinstance(self.invocation_id, str):
             raise InvalidRequestError("ToolRequest.invocation_id must be a string or None")
+        object.__setattr__(self, "arguments", _freeze(self.arguments))
+        object.__setattr__(self, "metadata", _freeze(self.metadata))
 
 
 @dataclass(frozen=True)
@@ -138,27 +146,12 @@ class ToolError:
             raise InvalidRequestError("ToolError.message must be a non-empty string")
         if not _is_mapping(self.details):
             raise InvalidRequestError("ToolError.details must be a mapping")
+        object.__setattr__(self, "details", _freeze(self.details))
 
 
 @dataclass(frozen=True)
 class ToolResult:
-    """Outcome of a single tool invocation.
-
-    Attributes:
-        success: Whether the invocation succeeded.
-        tool_name: Name of the tool that produced this result. Used by
-            ``ToolService`` to validate handlers didn't return a
-            result for the wrong tool.
-        content: Result payload on success. Should conform to the
-            tool's declared ``output_schema``; this milestone does not
-            enforce schema validation, only structural shape.
-        metadata: Optional result-scoped metadata.
-        error: Structured error information. Must be set when
-            ``success`` is False, and must be None when ``success`` is
-            True.
-        invocation_id: Echoes the originating request's invocation id,
-            when one was provided.
-    """
+    """Outcome of a single tool invocation."""
 
     success: bool
     tool_name: str
@@ -182,3 +175,5 @@ class ToolResult:
             raise InvalidRequestError("ToolResult.error must be None when success is True")
         if self.invocation_id is not None and not isinstance(self.invocation_id, str):
             raise InvalidRequestError("ToolResult.invocation_id must be a string or None")
+        object.__setattr__(self, "content", _freeze(self.content))
+        object.__setattr__(self, "metadata", _freeze(self.metadata))
