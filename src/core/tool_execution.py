@@ -105,11 +105,12 @@ class ToolPlanStepHandler:
             invocation_id=invocation_id or step.step_id,
         )
 
-    def __call__(
+    def invoke(
         self,
         step: PlanStep,
         confirmation: ToolExecutionConfirmation | None = None,
-    ) -> object:
+    ) -> tuple[ToolRequest, ToolResult]:
+        """Invoke a validated step and return the raw execution observation."""
         request = self.build_request(step)
 
         if step.requires_confirmation:
@@ -121,6 +122,15 @@ class ToolPlanStepHandler:
             raise TypeError(
                 f"Tool invoker returned {type(result).__name__}, expected ToolResult"
             )
+
+        return request, result
+
+    def __call__(
+        self,
+        step: PlanStep,
+        confirmation: ToolExecutionConfirmation | None = None,
+    ) -> object:
+        request, result = self.invoke(step, confirmation)
 
         if not result.success:
             assert result.error is not None
