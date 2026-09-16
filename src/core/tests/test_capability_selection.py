@@ -1,6 +1,8 @@
+import math
 import unittest
 
 from src.core.capability_selection import (
+    CapabilityCandidate,
     CapabilitySelection,
     CapabilitySelector,
     DeterministicCapabilitySelector,
@@ -82,6 +84,34 @@ class CapabilitySelectionTests(unittest.TestCase):
         before = self.capabilities
         self.selector.select("read file", self.capabilities)
         self.assertEqual(before, self.capabilities)
+
+    def test_candidate_requires_tool_definition(self):
+        with self.assertRaises(TypeError):
+            CapabilityCandidate(capability=object(), score=1, reason="match")  # type: ignore[arg-type]
+
+    def test_candidate_requires_finite_non_negative_score(self):
+        with self.assertRaises(ValueError):
+            CapabilityCandidate(self.capabilities[0], math.inf, "match")
+        with self.assertRaises(ValueError):
+            CapabilityCandidate(self.capabilities[0], -0.1, "match")
+
+    def test_candidate_rejects_empty_reason(self):
+        with self.assertRaises(ValueError):
+            CapabilityCandidate(self.capabilities[0], 1.0, " ")
+
+    def test_selection_rejects_invalid_candidate_entries(self):
+        with self.assertRaises(TypeError):
+            CapabilitySelection("read file", (object(),))  # type: ignore[arg-type]
+
+    def test_selection_requires_non_empty_query(self):
+        with self.assertRaises(ValueError):
+            CapabilitySelection(" ", ())
+
+    def test_candidate_score_normalizes_to_float(self):
+        candidate = CapabilityCandidate(self.capabilities[0], 2, "  matched  ")
+
+        self.assertEqual(2.0, candidate.score)
+        self.assertEqual("matched", candidate.reason)
 
 
 if __name__ == "__main__":
