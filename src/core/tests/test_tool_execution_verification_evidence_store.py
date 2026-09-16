@@ -101,8 +101,14 @@ class ToolExecutionVerificationEvidenceStoreTests(unittest.TestCase):
 
     def test_persistence_is_json_native(self):
         stored = self.store.save(self.verification)
-        record = json.loads(stored.verification_store_record if hasattr(stored, "verification_store_record") else "{}")
-        self.assertIsInstance(record, dict)
+        with sqlite3.connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT request_json, result_json FROM tool_execution_verification_evidence WHERE evidence_id = ?",
+                (stored.evidence_id,),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertIsInstance(json.loads(row[0]), dict)
+        self.assertIsInstance(json.loads(row[1]), dict)
 
     def test_tampered_row_is_rejected(self):
         stored = self.store.save(self.verification)
