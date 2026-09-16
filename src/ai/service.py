@@ -53,8 +53,6 @@ class AIService:
         name = provider.provider_name()
         if not isinstance(name, str) or not name.strip():
             raise InvalidRequestError("Provider name cannot be empty.")
-        if name in self._providers and self._providers[name] is not provider:
-            raise InvalidRequestError(f"Provider '{name}' is already registered.")
         self._providers[name] = provider
 
     def set_default_provider(self, provider_name):
