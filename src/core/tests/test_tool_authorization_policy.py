@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from src.core.execution_plan_models import PlanStep
@@ -128,7 +129,7 @@ class ToolAuthorizationPolicyTests(unittest.TestCase):
         self.assertFalse(authorization.authorized)
         self.assertIn("denied", authorization.reason)
 
-    def test_evidence_round_trips_authorization_fields(self) -> None:
+    def test_evidence_is_json_native_and_round_trips_fields(self) -> None:
         authorization = self.policy.authorize(self.step, self._request())
         evidence = ToolAuthorizationEvidence.from_authorization(authorization)
         record = evidence.to_record()
@@ -138,8 +139,9 @@ class ToolAuthorizationPolicyTests(unittest.TestCase):
         self.assertEqual(record["scope"], "diagnostics")
         self.assertEqual(record["capability_class"], "diagnostic")
         self.assertTrue(record["authorized"])
-        with self.assertRaises(TypeError):
-            record["authorized"] = False  # type: ignore[index]
+        self.assertEqual(json.loads(json.dumps(record)), record)
+        record["authorized"] = False
+        self.assertTrue(evidence.authorized)
 
     def test_evidence_requires_scope_and_capability_class(self) -> None:
         authorization = ToolExecutionAuthorization(
