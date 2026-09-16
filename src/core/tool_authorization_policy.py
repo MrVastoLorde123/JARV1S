@@ -7,7 +7,6 @@ execute tools, confirm user intent, or claim that an execution succeeded.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from types import MappingProxyType
 from typing import Mapping
 
 from src.core.execution_plan_models import PlanStep
@@ -183,11 +182,7 @@ class StaticToolAuthorizationPolicy:
 
 @dataclass(frozen=True)
 class ToolAuthorizationEvidence:
-    """Serializable evidence snapshot for one authorization decision.
-
-    This is an evidence artifact, not a persistence mechanism and not an
-    execution result. The caller may persist it through an independent store.
-    """
+    """Immutable evidence snapshot for one authorization decision."""
 
     step_id: str
     invocation_id: str | None
@@ -199,7 +194,14 @@ class ToolAuthorizationEvidence:
     reason: str
 
     def __post_init__(self) -> None:
-        for field_name in ("step_id", "tool_name", "scope", "capability_class", "policy_id", "reason"):
+        for field_name in (
+            "step_id",
+            "tool_name",
+            "scope",
+            "capability_class",
+            "policy_id",
+            "reason",
+        ):
             value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
@@ -219,10 +221,10 @@ class ToolAuthorizationEvidence:
         scope = metadata.get(_REQUEST_SCOPE_KEY)
         capability_class = metadata.get(_CAPABILITY_CLASS_KEY)
         if not isinstance(scope, str) or not scope.strip():
-            raise ValueError("authorized request evidence requires a non-empty scope")
+            raise ValueError("authorization evidence requires a non-empty scope")
         if not isinstance(capability_class, str) or not capability_class.strip():
             raise ValueError(
-                "authorized request evidence requires a non-empty capability_class"
+                "authorization evidence requires a non-empty capability_class"
             )
         return cls(
             step_id=authorization.step_id,
@@ -235,16 +237,15 @@ class ToolAuthorizationEvidence:
             reason=authorization.reason,
         )
 
-    def to_record(self) -> Mapping[str, object]:
-        return MappingProxyType(
-            {
-                "step_id": self.step_id,
-                "invocation_id": self.invocation_id,
-                "tool_name": self.tool_name,
-                "scope": self.scope,
-                "capability_class": self.capability_class,
-                "authorized": self.authorized,
-                "policy_id": self.policy_id,
-                "reason": self.reason,
-            }
-        )
+    def to_record(self) -> dict[str, object]:
+        """Return a JSON-native snapshot suitable for independent persistence."""
+        return {
+            "step_id": self.step_id,
+            "invocation_id": self.invocation_id,
+            "tool_name": self.tool_name,
+            "scope": self.scope,
+            "capability_class": self.capability_class,
+            "authorized": self.authorized,
+            "policy_id": self.policy_id,
+            "reason": self.reason,
+        }
