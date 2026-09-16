@@ -2,8 +2,8 @@ import unittest
 
 from src.core.capability_argument_planner import CapabilityInvocationService
 from src.core.capability_catalog import CapabilityCatalog
-from src.core.capability_realization import CapabilityRealizationService
-from src.core.capability_selection import CapabilityCandidate
+from src.core.capability_realization import CapabilityRealization, CapabilityRealizationService
+from src.core.capability_selection import CapabilityCandidate, CapabilitySelection
 from src.core.capability_selection_service import CapabilitySelectionService
 from src.core.tool_execution import ToolCapabilityGateway
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
@@ -122,6 +122,72 @@ class CapabilityRealizationTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             service.realize("   ")
+
+    def test_realization_rejects_candidate_outside_selection(self):
+        read = definition("read_file", "read a file", {"type": "object"})
+        write = definition("write_file", "write a file", {"type": "object"})
+        read_candidate = CapabilityCandidate(read, 1.0, "read")
+        write_candidate = CapabilityCandidate(write, 1.0, "write")
+        selection = CapabilitySelection("read file", (read_candidate,))
+        request = ToolRequest(tool_name="write_file", arguments={})
+
+        with self.assertRaises(ValueError):
+            CapabilityRealization(
+                intent="read file",
+                selection=selection,
+                candidate=write_candidate,
+                request=request,
+            )
+
+    def test_realization_rejects_request_for_different_capability(self):
+        read = definition("read_file", "read a file", {"type": "object"})
+        candidate = CapabilityCandidate(read, 1.0, "read")
+        selection = CapabilitySelection("read file", (candidate,))
+        request = ToolRequest(tool_name="write_file", arguments={})
+
+        with self.assertRaises(ValueError):
+            CapabilityRealization(
+                intent="read file",
+                selection=selection,
+                candidate=candidate,
+                request=request,
+            )
+
+    def test_realization_rejects_malformed_fields(self):
+        read = definition("read_file", "read a file", {"type": "object"})
+        candidate = CapabilityCandidate(read, 1.0, "read")
+        selection = CapabilitySelection("read file", (candidate,))
+        request = ToolRequest(tool_name="read_file", arguments={})
+
+        with self.assertRaises(ValueError):
+            CapabilityRealization(
+                intent="   ",
+                selection=selection,
+                candidate=candidate,
+                request=request,
+            )
+        with self.assertRaises(TypeError):
+            CapabilityRealization(
+                intent="read file",
+                selection=object(),
+                candidate=candidate,
+                request=request,
+            )
+
+    def test_realization_is_frozen(self):
+        read = definition("read_file", "read a file", {"type": "object"})
+        candidate = CapabilityCandidate(read, 1.0, "read")
+        selection = CapabilitySelection("read file", (candidate,))
+        request = ToolRequest(tool_name="read_file", arguments={})
+        result = CapabilityRealization(
+            intent="read file",
+            selection=selection,
+            candidate=candidate,
+            request=request,
+        )
+
+        with self.assertRaises(AttributeError):
+            result.intent = "write file"
 
 
 if __name__ == "__main__":
