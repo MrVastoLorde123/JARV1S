@@ -20,8 +20,15 @@ class ModelRoutingRuntime:
         )
         self._router = self._catalog.router()
 
+    def _synchronize_policy(self) -> None:
+        """Reflect newly registered policy rules without requiring re-observation."""
+        for rule in self._policy.list_rules():
+            self._catalog.register_profile(rule.profile(available=False))
+        self._router = self._catalog.router()
+
     @property
     def catalog(self) -> ModelCatalog:
+        self._synchronize_policy()
         return self._catalog
 
     @property
@@ -30,22 +37,26 @@ class ModelRoutingRuntime:
 
     def observe_models(self, model_ids: Iterable[str]) -> None:
         """Refresh availability from a provider observation snapshot."""
+        self._synchronize_policy()
         self._catalog.observe_ids(model_ids)
         self._router = self._catalog.router()
 
     def observe_openai_models(self, payload) -> tuple[str, ...]:
         """Refresh availability from an OpenAI-compatible /v1/models payload."""
+        self._synchronize_policy()
         observed = self._catalog.observe_openai_models(payload)
         self._router = self._catalog.router()
         return observed
 
     def list_models(self) -> tuple[ModelProfile, ...]:
+        self._synchronize_policy()
         return self._catalog.profiles()
 
     def observed_model_ids(self) -> tuple[str, ...]:
         return self._catalog.observed_model_ids()
 
     def route(self, role: ModelRole, preferred_model: str | None = None) -> RoutingDecision:
+        self._synchronize_policy()
         return self._router.route(
             RoutingRequest(role=role, preferred_model=preferred_model)
         )
