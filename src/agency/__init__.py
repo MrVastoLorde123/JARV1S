@@ -29,6 +29,17 @@ from .world_projection import WorldAgentObservation, WorldObservation, WorldObse
 from .world_runtime import AgentWorldRuntime
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
+from .task_orchestration import (
+    CoordinationAction,
+    CoordinationDecision,
+    OrchestratedStep,
+    OrchestrationStatus,
+    StepExecutionState,
+    TaskOrchestration,
+    begin_task_orchestration,
+    choose_next_coordination,
+    update_orchestration,
+)
 
 __all__ = [
     "AgentEntity",
@@ -67,4 +78,13 @@ __all__ = [
     "WorkPlanStep",
     "build_work_plan",
     "next_ready_steps",
+    "CoordinationAction",
+    "CoordinationDecision",
+    "OrchestratedStep",
+    "OrchestrationStatus",
+    "StepExecutionState",
+    "TaskOrchestration",
+    "begin_task_orchestration",
+    "choose_next_coordination",
+    "update_orchestration",
 ]
