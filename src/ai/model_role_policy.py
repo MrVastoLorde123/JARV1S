@@ -22,10 +22,12 @@ class ModelRolePolicyRule:
     notes: str = ""
 
     def __post_init__(self) -> None:
-        if not self.model_id.strip():
+        if not isinstance(self.model_id, str) or not self.model_id.strip():
             raise ValueError("model_id cannot be empty")
         if not self.roles:
             raise ValueError("roles cannot be empty")
+        if not all(isinstance(role, ModelRole) for role in self.roles):
+            raise TypeError("roles must contain only ModelRole values")
         if self.priority < 0:
             raise ValueError("priority cannot be negative")
 
