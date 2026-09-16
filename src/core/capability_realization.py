@@ -12,12 +12,31 @@ from src.tools.models import ToolRequest
 
 @dataclass(frozen=True)
 class CapabilityRealization:
-    """The read-only result of realizing one natural-language capability intent."""
+    """The immutable, read-only result of realizing one capability intent."""
 
     intent: str
     selection: CapabilitySelection
     candidate: CapabilityCandidate
     request: ToolRequest
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.intent, str) or not self.intent.strip():
+            raise ValueError("intent must be a non-empty string")
+        if not isinstance(self.selection, CapabilitySelection):
+            raise TypeError("selection must be a CapabilitySelection")
+        if not isinstance(self.candidate, CapabilityCandidate):
+            raise TypeError("candidate must be a CapabilityCandidate")
+        if not isinstance(self.request, ToolRequest):
+            raise TypeError("request must be a ToolRequest")
+        if not any(
+            selected is self.candidate for selected in self.selection.candidates
+        ):
+            raise ValueError("candidate must originate from the selection")
+        if (
+            self.request.tool_name.strip().lower()
+            != self.candidate.capability.name.strip().lower()
+        ):
+            raise ValueError("request tool_name must match candidate capability")
 
 
 class CapabilityRealizationService:
