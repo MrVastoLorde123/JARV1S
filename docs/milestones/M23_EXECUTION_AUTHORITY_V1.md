@@ -32,6 +32,10 @@ Independent Verification
 Durable Verification Evidence
       ↓
 Inert Learning Signal
+      ↓
+Recovery Recommendation
+      ↓
+Correction / Review / Completion
 ```
 
 ## Invariants
@@ -60,6 +64,10 @@ Authorization and verification evidence are separately persisted, content-addres
 
 Execution evidence may be converted into an inert learning signal. The signal records authorization, execution, verification status, and lineage, but cannot execute, authorize, retry, mutate memory/policy, or establish truth by itself.
 
+### Recovery
+
+Recovery consumes verification evidence only to recommend a bounded next control stage. `COMPLETE`, `CORRECT`, and `REVIEW` are recommendations, not permission, execution, retry, or policy mutation.
+
 ## Existing runtime composition
 
 The completed chain is exposed through `ToolExecutionChain` and can be bound to the existing `PlanExecutor` `USE_TOOL` action via `ToolExecutionChainPlanHandler`. The existing `PolicyGate` remains available below that composition boundary for tool-layer policy, confirmation, integrity, sandbox, and handoff enforcement.
@@ -77,6 +85,22 @@ ToolExecutionChain
     ├── Verification Service
     └── Verification Evidence Store
 ```
+
+## Closed-loop evidence path
+
+```text
+Authorization Evidence
+        +
+Execution Observation
+        +
+Verification Evidence
+        ↓
+Inert Learning Signal
+        ↓
+Recovery Recommendation
+```
+
+The learning and recovery stages consume evidence; they do not gain execution authority from it.
 
 ## Final V1 verification requirement
 
