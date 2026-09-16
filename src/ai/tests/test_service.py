@@ -29,6 +29,8 @@ class FakeProvider(AIProvider):
 
         self.generate_count = 0
         self.return_invalid_response = False
+        self.return_wrong_provider = False
+        self.return_empty_model = False
 
     def generate(
         self,
@@ -44,8 +46,8 @@ class FakeProvider(AIProvider):
                 f"Fake response: "
                 f"{request.task}"
             ),
-            provider=self._name,
-            model="fake-model",
+            provider="wrong-provider" if self.return_wrong_provider else self._name,
+            model="" if self.return_empty_model else "fake-model",
             finish_reason="completed",
         )
 
@@ -66,6 +68,16 @@ class FakeProvider(AIProvider):
 class InvalidCapabilitiesProvider(FakeProvider):
     def capabilities(self):
         return "invalid-capabilities"
+
+
+class InvalidInventoryProvider(FakeProvider):
+    def list_models(self):
+        return ("valid-model", "", 123)
+
+
+class ValidInventoryProvider(FakeProvider):
+    def list_models(self):
+        return ("valid-model", "second-model")
 
 
 class AIServiceTests(unittest.TestCase):
@@ -238,6 +250,36 @@ class AIServiceTests(unittest.TestCase):
         request = AIRequest(task="hello", context=None)
         with self.assertRaisesRegex(InvalidRequestError, "must return AIResponse"):
             self.service.generate(request)
+
+    def test_provider_response_provenance_is_enforced(self):
+        self.provider.return_wrong_provider = True
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "expected 'fake'"):
+            self.service.generate(request)
+
+    def test_provider_response_requires_model_identifier(self):
+        self.provider.return_empty_model = True
+        request = AIRequest(task="hello", context=None)
+        with self.assertRaisesRegex(InvalidRequestError, "response model cannot be empty"):
+            self.service.generate(request)
+
+    def test_provider_model_inventory_is_validated(self):
+        service = AIService(default_provider="inventory")
+        service.register_provider(ValidInventoryProvider(name="inventory"))
+        self.assertEqual(
+            service.observe_provider_models(),
+            ("valid-model", "second-model"),
+        )
+
+    def test_invalid_provider_model_inventory_is_rejected(self):
+        service = AIService(default_provider="inventory")
+        service.register_provider(InvalidInventoryProvider(name="inventory"))
+        with self.assertRaisesRegex(InvalidRequestError, "invalid model inventory"):
+            service.observe_provider_models()
+
+    def test_provider_without_model_observation_is_rejected(self):
+        with self.assertRaisesRegex(InvalidRequestError, "does not expose model observation"):
+            self.service.observe_provider_models()
 
     def test_unknown_provider_is_rejected(self):
 
