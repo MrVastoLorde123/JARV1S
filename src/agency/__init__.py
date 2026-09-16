@@ -41,6 +41,7 @@ from .task_orchestration import (
     update_orchestration,
 )
 from .work_dispatch import DispatchRequest, DispatchResult, WorkDispatcher
+from .execution_handoff import ExecutionHandoff, create_execution_handoff
 
 __all__ = [
     "AgentEntity",
@@ -91,4 +92,6 @@ __all__ = [
     "DispatchRequest",
     "DispatchResult",
     "WorkDispatcher",
+    "ExecutionHandoff",
+    "create_execution_handoff",
 ]
