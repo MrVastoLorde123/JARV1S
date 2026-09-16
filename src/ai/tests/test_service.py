@@ -5,6 +5,7 @@ from src.ai.errors import (
     InvalidRequestError,
 )
 
+from src.ai.model_catalog import ModelCatalog
 from src.ai.models import (
     AIRequest,
     AIResponse,
@@ -264,7 +265,10 @@ class AIServiceTests(unittest.TestCase):
             self.service.generate(request)
 
     def test_provider_model_inventory_is_validated(self):
-        service = AIService(default_provider="inventory")
+        service = AIService(
+            default_provider="inventory",
+            model_catalog=ModelCatalog(),
+        )
         service.register_provider(ValidInventoryProvider(name="inventory"))
         self.assertEqual(
             service.observe_provider_models(),
@@ -272,7 +276,10 @@ class AIServiceTests(unittest.TestCase):
         )
 
     def test_invalid_provider_model_inventory_is_rejected(self):
-        service = AIService(default_provider="inventory")
+        service = AIService(
+            default_provider="inventory",
+            model_catalog=ModelCatalog(),
+        )
         service.register_provider(InvalidInventoryProvider(name="inventory"))
         with self.assertRaisesRegex(InvalidRequestError, "invalid model inventory"):
             service.observe_provider_models()
