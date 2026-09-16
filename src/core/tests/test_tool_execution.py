@@ -95,6 +95,27 @@ class ToolExecutionBridgeTests(unittest.TestCase):
         self.assertEqual({"path": "README.md"}, invoker.requests[0].arguments)
         self.assertEqual("step-1", invoker.requests[0].invocation_id)
 
+    def test_request_preserves_authorization_metadata(self):
+        step = PlanStep(
+            step_id="step-auth-1",
+            description="Run diagnostic",
+            action="USE_TOOL",
+            order=0,
+            metadata={
+                "tool_name": "ping_host",
+                "arguments": {"host": "127.0.0.1"},
+                "scope": "diagnostics",
+                "capability_class": "diagnostic",
+            },
+        )
+
+        request = ToolPlanStepHandler.build_request(step)
+
+        self.assertEqual(
+            {"scope": "diagnostics", "capability_class": "diagnostic"},
+            dict(request.metadata),
+        )
+
     def test_explicit_invocation_id_is_preserved(self):
         invoker = FakeToolInvoker(
             ToolResult(
