@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import fields, replace
 
 from src.ai.errors import (
     CapabilityError,
@@ -189,13 +189,15 @@ class AIService:
         if not required_capabilities:
             return
         capabilities = self.get_capabilities(provider.provider_name())
+        declared_capabilities = {item.name for item in fields(AICapabilities)}
         for capability in required_capabilities:
             if not isinstance(capability, str) or not capability.strip():
                 raise InvalidRequestError("required_capabilities must contain non-empty strings.")
-            supported = getattr(capabilities, capability, False)
-            if not isinstance(supported, bool):
+            if capability not in declared_capabilities:
                 raise InvalidRequestError(f"Unknown provider capability '{capability}'.")
-            if not supported:
+            if not isinstance(getattr(capabilities, capability), bool):
+                raise InvalidRequestError(f"Provider capability '{capability}' is not boolean.")
+            if not getattr(capabilities, capability):
                 raise CapabilityError(
                     f"Provider '{provider.provider_name()}' "
                     f"does not support capability '{capability}'."
