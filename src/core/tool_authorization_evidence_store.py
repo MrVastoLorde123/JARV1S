@@ -79,6 +79,37 @@ class ToolAuthorizationEvidenceStore:
         )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
+    @classmethod
+    def _validate_stored_evidence(
+        cls,
+        evidence_id: str,
+        evidence: ToolAuthorizationEvidence,
+    ) -> None:
+        expected_id = cls._evidence_id(evidence)
+        if evidence_id != expected_id:
+            raise ValueError(
+                "stored authorization evidence failed integrity validation"
+            )
+
+    @staticmethod
+    def _row_to_stored(row: tuple[object, ...]) -> StoredToolAuthorizationEvidence:
+        evidence = ToolAuthorizationEvidence(
+            step_id=row[1],
+            invocation_id=row[2],
+            tool_name=row[3],
+            scope=row[4],
+            capability_class=row[5],
+            authorized=bool(row[6]),
+            policy_id=row[7],
+            reason=row[8],
+        )
+        stored = StoredToolAuthorizationEvidence(row[0], evidence)
+        ToolAuthorizationEvidenceStore._validate_stored_evidence(
+            stored.evidence_id,
+            stored.evidence,
+        )
+        return stored
+
     def save(self, evidence: ToolAuthorizationEvidence) -> StoredToolAuthorizationEvidence:
         if not isinstance(evidence, ToolAuthorizationEvidence):
             raise TypeError("evidence must be a ToolAuthorizationEvidence")
@@ -126,18 +157,7 @@ class ToolAuthorizationEvidenceStore:
 
         if row is None:
             return None
-
-        evidence = ToolAuthorizationEvidence(
-            step_id=row[1],
-            invocation_id=row[2],
-            tool_name=row[3],
-            scope=row[4],
-            capability_class=row[5],
-            authorized=bool(row[6]),
-            policy_id=row[7],
-            reason=row[8],
-        )
-        return StoredToolAuthorizationEvidence(row[0], evidence)
+        return self._row_to_stored(row)
 
     def list_for_step(self, step_id: str) -> tuple[StoredToolAuthorizationEvidence, ...]:
         if not isinstance(step_id, str) or not step_id.strip():
@@ -155,22 +175,7 @@ class ToolAuthorizationEvidenceStore:
                 (step_id,),
             ).fetchall()
 
-        return tuple(
-            StoredToolAuthorizationEvidence(
-                row[0],
-                ToolAuthorizationEvidence(
-                    step_id=row[1],
-                    invocation_id=row[2],
-                    tool_name=row[3],
-                    scope=row[4],
-                    capability_class=row[5],
-                    authorized=bool(row[6]),
-                    policy_id=row[7],
-                    reason=row[8],
-                ),
-            )
-            for row in rows
-        )
+        return tuple(self._row_to_stored(row) for row in rows)
 
     def all(self) -> tuple[StoredToolAuthorizationEvidence, ...]:
         with self._connection() as connection:
@@ -183,19 +188,4 @@ class ToolAuthorizationEvidenceStore:
                 """
             ).fetchall()
 
-        return tuple(
-            StoredToolAuthorizationEvidence(
-                row[0],
-                ToolAuthorizationEvidence(
-                    step_id=row[1],
-                    invocation_id=row[2],
-                    tool_name=row[3],
-                    scope=row[4],
-                    capability_class=row[5],
-                    authorized=bool(row[6]),
-                    policy_id=row[7],
-                    reason=row[8],
-                ),
-            )
-            for row in rows
-        )
+        return tuple(self._row_to_stored(row) for row in rows)
