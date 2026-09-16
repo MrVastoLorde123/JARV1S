@@ -22,13 +22,9 @@ class AICodingAgentPlanner:
 
     _MAX_OUTPUT_TOKENS = 768
 
-    def __init__(
-        self,
-        ai_service: AIService,
-        *,
-        provider_name: str | None = None,
-        model: str | None = None,
-    ) -> None:
+    def __init__(self, ai_service: AIService, *, provider_name: str | None = None, model: str | None = None) -> None:
+        if not isinstance(ai_service, AIService):
+            raise TypeError("ai_service must be an AIService")
         self._ai_service = ai_service
         self._provider_name = provider_name
         self._model = model
@@ -36,7 +32,6 @@ class AICodingAgentPlanner:
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
         if not isinstance(task, CodingAgentTask):
             raise TypeError("task must be a CodingAgentTask")
-
         request = AIRequest(
             task=self._build_prompt(task),
             context=None,
@@ -47,45 +42,29 @@ class AICodingAgentPlanner:
                 "response_format": {"type": "json_object"},
                 "chat_template_kwargs": {"enable_thinking": False},
             },
-            metadata={
-                "actor": "coding_agent_planner",
-                "task_id": task.task_id,
-            },
+            metadata={"actor": "coding_agent_planner", "task_id": task.task_id},
         )
-
-        generate_for_role = getattr(self._ai_service, "generate_for_role", None)
-        if callable(generate_for_role):
-            response = generate_for_role(
-                request,
-                role=ModelRole.CODING,
-                provider_name=self._provider_name,
-                preferred_model=self._model,
-                required_capabilities=("structured_output",),
-            )
-        else:
-            response = self._ai_service.generate(
-                request,
-                provider_name=self._provider_name,
-                required_capabilities=("structured_output",),
-            )
-
-        payload = self._parse_response(response.content)
-        return self._decode_plan(payload)
+        response = self._ai_service.generate_for_role(
+            request,
+            role=ModelRole.CODING,
+            provider_name=self._provider_name,
+            preferred_model=self._model,
+            required_capabilities=("structured_output",),
+        )
+        return self._decode_plan(self._parse_response(response.content))
 
     @staticmethod
     def _build_prompt(task: CodingAgentTask) -> str:
         repository_context = task.metadata.get("repository_context")
         if not isinstance(repository_context, str):
             repository_context = "No repository context was supplied. Do not invent environment facts."
-
         return (
             "You are the planning component of a bounded coding agent inside JARVIS.\n"
             "Produce ONLY one JSON object matching this shape:\n"
             "{\n"
             "  \"rationale\": \"string\",\n"
             "  \"edits\": [\n"
-            "    {\"path\": \"relative/path\", \"content\": \"full UTF-8 file content\", "
-            "\"overwrite\": true, \"create_parents\": false}\n"
+            "    {\"path\": \"relative/path\", \"content\": \"full UTF-8 file content\", \"overwrite\": true, \"create_parents\": false}\n"
             "  ],\n"
             "  \"verification\": {\n"
             "    \"runner\": \"python_unittest\" | \"npm_build\",\n"
@@ -119,7 +98,6 @@ class AICodingAgentPlanner:
                 raise ValueError("coding planner returned invalid JSON") from exc
         else:
             raise TypeError("coding planner response must be a mapping or JSON string")
-
         if not isinstance(payload, Mapping):
             raise TypeError("coding planner response root must be an object")
         return payload
@@ -129,53 +107,34 @@ class AICodingAgentPlanner:
         raw_edits = payload.get("edits", [])
         if not isinstance(raw_edits, list):
             raise TypeError("coding planner 'edits' must be an array")
-
         edits = []
         for raw_edit in raw_edits:
             if not isinstance(raw_edit, Mapping):
                 raise TypeError("each coding planner edit must be an object")
-            edits.append(
-                CodingAgentEdit(
-                    path=raw_edit.get("path"),
-                    content=raw_edit.get("content"),
-                    overwrite=raw_edit.get("overwrite", False),
-                    create_parents=raw_edit.get("create_parents", False),
-                )
-            )
+            edits.append(CodingAgentEdit(path=raw_edit.get("path"), content=raw_edit.get("content"), overwrite=raw_edit.get("overwrite", False), create_parents=raw_edit.get("create_parents", False)))
 
         raw_verification = payload.get("verification")
         if not isinstance(raw_verification, Mapping):
             raise TypeError("coding planner 'verification' must be an object")
-
         runner = raw_verification.get("runner")
         arguments = raw_verification.get("arguments", [])
         if not isinstance(arguments, list):
             raise TypeError("coding planner verification 'arguments' must be an array")
         if any(not isinstance(item, str) for item in arguments):
             raise TypeError("coding planner verification arguments must be strings")
-
         if runner == "python_unittest":
             if not arguments:
                 arguments = ["-m", "unittest"]
             elif len(arguments) < 2 or arguments[:2] != ["-m", "unittest"]:
-                raise ValueError(
-                    "python_unittest verification arguments must begin with '-m', 'unittest'"
-                )
-        elif runner == "npm_build":
-            if arguments:
-                raise ValueError("npm_build verification does not accept arguments")
-
+                raise ValueError("python_unittest verification arguments must begin with '-m', 'unittest'")
+        elif runner == "npm_build" and arguments:
+            raise ValueError("npm_build verification does not accept arguments")
         timeout_seconds = raw_verification.get("timeout_seconds")
         if timeout_seconds is not None and not isinstance(timeout_seconds, int):
             raise TypeError("coding planner verification 'timeout_seconds' must be an integer")
-
         return CodingAgentPlan(
             edits=tuple(edits),
-            verification=CodingAgentVerification(
-                runner=runner,
-                arguments=tuple(arguments),
-                timeout_seconds=timeout_seconds,
-            ),
+            verification=CodingAgentVerification(runner=runner, arguments=tuple(arguments), timeout_seconds=timeout_seconds),
             rationale=payload.get("rationale", ""),
         )
 
