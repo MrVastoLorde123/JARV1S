@@ -13,6 +13,7 @@ permission, authorization, or verification truth.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
@@ -86,8 +87,8 @@ class ToolPlanStepHandler:
             raise ValueError("tool plan step requires a non-empty 'tool_name'")
 
         arguments = step.metadata.get("arguments", {})
-        if not isinstance(arguments, dict):
-            raise ValueError("tool plan step 'arguments' must be a dictionary")
+        if not isinstance(arguments, Mapping):
+            raise ValueError("tool plan step 'arguments' must be a mapping")
 
         invocation_id = step.metadata.get("invocation_id")
         if invocation_id is not None and not isinstance(invocation_id, str):
