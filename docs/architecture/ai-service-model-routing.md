@@ -32,6 +32,8 @@ A request may provide an explicit model preference. The router must validate tha
 
 `AIService.generate_for_role()` routes an `AIRequest` to a model role and then executes it through the selected provider. The selected model is copied into the provider-neutral request's `model` field. Existing `AIService.generate()` behavior remains available for provider-directed calls.
 
+Role-routed generation is strict: `generate_for_role()` does not fall back to provider-default generation when routing is unconfigured. A caller requesting a cognitive role must therefore encounter a routing decision before provider execution. This keeps model-role callers on one deterministic contract and prevents a silent provider-default path from bypassing role policy.
+
 This boundary intentionally does not yet:
 
 - discover live `/v1/models` state;
@@ -48,6 +50,7 @@ Those are subsequent boundaries.
 - Role routing deterministically selects an available model.
 - An explicit model preference is validated against the requested role.
 - Routed execution reaches the selected provider with the selected model id.
+- Unconfigured role-routed generation fails before provider execution rather than falling back to a provider default.
 - Routing decisions contain no authority, permission, tool, execution, or verification fields.
 - Legacy provider-directed `AIService.generate()` remains usable.
 - Routing can be tested without an actual LLM or network connection.
