@@ -63,6 +63,7 @@ class ToolPlanStepHandler:
     """
 
     ACTION = "USE_TOOL"
+    REQUEST_METADATA_KEYS = ("scope", "capability_class")
 
     def __init__(self, invoker: ToolInvoker) -> None:
         if not isinstance(invoker, ToolInvoker):
@@ -91,9 +92,16 @@ class ToolPlanStepHandler:
         if invocation_id is not None and not isinstance(invocation_id, str):
             raise ValueError("tool plan step 'invocation_id' must be a string or None")
 
+        request_metadata = {
+            key: step.metadata[key]
+            for key in ToolPlanStepHandler.REQUEST_METADATA_KEYS
+            if key in step.metadata
+        }
+
         return ToolRequest(
             tool_name=tool_name,
             arguments=dict(arguments),
+            metadata=request_metadata,
             invocation_id=invocation_id or step.step_id,
         )
 
