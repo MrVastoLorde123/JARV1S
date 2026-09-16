@@ -64,6 +64,10 @@ class ModelRolePolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "roles cannot be empty"):
             ModelRolePolicyRule("empty", frozenset())
 
+    def test_policy_rule_requires_model_role_values(self) -> None:
+        with self.assertRaisesRegex(TypeError, "roles must contain only ModelRole"):
+            ModelRolePolicyRule("bad", frozenset({"GENERAL"}))
+
 
 if __name__ == "__main__":
     unittest.main()
