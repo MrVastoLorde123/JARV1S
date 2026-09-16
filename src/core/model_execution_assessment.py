@@ -62,18 +62,11 @@ class ModelExecutionAssessmentService:
             },
             metadata={"purpose": "execution_state_reasoning"},
         )
-        generate_for_role = getattr(self.ai_service, "generate_for_role", None)
-        if callable(generate_for_role):
-            response = generate_for_role(
-                request,
-                role=ModelRole.GENERAL,
-                provider_name=self.provider_name,
-            )
-        else:
-            response = self.ai_service.generate(
-                request,
-                provider_name=self.provider_name,
-            )
+        response = self.ai_service.generate_for_role(
+            request,
+            role=ModelRole.GENERAL,
+            provider_name=self.provider_name,
+        )
 
         parsed = self._parse(response.content)
         return ExecutionAssessment(
