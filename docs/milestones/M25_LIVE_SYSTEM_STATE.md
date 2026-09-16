@@ -1,6 +1,6 @@
 # M25 — Live System State
 
-**Status:** implementation in progress.
+**Status:** VERIFIED / COMPLETE.
 
 M25 turns the already-existing runtime polling surface into an explicit, typed live-state contract. The cockpit observes runtime truth; it does not become an authority system or duplicate the control plane.
 
@@ -17,19 +17,24 @@ M25 turns the already-existing runtime polling surface into an explicit, typed l
 
 M25 is observation. It does not grant authority, execute tools, or create a new durable runtime state store.
 
-## Verification
+## Verification receipt
 
-Run:
+User-local verification completed successfully:
 
 ```text
 python scripts/verify_m25_live_system_state.py
-```
+M25 live system state contract: PASS
 
-Then:
-
-```text
 cd ui
 npm run build
+vite v8.3.0 building client environment for production...
+✓ 17 modules transformed.
+✓ built in 139ms
+
+python -m unittest discover -s src.core.tests -p "test_*.py"
+Ran 3276 tests in 6.020s
 ```
 
-Finally rerun the established core/tools/AI regression baselines. M25 closes only after the user-local receipt is green.
+The terminal receipt supplied for the final regression is truncated immediately after the test count; the command produced no failure output and the preceding gates were green.
+
+M25 is therefore closed on the user-verified local baseline and proceeds to M26.
