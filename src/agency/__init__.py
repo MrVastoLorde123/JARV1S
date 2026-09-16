@@ -40,6 +40,7 @@ from .task_orchestration import (
     choose_next_coordination,
     update_orchestration,
 )
+from .work_dispatch import DispatchRequest, DispatchResult, WorkDispatcher
 
 __all__ = [
     "AgentEntity",
@@ -87,4 +88,7 @@ __all__ = [
     "begin_task_orchestration",
     "choose_next_coordination",
     "update_orchestration",
+    "DispatchRequest",
+    "DispatchResult",
+    "WorkDispatcher",
 ]
