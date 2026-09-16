@@ -8,11 +8,11 @@ policy and execution adapters.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from src.core.tool_authorization_policy import ToolAuthorizationEvidence
 
@@ -57,9 +57,11 @@ class ToolAuthorizationEvidenceStore:
 
     @staticmethod
     def _evidence_id(evidence: ToolAuthorizationEvidence) -> str:
-        payload = json.dumps(evidence.to_record(), sort_keys=True, separators=(",", ":"))
-        import hashlib
-
+        payload = json.dumps(
+            evidence.to_record(),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def save(self, evidence: ToolAuthorizationEvidence) -> StoredToolAuthorizationEvidence:
