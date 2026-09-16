@@ -4,6 +4,7 @@ from src.ai.model_routing import (
     ModelProfile,
     ModelRole,
     ModelRouter,
+    RoutingDecision,
     RoutingRequest,
 )
 
@@ -74,6 +75,18 @@ class ModelRoutingContractTests(unittest.TestCase):
         )
         decision = router.route(RoutingRequest(ModelRole.GENERAL))
         self.assertEqual(decision.model_id, "alpha")
+
+    def test_model_profile_requires_model_role_values(self) -> None:
+        with self.assertRaisesRegex(TypeError, "roles must contain only ModelRole"):
+            ModelProfile("bad", frozenset({"GENERAL"}))
+
+    def test_routing_decision_requires_model_role_values(self) -> None:
+        with self.assertRaisesRegex(TypeError, "role must be a ModelRole"):
+            RoutingDecision("GENERAL", "granite-8b", "test", ("granite-8b",))
+
+    def test_routing_decision_requires_nonempty_candidates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "candidates_considered"):
+            RoutingDecision(ModelRole.GENERAL, "", "test", ("",))
 
 
 if __name__ == "__main__":
