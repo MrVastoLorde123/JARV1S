@@ -34,9 +34,8 @@ def _normalize_set(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:
 class ToolAuthorizationPolicyRule:
     """One immutable allow/deny policy rule.
 
-    Deny rules take precedence over allow rules. An allow list is required;
-    an empty allow list therefore denies everything unless a future policy
-    composition layer explicitly contributes another rule.
+    Deny rules take precedence over allow rules. An empty allow list means
+    that dimension is unrestricted within the matching rule.
     """
 
     policy_id: str
