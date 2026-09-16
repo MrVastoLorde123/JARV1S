@@ -20,6 +20,10 @@ class CapabilityInvocationBuilder:
     confirmation.
     """
 
+    _SUPPORTED_TYPES = frozenset(
+        {"string", "integer", "number", "boolean", "object", "array", "null"}
+    )
+
     def build(
         self,
         capability: ToolDefinition,
@@ -65,12 +69,18 @@ class CapabilityInvocationBuilder:
                 f"invalid properties declaration for '{capability.name}'"
             )
         for name, declaration in properties.items():
-            if not isinstance(name, str) or not name.strip() or not isinstance(declaration, Mapping):
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or not isinstance(declaration, Mapping)
+            ):
                 raise CapabilityInvocationError(
                     f"invalid property declaration for '{capability.name}'"
                 )
             expected = declaration.get("type")
-            if expected is not None and not isinstance(expected, str):
+            if expected is not None and (
+                not isinstance(expected, str) or expected not in self._SUPPORTED_TYPES
+            ):
                 raise CapabilityInvocationError(
                     f"invalid type declaration for argument '{name}'"
                 )
@@ -91,8 +101,10 @@ class CapabilityInvocationBuilder:
             invocation_id=invocation_id,
         )
 
-    @staticmethod
-    def _matches_type(value: Any, expected: str) -> bool:
+    @classmethod
+    def _matches_type(cls, value: Any, expected: str) -> bool:
+        if expected not in cls._SUPPORTED_TYPES:
+            return False
         if expected == "string":
             return isinstance(value, str)
         if expected == "integer":
@@ -107,4 +119,4 @@ class CapabilityInvocationBuilder:
             return isinstance(value, (list, tuple))
         if expected == "null":
             return value is None
-        return True
+        return False
