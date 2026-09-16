@@ -89,6 +89,24 @@ class WrongToolNameHandler:
         return ToolResult(success=True, tool_name="someone-else", content=None)
 
 
+class WrongInvocationIdHandler:
+    """A handler that returns a result for the wrong invocation identity."""
+
+    def __init__(self, name: str = "wrong_invocation") -> None:
+        self._definition = make_definition(name=name)
+
+    def definition(self) -> ToolDefinition:
+        return self._definition
+
+    def execute(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=self._definition.name,
+            content=None,
+            invocation_id="unexpected-invocation-id",
+        )
+
+
 class NotAHandler:
     """Deliberately missing execute() -- fails the ToolHandler protocol."""
 
