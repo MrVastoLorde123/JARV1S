@@ -156,9 +156,18 @@ class AIService:
             raise InvalidRequestError(
                 f"Provider '{provider.provider_name()}' does not expose model observation."
             )
-        model_ids = tuple(list_models())
-        self.observe_models(model_ids)
-        return model_ids
+        try:
+            observed = tuple(list_models())
+        except TypeError as exc:
+            raise InvalidRequestError(
+                f"Provider '{provider.provider_name()}' returned a non-iterable model inventory."
+            ) from exc
+        if any(not isinstance(model_id, str) or not model_id.strip() for model_id in observed):
+            raise InvalidRequestError(
+                f"Provider '{provider.provider_name()}' returned an invalid model inventory."
+            )
+        self.observe_models(observed)
+        return observed
 
     def route_model(self, role: ModelRole, preferred_model=None):
         """Select a cognitive model without granting any runtime authority."""
@@ -208,6 +217,12 @@ class AIService:
         response = provider.generate(request)
         if not isinstance(response, AIResponse):
             raise InvalidRequestError("AI provider generate() must return AIResponse.")
+        if response.provider != provider.provider_name():
+            raise InvalidRequestError(
+                f"AI provider response names '{response.provider}', expected '{provider.provider_name()}'."
+            )
+        if not isinstance(response.model, str) or not response.model.strip():
+            raise InvalidRequestError("AI provider response model cannot be empty.")
         return response
 
     def generate_for_role(
