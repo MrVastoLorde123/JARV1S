@@ -28,6 +28,7 @@ from .execution_runtime import (
 from .world_projection import WorldAgentObservation, WorldObservation, WorldObservationProjector
 from .world_runtime import AgentWorldRuntime
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
+from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 
 __all__ = [
     "AgentEntity",
@@ -61,4 +62,9 @@ __all__ = [
     "WorkState",
     "WorkStatus",
     "infer_work_role",
+    "PlanStepKind",
+    "WorkPlan",
+    "WorkPlanStep",
+    "build_work_plan",
+    "next_ready_steps",
 ]
