@@ -32,6 +32,8 @@ class CapabilityInvocationBuilder:
             raise TypeError("capability must be a ToolDefinition")
         if not isinstance(arguments, Mapping):
             raise CapabilityInvocationError("arguments must be a mapping")
+        if not all(isinstance(name, str) and name.strip() for name in arguments):
+            raise CapabilityInvocationError("argument names must be non-empty strings")
         if invocation_id is not None and not isinstance(invocation_id, str):
             raise CapabilityInvocationError("invocation_id must be a string or None")
         if metadata is not None and not isinstance(metadata, Mapping):
@@ -44,16 +46,14 @@ class CapabilityInvocationBuilder:
             )
 
         required = schema.get("required", ())
-        if not isinstance(required, (list, tuple)):
+        if not isinstance(required, (list, tuple)) or not all(
+            isinstance(name, str) and name.strip() for name in required
+        ):
             raise CapabilityInvocationError(
                 f"invalid required declaration for '{capability.name}'"
             )
 
-        missing = [
-            name
-            for name in required
-            if isinstance(name, str) and name not in arguments
-        ]
+        missing = [name for name in required if name not in arguments]
         if missing:
             raise CapabilityInvocationError(
                 f"missing required argument(s): {', '.join(missing)}"
@@ -64,11 +64,21 @@ class CapabilityInvocationBuilder:
             raise CapabilityInvocationError(
                 f"invalid properties declaration for '{capability.name}'"
             )
+        for name, declaration in properties.items():
+            if not isinstance(name, str) or not name.strip() or not isinstance(declaration, Mapping):
+                raise CapabilityInvocationError(
+                    f"invalid property declaration for '{capability.name}'"
+                )
+            expected = declaration.get("type")
+            if expected is not None and not isinstance(expected, str):
+                raise CapabilityInvocationError(
+                    f"invalid type declaration for argument '{name}'"
+                )
 
         for name, value in arguments.items():
             if name not in properties:
                 continue
-            expected = properties[name].get("type") if isinstance(properties[name], Mapping) else None
+            expected = properties[name].get("type")
             if expected is not None and not self._matches_type(value, expected):
                 raise CapabilityInvocationError(
                     f"argument '{name}' must be of type {expected}"
