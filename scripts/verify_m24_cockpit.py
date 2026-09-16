@@ -4,12 +4,14 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "ui" / "src" / "App.tsx"
 MODEL = ROOT / "ui" / "src" / "cockpit" / "m24.ts"
 ENTRY = ROOT / "ui" / "index.html"
+CSS = ROOT / "ui" / "src" / "functional.css"
 
 
 def main() -> None:
     app = APP.read_text(encoding="utf-8")
     model = MODEL.read_text(encoding="utf-8")
     entry = ENTRY.read_text(encoding="utf-8")
+    css = CSS.read_text(encoding="utf-8")
 
     required_app_markers = (
         "CONTROL",
@@ -18,6 +20,8 @@ def main() -> None:
         "AUTHORITY",
         "VERIFICATION",
         "ACTIVITY",
+        "activeSpace",
+        "ControlSpace",
     )
     for marker in required_app_markers:
         assert marker in app, f"missing cockpit marker: {marker}"
@@ -30,11 +34,22 @@ def main() -> None:
         "CockpitSnapshot",
         "normalizeProgress",
         "createEmptyCockpitSnapshot",
+        "WAITING_FOR_AUTHORIZATION",
     ):
         assert marker in model, f"missing M24 contract marker: {marker}"
 
     assert '<div id="root"></div>' in entry
     assert '/src/main.tsx' in entry
+
+    for marker in (
+        "@media (max-width: 1000px)",
+        "@media (max-width: 700px)",
+        ".space-panel",
+        ".pipeline-grid",
+        ".authority-note",
+    ):
+        assert marker in css, f"missing responsive/operational style marker: {marker}"
+
     print("M24 cockpit contract: PASS")
 
 
