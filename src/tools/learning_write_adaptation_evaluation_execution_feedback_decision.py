@@ -12,12 +12,13 @@ from enum import Enum
 import hashlib
 import json
 from types import MappingProxyType
-from typing import Any, Mapping, Protocol
+from typing import Any, Mapping, Protocol, TYPE_CHECKING
 
-from .learning_write_adaptation_evaluation_execution_feedback_evaluation import (
-    LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation,
-    LearningWriteAdaptationEvaluationExecutionFeedbackSignalKind,
-)
+if TYPE_CHECKING:
+    from .learning_write_adaptation_evaluation_execution_feedback_evaluation import (
+        LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation,
+        LearningWriteAdaptationEvaluationExecutionFeedbackSignalKind,
+    )
 
 
 class LearningWriteAdaptationEvaluationExecutionFeedbackDecisionError(ValueError):
@@ -48,10 +49,13 @@ def _freeze(value: Any) -> Any:
 class LearningWriteAdaptationEvaluationExecutionFeedbackDecisionContext:
     """Immutable context supplied to a M22.38 decision provider."""
 
-    evaluation: LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation
+    evaluation: "LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation"
     related_context: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        from .learning_write_adaptation_evaluation_execution_feedback_evaluation import (
+            LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation,
+        )
         if not isinstance(
             self.evaluation,
             LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation,
@@ -192,7 +196,7 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackDecisionPro
         context: LearningWriteAdaptationEvaluationExecutionFeedbackDecisionContext,
     ) -> LearningWriteAdaptationEvaluationExecutionFeedbackDecision:
         evaluation = context.evaluation
-        if evaluation.signal is LearningWriteAdaptationEvaluationExecutionFeedbackSignalKind.EXECUTION_FAILURE_SIGNAL:
+        if evaluation.signal.value == "execution_failure_signal":
             action = LearningWriteAdaptationEvaluationExecutionFeedbackAction.DEFER
             reason = "failed future adaptation execution feedback requires further evidence before a downstream decision"
         elif evaluation.confidence < 0.5:
@@ -226,7 +230,7 @@ class DeterministicLearningWriteAdaptationEvaluationExecutionFeedbackDecisionPro
 
     @staticmethod
     def _decision_id(
-        evaluation: LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation,
+        evaluation: "LearningWriteAdaptationEvaluationExecutionFeedbackEvaluation",
         action: LearningWriteAdaptationEvaluationExecutionFeedbackAction,
     ) -> str:
         payload = json.dumps(
