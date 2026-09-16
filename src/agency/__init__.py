@@ -42,6 +42,7 @@ from .task_orchestration import (
 )
 from .work_dispatch import DispatchRequest, DispatchResult, WorkDispatcher
 from .execution_handoff import ExecutionHandoff, create_execution_handoff
+from .execution_bridge import AgencyExecutionBridgeResult, run_execution_handoff
 
 __all__ = [
     "AgentEntity",
@@ -94,4 +95,6 @@ __all__ = [
     "WorkDispatcher",
     "ExecutionHandoff",
     "create_execution_handoff",
+    "AgencyExecutionBridgeResult",
+    "run_execution_handoff",
 ]
