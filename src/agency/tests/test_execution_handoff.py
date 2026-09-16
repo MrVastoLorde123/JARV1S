@@ -5,7 +5,11 @@ from src.agency.work_dispatch import DispatchRequest, WorkDispatcher
 from src.agency.work_planning import PlanStepKind, WorkPlanStep, build_work_plan
 from src.agency.work_state import WorkRole, WorkStage, WorkState, WorkStatus
 from src.agency.workforce import WorkerAssignment, WorkerDefinition, WorkerRegistry
-from src.context.authorization_integrity_semantics import AuthorizationIntegrity, AuthorizationIntegrityStatus
+from src.context.authorization_integrity_semantics import (
+    AuthorizationIntegrity,
+    AuthorizationIntegrityStatus,
+    AuthorizationIntegrityViolation,
+)
 from src.context.authorization_semantics import AuthorizationDecision, AuthorizationStatus
 from src.context.execution_semantics import ExecutionGate, ExecutionPreparationStatus
 
@@ -38,7 +42,7 @@ class M35ExecutionHandoffTests(TestCase):
             policy_decision_id="policy-1",
             confirmation_id=None,
             status=AuthorizationStatus.AUTHORIZED,
-            rationale="test authorization is already established",
+            rationale="policy allows the consequence without a confirmation requirement.",
         )
         integrity = AuthorizationIntegrity(
             request="deploy change",
@@ -71,7 +75,7 @@ class M35ExecutionHandoffTests(TestCase):
                 policy_decision_id="policy-2",
                 confirmation_id=None,
                 status=AuthorizationStatus.DENIED,
-                rationale="test authorization is denied",
+                rationale="policy denied the consequence.",
             ),
             AuthorizationIntegrity(
                 request="deploy change",
@@ -81,6 +85,12 @@ class M35ExecutionHandoffTests(TestCase):
                 policy_decision_id="policy-2",
                 confirmation_id=None,
                 status=AuthorizationIntegrityStatus.INVALID,
+                violations=(
+                    AuthorizationIntegrityViolation(
+                        "test_invalid_integrity",
+                        "synthetic invalid integrity for the blocked-preparation test.",
+                    ),
+                ),
             ),
             "exec-2",
             "deploy",
