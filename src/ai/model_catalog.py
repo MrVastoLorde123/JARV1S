@@ -57,6 +57,8 @@ class ModelCatalog:
 
     def observe_openai_models(self, payload: Mapping[str, Any]) -> tuple[str, ...]:
         """Observe IDs from an OpenAI-compatible /v1/models response."""
+        if not isinstance(payload, Mapping):
+            raise TypeError("/v1/models payload must be a mapping")
         raw_models = payload.get("data", ())
         if not isinstance(raw_models, (list, tuple)):
             raise ValueError("/v1/models payload field 'data' must be a sequence")
