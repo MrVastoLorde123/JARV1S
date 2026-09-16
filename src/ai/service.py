@@ -48,9 +48,13 @@ class AIService:
 
     def register_provider(self, provider: AIProvider):
         """Register an AI provider under its normalized provider name."""
+        if not isinstance(provider, AIProvider):
+            raise TypeError("provider must be an AIProvider")
         name = provider.provider_name()
-        if not name:
+        if not isinstance(name, str) or not name.strip():
             raise InvalidRequestError("Provider name cannot be empty.")
+        if name in self._providers and self._providers[name] is not provider:
+            raise InvalidRequestError(f"Provider '{name}' is already registered.")
         self._providers[name] = provider
 
     def set_default_provider(self, provider_name):
@@ -166,15 +170,22 @@ class AIService:
 
     def get_capabilities(self, provider_name=None) -> AICapabilities:
         provider = self.get_provider(provider_name)
-        return provider.capabilities()
+        capabilities = provider.capabilities()
+        if not isinstance(capabilities, AICapabilities):
+            raise InvalidRequestError("Provider capabilities() must return AICapabilities.")
+        return capabilities
 
     def _check_capabilities(self, provider, required_capabilities):
         """Verify that a provider supports required request capabilities."""
         if not required_capabilities:
             return
-        capabilities = provider.capabilities()
+        capabilities = self.get_capabilities(provider.provider_name())
         for capability in required_capabilities:
+            if not isinstance(capability, str) or not capability.strip():
+                raise InvalidRequestError("required_capabilities must contain non-empty strings.")
             supported = getattr(capabilities, capability, False)
+            if not isinstance(supported, bool):
+                raise InvalidRequestError(f"Unknown provider capability '{capability}'.")
             if not supported:
                 raise CapabilityError(
                     f"Provider '{provider.provider_name()}' "
@@ -190,11 +201,14 @@ class AIService:
         """Execute an AI request through the selected provider."""
         if not isinstance(request, AIRequest):
             raise InvalidRequestError("generate() requires an AIRequest.")
-        if not request.task.strip():
+        if not isinstance(request.task, str) or not request.task.strip():
             raise InvalidRequestError("AIRequest task cannot be empty.")
         provider = self.get_provider(provider_name)
         self._check_capabilities(provider, required_capabilities)
-        return provider.generate(request)
+        response = provider.generate(request)
+        if not isinstance(response, AIResponse):
+            raise InvalidRequestError("AI provider generate() must return AIResponse.")
+        return response
 
     def generate_for_role(
         self,
