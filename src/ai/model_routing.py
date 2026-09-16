@@ -42,6 +42,10 @@ class RoutingRequest:
     preferred_model: str | None = None
     require_available: bool = True
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.role, ModelRole):
+            raise TypeError("role must be a ModelRole")
+
 
 @dataclass(frozen=True)
 class RoutingDecision:

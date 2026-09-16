@@ -26,6 +26,10 @@ class ModelRoutingContractTests(unittest.TestCase):
         self.assertEqual(decision.reason, "highest-priority available model for role")
         self.assertEqual(decision.candidates_considered, ("qwen3-14b",))
 
+    def test_routing_request_requires_a_model_role(self) -> None:
+        with self.assertRaisesRegex(TypeError, "role must be a ModelRole"):
+            RoutingRequest("GENERAL")
+
     def test_unavailable_higher_priority_model_does_not_win(self) -> None:
         decision = self.router.route(RoutingRequest(ModelRole.DIAGNOSTIC, require_available=True))
         self.assertEqual(decision.model_id, "qwen3-14b")
