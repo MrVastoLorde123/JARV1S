@@ -14,6 +14,19 @@ from src.core.capability_selection import CapabilityCandidate
 from src.tools.models import ToolRequest
 
 
+def _json_compatible(value: Any) -> Any:
+    """Convert immutable contract snapshots into JSON-native values."""
+    if isinstance(value, Mapping):
+        return {key: _json_compatible(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_json_compatible(item) for item in value]
+    if isinstance(value, list):
+        return [_json_compatible(item) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return [_json_compatible(item) for item in value]
+    return value
+
+
 @runtime_checkable
 class CapabilityArgumentPlanner(Protocol):
     """Propose a structured argument mapping without executing a tool."""
@@ -83,7 +96,7 @@ class AIRequestArgumentPlanner:
 
     @staticmethod
     def _prompt(intent: str, definition) -> str:
-        schema = json.dumps(definition.input_schema, sort_keys=True)
+        schema = json.dumps(_json_compatible(definition.input_schema), sort_keys=True)
         return (
             "Return ONLY a JSON object of arguments for the selected capability. "
             "Do not include markdown, explanation, or the tool name. "
