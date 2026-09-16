@@ -68,6 +68,10 @@ class ModelRolePolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "roles must contain only ModelRole"):
             ModelRolePolicyRule("bad", frozenset({"GENERAL"}))
 
+    def test_policy_rule_requires_immutable_role_set(self) -> None:
+        with self.assertRaisesRegex(TypeError, "roles must be a frozenset"):
+            ModelRolePolicyRule("bad", {ModelRole.GENERAL})
+
 
 if __name__ == "__main__":
     unittest.main()
