@@ -3,10 +3,10 @@ import unittest
 from pathlib import Path
 
 from src import database
+from src.ai.model_routing import ModelRole
 from src.core.jarvis import JARVIS
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.conversation_store import ConversationStore
-from src.core.models import JARVISResponse
 from src.database_bootstrap import bootstrap_database
 
 
@@ -21,10 +21,13 @@ class FakeAIResponse:
 class FakeAIService:
     def __init__(self):
         self.requests = []
+        self.role_calls = []
 
-    def generate(self, request, provider_name=None):
-        del provider_name
+    def generate_for_role(self, request, *, role, provider_name=None):
         self.requests.append(request)
+        self.role_calls.append((request, role, provider_name))
+        if role != ModelRole.GENERAL:
+            raise AssertionError(f"continuity conversation expected GENERAL role, got {role!r}")
         state_items = [
             item["content"]
             for item in request.context["context"]["items"]
