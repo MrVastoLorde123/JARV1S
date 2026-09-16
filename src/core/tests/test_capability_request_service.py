@@ -92,6 +92,24 @@ class CapabilityRequestProposalTests(unittest.TestCase):
         self.assertEqual(result.request.arguments, {"path": "README.md"})
         self.assertEqual(result.request.invocation_id, "inv-1")
 
+    def test_proposal_arguments_are_immutable(self):
+        result = self.service.propose(snapshot())
+
+        with self.assertRaises(TypeError):
+            result.arguments["path"] = "other.txt"  # type: ignore[index]
+        self.assertEqual(result.arguments["path"], "README.md")
+        self.assertEqual(result.request.arguments["path"], "README.md")
+
+    def test_proposal_nested_arguments_are_immutable(self):
+        original = self._ai(json.dumps({"options": {"recursive": True, "paths": ["README.md"]}}))
+        service = CapabilityRequestProposalService(AIRequestArgumentPlanner(original))
+        result = service.propose(snapshot())
+
+        with self.assertRaises(TypeError):
+            result.arguments["options"]["recursive"] = False  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            result.arguments["options"]["paths"].append("other.txt")  # type: ignore[union-attr]
+
     def test_proposal_is_bound_to_discovery_snapshot(self):
         result = self.service.propose(snapshot())
         self.assertIs(
