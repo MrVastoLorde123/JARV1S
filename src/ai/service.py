@@ -169,6 +169,8 @@ class AIService:
 
     def route_model(self, role: ModelRole, preferred_model=None):
         """Select a cognitive model without granting any runtime authority."""
+        if not self._model_routing_configured:
+            raise LookupError("model routing must be configured before role routing")
         if self._model_routing_runtime is not None:
             return self._model_routing_runtime.route(role, preferred_model=preferred_model)
         return self._model_router.route(
