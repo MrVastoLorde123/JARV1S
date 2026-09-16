@@ -1,6 +1,6 @@
 # M27 — Interaction
 
-**Status:** implementation in progress.
+**Status:** VERIFIED / COMPLETE.
 
 M27 turns the existing explicit chat/command surface into a durable typed interaction contract. The user remains the source of intent; the interface submits exactly what the user explicitly sends and reports the transport outcome without collapsing observation into authority.
 
@@ -19,17 +19,12 @@ M27 is interaction and transport presentation. It introduces no new authority, n
 
 ## Verification
 
-Run:
+Verified from the user-local receipt on the `feature/m27-interaction` head:
 
 ```text
-python scripts/verify_m27_interaction.py
+M27 interaction contract: PASS
+UI production build: PASS
+Core regression: 3276/3276 OK
 ```
 
-Then:
-
-```text
-cd ui
-npm run build
-```
-
-Finally rerun the established core/tools/AI regression baselines. M27 closes only after the user-local receipt is green.
+M27 is closed. The verified head becomes the baseline for M28.
