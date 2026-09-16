@@ -25,6 +25,36 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
     def _is_ai_service_receiver(node):
         return isinstance(node, ast.Attribute) and node.attr in {"ai_service", "_ai_service"}
 
+    @classmethod
+    def _ai_service_aliases(cls, tree):
+        """Return aliases created directly or transitively from an AIService receiver."""
+        aliases = set()
+        changed = True
+        while changed:
+            changed = False
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Assign):
+                    continue
+                if len(node.targets) != 1:
+                    continue
+                target = node.targets[0]
+                if not isinstance(target, ast.Name):
+                    continue
+                value = node.value
+                is_alias = cls._is_ai_service_receiver(value)
+                if isinstance(value, ast.Name) and value.id in aliases:
+                    is_alias = True
+                if is_alias and target.id not in aliases:
+                    aliases.add(target.id)
+                    changed = True
+        return aliases
+
+    @classmethod
+    def _is_ai_service_source(cls, node, aliases):
+        return cls._is_ai_service_receiver(node) or (
+            isinstance(node, ast.Name) and node.id in aliases
+        )
+
     def test_production_callers_do_not_directly_generate_from_ai_service(self):
         violations = []
         for path in sorted(self._SOURCE_ROOT.rglob("*.py")):
@@ -35,13 +65,14 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
                 continue
 
             tree = self._parse_tree(path)
+            aliases = self._ai_service_aliases(tree)
 
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
                     continue
                 if node.func.attr != "generate":
                     continue
-                if self._is_ai_service_receiver(node.func.value):
+                if self._is_ai_service_source(node.func.value, aliases):
                     violations.append(f"{path}:{node.lineno} calls {ast.unparse(node.func)}()")
 
         self.assertEqual(
@@ -85,6 +116,7 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
                 continue
 
             tree = self._parse_tree(path)
+            aliases = self._ai_service_aliases(tree)
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
                     continue
@@ -92,7 +124,7 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
                     continue
                 receiver = node.args[0]
                 attribute = node.args[1]
-                if not self._is_ai_service_receiver(receiver):
+                if not self._is_ai_service_source(receiver, aliases):
                     continue
                 if isinstance(attribute, ast.Constant) and attribute.value == "generate":
                     violations.append(f"{path}:{node.lineno} dynamically probes for generate with getattr()")
@@ -103,6 +135,22 @@ class RoleCallerGenerationSurfaceAuditTests(unittest.TestCase):
             "Production callers must not bypass role routing by dynamically resolving AIService.generate().\n"
             + "\n".join(violations),
         )
+
+    def test_production_alias_audit_detects_transitive_ai_service_aliases(self):
+        source = ast.parse(
+            """
+service = self.ai_service
+provider = service
+provider.generate(request)
+"""
+        )
+        aliases = self._ai_service_aliases(source)
+        self.assertEqual(aliases, {"service", "provider"})
+        call = next(
+            node for node in ast.walk(source)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        )
+        self.assertTrue(self._is_ai_service_source(call.func.value, aliases))
 
 
 if __name__ == "__main__":
