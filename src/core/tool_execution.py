@@ -1,33 +1,62 @@
-"""Bridge explicit tool plans to the tool-layer capability boundary."""
+"""Orchestrate tool invocation behind explicit plan-step boundaries.
+
+``ToolService`` remains the low-level tool boundary: it validates a
+``ToolRequest``, resolves a registered tool, invokes it, and validates the
+result. This module adds the plan-step adapter above that boundary.
+
+The plan-step adapter deliberately does not own policy or authority. A step
+that declares ``requires_confirmation=True`` must carry a separate,
+request-bound ``ToolExecutionConfirmation`` artifact before this adapter will
+invoke the tool. Confirmation is an execution precondition only; it is not
+permission, authorization, or verification truth.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import Protocol, runtime_checkable
+from dataclasses import dataclass
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
 
 
-@runtime_checkable
-class ToolInvoker(Protocol):
+@dataclass(frozen=True)
+class ToolExecutionConfirmation:
+    """Explicit confirmation bound to one immutable plan/request identity."""
+
+    step_id: str
+    request: ToolRequest
+    confirmed: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.step_id, str) or not self.step_id.strip():
+            raise ValueError("step_id must be a non-empty string")
+        if not isinstance(self.request, ToolRequest):
+            raise TypeError("request must be a ToolRequest")
+        if not isinstance(self.confirmed, bool):
+            raise TypeError("confirmed must be a bool")
+
+
+class ToolInvoker:
     """Minimal contract required to invoke a tool safely."""
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        ...
+        raise NotImplementedError
 
 
-@runtime_checkable
-class ToolCapabilityGateway(ToolInvoker, Protocol):
+class ToolCapabilityGateway(ToolInvoker):
     """Capability boundary used by JARVIS to discover and invoke tools."""
 
-    def list_definitions(self) -> Sequence[ToolDefinition]:
-        """Return the currently available tool capability definitions."""
-        ...
+    def list_definitions(self) -> tuple[ToolDefinition, ...]:
+        raise NotImplementedError
 
 
 class ToolPlanStepHandler:
-    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker."""
+    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker.
+
+    This adapter performs structural request validation and enforces the
+    plan's explicit confirmation requirement. It never decides policy and
+    never turns confirmation into authority.
+    """
 
     ACTION = "USE_TOOL"
 
@@ -36,7 +65,11 @@ class ToolPlanStepHandler:
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
 
-    def __call__(self, step: PlanStep) -> object:
+    def __call__(
+        self,
+        step: PlanStep,
+        confirmation: ToolExecutionConfirmation | None = None,
+    ) -> object:
         if not isinstance(step, PlanStep):
             raise TypeError("step must be a PlanStep")
 
@@ -50,20 +83,23 @@ class ToolPlanStepHandler:
             raise ValueError("tool plan step requires a non-empty 'tool_name'")
 
         arguments = step.metadata.get("arguments", {})
-        if not isinstance(arguments, Mapping):
-            raise ValueError("tool plan step 'arguments' must be a mapping")
+        if not isinstance(arguments, dict):
+            raise ValueError("tool plan step 'arguments' must be a dictionary")
 
         invocation_id = step.metadata.get("invocation_id")
         if invocation_id is not None and not isinstance(invocation_id, str):
             raise ValueError("tool plan step 'invocation_id' must be a string or None")
 
-        result = self._invoker.invoke(
-            ToolRequest(
-                tool_name=tool_name,
-                arguments=dict(arguments),
-                invocation_id=invocation_id or step.step_id,
-            )
+        request = ToolRequest(
+            tool_name=tool_name,
+            arguments=dict(arguments),
+            invocation_id=invocation_id or step.step_id,
         )
+
+        if step.requires_confirmation:
+            self._require_confirmation(step, request, confirmation)
+
+        result = self._invoker.invoke(request)
 
         if not isinstance(result, ToolResult):
             raise TypeError(
@@ -78,3 +114,26 @@ class ToolPlanStepHandler:
             )
 
         return result.content
+
+    @staticmethod
+    def _require_confirmation(
+        step: PlanStep,
+        request: ToolRequest,
+        confirmation: ToolExecutionConfirmation | None,
+    ) -> None:
+        if confirmation is None:
+            raise PermissionError(
+                f"tool plan step '{step.step_id}' requires explicit confirmation"
+            )
+        if not isinstance(confirmation, ToolExecutionConfirmation):
+            raise TypeError(
+                "confirmation must be a ToolExecutionConfirmation or None"
+            )
+        if not confirmation.confirmed:
+            raise PermissionError(
+                f"tool plan step '{step.step_id}' was not confirmed"
+            )
+        if confirmation.step_id != step.step_id or confirmation.request != request:
+            raise PermissionError(
+                "confirmation does not match the requested plan step execution"
+            )
