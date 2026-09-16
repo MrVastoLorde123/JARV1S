@@ -13,8 +13,6 @@ from src.ai.service import AIService
 
 
 class IntentKind(str, Enum):
-    """High-level intent categories produced by the interpretation layer."""
-
     CONVERSATION = "conversation"
     QUESTION = "question"
     TASK = "task"
@@ -23,8 +21,6 @@ class IntentKind(str, Enum):
 
 @dataclass(frozen=True)
 class RequestIntent:
-    """Untrusted but structurally validated interpretation of user input."""
-
     kind: IntentKind
     content: str
     reasoning: str = ""
@@ -34,18 +30,12 @@ class RequestIntent:
 
 @runtime_checkable
 class RequestIntentClassifier(Protocol):
-    """Classify ordinary natural language without executing anything."""
-
     def classify(self, text: str) -> RequestIntent:
         ...
 
 
 class AIRequestIntentClassifier:
-    """Use an AI provider to classify natural language into a small intent vocabulary.
-
-    The model returns data only. No routing side effect or tool execution is
-    performed by this class.
-    """
+    """Use an AI provider to classify natural language into a small intent vocabulary."""
 
     _KINDS = {kind.value: kind for kind in IntentKind}
 
@@ -76,25 +66,16 @@ class AIRequestIntentClassifier:
             generation_options={"temperature": 0},
             metadata={"purpose": "request_intent_classification"},
         )
-
-        generate_for_role = getattr(self._ai_service, "generate_for_role", None)
-        if callable(generate_for_role):
-            response = generate_for_role(
-                request,
-                role=ModelRole.GENERAL,
-                provider_name=self._provider_name,
-            )
-        else:
-            response = self._ai_service.generate(
-                request,
-                provider_name=self._provider_name,
-            )
+        response = self._ai_service.generate_for_role(
+            request,
+            role=ModelRole.GENERAL,
+            provider_name=self._provider_name,
+        )
 
         try:
             parsed = json.loads(str(response.content))
         except (TypeError, json.JSONDecodeError) as exc:
             raise ValueError("AI returned invalid JSON intent classification") from exc
-
         if not isinstance(parsed, dict):
             raise ValueError("AI intent classification must be a JSON object")
 
