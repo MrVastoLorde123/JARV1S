@@ -114,9 +114,10 @@ export function normalizeEvidenceReference(value: unknown): CockpitEvidenceRefer
   const summary = nonEmptyString(raw.summary);
   if (!evidenceId || !kind || !summary) return null;
   const statusCandidate = nonEmptyString(raw.status)?.toUpperCase();
-  const status = statusCandidate === "VERIFIED" || statusCandidate === "FAILED" || statusCandidate === "UNVERIFIED" || statusCandidate === "UNKNOWN"
-    ? statusCandidate
-    : "UNKNOWN";
+  const status: CockpitEvidenceReference["status"] =
+    statusCandidate === "VERIFIED" || statusCandidate === "FAILED" || statusCandidate === "UNVERIFIED" || statusCandidate === "UNKNOWN"
+      ? (statusCandidate as CockpitEvidenceReference["status"])
+      : "UNKNOWN";
   const source = raw.source_event_sequence ?? raw.sourceEventSequence;
   return Object.freeze({
     evidenceId,
