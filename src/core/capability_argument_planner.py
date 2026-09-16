@@ -64,18 +64,11 @@ class AIRequestArgumentPlanner:
             generation_options={"temperature": 0},
             metadata={"purpose": "capability_argument_proposal"},
         )
-        generate_for_role = getattr(self._ai_service, "generate_for_role", None)
-        if callable(generate_for_role):
-            response = generate_for_role(
-                request,
-                role=ModelRole.GENERAL,
-                provider_name=self._provider_name,
-            )
-        else:
-            response = self._ai_service.generate(
-                request,
-                provider_name=self._provider_name,
-            )
+        response = self._ai_service.generate_for_role(
+            request,
+            role=ModelRole.GENERAL,
+            provider_name=self._provider_name,
+        )
 
         try:
             parsed = json.loads(str(response.content))
