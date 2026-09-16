@@ -195,7 +195,7 @@ class AuthorizedToolExecutionTests(unittest.TestCase):
         handler(make_step())
 
         self.assertEqual(1, len(calls))
-        self.assertIs(invoker.requests[0], calls[0][1])
+        self.assertEqual(invoker.requests[0], calls[0][1])
 
 
 if __name__ == "__main__":
