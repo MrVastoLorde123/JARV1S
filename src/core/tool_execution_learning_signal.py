@@ -15,6 +15,18 @@ from src.core.tool_execution_chain import ToolExecutionChainTrace
 from src.core.tool_execution_verification import ToolVerificationStatus
 
 
+def _freeze(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType({str(key): _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(item) for item in value)
+    return value
+
+
 @dataclass(frozen=True)
 class ToolExecutionLearningSignal:
     """Immutable, provider-neutral learning evidence for one execution chain."""
@@ -48,8 +60,9 @@ class ToolExecutionLearningSignal:
             raise ValueError("verified must match verification_status")
         if not isinstance(self.reasons, Mapping) or not isinstance(self.lineage, Mapping):
             raise TypeError("reasons and lineage must be mappings")
-        object.__setattr__(self, "reasons", MappingProxyType(dict(self.reasons)))
-        object.__setattr__(self, "lineage", MappingProxyType(dict(self.lineage)))
+        object.__setattr__(self, "observation", _freeze(self.observation))
+        object.__setattr__(self, "reasons", _freeze(self.reasons))
+        object.__setattr__(self, "lineage", _freeze(self.lineage))
 
     @property
     def establishes_truth(self) -> bool:
