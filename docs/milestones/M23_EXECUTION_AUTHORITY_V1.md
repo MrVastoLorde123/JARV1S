@@ -1,5 +1,9 @@
 # M23 — Execution Authority V1 Closure
 
+**Status: VERIFIED / COMPLETE**
+
+**Verification baseline:** commit `182bd31` on `feature/m23.377-379-routing-contract-bulk-hardening`.
+
 ## V1 acceptance contract
 
 The execution path is considered implemented when the repository can represent and compose these boundaries without collapsing them:
@@ -102,6 +106,19 @@ Recovery Recommendation
 
 The learning and recovery stages consume evidence; they do not gain execution authority from it.
 
-## Final V1 verification requirement
+## Final V1 verification receipt
 
-Implementation completion is distinct from local verification. The repository must pass the final focused and regression suites before this document is treated as `VERIFIED / COMPLETE`.
+Local verification was completed after M23.468:
+
+- Focused verification-evidence store: **10/10 OK**
+- Core regression: **3276/3276 OK**
+- Tools regression: **892/892 OK**
+- AI regression: **111/111 OK**
+- Execution chain: **5/5 OK**
+- Chain adapter: **4/4 OK**
+- Learning signal: **3/3 OK**
+- Recovery boundary: **4/4 OK**
+
+The previous Windows SQLite cleanup failure was corrected in M23.468 by making test-side SQLite connections follow an explicit commit/rollback/close lifecycle. The production verification evidence store already uses deterministic connection closure.
+
+Implementation completion is distinct from local verification; with the receipts above, this document is now treated as **VERIFIED / COMPLETE**.
