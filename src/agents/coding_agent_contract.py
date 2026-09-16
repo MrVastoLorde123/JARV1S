@@ -7,7 +7,7 @@ confirmation, tool-authorization, worker, and verification boundaries.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Mapping
 
@@ -37,7 +37,7 @@ class CodingAgentState:
     edits_applied: int = 0
     verification_runner: str | None = None
     message: str = ""
-    metadata: Mapping[str, object] = ()
+    metadata: Mapping[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.task_id, str) or not self.task_id.strip():
