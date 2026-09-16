@@ -23,8 +23,6 @@ class AICodingAgentPlanner:
     _MAX_OUTPUT_TOKENS = 768
 
     def __init__(self, ai_service: AIService, *, provider_name: str | None = None, model: str | None = None) -> None:
-        if not isinstance(ai_service, AIService):
-            raise TypeError("ai_service must be an AIService")
         self._ai_service = ai_service
         self._provider_name = provider_name
         self._model = model
@@ -137,6 +135,3 @@ class AICodingAgentPlanner:
             verification=CodingAgentVerification(runner=runner, arguments=tuple(arguments), timeout_seconds=timeout_seconds),
             rationale=payload.get("rationale", ""),
         )
-
-
-__all__ = ["AICodingAgentPlanner"]
