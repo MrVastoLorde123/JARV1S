@@ -13,6 +13,10 @@ class ModelObservation:
     observed: bool = True
     metadata: Mapping[str, Any] | None = None
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.model_id, str) or not self.model_id.strip():
+            raise ValueError("model_id cannot be empty")
+
 
 class ModelCatalog:
     """Maintain observed model availability without granting model authority."""
@@ -99,4 +103,6 @@ class ModelCatalog:
 
     @staticmethod
     def roles_for(*roles: ModelRole) -> frozenset[ModelRole]:
+        if not all(isinstance(role, ModelRole) for role in roles):
+            raise TypeError("roles must contain only ModelRole values")
         return frozenset(roles)
