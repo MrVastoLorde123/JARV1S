@@ -38,6 +38,7 @@ class M35ExecutionHandoffTests(TestCase):
             policy_decision_id="policy-1",
             confirmation_id=None,
             status=AuthorizationStatus.AUTHORIZED,
+            rationale="test authorization is already established",
         )
         integrity = AuthorizationIntegrity(
             request="deploy change",
@@ -70,6 +71,7 @@ class M35ExecutionHandoffTests(TestCase):
                 policy_decision_id="policy-2",
                 confirmation_id=None,
                 status=AuthorizationStatus.DENIED,
+                rationale="test authorization is denied",
             ),
             AuthorizationIntegrity(
                 request="deploy change",
