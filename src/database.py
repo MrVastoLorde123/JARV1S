@@ -8,8 +8,13 @@ DATABASE_PATH = Path("data/processed/jarvis.db")
 def get_connection():
     """
     Create and configure a JARVIS database connection.
+
+    The configured database path may live below a directory that does not yet
+    exist in a fresh checkout or isolated test environment. Directory setup is
+    part of the connection contract, not a caller responsibility.
     """
 
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(DATABASE_PATH)
 
     connection.execute("PRAGMA foreign_keys = ON")
