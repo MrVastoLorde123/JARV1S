@@ -156,8 +156,13 @@ def choose_next_coordination(orchestration: TaskOrchestration) -> CoordinationDe
     if active is not None:
         return CoordinationDecision(action=CoordinationAction.WAIT, reason=f"step {active.step_id} is active")
 
-    ready = next_ready_steps(orchestration.plan, orchestration.completed_step_ids)
-    ready = tuple(step for step in ready if orchestration.steps[orchestration.plan.steps.index(step)].state is StepExecutionState.PENDING)
+    completed = orchestration.completed_step_ids
+    state_by_id = {item.step_id: item for item in orchestration.steps}
+    ready = tuple(
+        step
+        for step in next_ready_steps(orchestration.plan, completed)
+        if state_by_id[step.step_id].state is StepExecutionState.PENDING
+    )
     if ready:
         return CoordinationDecision(
             action=CoordinationAction.START_STEP,
@@ -188,6 +193,18 @@ def update_orchestration(
         raise TypeError("state must be a StepExecutionState")
     if step_id not in {step.step_id for step in orchestration.plan.steps}:
         raise ValueError("step_id is not present in the plan")
+    if metadata is not None and not isinstance(metadata, Mapping):
+        raise TypeError("metadata must be a mapping or None")
+
+    step = next(item for item in orchestration.plan.steps if item.step_id == step_id)
+    completed = set(orchestration.completed_step_ids)
+    if state in {StepExecutionState.ACTIVE, StepExecutionState.COMPLETE}:
+        missing_dependencies = set(step.depends_on) - completed
+        if missing_dependencies:
+            raise ValueError(
+                f"step {step_id} cannot enter {state.value} before dependencies complete: "
+                f"{sorted(missing_dependencies)}"
+            )
 
     updated = []
     for item in orchestration.steps:
