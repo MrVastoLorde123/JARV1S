@@ -45,6 +45,7 @@ class ModelExecutionPlannerTests(unittest.TestCase):
             ModelProfile(
                 model_id="test-model",
                 roles=frozenset({ModelRole.GENERAL}),
+                priority=100,
             )
         )
         planner = ModelExecutionPlanner(
