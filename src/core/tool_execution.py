@@ -69,15 +69,12 @@ class ToolPlanStepHandler:
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
 
-    def __call__(
-        self,
-        step: PlanStep,
-        confirmation: ToolExecutionConfirmation | None = None,
-    ) -> object:
+    @staticmethod
+    def build_request(step: PlanStep) -> ToolRequest:
+        """Materialize the exact deterministic request represented by a step."""
         if not isinstance(step, PlanStep):
             raise TypeError("step must be a PlanStep")
-
-        if step.action.strip().upper() != self.ACTION:
+        if step.action.strip().upper() != ToolPlanStepHandler.ACTION:
             raise ValueError(
                 f"ToolPlanStepHandler cannot execute action {step.action!r}"
             )
@@ -94,11 +91,18 @@ class ToolPlanStepHandler:
         if invocation_id is not None and not isinstance(invocation_id, str):
             raise ValueError("tool plan step 'invocation_id' must be a string or None")
 
-        request = ToolRequest(
+        return ToolRequest(
             tool_name=tool_name,
             arguments=dict(arguments),
             invocation_id=invocation_id or step.step_id,
         )
+
+    def __call__(
+        self,
+        step: PlanStep,
+        confirmation: ToolExecutionConfirmation | None = None,
+    ) -> object:
+        request = self.build_request(step)
 
         if step.requires_confirmation:
             self._require_confirmation(step, request, confirmation)
@@ -113,7 +117,7 @@ class ToolPlanStepHandler:
         if not result.success:
             assert result.error is not None
             raise RuntimeError(
-                f"tool '{tool_name}' failed: "
+                f"tool '{request.tool_name}' failed: "
                 f"{result.error.code}: {result.error.message}"
             )
 
