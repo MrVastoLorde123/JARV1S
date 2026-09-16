@@ -3,11 +3,12 @@ import unittest
 
 from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
 from src.ai.models import AICapabilities, AIResponse
+from src.ai.provider import AIProvider
 from src.ai.service import AIService
 from src.core.request_intent import AIRequestIntentClassifier, IntentKind, RequestIntent, RequestIntentClassifier
 
 
-class FakeAIProvider:
+class FakeAIProvider(AIProvider):
     def __init__(self, content):
         self.content = content
         self.last_request = None
@@ -89,4 +90,4 @@ class RequestIntentModelTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
