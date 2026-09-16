@@ -43,6 +43,16 @@ from .task_orchestration import (
 from .work_dispatch import DispatchRequest, DispatchResult, WorkDispatcher
 from .execution_handoff import ExecutionHandoff, create_execution_handoff
 from .execution_bridge import AgencyExecutionBridgeResult, run_execution_handoff
+from .execution_outcome import (
+    AgencyExecutionOutcome,
+    AgencyOutcomeStatus,
+    AgencyVerifier,
+    VerificationDecision,
+    VerificationDisposition,
+    VerificationInput,
+    build_verification_input,
+    classify_agency_outcome,
+)
 
 __all__ = [
     "AgentEntity",
@@ -97,4 +107,12 @@ __all__ = [
     "create_execution_handoff",
     "AgencyExecutionBridgeResult",
     "run_execution_handoff",
+    "AgencyExecutionOutcome",
+    "AgencyOutcomeStatus",
+    "AgencyVerifier",
+    "VerificationDecision",
+    "VerificationDisposition",
+    "VerificationInput",
+    "build_verification_input",
+    "classify_agency_outcome",
 ]
