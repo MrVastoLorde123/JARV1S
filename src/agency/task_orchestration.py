@@ -132,10 +132,23 @@ def begin_task_orchestration(plan: WorkPlan) -> TaskOrchestration:
 
 def choose_next_coordination(orchestration: TaskOrchestration) -> CoordinationDecision:
     """Select the next bounded coordination action deterministically."""
-    if orchestration.terminal:
+    if orchestration.status is OrchestrationStatus.FAILED:
+        failed = next(
+            (item for item in orchestration.steps if item.state is StepExecutionState.FAILED),
+            None,
+        )
+        return CoordinationDecision(
+            action=CoordinationAction.BLOCKED,
+            reason=(
+                failed.message if failed and failed.message
+                else "orchestration has failed"
+            ),
+        )
+
+    if orchestration.status is OrchestrationStatus.COMPLETE:
         return CoordinationDecision(
             action=CoordinationAction.COMPLETE,
-            reason="orchestration is terminal",
+            reason="orchestration is complete",
         )
 
     blocked = next((item for item in orchestration.steps if item.state is StepExecutionState.BLOCKED), None)
