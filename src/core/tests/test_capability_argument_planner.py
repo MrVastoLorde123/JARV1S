@@ -9,6 +9,7 @@ from src.core.capability_argument_planner import (
     AIRequestArgumentPlanner,
     CapabilityInvocationService,
 )
+from src.core.capability_invocation import CapabilityInvocationBuilder
 from src.core.capability_selection import CapabilityCandidate
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
 
@@ -124,3 +125,36 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
             CapabilityCandidate(capability(), 3.0, "match"),
         )
         self.assertEqual(request.tool_name, "read_file")
+
+    def test_invocation_builder_rejects_malformed_required_declaration(self):
+        builder = CapabilityInvocationBuilder()
+        malformed = ToolDefinition(
+            name="bad_required",
+            description="bad schema",
+            version="1.0.0",
+            input_schema={"type": "object", "required": ["", 7]},
+            output_schema={"type": "object"},
+        )
+        with self.assertRaises(ValueError):
+            builder.build(malformed, {})
+
+    def test_invocation_builder_rejects_malformed_property_declaration(self):
+        builder = CapabilityInvocationBuilder()
+        malformed = ToolDefinition(
+            name="bad_properties",
+            description="bad schema",
+            version="1.0.0",
+            input_schema={"type": "object", "properties": {"path": "string"}},
+            output_schema={"type": "object"},
+        )
+        with self.assertRaises(ValueError):
+            builder.build(malformed, {})
+
+    def test_invocation_builder_rejects_non_string_argument_names(self):
+        builder = CapabilityInvocationBuilder()
+        with self.assertRaises(ValueError):
+            builder.build(capability(), {7: "README.md"})  # type: ignore[dict-item]
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
