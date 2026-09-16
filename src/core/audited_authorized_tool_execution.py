@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from src.core.authorized_tool_execution import AuthorizedToolPlanStepHandler
 from src.core.execution_plan_models import PlanStep
-from src.core.tool_authorization import ToolExecutionAuthorization
+from src.core.tool_authorization import (
+    ToolAuthorizationPolicy,
+    require_authorization,
+)
 from src.core.tool_authorization_evidence_store import ToolAuthorizationEvidenceStore
-from src.core.tool_authorization_policy import ToolAuthorizationEvidence, ToolAuthorizationPolicy
-from src.core.tool_execution import ToolExecutionConfirmation, ToolInvoker
+from src.core.tool_authorization_policy import ToolAuthorizationEvidence
+from src.core.tool_execution import ToolExecutionConfirmation, ToolPlanStepHandler, ToolInvoker
 
 
 class AuditedAuthorizedToolPlanStepHandler:
@@ -25,18 +27,18 @@ class AuditedAuthorizedToolPlanStepHandler:
             raise TypeError("policy must implement ToolAuthorizationPolicy")
         if not isinstance(evidence_store, ToolAuthorizationEvidenceStore):
             raise TypeError("evidence_store must be a ToolAuthorizationEvidenceStore")
-        self._invoker = invoker
+        self._handler = ToolPlanStepHandler(invoker)
         self._policy = policy
         self._evidence_store = evidence_store
-        self._authorized_handler = AuthorizedToolPlanStepHandler(invoker, policy)
 
     def __call__(
         self,
         step: PlanStep,
         confirmation: ToolExecutionConfirmation | None = None,
     ) -> object:
-        request = self._authorized_handler._handler.build_request(step)
+        request = ToolPlanStepHandler.build_request(step)
         authorization = self._policy.authorize(step, request)
         evidence = ToolAuthorizationEvidence.from_authorization(authorization)
         self._evidence_store.save(evidence)
-        return self._authorized_handler(step, confirmation)
+        require_authorization(step, request, authorization)
+        return self._handler(step, confirmation)
