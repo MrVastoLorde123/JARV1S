@@ -63,6 +63,14 @@ class ModelCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "data.*sequence"):
             self.catalog.observe_openai_models({"data": {"id": "granite-8b"}})
 
+    def test_observation_requires_nonempty_model_id(self) -> None:
+        with self.assertRaisesRegex(ValueError, "model_id cannot be empty"):
+            ModelObservation("   ")
+
+    def test_roles_for_requires_model_role_values(self) -> None:
+        with self.assertRaisesRegex(TypeError, "roles must contain only ModelRole"):
+            ModelCatalog.roles_for("GENERAL")
+
 
 if __name__ == "__main__":
     unittest.main()
