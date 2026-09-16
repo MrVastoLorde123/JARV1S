@@ -3,6 +3,7 @@ import unittest
 
 from src.ai.models import AIResponse
 from src.ai.model_routing import ModelProfile, ModelRole, ModelRouter
+from src.ai.provider import AIProvider
 from src.ai.service import AIService
 from src.core.capability_argument_planner import (
     AIRequestArgumentPlanner,
@@ -12,7 +13,7 @@ from src.core.capability_selection import CapabilityCandidate
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest
 
 
-class FakeAIProvider:
+class FakeAIProvider(AIProvider):
     def __init__(self, content):
         self._content = content
         self.last_request = None
