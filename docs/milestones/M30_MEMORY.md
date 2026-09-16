@@ -1,6 +1,6 @@
 # M30 — Memory
 
-**Status:** implementation in progress.
+**Status:** VERIFIED / COMPLETE.
 
 M30 formalizes durable memory as a typed, provenance-bearing knowledge layer over the existing structured memory and memory-evidence stores.
 
@@ -16,15 +16,11 @@ M30 formalizes durable memory as a typed, provenance-bearing knowledge layer ove
 
 M30 is memory and knowledge persistence. Existing memory/evidence stores remain authoritative for persistence. No new authority, tool execution, or duplicate memory store is introduced.
 
-## Verification
+## Verification receipt
 
-```text
-python -m unittest src.memory.tests.test_m30_memory_contract -v
-python scripts/verify_m30_memory.py
-cd ui
-npm run build
-cd ..
-python -m unittest discover -s src.core.tests -p "test_*.py"
-```
+- Focused M30 contract tests: **4/4 OK**
+- `M30 memory contract: PASS`
+- UI production build: **PASS**
+- Core regression: **3279/3279 OK**
 
-M30 closes only after the user-local receipt is green.
+M30 is therefore **VERIFIED / COMPLETE**.
