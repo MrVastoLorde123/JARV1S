@@ -1,6 +1,6 @@
 # M26 — Activity & Evidence
 
-**Status:** implementation in progress.
+**Status:** VERIFIED / COMPLETE.
 
 M26 turns the cockpit's existing activity and verification projections into a typed, safe presentation contract. It makes operational history and evidence references consumable without making the interface a second authority system.
 
@@ -13,23 +13,14 @@ M26 turns the cockpit's existing activity and verification projections into a ty
 - **M26.5 — UI visibility:** preserve the existing activity rail and verification surfaces as runtime-backed presentation.
 - **M26.6 — Verification gate:** repository-local contract validation plus UI build and established regression baseline.
 
+## Verification receipt
+
+- `python scripts/verify_m26_activity_evidence.py` → **PASS**
+- `cd ui && npm run build` → **PASS**
+- `python -m unittest discover -s src.core.tests -p "test_*.py"` → **3276/3276 OK**
+
 ## Boundary
 
 M26 is observation and evidence presentation. It introduces no authorization, no new execution path, and no duplicate durable activity store.
 
-## Verification
-
-Run:
-
-```text
-python scripts/verify_m26_activity_evidence.py
-```
-
-Then:
-
-```text
-cd ui
-npm run build
-```
-
-Finally rerun the established core/tools/AI regression baselines. M26 closes only after the user-local receipt is green.
+M26 is closed on the verified local receipt above. The next milestone may build on its typed activity/evidence contract.
