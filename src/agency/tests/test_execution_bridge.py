@@ -65,7 +65,7 @@ class M36ExecutionBridgeTests(TestCase):
         return ControlledAgency(
             ExecutionRuntime(_SuccessfulAdapter()),
             ExecutionObservationContextIntegrator(),
-            max_steps=1,
+            max_steps=2,
         )
 
     def _context(self):
