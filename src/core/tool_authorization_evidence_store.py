@@ -11,8 +11,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterator
 
 from src.core.tool_authorization_policy import ToolAuthorizationEvidence
 
@@ -47,13 +49,26 @@ class ToolAuthorizationEvidenceStore:
     def __init__(self, database_path: str | Path = "data/processed/jarvis.db") -> None:
         self._database_path = Path(database_path)
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(_SCHEMA)
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self._database_path)
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
+
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        """Yield a transactional connection and always close it."""
+        connection = self._connect()
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     @staticmethod
     def _evidence_id(evidence: ToolAuthorizationEvidence) -> str:
@@ -71,7 +86,7 @@ class ToolAuthorizationEvidenceStore:
         evidence_id = self._evidence_id(evidence)
         record = evidence.to_record()
 
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 INSERT OR IGNORE INTO tool_authorization_evidence (
@@ -98,7 +113,7 @@ class ToolAuthorizationEvidenceStore:
         if not isinstance(evidence_id, str) or not evidence_id.strip():
             raise ValueError("evidence_id must be a non-empty string")
 
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 """
                 SELECT evidence_id, step_id, invocation_id, tool_name, scope,
@@ -128,7 +143,7 @@ class ToolAuthorizationEvidenceStore:
         if not isinstance(step_id, str) or not step_id.strip():
             raise ValueError("step_id must be a non-empty string")
 
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT evidence_id, step_id, invocation_id, tool_name, scope,
@@ -158,7 +173,7 @@ class ToolAuthorizationEvidenceStore:
         )
 
     def all(self) -> tuple[StoredToolAuthorizationEvidence, ...]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT evidence_id, step_id, invocation_id, tool_name, scope,
