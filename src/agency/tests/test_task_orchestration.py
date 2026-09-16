@@ -47,6 +47,13 @@ class M33TaskOrchestrationTests(TestCase):
         self.assertEqual("implement", decision.step.step_id)
         self.assertEqual(("research",), orchestration.completed_step_ids)
 
+    def test_dependency_gate_rejects_premature_step_progression(self):
+        orchestration = begin_task_orchestration(self._plan())
+        with self.assertRaises(ValueError):
+            update_orchestration(orchestration, "implement", StepExecutionState.ACTIVE)
+        with self.assertRaises(ValueError):
+            update_orchestration(orchestration, "implement", StepExecutionState.COMPLETE)
+
     def test_active_blocked_and_failed_states_never_execute_actions(self):
         orchestration = begin_task_orchestration(self._plan())
         active = update_orchestration(orchestration, "research", StepExecutionState.ACTIVE)
@@ -72,5 +79,5 @@ class M33TaskOrchestrationTests(TestCase):
             update_orchestration(orchestration, "missing", StepExecutionState.COMPLETE)
         with self.assertRaises(TypeError):
             update_orchestration(orchestration, "research", "COMPLETE")
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             OrchestratedStep("research", StepExecutionState.PENDING, metadata=[])
