@@ -14,6 +14,7 @@ permission, authorization, or verification truth.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
@@ -36,18 +37,20 @@ class ToolExecutionConfirmation:
             raise TypeError("confirmed must be a bool")
 
 
-class ToolInvoker:
+@runtime_checkable
+class ToolInvoker(Protocol):
     """Minimal contract required to invoke a tool safely."""
 
     def invoke(self, request: ToolRequest) -> ToolResult:
-        raise NotImplementedError
+        ...
 
 
-class ToolCapabilityGateway(ToolInvoker):
+@runtime_checkable
+class ToolCapabilityGateway(ToolInvoker, Protocol):
     """Capability boundary used by JARVIS to discover and invoke tools."""
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
-        raise NotImplementedError
+        ...
 
 
 class ToolPlanStepHandler:
