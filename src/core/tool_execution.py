@@ -4,11 +4,11 @@
 ``ToolRequest``, resolves a registered tool, invokes it, and validates the
 result. This module adds the plan-step adapter above that boundary.
 
-The plan-step adapter deliberately does not own policy or authority. A tool
-execution must carry a separate, request-bound authorization artifact, and a
-step that declares ``requires_confirmation=True`` must also carry a separate,
-request-bound confirmation artifact. Authorization and confirmation are
-independent execution preconditions; neither is verification truth.
+The plan-step adapter deliberately does not own policy or authority. A step
+that declares ``requires_confirmation=True`` must carry a separate,
+request-bound ``ToolExecutionConfirmation`` artifact before this adapter will
+invoke the tool. Confirmation is an execution precondition only; it is not
+permission, authorization, or verification truth.
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
-from src.core.tool_authorization import ToolExecutionAuthorization, require_authorization
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
 
 
@@ -58,10 +57,9 @@ class ToolCapabilityGateway(ToolInvoker, Protocol):
 class ToolPlanStepHandler:
     """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker.
 
-    This adapter performs structural request validation and enforces explicit
-    authorization for every tool execution. It separately enforces the plan's
-    confirmation requirement when requested. It never decides policy itself,
-    and it never turns confirmation into authority.
+    This adapter performs structural request validation and enforces the
+    plan's explicit confirmation requirement. It never decides policy and
+    never turns confirmation into authority.
     """
 
     ACTION = "USE_TOOL"
@@ -74,7 +72,6 @@ class ToolPlanStepHandler:
     def __call__(
         self,
         step: PlanStep,
-        authorization: ToolExecutionAuthorization | None = None,
         confirmation: ToolExecutionConfirmation | None = None,
     ) -> object:
         if not isinstance(step, PlanStep):
@@ -102,8 +99,6 @@ class ToolPlanStepHandler:
             arguments=dict(arguments),
             invocation_id=invocation_id or step.step_id,
         )
-
-        require_authorization(step, request, authorization)
 
         if step.requires_confirmation:
             self._require_confirmation(step, request, confirmation)
