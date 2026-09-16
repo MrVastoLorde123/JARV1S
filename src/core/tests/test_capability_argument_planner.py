@@ -77,6 +77,18 @@ class CapabilityArgumentPlannerTests(unittest.TestCase):
         self.assertIsNotNone(provider.last_request)
         self.assertEqual(provider.last_request.model, "fake-model")
 
+    def test_immutable_input_schema_is_serialized_for_model_prompt(self):
+        ai, provider = self._ai(json.dumps({"path": "README.md"}))
+        planner = AIRequestArgumentPlanner(ai)
+        candidate = CapabilityCandidate(capability(), 3.0, "match")
+
+        planner.propose("open the README", candidate)
+
+        self.assertIsNotNone(provider.last_request)
+        self.assertIn('"properties"', provider.last_request.task)
+        self.assertIn('"path"', provider.last_request.task)
+        self.assertIn('"required"', provider.last_request.task)
+
     def test_invalid_json_is_rejected(self):
         ai, _ = self._ai("not json")
         planner = AIRequestArgumentPlanner(ai)
