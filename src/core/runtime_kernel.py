@@ -18,6 +18,7 @@ from src.core.runtime_activity_stream import (
     ObservableInterfaceOrchestration,
     RuntimeActivityStream,
 )
+from src.core.security_system import SecuritySystem
 from src.interface_surface import TerminalInterfaceSurface
 
 
@@ -37,6 +38,7 @@ class JarvisRuntime:
         request_id_factory: Callable[[], str] | None = None,
         capability_registry: CapabilityRegistry | None = None,
         capability_system: CapabilitySystem | None = None,
+        security_system: SecuritySystem | None = None,
         model_provider: ModelProviderBoundary | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
@@ -51,6 +53,8 @@ class JarvisRuntime:
             raise TypeError("capability_registry must be a capability registry")
         if capability_system is not None and type(capability_system) is not CapabilitySystem:
             raise TypeError("capability_system must be a capability system")
+        if security_system is not None and type(security_system) is not SecuritySystem:
+            raise TypeError("security_system must be a security system")
         if model_provider is not None and type(model_provider) is not ModelProviderBoundary:
             raise TypeError("model_provider must be a model provider boundary")
 
@@ -59,6 +63,7 @@ class JarvisRuntime:
             capability_registry if capability_registry is not None else CapabilityRegistry()
         )
         self._capability_system = capability_system
+        self._security_system = security_system
         self._model_provider = model_provider
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
@@ -135,6 +140,10 @@ class JarvisRuntime:
     @property
     def capability_system(self) -> CapabilitySystem | None:
         return self._capability_system
+
+    @property
+    def security_system(self) -> SecuritySystem | None:
+        return self._security_system
 
     @property
     def model_provider(self) -> ModelProviderBoundary | None:
