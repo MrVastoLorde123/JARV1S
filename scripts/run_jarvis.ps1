@@ -7,6 +7,7 @@ param(
     [int]$Port = 8080,
     [string]$ModelAlias = "qwen3-4b-local",
     [string]$SessionId = "",
+    [string]$DataDir = "",
     [ValidateRange(256, 131072)]
     [int]$ContextSize = 8192,
     [ValidateRange(5, 600)]
@@ -167,8 +168,18 @@ Set-Location $repoRoot
 $serverProcess = $null
 $startedByScript = $false
 $serverOwnership = "none"
+$originalDataDir = $env:JARVIS_DATA_DIR
 $baseUrl = "http://$BindHost`:$Port"
 $effectiveModel = $ModelAlias
+if ($DataDir) {
+    $resolvedDataDir = [System.IO.Path]::GetFullPath($DataDir)
+}
+elseif ($env:JARVIS_DATA_DIR) {
+    $resolvedDataDir = [System.IO.Path]::GetFullPath($env:JARVIS_DATA_DIR)
+}
+else {
+    $resolvedDataDir = Join-Path $repoRoot "data"
+}
 
 try {
     Write-Stage "JARVIS LOCAL LAUNCH"
@@ -186,7 +197,9 @@ try {
     }
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) { Fail "Python was not found on PATH." }
 
-    New-Item -ItemType Directory -Force (Join-Path $repoRoot "data\processed") | Out-Null
+    $env:JARVIS_DATA_DIR = $resolvedDataDir
+    Write-Host "Data dir   : $env:JARVIS_DATA_DIR"
+    New-Item -ItemType Directory -Force (Join-Path $env:JARVIS_DATA_DIR "processed") | Out-Null
     New-Item -ItemType Directory -Force (Join-Path $repoRoot "logs\local") | Out-Null
 
     Write-Stage "Database bootstrap"
@@ -272,6 +285,12 @@ finally {
     Remove-Item Env:JARVIS_LOCAL_BASE_URL -ErrorAction SilentlyContinue
     Remove-Item Env:JARVIS_LOCAL_MODEL -ErrorAction SilentlyContinue
     Remove-Item Env:JARVIS_SESSION_ID -ErrorAction SilentlyContinue
+    if ($null -eq $originalDataDir) {
+        Remove-Item Env:JARVIS_DATA_DIR -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:JARVIS_DATA_DIR = $originalDataDir
+    }
     if ($startedByScript -and -not $KeepServer) {
         Stop-StartedServer -Process $serverProcess -StartedByScript $startedByScript
         $serverOwnership = "stopped-after-session"
