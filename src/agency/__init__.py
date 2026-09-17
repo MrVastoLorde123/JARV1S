@@ -69,6 +69,12 @@ from .confirmation import (
     ConfirmationResult,
     build_confirmation_result,
 )
+from .authorization_decision import (
+    AuthorizationDecision,
+    AuthorizationDecisionSet,
+    AuthorizationDisposition,
+    build_authorization_decision_set,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -148,6 +154,10 @@ __all__ = [
     "ConfirmationRequest",
     "ConfirmationResult",
     "build_confirmation_result",
+    "AuthorizationDecision",
+    "AuthorizationDecisionSet",
+    "AuthorizationDisposition",
+    "build_authorization_decision_set",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
