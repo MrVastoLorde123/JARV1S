@@ -136,6 +136,19 @@ class Phase3SystemsIntelligenceTests(unittest.TestCase):
         self.assertAlmostEqual(system.utility_model.utility_score("analyze"), 0.7)
         self.assertEqual(system.utility_model.profile("analyze").evidence_count, 4)
 
+    def test_aggregate_system_rejects_utility_profile_for_unknown_capability(self) -> None:
+        profile = CapabilityUtilityProfile(
+            capability_id="missing",
+            frequency=1.0,
+            impact=1.0,
+            reliability=1.0,
+            scalability=1.0,
+            cost=0.0,
+            failure_rate=0.0,
+        )
+        with self.assertRaises(KeyError):
+            CapabilitySystem(self.graph(), utility_profiles=(profile,))
+
     def test_composition_requires_all_component_dependencies(self) -> None:
         system = CapabilitySystem(
             self.graph(),
