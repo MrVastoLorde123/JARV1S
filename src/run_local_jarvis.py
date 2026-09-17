@@ -16,6 +16,8 @@ from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
+from src.core.tool_authorization_evidence_recording import ToolAuthorizationEvidenceRecorder
+from src.core.tool_authorization_evidence_store import ToolAuthorizationEvidenceStore
 from src.database_bootstrap import bootstrap_database
 from src.interface.capability_host import start_capability_http
 from src.interface.coding_execution_activity import CodingExecutionActivityRecorder, ObservingToolInvoker
@@ -83,6 +85,10 @@ def main():
 
     database_path = data_dir / "processed" / "jarvis.db"
     control_plane_store = ControlPlaneActivityStore(database_path)
+    authorization_evidence_store = ToolAuthorizationEvidenceStore(database_path)
+    authorization_evidence_recorder = ToolAuthorizationEvidenceRecorder(
+        authorization_evidence_store,
+    )
     activity_stream = RuntimeActivityStream()
     activity_recorder = ControlPlaneActivityRecorder(
         activity_stream,
@@ -98,6 +104,7 @@ def main():
     tool_stack = build_local_development_tool_stack(
         workspace_dir,
         confirmation_provider=coding_confirmation_provider,
+        authorization_recorder=authorization_evidence_recorder,
     )
     coding_execution_recorder = CodingExecutionActivityRecorder(
         activity_stream,
