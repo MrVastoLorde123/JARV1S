@@ -75,6 +75,7 @@ def main() -> None:
                 fail(f"missing required symbol: {filename}: {symbol}")
 
     persistent = (CORE / "persistent_intelligence.py").read_text(encoding="utf-8")
+    procedural = (CORE / "memory_procedural.py").read_text(encoding="utf-8")
     runtime = (CORE / "runtime_kernel.py").read_text(encoding="utf-8")
 
     required_contract_markers = (
@@ -110,8 +111,8 @@ def main() -> None:
         fail("working-memory persistence rejection is missing")
     if "return propose_semantic_consolidation(episodes)" not in persistent:
         fail("consolidation path must remain proposal-only")
-    if "execution_authorized": False in ({}):
-        pass
+    if '"execution_authorized": False' not in procedural:
+        fail("procedural memory must not establish execution authority")
 
     print("Phase 5 contract: PASS")
 
