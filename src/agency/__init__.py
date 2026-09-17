@@ -28,6 +28,13 @@ from .execution_runtime import (
 from .world_projection import WorldAgentObservation, WorldObservation, WorldObservationProjector
 from .world_runtime import AgentWorldRuntime
 from .world_model import WorldModelFact, WorldModelSnapshot, build_world_model_snapshot
+from .world_model_qualification import (
+    WorldFactAssessment,
+    WorldFactFreshness,
+    WorldFactQualification,
+    WorldModelQualification,
+    assess_world_model,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -76,6 +83,11 @@ __all__ = [
     "WorldModelFact",
     "WorldModelSnapshot",
     "build_world_model_snapshot",
+    "WorldFactAssessment",
+    "WorldFactFreshness",
+    "WorldFactQualification",
+    "WorldModelQualification",
+    "assess_world_model",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
