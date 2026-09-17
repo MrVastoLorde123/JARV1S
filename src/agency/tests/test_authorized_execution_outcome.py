@@ -9,6 +9,7 @@ from src.agency.authorization_execution_bridge import create_authorization_execu
 from src.agency.controlled_agency import AgencyStopReason, ControlledAgencyResult
 from src.agency.execution_bridge import AgencyExecutionBridgeResult
 from src.agency.execution_handoff import create_execution_handoff
+from src.agency.execution_runtime import ExecutionObservation, ExecutionOutcome, ExecutionStatus
 from src.agency.work_dispatch import DispatchRequest, WorkDispatcher
 from src.agency.work_planning import PlanStepKind, WorkPlanStep, build_work_plan
 from src.agency.work_state import WorkRole, WorkStage, WorkState, WorkStatus
@@ -74,8 +75,23 @@ class _M56Fixture(TestCase):
         preparation = self._preparation()
         bridge = create_authorization_execution_bridge(self._authorization(), preparation)
         admission = create_authorized_execution_admission(bridge, self._handoff())
+        observation = ExecutionObservation(
+            execution_id="exec-56",
+            request="deploy change",
+            proposal_id="proposal-56",
+            validation_id="validation-56",
+            policy_decision_id="policy-56",
+            confirmation_id="confirmation-56",
+            authorization_id="auth-56",
+            operation="deploy",
+            status=ExecutionStatus.SUCCEEDED,
+            attempted=True,
+            completed=True,
+            succeeded=True,
+            outcome=ExecutionOutcome(success=True, content={"result": "ok"}),
+        )
         agency_result = ControlledAgencyResult(
-            observations=(),
+            observations=(observation,),
             lifecycles=(),
             working_context=Mock(spec=WorkingContext),
             stop_reason=AgencyStopReason.COMPLETED,
