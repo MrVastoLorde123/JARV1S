@@ -9,11 +9,16 @@ from src.core.capability_system import CapabilitySystem
 from src.core.security_admission import SecurityAdmission, SecurityAdmissionService, SecurityRequest
 from src.core.security_audit import SecurityAuditLedger
 from src.core.security_identity import SecurityIdentityRegistry
-from src.core.security_isolation import CapabilityIsolationBinding, IsolationModel
-from src.core.security_permission import PermissionGrant, PermissionModel
+from src.core.security_isolation import IsolationModel
+from src.core.security_permission import PermissionModel
 from src.core.security_secrets import SecretReferenceCatalog
 from src.core.security_trust import TrustModel
-from src.core.security_verification import SecurityRecoveryDecision, SecurityVerification, derive_security_recovery, verify_security_admission
+from src.core.security_verification import (
+    SecurityRecoveryDecision,
+    SecurityVerification,
+    derive_security_recovery,
+    verify_security_admission,
+)
 
 
 @dataclass(frozen=True)
@@ -49,6 +54,18 @@ class SecuritySystem:
         audit: SecurityAuditLedger,
         capability_system: CapabilitySystem | None = None,
     ) -> None:
+        for name, value in (
+            ("identities", identities),
+            ("permissions", permissions),
+            ("secrets", secrets),
+            ("isolation", isolation),
+            ("trust", trust),
+            ("audit", audit),
+        ):
+            if value is None:
+                raise TypeError(f"{name} is required")
+        if capability_system is not None and type(capability_system) is not CapabilitySystem:
+            raise TypeError("capability_system must be a CapabilitySystem")
         self._identities = identities
         self._permissions = permissions
         self._secrets = secrets
@@ -123,7 +140,15 @@ class SecuritySystem:
             "summary": dict(self.summary()),
             "coverage": self.coverage().to_context(),
             "identities": tuple(item.to_context() for item in self._identities.snapshot()),
-            "permissions": tuple(item for item in (grant for grant in self._permissions.snapshot())),
+            "permissions": tuple(
+                {
+                    "principal_id": grant.principal_id,
+                    "capability_id": grant.capability_id,
+                    "actions": tuple(item.value for item in grant.actions),
+                    "enabled": grant.enabled,
+                }
+                for grant in self._permissions.snapshot()
+            ),
             "secrets": tuple(item.to_context() for item in self._secrets.snapshot()),
             "isolation": tuple(
                 {
