@@ -13,6 +13,7 @@ from src.agency.driveability import ContinuationCycle, Objective, ObjectiveState
 from src.agency.execution_bridge import AgencyExecutionBridgeResult
 from src.agency.execution_handoff import create_execution_handoff
 from src.agency.execution_outcome import VerificationDecision, VerificationDisposition
+from src.agency.execution_runtime import ExecutionObservation, ExecutionOutcome, ExecutionStatus
 from src.agency.work_dispatch import DispatchRequest, WorkDispatcher
 from src.agency.work_planning import PlanStepKind, WorkPlanStep, build_work_plan
 from src.agency.work_state import WorkRole, WorkStage, WorkState, WorkStatus
@@ -78,8 +79,23 @@ class _M58Fixture(TestCase):
         preparation = self._preparation()
         bridge = create_authorization_execution_bridge(self._authorization(), preparation)
         admission = create_authorized_execution_admission(bridge, self._handoff())
+        observation = ExecutionObservation(
+            execution_id="exec-58",
+            request="deploy change",
+            proposal_id="proposal-58",
+            validation_id="validation-58",
+            policy_decision_id="policy-58",
+            confirmation_id="confirmation-58",
+            authorization_id="auth-58",
+            operation="deploy",
+            status=ExecutionStatus.SUCCEEDED,
+            attempted=True,
+            completed=True,
+            succeeded=True,
+            outcome=ExecutionOutcome(success=True, content={"result": "ok"}),
+        )
         agency_result = ControlledAgencyResult(
-            observations=(),
+            observations=(observation,),
             lifecycles=(),
             working_context=Mock(spec=WorkingContext),
             stop_reason=AgencyStopReason.COMPLETED,
