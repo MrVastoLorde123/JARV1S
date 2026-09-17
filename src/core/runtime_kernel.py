@@ -1,10 +1,11 @@
-"""M26.1: compose the verified M25 stack into one runtime kernel."""
+"""M26.1 + M133: compose the verified M25 stack and cognitive runtime."""
 from __future__ import annotations
 
 from typing import Callable, Mapping, TextIO
 
 from src.core.capability_registry import CapabilityRegistry
 from src.core.capability_system import CapabilitySystem
+from src.core.cognitive_runtime import CognitiveRuntime, CognitiveRuntimeRequest, CognitiveRuntimeResult
 from src.core.interface_adapter import InterfaceAdapter
 from src.core.interface_backend import (
     InterfaceOperation,
@@ -32,7 +33,7 @@ class JarvisRuntimeError(RuntimeError):
 
 
 class JarvisRuntime:
-    """Composition root for the verified M25 stack plus bounded cognitive seams."""
+    """Composition root for the verified M25 stack plus the Phase 10 cognitive cycle."""
 
     def __init__(
         self,
@@ -86,10 +87,18 @@ class JarvisRuntime:
         self._security_system = security_system
         self._persistent_intelligence = persistent_intelligence
         self._model_provider = model_provider
-        self._world_model = world_model
-        self._reasoning_system = reasoning_system
-        self._planning_system = planning_system
-        self._proactive_initiative = proactive_initiative
+        self._world_model = world_model if world_model is not None else WorldModelSystem()
+        self._reasoning_system = reasoning_system if reasoning_system is not None else ReasoningSystem()
+        self._planning_system = planning_system if planning_system is not None else PlanningDecisionSystem()
+        self._proactive_initiative = (
+            proactive_initiative if proactive_initiative is not None else ProactiveInitiativeSystem()
+        )
+        self._cognitive_runtime = CognitiveRuntime(
+            world_model=self._world_model,
+            reasoning_system=self._reasoning_system,
+            planning_system=self._planning_system,
+            proactive_initiative=self._proactive_initiative,
+        )
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -115,8 +124,12 @@ class JarvisRuntime:
         payload: Mapping[str, object] | None = None,
         metadata: Mapping[str, object] | None = None,
     ) -> Mapping[str, object]:
-        """Submit one interface operation through the complete M25 runtime path."""
+        """Submit one interface operation through the composed M25 runtime path."""
         return self._surface.submit(operation, payload=payload, metadata=metadata)
+
+    def run_cognitive_cycle(self, request: CognitiveRuntimeRequest) -> CognitiveRuntimeResult:
+        """Run one bounded cognitive cycle below validation, policy, and authority."""
+        return self._cognitive_runtime.run(request)
 
     def handle_line(self, line: str) -> str:
         """Handle one terminal command through the composed runtime."""
@@ -179,20 +192,24 @@ class JarvisRuntime:
         return self._model_provider
 
     @property
-    def world_model(self) -> WorldModelSystem | None:
+    def world_model(self) -> WorldModelSystem:
         return self._world_model
 
     @property
-    def reasoning_system(self) -> ReasoningSystem | None:
+    def reasoning_system(self) -> ReasoningSystem:
         return self._reasoning_system
 
     @property
-    def planning_system(self) -> PlanningDecisionSystem | None:
+    def planning_system(self) -> PlanningDecisionSystem:
         return self._planning_system
 
     @property
-    def proactive_initiative(self) -> ProactiveInitiativeSystem | None:
+    def proactive_initiative(self) -> ProactiveInitiativeSystem:
         return self._proactive_initiative
+
+    @property
+    def cognitive_runtime(self) -> CognitiveRuntime:
+        return self._cognitive_runtime
 
     @property
     def authorizes_execution(self) -> bool:
