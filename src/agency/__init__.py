@@ -57,6 +57,12 @@ from .proactive_proposal import (
     ProactiveProposalSet,
     build_proactive_proposal_set,
 )
+from .scheduling_notification import (
+    SchedulingNotificationKind,
+    SchedulingNotificationProposal,
+    SchedulingNotificationProposalSet,
+    build_scheduling_notification_proposal_set,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -128,6 +134,10 @@ __all__ = [
     "ProactiveProposal",
     "ProactiveProposalSet",
     "build_proactive_proposal_set",
+    "SchedulingNotificationKind",
+    "SchedulingNotificationProposal",
+    "SchedulingNotificationProposalSet",
+    "build_scheduling_notification_proposal_set",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
