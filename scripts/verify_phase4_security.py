@@ -1,6 +1,7 @@
 """Static contract verifier for Phase 4 Security."""
 
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {
@@ -87,7 +88,7 @@ secret_text = (ROOT / "src" / "core" / "security_secrets.py").read_text(encoding
 for marker in ("raw_secret_present", "secret_ref_id"):
     if marker not in secret_text:
         raise SystemExit(f"Phase 4 contract: secret boundary marker missing {marker}")
-if "secret_value" in secret_text or "raw_secret" in secret_text:
+if re.search(r"(?m)^\s*(?:secret_value|raw_secret)\s*:", secret_text):
     raise SystemExit("Phase 4 contract: raw secret field detected")
 
 runtime_text = (ROOT / "src" / "core" / "runtime_kernel.py").read_text(encoding="utf-8")
@@ -99,4 +100,4 @@ for marker in (
     if marker not in runtime_text:
         raise SystemExit(f"Phase 4 contract: runtime authority marker missing {marker}")
 
-print("Phase 4 security contract: PASS")
+print("Phase 4 contract: PASS")
