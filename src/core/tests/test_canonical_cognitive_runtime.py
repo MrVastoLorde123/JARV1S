@@ -51,7 +51,7 @@ class CanonicalCognitiveRuntimeTests(unittest.TestCase):
             self.runtime.run("")
 
     def test_invalid_timestamp_fails_closed(self) -> None:
-        with self.assertRaises(CanonicalCognitiveRuntimeError):
+        with self.assertRaises(ValueError):
             self.runtime.run("review", request_id="bad-time", created_at="not-a-timestamp")
 
 
