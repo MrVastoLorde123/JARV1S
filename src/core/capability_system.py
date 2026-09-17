@@ -76,6 +76,7 @@ class CapabilitySystem:
         *,
         dependency_model: CapabilityDependencyModel | None = None,
         utility_model: CapabilityUtilityModel | None = None,
+        utility_profiles: Sequence[CapabilityUtilityProfile] = (),
         compositions: Sequence[CapabilityComposition] = (),
         compounding_links: Sequence[CapabilityCompoundingLink] = (),
         utility_weights: CapabilityUtilityWeights | None = None,
@@ -85,8 +86,10 @@ class CapabilitySystem:
         dependency_model = dependency_model or build_capability_dependency_model(graph)
         if dependency_model.graph is not graph:
             raise ValueError("dependency_model must be derived from graph")
+        if utility_model is not None and utility_profiles:
+            raise ValueError("utility_profiles cannot be combined with supplied utility_model")
         if utility_model is None:
-            utility_model = CapabilityUtilityModel(weights=utility_weights)
+            utility_model = CapabilityUtilityModel(utility_profiles, weights=utility_weights)
         elif utility_weights is not None and utility_model.weights != utility_weights:
             raise ValueError("utility_weights conflicts with supplied utility_model")
         unknown_profiles = tuple(
@@ -129,12 +132,12 @@ class CapabilitySystem:
         if type(registry) is not CapabilityRegistry:
             raise TypeError("registry must be a CapabilityRegistry")
         graph = build_capability_graph(registry.snapshot(), relations)
-        utility_model = CapabilityUtilityModel(utility_profiles, weights=utility_weights)
         return cls(
             graph,
-            utility_model=utility_model,
+            utility_profiles=utility_profiles,
             compositions=compositions,
             compounding_links=compounding_links,
+            utility_weights=utility_weights,
         )
 
     @property
