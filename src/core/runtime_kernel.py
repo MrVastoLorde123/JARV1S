@@ -1,4 +1,4 @@
-"""M26.1: compose the verified M25 interface stack into one runtime kernel."""
+"""M26.1: compose the verified M25 stack into one runtime kernel."""
 from __future__ import annotations
 
 from typing import Callable, Mapping, TextIO
@@ -14,6 +14,7 @@ from src.core.interface_backend import (
 from src.core.interface_session_state import InterfaceSessionStateProjector
 from src.core.model_provider_boundary import ModelProviderBoundary
 from src.core.persistent_intelligence import PersistentIntelligenceSystem
+from src.core.reasoning import ReasoningSystem
 from src.core.runtime_activity_stream import (
     InterfaceRuntimeActivityRecorder,
     ObservableInterfaceOrchestration,
@@ -29,7 +30,7 @@ class JarvisRuntimeError(RuntimeError):
 
 
 class JarvisRuntime:
-    """Composition root for the verified M25 stack plus M26 capability/model seams."""
+    """Composition root for the verified M25 stack plus bounded cognitive seams."""
 
     def __init__(
         self,
@@ -44,6 +45,7 @@ class JarvisRuntime:
         persistent_intelligence: PersistentIntelligenceSystem | None = None,
         model_provider: ModelProviderBoundary | None = None,
         world_model: WorldModelSystem | None = None,
+        reasoning_system: ReasoningSystem | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
             raise TypeError("orchestration must provide callable dispatch")
@@ -65,6 +67,8 @@ class JarvisRuntime:
             raise TypeError("model_provider must be a model provider boundary")
         if world_model is not None and type(world_model) is not WorldModelSystem:
             raise TypeError("world_model must be a world model system")
+        if reasoning_system is not None and type(reasoning_system) is not ReasoningSystem:
+            raise TypeError("reasoning_system must be a reasoning system")
 
         self._orchestration = orchestration
         self._capability_registry = (
@@ -75,6 +79,7 @@ class JarvisRuntime:
         self._persistent_intelligence = persistent_intelligence
         self._model_provider = model_provider
         self._world_model = world_model
+        self._reasoning_system = reasoning_system
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -166,6 +171,10 @@ class JarvisRuntime:
     @property
     def world_model(self) -> WorldModelSystem | None:
         return self._world_model
+
+    @property
+    def reasoning_system(self) -> ReasoningSystem | None:
+        return self._reasoning_system
 
     @property
     def authorizes_execution(self) -> bool:
