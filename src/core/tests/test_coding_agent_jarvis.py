@@ -13,6 +13,7 @@ from src.agents.coding_worker import (
     CodingAgentVerification,
 )
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
+from src.tools.models import ToolResult
 
 
 class FakePlanner:
@@ -63,7 +64,20 @@ class M28CodingAgentJARVISTests(unittest.TestCase):
             status="verified",
             edits_attempted=1,
             edits_applied=1,
-            verification=None,
+            verification=ToolResult(
+                success=True,
+                tool_name="run_test",
+                content={"exit_code": 0},
+                invocation_id="coding-jarvis-001-verification",
+            ),
+            edit_results=(
+                ToolResult(
+                    success=True,
+                    tool_name="write_file",
+                    content={"path": "ui/src/App.tsx", "written": True},
+                    invocation_id="coding-jarvis-001-edit-1",
+                ),
+            ),
             message="verification passed",
         )
         self.planner = FakePlanner(self.task_plan)
