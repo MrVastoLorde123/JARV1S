@@ -27,6 +27,7 @@ from .execution_runtime import (
 )
 from .world_projection import WorldAgentObservation, WorldObservation, WorldObservationProjector
 from .world_runtime import AgentWorldRuntime
+from .world_model import WorldModelFact, WorldModelSnapshot, build_world_model_snapshot
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -72,6 +73,9 @@ __all__ = [
     "WorldAgentObservation",
     "WorldObservation",
     "WorldObservationProjector",
+    "WorldModelFact",
+    "WorldModelSnapshot",
+    "build_world_model_snapshot",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
