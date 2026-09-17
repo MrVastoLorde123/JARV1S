@@ -83,6 +83,10 @@ from .authorized_execution_admission import (
     AuthorizedExecutionAdmission,
     create_authorized_execution_admission,
 )
+from .authorized_execution_runtime_admission import (
+    AuthorizedExecutionRuntimeAdmission,
+    create_authorized_execution_runtime_admission,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -170,6 +174,8 @@ __all__ = [
     "create_authorization_execution_bridge",
     "AuthorizedExecutionAdmission",
     "create_authorized_execution_admission",
+    "AuthorizedExecutionRuntimeAdmission",
+    "create_authorized_execution_runtime_admission",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
