@@ -5,6 +5,7 @@ from src.agency.world_bootstrap import create_local_world_runtime
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_confirmation_provider import CodingAgentConfirmationProvider
 from src.agents.coding_confirmation_store import CodingConfirmationStore
+from src.agents.coding_execution_learning import CodingExecutionLearningService
 from src.agents.coding_service import CodingAgentService
 from src.ai.local_model_policy import build_local_model_role_policy
 from src.ai.model_routing_runtime import ModelRoutingRuntime
@@ -13,6 +14,7 @@ from src.ai.service import AIService
 from src.context.memory_context_source_provider import MemoryContextSourceProvider
 from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
+from src.core.persistent_intelligence import PersistentMemoryRepository
 from src.core.conversation_store import ConversationStore
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
@@ -84,6 +86,10 @@ def main():
     personalization_runtime = PersonalizationRuntime()
 
     database_path = data_dir / "processed" / "jarvis.db"
+    persistent_memory_repository = PersistentMemoryRepository(database_path)
+    coding_execution_learning_service = CodingExecutionLearningService(
+        persistent_memory_repository,
+    )
     control_plane_store = ControlPlaneActivityStore(database_path)
     authorization_evidence_store = ToolAuthorizationEvidenceStore(database_path)
     authorization_evidence_recorder = ToolAuthorizationEvidenceRecorder(
@@ -141,6 +147,7 @@ def main():
             tool_invoker=coding_tool_invoker,
             coding_agent_service=coding_agent_service,
             coding_confirmation_service=coding_confirmation_service,
+            coding_execution_learning_service=coding_execution_learning_service,
         )
 
     default_processor = CodingAgentJARVIS(
@@ -148,6 +155,7 @@ def main():
         tool_invoker=coding_tool_invoker,
         coding_agent_service=coding_agent_service,
         coding_confirmation_service=coding_confirmation_service,
+        coding_execution_learning_service=coding_execution_learning_service,
     )
     world_runtime = create_local_world_runtime() if enable_world_http else None
     runtime = JARVISRuntime.from_processor(
