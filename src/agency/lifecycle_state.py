@@ -34,7 +34,7 @@ class AgencyLifecycleState:
             raise TypeError("plan must be a WorkPlan")
         if not isinstance(self.orchestration, TaskOrchestration):
             raise TypeError("orchestration must be a TaskOrchestration")
-        if self.orchestration.plan.plan_id != self.plan.plan_id:
+        if self.orchestration.plan != self.plan:
             raise ValueError("orchestration/plan identity mismatch")
         if self.plan.work_id != self.work.work_id:
             raise ValueError("plan/work identity mismatch")
@@ -59,13 +59,21 @@ class AgencyLifecycleState:
     def current_step_id(self) -> str | None:
         return self.orchestration.current_step_id
 
+    @property
+    def authorization_granted(self) -> bool:
+        return False
+
+    @property
+    def execution_requested(self) -> bool:
+        return False
+
     def to_context(self) -> dict[str, Any]:
         return {
             "work_id": self.work.work_id,
             "objective": self.work.objective,
             "work_stage": self.work.stage.value,
             "work_status": self.work.status.value,
-            "plan_id": self.plan.plan_id,
+            "plan_work_id": self.plan.work_id,
             "orchestration_status": self.orchestration.status.value,
             "current_step_id": self.orchestration.current_step_id,
             "completed_step_ids": self.orchestration.completed_step_ids,
