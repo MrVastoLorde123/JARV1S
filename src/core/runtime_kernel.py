@@ -13,6 +13,7 @@ from src.core.interface_backend import (
 )
 from src.core.interface_session_state import InterfaceSessionStateProjector
 from src.core.model_provider_boundary import ModelProviderBoundary
+from src.core.persistent_intelligence import PersistentIntelligenceSystem
 from src.core.runtime_activity_stream import (
     InterfaceRuntimeActivityRecorder,
     ObservableInterfaceOrchestration,
@@ -39,6 +40,7 @@ class JarvisRuntime:
         capability_registry: CapabilityRegistry | None = None,
         capability_system: CapabilitySystem | None = None,
         security_system: SecuritySystem | None = None,
+        persistent_intelligence: PersistentIntelligenceSystem | None = None,
         model_provider: ModelProviderBoundary | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
@@ -55,6 +57,8 @@ class JarvisRuntime:
             raise TypeError("capability_system must be a capability system")
         if security_system is not None and type(security_system) is not SecuritySystem:
             raise TypeError("security_system must be a security system")
+        if persistent_intelligence is not None and type(persistent_intelligence) is not PersistentIntelligenceSystem:
+            raise TypeError("persistent_intelligence must be a persistent intelligence system")
         if model_provider is not None and type(model_provider) is not ModelProviderBoundary:
             raise TypeError("model_provider must be a model provider boundary")
 
@@ -64,6 +68,7 @@ class JarvisRuntime:
         )
         self._capability_system = capability_system
         self._security_system = security_system
+        self._persistent_intelligence = persistent_intelligence
         self._model_provider = model_provider
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
@@ -144,6 +149,10 @@ class JarvisRuntime:
     @property
     def security_system(self) -> SecuritySystem | None:
         return self._security_system
+
+    @property
+    def persistent_intelligence(self) -> PersistentIntelligenceSystem | None:
+        return self._persistent_intelligence
 
     @property
     def model_provider(self) -> ModelProviderBoundary | None:
