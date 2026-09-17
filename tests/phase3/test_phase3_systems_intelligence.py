@@ -9,8 +9,8 @@ from src.core.capability_compounding import (
     CapabilityCompoundingLink,
 )
 from src.core.capability_composition import (
-    CapabilityCompositionStep,
     CapabilityComposition,
+    CapabilityCompositionStep,
 )
 from src.core.capability_graph import (
     CapabilityGraph,
@@ -169,7 +169,7 @@ class Phase3SystemsIntelligenceTests(unittest.TestCase):
             self.graph(),
             utility_profiles=(
                 CapabilityUtilityProfile(
-                    capability_id="analyze",
+                    capability_id="collect",
                     frequency=1.0,
                     impact=1.0,
                     reliability=1.0,
