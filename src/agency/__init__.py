@@ -47,6 +47,11 @@ from .initiative_evaluation import (
     InitiativeEvaluationSet,
     build_initiative_evaluation_set,
 )
+from .information_gain import (
+    InformationGainAssessment,
+    InformationGainOpportunity,
+    build_information_gain_assessment,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -112,6 +117,9 @@ __all__ = [
     "InitiativeEvaluation",
     "InitiativeEvaluationSet",
     "build_initiative_evaluation_set",
+    "InformationGainAssessment",
+    "InformationGainOpportunity",
+    "build_information_gain_assessment",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
