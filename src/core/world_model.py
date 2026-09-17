@@ -48,10 +48,7 @@ def _parse_timestamp(value: str) -> datetime:
 
 def _canonical(value: object) -> object:
     if isinstance(value, Mapping):
-        return {
-            str(key): _canonical(item)
-            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
-        }
+        return {str(key): _canonical(item) for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))}
     if isinstance(value, (tuple, list)):
         return [_canonical(item) for item in value]
     if isinstance(value, Enum):
@@ -60,12 +57,7 @@ def _canonical(value: object) -> object:
 
 
 def _digest(payload: object) -> str:
-    encoded = json.dumps(
-        _canonical(payload),
-        sort_keys=True,
-        separators=(",", ":"),
-        default=str,
-    ).encode("utf-8")
+    encoded = json.dumps(_canonical(payload), sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -89,8 +81,6 @@ class ValidityWindow:
             end = _parse_timestamp(self.valid_until)
             if end <= start:
                 raise ValueError("valid_until must be later than valid_from")
-            if observed < start:
-                raise ValueError("observed_at cannot precede valid_from")
         if observed < start:
             raise ValueError("observed_at cannot precede valid_from")
 
@@ -113,7 +103,7 @@ class ValidityWindow:
 
 @dataclass(frozen=True)
 class WorldEntity:
-    """Immutable entity state candidate derived from one observation."""
+    """Immutable entity-state candidate derived from one observation."""
 
     entity_id: str
     entity_type: WorldEntityType
@@ -154,7 +144,7 @@ class WorldEntity:
         return _digest(self.to_context(include_identity=False))
 
     def to_context(self, *, include_identity: bool = True) -> dict[str, object]:
-        payload = {
+        payload: dict[str, object] = {
             "entity_type": self.entity_type.value,
             "label": self.label,
             "attributes": dict(self.attributes),
@@ -172,7 +162,7 @@ class WorldEntity:
 
 @dataclass(frozen=True)
 class WorldRelation:
-    """Immutable relationship state candidate between two world entities."""
+    """Immutable relationship-state candidate between two world entities."""
 
     relation_id: str
     source_entity_id: str
@@ -212,7 +202,7 @@ class WorldRelation:
         return _digest(self.to_context(include_identity=False))
 
     def to_context(self, *, include_identity: bool = True) -> dict[str, object]:
-        payload = {
+        payload: dict[str, object] = {
             "source_entity_id": self.source_entity_id,
             "target_entity_id": self.target_entity_id,
             "predicate": self.predicate,
@@ -315,14 +305,9 @@ class WorldConflict:
     reason: str = "multiple active candidates disagree"
 
     def __post_init__(self) -> None:
-        if not all(isinstance(item, str) and item.strip() for item in (
-            self.conflict_id,
-            self.subject_id,
-            self.subject_kind,
-            self.selected_fingerprint,
-            self.reason,
-        )):
-            raise ValueError("conflict identity and reason must be non-empty strings")
+        for value in (self.conflict_id, self.subject_id, self.subject_kind, self.selected_fingerprint, self.reason):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("conflict identity and reason must be non-empty strings")
         if not self.candidate_fingerprints:
             raise ValueError("conflict must contain candidate fingerprints")
         if not self.observation_ids:
@@ -365,9 +350,7 @@ class WorldSnapshot:
             raise TypeError("relations must be a tuple of WorldRelation")
         if not isinstance(self.conflicts, tuple) or any(not isinstance(item, WorldConflict) for item in self.conflicts):
             raise TypeError("conflicts must be a tuple of WorldConflict")
-        if not isinstance(self.observation_ids, tuple) or any(
-            not isinstance(item, str) or not item.strip() for item in self.observation_ids
-        ):
+        if not isinstance(self.observation_ids, tuple) or any(not isinstance(item, str) or not item.strip() for item in self.observation_ids):
             raise TypeError("observation_ids must be a tuple of non-empty strings")
 
     @property
@@ -404,9 +387,7 @@ class WorldModelSystem:
         existing = self._observations.get(observation.observation_id)
         if existing is not None:
             if existing.fingerprint != observation.fingerprint:
-                raise ValueError(
-                    f"observation id already exists with different content: {observation.observation_id}"
-                )
+                raise ValueError(f"observation id already exists with different content: {observation.observation_id}")
             return False
         if observation.action is WorldObservationAction.RETRACT:
             target = observation.retracts_observation_id
@@ -418,94 +399,21 @@ class WorldModelSystem:
         return True
 
     def observations(self) -> tuple[WorldObservation, ...]:
-        return tuple(
-            self._observations[key]
-            for key in sorted(self._observations)
-        )
-
-    def snapshot(self, *, generated_at: str) -> WorldSnapshot:
-        _parse_timestamp(generated_at)
-        active = [
-            observation
-            for observation in self._observations.values()
-            if observation.action is WorldObservationAction.ASSERT
-            and observation.observation_id not in self._retracted
-            and (
-                observation.entity is not None and observation.entity.validity.is_active(generated_at)
-                or observation.relation is not None and observation.relation.validity.is_active(generated_at)
-            )
-        ]
-
-        entity_candidates: dict[str, list[tuple[WorldObservation, WorldEntity]]] = {}
-        relation_candidates: dict[str, list[tuple[WorldObservation, WorldRelation]]] = {}
-        for observation in active:
-            if observation.entity is not None:
-                entity_candidates.setdefault(observation.entity.entity_id, []).append(
-                    (observation, observation.entity)
-                )
-            if observation.relation is not None:
-                relation_candidates.setdefault(observation.relation.relation_id, []).append(
-                    (observation, observation.relation)
-                )
-
-        entities: list[WorldEntity] = []
-        relations: list[WorldRelation] = []
-        conflicts: list[WorldConflict] = []
-        used_observation_ids: list[str] = []
-
-        for subject_id in sorted(entity_candidates):
-            candidates = entity_candidates[subject_id]
-            selected, conflict = self._select_entity(subject_id, candidates)
-            entities.append(selected.entity)
-            used_observation_ids.extend(item.observation_id for item, _ in candidates)
-            if conflict is not None:
-                conflicts.append(conflict)
-
-        for relation_id in sorted(relation_candidates):
-            candidates = relation_candidates[relation_id]
-            selected, conflict = self._select_relation(relation_id, candidates)
-            relations.append(selected.relation)
-            used_observation_ids.extend(item.observation_id for item, _ in candidates)
-            if conflict is not None:
-                conflicts.append(conflict)
-
-        snapshot_payload = {
-            "version": self._version,
-            "generated_at": generated_at,
-            "entities": tuple(item.to_context() for item in entities),
-            "relations": tuple(item.to_context() for item in relations),
-            "conflicts": tuple(item.to_context() for item in conflicts),
-            "observation_ids": tuple(sorted(set(used_observation_ids))),
-        }
-        snapshot_id = _digest(snapshot_payload)
-        return WorldSnapshot(
-            snapshot_id=snapshot_id,
-            version=self._version,
-            generated_at=generated_at,
-            entities=tuple(entities),
-            relations=tuple(relations),
-            conflicts=tuple(conflicts),
-            observation_ids=tuple(sorted(set(used_observation_ids))),
-        )
+        return tuple(self._observations[key] for key in sorted(self._observations))
 
     @staticmethod
-    def _candidate_sort_key(observation: WorldObservation, payload: WorldEntity | WorldRelation) -> tuple[float, datetime, str]:
-        return (
-            float(payload.confidence),
-            _parse_timestamp(observation.observed_at),
-            observation.observation_id,
-        )
+    def _candidate_sort_key(
+        observation: WorldObservation,
+        payload: WorldEntity | WorldRelation,
+    ) -> tuple[float, datetime, str]:
+        return (float(payload.confidence), _parse_timestamp(observation.observed_at), observation.observation_id)
 
     def _select_entity(
         self,
         subject_id: str,
         candidates: list[tuple[WorldObservation, WorldEntity]],
     ) -> tuple[tuple[WorldObservation, WorldEntity], WorldConflict | None]:
-        ordered = sorted(
-            candidates,
-            key=lambda pair: self._candidate_sort_key(pair[0], pair[1]),
-            reverse=True,
-        )
+        ordered = sorted(candidates, key=lambda pair: self._candidate_sort_key(pair[0], pair[1]), reverse=True)
         selected = ordered[0]
         fingerprints = tuple(sorted({payload.fingerprint for _, payload in ordered}))
         if len(fingerprints) <= 1:
@@ -526,11 +434,7 @@ class WorldModelSystem:
         subject_id: str,
         candidates: list[tuple[WorldObservation, WorldRelation]],
     ) -> tuple[tuple[WorldObservation, WorldRelation], WorldConflict | None]:
-        ordered = sorted(
-            candidates,
-            key=lambda pair: self._candidate_sort_key(pair[0], pair[1]),
-            reverse=True,
-        )
+        ordered = sorted(candidates, key=lambda pair: self._candidate_sort_key(pair[0], pair[1]), reverse=True)
         selected = ordered[0]
         fingerprints = tuple(sorted({payload.fingerprint for _, payload in ordered}))
         if len(fingerprints) <= 1:
@@ -543,6 +447,68 @@ class WorldModelSystem:
             subject_kind="RELATION",
             candidate_fingerprints=fingerprints,
             selected_fingerprint=selected[1].fingerprint,
+            observation_ids=observation_ids,
+        )
+
+    def snapshot(self, *, generated_at: str) -> WorldSnapshot:
+        _parse_timestamp(generated_at)
+        active = [
+            observation
+            for observation in self._observations.values()
+            if observation.action is WorldObservationAction.ASSERT
+            and observation.observation_id not in self._retracted
+            and (
+                (observation.entity is not None and observation.entity.validity.is_active(generated_at))
+                or (observation.relation is not None and observation.relation.validity.is_active(generated_at))
+            )
+        ]
+
+        entity_candidates: dict[str, list[tuple[WorldObservation, WorldEntity]]] = {}
+        relation_candidates: dict[str, list[tuple[WorldObservation, WorldRelation]]] = {}
+        for observation in active:
+            if observation.entity is not None:
+                entity_candidates.setdefault(observation.entity.entity_id, []).append((observation, observation.entity))
+            if observation.relation is not None:
+                relation_candidates.setdefault(observation.relation.relation_id, []).append((observation, observation.relation))
+
+        entities: list[WorldEntity] = []
+        relations: list[WorldRelation] = []
+        conflicts: list[WorldConflict] = []
+        used_observation_ids: list[str] = []
+
+        for subject_id in sorted(entity_candidates):
+            candidates = entity_candidates[subject_id]
+            selected, conflict = self._select_entity(subject_id, candidates)
+            entities.append(selected[1])
+            used_observation_ids.extend(item.observation_id for item, _ in candidates)
+            if conflict is not None:
+                conflicts.append(conflict)
+
+        for relation_id in sorted(relation_candidates):
+            candidates = relation_candidates[relation_id]
+            selected, conflict = self._select_relation(relation_id, candidates)
+            relations.append(selected[1])
+            used_observation_ids.extend(item.observation_id for item, _ in candidates)
+            if conflict is not None:
+                conflicts.append(conflict)
+
+        observation_ids = tuple(sorted(set(used_observation_ids)))
+        snapshot_payload = {
+            "version": self._version,
+            "generated_at": generated_at,
+            "entities": tuple(item.to_context() for item in entities),
+            "relations": tuple(item.to_context() for item in relations),
+            "conflicts": tuple(item.to_context() for item in conflicts),
+            "observation_ids": observation_ids,
+        }
+        snapshot_id = _digest(snapshot_payload)
+        return WorldSnapshot(
+            snapshot_id=snapshot_id,
+            version=self._version,
+            generated_at=generated_at,
+            entities=tuple(entities),
+            relations=tuple(relations),
+            conflicts=tuple(conflicts),
             observation_ids=observation_ids,
         )
 
