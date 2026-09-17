@@ -35,6 +35,7 @@ from .world_model_qualification import (
     WorldModelQualification,
     assess_world_model,
 )
+from .current_context import CurrentContext, CurrentContextFact, build_current_context
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -88,6 +89,9 @@ __all__ = [
     "WorldFactQualification",
     "WorldModelQualification",
     "assess_world_model",
+    "CurrentContext",
+    "CurrentContextFact",
+    "build_current_context",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
