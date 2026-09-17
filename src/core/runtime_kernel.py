@@ -14,6 +14,7 @@ from src.core.interface_backend import (
 from src.core.interface_session_state import InterfaceSessionStateProjector
 from src.core.model_provider_boundary import ModelProviderBoundary
 from src.core.persistent_intelligence import PersistentIntelligenceSystem
+from src.core.planning_decision import PlanningDecisionSystem
 from src.core.reasoning import ReasoningSystem
 from src.core.runtime_activity_stream import (
     InterfaceRuntimeActivityRecorder,
@@ -46,6 +47,7 @@ class JarvisRuntime:
         model_provider: ModelProviderBoundary | None = None,
         world_model: WorldModelSystem | None = None,
         reasoning_system: ReasoningSystem | None = None,
+        planning_system: PlanningDecisionSystem | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
             raise TypeError("orchestration must provide callable dispatch")
@@ -69,6 +71,8 @@ class JarvisRuntime:
             raise TypeError("world_model must be a world model system")
         if reasoning_system is not None and type(reasoning_system) is not ReasoningSystem:
             raise TypeError("reasoning_system must be a reasoning system")
+        if planning_system is not None and type(planning_system) is not PlanningDecisionSystem:
+            raise TypeError("planning_system must be a planning decision system")
 
         self._orchestration = orchestration
         self._capability_registry = (
@@ -80,6 +84,7 @@ class JarvisRuntime:
         self._model_provider = model_provider
         self._world_model = world_model
         self._reasoning_system = reasoning_system
+        self._planning_system = planning_system
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -175,6 +180,10 @@ class JarvisRuntime:
     @property
     def reasoning_system(self) -> ReasoningSystem | None:
         return self._reasoning_system
+
+    @property
+    def planning_system(self) -> PlanningDecisionSystem | None:
+        return self._planning_system
 
     @property
     def authorizes_execution(self) -> bool:
