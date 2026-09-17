@@ -75,6 +75,10 @@ from .authorization_decision import (
     AuthorizationDisposition,
     build_authorization_decision_set,
 )
+from .authorization_execution_bridge import (
+    AuthorizationExecutionBridge,
+    create_authorization_execution_bridge,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -158,6 +162,8 @@ __all__ = [
     "AuthorizationDecisionSet",
     "AuthorizationDisposition",
     "build_authorization_decision_set",
+    "AuthorizationExecutionBridge",
+    "create_authorization_execution_bridge",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
