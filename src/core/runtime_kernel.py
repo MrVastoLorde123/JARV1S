@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Callable, Mapping, TextIO
 
 from src.core.capability_registry import CapabilityRegistry
+from src.core.capability_system import CapabilitySystem
 from src.core.interface_adapter import InterfaceAdapter
 from src.core.interface_backend import (
     InterfaceOperation,
@@ -35,6 +36,7 @@ class JarvisRuntime:
         actor_id: str,
         request_id_factory: Callable[[], str] | None = None,
         capability_registry: CapabilityRegistry | None = None,
+        capability_system: CapabilitySystem | None = None,
         model_provider: ModelProviderBoundary | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
@@ -47,6 +49,8 @@ class JarvisRuntime:
             raise TypeError("request_id_factory must be callable")
         if capability_registry is not None and type(capability_registry) is not CapabilityRegistry:
             raise TypeError("capability_registry must be a capability registry")
+        if capability_system is not None and type(capability_system) is not CapabilitySystem:
+            raise TypeError("capability_system must be a capability system")
         if model_provider is not None and type(model_provider) is not ModelProviderBoundary:
             raise TypeError("model_provider must be a model provider boundary")
 
@@ -54,6 +58,7 @@ class JarvisRuntime:
         self._capability_registry = (
             capability_registry if capability_registry is not None else CapabilityRegistry()
         )
+        self._capability_system = capability_system
         self._model_provider = model_provider
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
@@ -126,6 +131,10 @@ class JarvisRuntime:
     @property
     def capability_registry(self) -> CapabilityRegistry:
         return self._capability_registry
+
+    @property
+    def capability_system(self) -> CapabilitySystem | None:
+        return self._capability_system
 
     @property
     def model_provider(self) -> ModelProviderBoundary | None:
