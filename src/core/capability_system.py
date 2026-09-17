@@ -18,6 +18,7 @@ from src.core.capability_compounding import (
 from src.core.capability_composition import (
     CapabilityComposition,
     CapabilityCompositionModel,
+    CapabilityCompositionReadiness,
 )
 from src.core.capability_dependency import (
     CapabilityDependencyModel,
@@ -28,7 +29,7 @@ from src.core.capability_graph import (
     CapabilityRelation,
     build_capability_graph,
 )
-from src.core.capability_registry import CapabilityDefinition, CapabilityRegistry
+from src.core.capability_registry import CapabilityRegistry
 from src.core.capability_utility import (
     CapabilityUtilityModel,
     CapabilityUtilityProfile,
@@ -88,6 +89,15 @@ class CapabilitySystem:
             utility_model = CapabilityUtilityModel(weights=utility_weights)
         elif utility_weights is not None and utility_model.weights != utility_weights:
             raise ValueError("utility_weights conflicts with supplied utility_model")
+        unknown_profiles = tuple(
+            profile.capability_id
+            for profile in utility_model.snapshot()
+            if not graph.has_capability(profile.capability_id)
+        )
+        if unknown_profiles:
+            raise KeyError(
+                f"utility profiles reference unknown capabilities: {unknown_profiles}"
+            )
         composition_model = CapabilityCompositionModel(
             graph,
             dependency_model,
@@ -183,7 +193,7 @@ class CapabilitySystem:
         composition_id: str,
         *,
         available_capabilities: Iterable[str],
-    ):
+    ) -> CapabilityCompositionReadiness:
         """Assess prerequisites without invoking or authorizing the composition."""
         return self._composition_model.assess_readiness(
             composition_id,
