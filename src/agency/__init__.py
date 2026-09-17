@@ -53,6 +53,7 @@ from .execution_outcome import (
     build_verification_input,
     classify_agency_outcome,
 )
+from .verification_recovery import RecoveryDecision, RecoveryDisposition, derive_recovery_decision
 
 __all__ = [
     "AgentEntity",
@@ -115,4 +116,7 @@ __all__ = [
     "VerificationInput",
     "build_verification_input",
     "classify_agency_outcome",
+    "RecoveryDecision",
+    "RecoveryDisposition",
+    "derive_recovery_decision",
 ]
