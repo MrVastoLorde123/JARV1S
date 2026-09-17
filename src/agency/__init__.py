@@ -103,6 +103,14 @@ from .authorized_execution_reconciliation import (
     AuthorizedExecutionReconciliation,
     build_authorized_execution_reconciliation,
 )
+from .experience_feedback import ExperienceFeedback, build_experience_feedback
+from .experience_record import ExperienceRecord, build_experience_record
+from .learning_signal import LearningSignal, build_learning_signal
+from .learning_evaluation import LearningEvaluation, LearningEvaluationDisposition, evaluate_learning_signal
+from .adaptation_proposal import AdaptationProposal, propose_adaptation
+from .adaptation_validation import AdaptationValidation, AdaptationValidationDisposition, validate_adaptation
+from .adaptation_application import AdaptationApplication, LearningProfile, apply_adaptation
+from .adaptation_outcome import AdaptationOutcome, AdaptationOutcomeDisposition, evaluate_adaptation_outcome
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -200,6 +208,26 @@ __all__ = [
     "build_authorized_execution_recovery",
     "AuthorizedExecutionReconciliation",
     "build_authorized_execution_reconciliation",
+    "ExperienceFeedback",
+    "build_experience_feedback",
+    "ExperienceRecord",
+    "build_experience_record",
+    "LearningSignal",
+    "build_learning_signal",
+    "LearningEvaluation",
+    "LearningEvaluationDisposition",
+    "evaluate_learning_signal",
+    "AdaptationProposal",
+    "propose_adaptation",
+    "AdaptationValidation",
+    "AdaptationValidationDisposition",
+    "validate_adaptation",
+    "AdaptationApplication",
+    "LearningProfile",
+    "apply_adaptation",
+    "AdaptationOutcome",
+    "AdaptationOutcomeDisposition",
+    "evaluate_adaptation_outcome",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
