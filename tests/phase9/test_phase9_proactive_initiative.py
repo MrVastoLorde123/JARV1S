@@ -11,7 +11,6 @@ from src.core.planning_decision import (
     PlanRanking,
     PlannedStep,
     PlanningContext,
-    PlanningDecisionSystem,
     PlanningResult,
 )
 from src.core.proactive_initiative import (
@@ -47,16 +46,6 @@ def _base_planning(*, ambiguous: bool = False, feasible: bool = True) -> tuple[P
         desired_outcome="Reduce recurring system failures",
         priority=0.8,
     )
-    world = WorldSnapshot(
-        snapshot_id="world-1",
-        version=1,
-        generated_at=_NOW,
-        entities=(),
-        relations=(),
-        conflicts=(object(),) if ambiguous else (),
-        observation_ids=(),
-    )
-    # Keep the ambiguity fixture provider-neutral without bypassing the immutable model.
     if ambiguous:
         from src.core.world_model import WorldConflict
 
@@ -77,6 +66,16 @@ def _base_planning(*, ambiguous: bool = False, feasible: bool = True) -> tuple[P
                 ),
             ),
             observation_ids=("obs-1", "obs-2"),
+        )
+    else:
+        world = WorldSnapshot(
+            snapshot_id="world-1",
+            version=1,
+            generated_at=_NOW,
+            entities=(),
+            relations=(),
+            conflicts=(),
+            observation_ids=(),
         )
     reasoning_context = ReasoningContext(
         request_id="reason-1",
@@ -242,9 +241,8 @@ class Phase9ProactiveInitiativeTests(unittest.TestCase):
 
     def test_missing_selected_plan_is_rejected_explicitly(self) -> None:
         _, planning_result, _ = _base_planning()
-        context = ProactiveInitiativeContext(planning_result, {})
         with self.assertRaises(ProactiveInitiativeValidationError):
-            ProactiveInitiativeSystem().compose(context)
+            ProactiveInitiativeContext(planning_result, {})
 
 
 if __name__ == "__main__":
