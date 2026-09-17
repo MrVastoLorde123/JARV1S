@@ -1,12 +1,12 @@
 from unittest import TestCase
 
 from src.agency.recovery_state import reconcile_recovery
-from src.agency.driveability import ContinuationCycle, DriveabilityController, Objective, ObjectiveState
+from src.agency.driveability import ContinuationCycle, Objective, ObjectiveState
 from src.agency.execution_outcome import VerificationDecision, VerificationDisposition
 from src.agency.task_orchestration import begin_task_orchestration
 from src.agency.verification_recovery import derive_recovery_decision
 from src.agency.work_planning import PlanStepKind, WorkPlanStep, build_work_plan
-from src.agency.work_state import WorkStage, WorkState, WorkStatus
+from src.agency.work_state import WorkRole, WorkStage, WorkState, WorkStatus
 from src.agency.lifecycle_state import AgencyLifecycleState, build_agency_lifecycle_state
 
 
@@ -17,8 +17,8 @@ class M40AgencyLifecycleStateTests(TestCase):
     def _plan(self):
         return build_work_plan(
             self._work(),
-            (WorkPlanStep("step-1", "verify result", PlanStepKind.VERIFY),),
-            "bounded lifecycle test",
+            (WorkPlanStep("step-1", "verify result", PlanStepKind.VERIFY, WorkRole.REVIEWER),),
+            rationale="bounded lifecycle test",
         )
 
     def _recovery(self):
@@ -37,7 +37,8 @@ class M40AgencyLifecycleStateTests(TestCase):
         self.assertEqual("work-1", state.work.work_id)
         self.assertEqual("step-1", state.plan.steps[0].step_id)
         self.assertFalse(state.terminal)
-        self.assertFalse(state.authorization_granted if hasattr(state, "authorization_granted") else True)
+        self.assertFalse(state.authorization_granted)
+        self.assertFalse(state.execution_requested)
 
     def test_recovery_can_be_attached_without_becoming_authority(self):
         work = self._work()
@@ -53,6 +54,10 @@ class M40AgencyLifecycleStateTests(TestCase):
         work = self._work()
         plan = self._plan()
         orchestration = begin_task_orchestration(plan)
-        mismatched = build_work_plan(work, (WorkPlanStep("step-2", "other", PlanStepKind.REVIEW),), "other")
+        mismatched = build_work_plan(
+            work,
+            (WorkPlanStep("step-2", "other", PlanStepKind.REVIEW, WorkRole.REVIEWER),),
+            rationale="other",
+        )
         with self.assertRaises(ValueError):
             build_agency_lifecycle_state(work, mismatched, orchestration)
