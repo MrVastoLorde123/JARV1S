@@ -19,7 +19,12 @@ from src.core.memory_lifecycle import (
     propose_semantic_consolidation,
     validate_transition,
 )
-from src.core.memory_provenance import ProvenanceChain, ProvenanceRef, validate_provenance
+from src.core.memory_provenance import (
+    ProvenanceChain,
+    ProvenanceRef,
+    ProvenanceSourceKind,
+    validate_provenance,
+)
 from src.core.memory_working import WorkingMemorySnapshot
 from src.core.personal_model import PersonalModel, PersonalModelEntry
 from src.core.persistent_memory import (
@@ -124,6 +129,8 @@ class PersistentMemoryRepository:
         if not record.created_at or not record.updated_at:
             raise ValueError("persistent records require created_at and updated_at")
 
+        incoming_metadata = json.loads(json.dumps(dict(record.metadata), sort_keys=True))
+
         with self._connect() as connection:
             existing = connection.execute(
                 "SELECT kind, subject_id, content, confidence, importance, status, created_at, updated_at, supersedes_memory_id, provenance_json, tags_json, metadata_json FROM persistent_memory_records WHERE memory_id = ?",
@@ -156,7 +163,7 @@ class PersistentMemoryRepository:
                     "supersedes_memory_id": record.supersedes_memory_id,
                     "provenance_ids": tuple(record.provenance_ids),
                     "tags": tuple(record.tags),
-                    "metadata": dict(record.metadata),
+                    "metadata": incoming_metadata,
                 }
                 if existing_payload != incoming_payload:
                     raise ValueError(f"memory id already exists with different content: {record.memory_id}")
@@ -199,7 +206,7 @@ class PersistentMemoryRepository:
                     record.supersedes_memory_id,
                     json.dumps(record.provenance_ids),
                     json.dumps(record.tags),
-                    json.dumps(dict(record.metadata), sort_keys=True),
+                    json.dumps(incoming_metadata, sort_keys=True),
                 ),
             )
         return True
@@ -305,9 +312,7 @@ class PersistentMemoryRepository:
         refs = tuple(
             ProvenanceRef(
                 provenance_id=provenance_id,
-                source_kind=__import__(
-                    "src.core.memory_provenance", fromlist=["ProvenanceSourceKind"]
-                ).ProvenanceSourceKind(row[1]),
+                source_kind=ProvenanceSourceKind(row[1]),
                 source_id=row[2],
                 summary=row[3],
                 observed_at=row[4],
