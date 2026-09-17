@@ -1,5 +1,12 @@
 """Repository-local M45 reasoning contract verification."""
 
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from src.agency.current_context import CurrentContext, CurrentContextFact
 from src.agency.reasoning import ReasoningHypothesis, build_reasoning_result
 from src.agency.world_model import WorldModelFact
