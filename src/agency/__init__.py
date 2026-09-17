@@ -95,6 +95,10 @@ from .authorized_execution_verification import (
     AuthorizedExecutionVerification,
     bind_authorized_execution_verification,
 )
+from .authorized_execution_recovery import (
+    AuthorizedExecutionRecovery,
+    build_authorized_execution_recovery,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -188,6 +192,8 @@ __all__ = [
     "build_authorized_execution_outcome",
     "AuthorizedExecutionVerification",
     "bind_authorized_execution_verification",
+    "AuthorizedExecutionRecovery",
+    "build_authorized_execution_recovery",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
