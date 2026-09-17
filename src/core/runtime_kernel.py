@@ -20,6 +20,7 @@ from src.core.runtime_activity_stream import (
     RuntimeActivityStream,
 )
 from src.core.security_system import SecuritySystem
+from src.core.world_model import WorldModelSystem
 from src.interface_surface import TerminalInterfaceSurface
 
 
@@ -42,6 +43,7 @@ class JarvisRuntime:
         security_system: SecuritySystem | None = None,
         persistent_intelligence: PersistentIntelligenceSystem | None = None,
         model_provider: ModelProviderBoundary | None = None,
+        world_model: WorldModelSystem | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
             raise TypeError("orchestration must provide callable dispatch")
@@ -61,6 +63,8 @@ class JarvisRuntime:
             raise TypeError("persistent_intelligence must be a persistent intelligence system")
         if model_provider is not None and type(model_provider) is not ModelProviderBoundary:
             raise TypeError("model_provider must be a model provider boundary")
+        if world_model is not None and type(world_model) is not WorldModelSystem:
+            raise TypeError("world_model must be a world model system")
 
         self._orchestration = orchestration
         self._capability_registry = (
@@ -70,6 +74,7 @@ class JarvisRuntime:
         self._security_system = security_system
         self._persistent_intelligence = persistent_intelligence
         self._model_provider = model_provider
+        self._world_model = world_model
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -157,6 +162,10 @@ class JarvisRuntime:
     @property
     def model_provider(self) -> ModelProviderBoundary | None:
         return self._model_provider
+
+    @property
+    def world_model(self) -> WorldModelSystem | None:
+        return self._world_model
 
     @property
     def authorizes_execution(self) -> bool:
