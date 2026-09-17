@@ -56,11 +56,6 @@ def _score(value: float, field_name: str) -> float:
     return value
 
 
-def _digest(payload: object) -> str:
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
-
-
 @dataclass(frozen=True)
 class Goal:
     """Immutable desired outcome representation used by planning."""
@@ -362,16 +357,19 @@ class PlanningDecisionSystem:
             raise TypeError("evaluations must be a tuple of PlanEvaluation")
         if len({item.plan_id for item in evaluations}) != len(evaluations):
             raise PlanningValidationError("plan ids must be unique")
+        priority = {
+            PlanFeasibility.FEASIBLE: 2,
+            PlanFeasibility.REVIEW: 1,
+            PlanFeasibility.BLOCKED: 0,
+        }
         ordered = tuple(
             sorted(
                 evaluations,
                 key=lambda item: (
-                    item.feasibility is not PlanFeasibility.BLOCKED,
-                    item.feasibility is PlanFeasibility.FEASIBLE,
-                    float(item.advisory_score),
+                    -priority[item.feasibility],
+                    -float(item.advisory_score),
                     item.plan_id,
                 ),
-                reverse=True,
             )
         )
         ordered_ids = tuple(item.plan_id for item in ordered)
