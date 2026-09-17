@@ -38,7 +38,12 @@ class _ToolServiceExecutor:
 
 
 class PolicyGate:
-    """Enforces policy, confirmation, authorization, integrity, sandbox, handoff, and execution attempt."""
+    """Enforces policy, confirmation, authorization, integrity, sandbox, handoff, and execution attempt.
+
+    When an ``authorization_recorder`` is configured, every execution attempt
+    must durably record the exact authorization decision before execution can
+    proceed. Recorder failure therefore fails closed.
+    """
 
     def __init__(
         self,
@@ -48,6 +53,7 @@ class PolicyGate:
         confirmation_provider: Optional[ConfirmationProvider] = None,
         sandbox_profile_registry: Optional[SandboxProfileRegistry] = None,
         executor: Optional[ToolExecutor] = None,
+        authorization_recorder=None,
     ) -> None:
         self._registry = registry
         self._service = service
@@ -63,6 +69,9 @@ class PolicyGate:
         self._execution_preparation = ExecutionPreparationService()
         self._executor = executor or _ToolServiceExecutor(service)
         self._execution_attempt = ExecutionAttemptService(self._executor)
+        if authorization_recorder is not None and not callable(authorization_recorder):
+            raise TypeError("authorization_recorder must be callable")
+        self._authorization_recorder = authorization_recorder
 
     def list_definitions(self) -> tuple[ToolDefinition, ...]:
         """Return the immutable capability catalog visible to callers."""
@@ -92,6 +101,17 @@ class PolicyGate:
     def invoke(self, request: ToolRequest) -> ToolResult:
         """Run one request through all authority boundaries before the executor."""
         decision = self.authorize(request)
+
+        if self._authorization_recorder is not None:
+            try:
+                definition = self._registry.get(request.tool_name).definition()
+                self._authorization_recorder(request, definition, decision)
+            except Exception as exc:
+                return self._blocked_result(
+                    request,
+                    code="authorization_evidence_failed",
+                    message=f"authorization evidence could not be durably recorded: {exc}",
+                )
 
         if not decision.authorized:
             if decision.policy_decision is PolicyDecision.DENY:
