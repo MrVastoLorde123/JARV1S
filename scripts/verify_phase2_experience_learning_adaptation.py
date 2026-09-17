@@ -3,26 +3,16 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS = (
-    ROOT / "src" / "agency" / "experience_feedback.py",
-    ROOT / "src" / "agency" / "experience_record.py",
-    ROOT / "src" / "agency" / "learning_signal.py",
-    ROOT / "src" / "agency" / "learning_evaluation.py",
-    ROOT / "src" / "agency" / "adaptation_proposal.py",
-    ROOT / "src" / "agency" / "adaptation_validation.py",
-    ROOT / "src" / "agency" / "adaptation_application.py",
-    ROOT / "src" / "agency" / "adaptation_outcome.py",
-)
-required = (
-    "ExperienceFeedback",
-    "ExperienceRecord",
-    "LearningSignal",
-    "LearningEvaluation",
-    "AdaptationProposal",
-    "AdaptationValidation",
-    "AdaptationApplication",
-    "AdaptationOutcome",
-)
+TARGETS = {
+    ROOT / "src" / "agency" / "experience_feedback.py": "ExperienceFeedback",
+    ROOT / "src" / "agency" / "experience_record.py": "ExperienceRecord",
+    ROOT / "src" / "agency" / "learning_signal.py": "LearningSignal",
+    ROOT / "src" / "agency" / "learning_evaluation.py": "LearningEvaluation",
+    ROOT / "src" / "agency" / "adaptation_proposal.py": "AdaptationProposal",
+    ROOT / "src" / "agency" / "adaptation_validation.py": "AdaptationValidation",
+    ROOT / "src" / "agency" / "adaptation_application.py": "AdaptationApplication",
+    ROOT / "src" / "agency" / "adaptation_outcome.py": "AdaptationOutcome",
+}
 forbidden = (
     "authorize(",
     "run_execution_handoff(",
@@ -36,12 +26,11 @@ forbidden = (
     "unlink(",
 )
 
-for target in TARGETS:
+for target, marker in TARGETS.items():
     text = target.read_text(encoding="utf-8")
-    missing = [marker for marker in required if marker in target.name and marker not in text]
-    forbidden_found = [marker for marker in forbidden if marker in text]
-    if missing:
-        raise SystemExit(f"Phase 2 contract: {target.name} missing {missing}")
+    if marker not in text:
+        raise SystemExit(f"Phase 2 contract: {target.name} missing {marker}")
+    forbidden_found = [item for item in forbidden if item in text]
     if forbidden_found:
         raise SystemExit(f"Phase 2 contract: {target.name} contains forbidden surface {forbidden_found}")
 
