@@ -1,5 +1,12 @@
 """Repository-local M49 proactive proposal contract verification."""
 
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from src.agency.information_gain import InformationGainAssessment, InformationGainOpportunity
 from src.agency.initiative_evaluation import InitiativeEvaluation, InitiativeEvaluationSet
 from src.agency.proactive_proposal import ProactiveProposal, build_proactive_proposal_set
