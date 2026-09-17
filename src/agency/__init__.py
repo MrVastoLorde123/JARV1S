@@ -55,6 +55,7 @@ from .execution_outcome import (
 )
 from .verification_recovery import RecoveryDecision, RecoveryDisposition, derive_recovery_decision
 from .recovery_state import RecoveryReconciliation, RecoveryStateDisposition, reconcile_recovery
+from .lifecycle_state import AgencyLifecycleState, build_agency_lifecycle_state
 
 __all__ = [
     "AgentEntity",
@@ -123,4 +124,6 @@ __all__ = [
     "RecoveryReconciliation",
     "RecoveryStateDisposition",
     "reconcile_recovery",
+    "AgencyLifecycleState",
+    "build_agency_lifecycle_state",
 ]
