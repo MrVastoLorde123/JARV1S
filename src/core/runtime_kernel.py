@@ -15,6 +15,7 @@ from src.core.interface_session_state import InterfaceSessionStateProjector
 from src.core.model_provider_boundary import ModelProviderBoundary
 from src.core.persistent_intelligence import PersistentIntelligenceSystem
 from src.core.planning_decision import PlanningDecisionSystem
+from src.core.proactive_initiative import ProactiveInitiativeSystem
 from src.core.reasoning import ReasoningSystem
 from src.core.runtime_activity_stream import (
     InterfaceRuntimeActivityRecorder,
@@ -48,6 +49,7 @@ class JarvisRuntime:
         world_model: WorldModelSystem | None = None,
         reasoning_system: ReasoningSystem | None = None,
         planning_system: PlanningDecisionSystem | None = None,
+        proactive_initiative: ProactiveInitiativeSystem | None = None,
     ) -> None:
         if orchestration is None or not callable(getattr(orchestration, "dispatch", None)):
             raise TypeError("orchestration must provide callable dispatch")
@@ -73,6 +75,8 @@ class JarvisRuntime:
             raise TypeError("reasoning_system must be a reasoning system")
         if planning_system is not None and type(planning_system) is not PlanningDecisionSystem:
             raise TypeError("planning_system must be a planning decision system")
+        if proactive_initiative is not None and type(proactive_initiative) is not ProactiveInitiativeSystem:
+            raise TypeError("proactive_initiative must be a proactive initiative system")
 
         self._orchestration = orchestration
         self._capability_registry = (
@@ -85,6 +89,7 @@ class JarvisRuntime:
         self._world_model = world_model
         self._reasoning_system = reasoning_system
         self._planning_system = planning_system
+        self._proactive_initiative = proactive_initiative
         self._activity_stream = RuntimeActivityStream()
         self._activity_recorder = InterfaceRuntimeActivityRecorder(self._activity_stream)
         self._observable_orchestration = ObservableInterfaceOrchestration(
@@ -184,6 +189,10 @@ class JarvisRuntime:
     @property
     def planning_system(self) -> PlanningDecisionSystem | None:
         return self._planning_system
+
+    @property
+    def proactive_initiative(self) -> ProactiveInitiativeSystem | None:
+        return self._proactive_initiative
 
     @property
     def authorizes_execution(self) -> bool:
