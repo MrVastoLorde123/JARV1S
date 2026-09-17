@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_service import CodingAgentService
@@ -37,7 +38,7 @@ class FakeWorker:
 
     def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
         self.executed.append((task, plan))
-        return self.result
+        return replace(self.result, task_id=task.task_id)
 
 
 class DummyAIService:
