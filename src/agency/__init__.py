@@ -99,6 +99,10 @@ from .authorized_execution_recovery import (
     AuthorizedExecutionRecovery,
     build_authorized_execution_recovery,
 )
+from .authorized_execution_reconciliation import (
+    AuthorizedExecutionReconciliation,
+    build_authorized_execution_reconciliation,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -194,6 +198,8 @@ __all__ = [
     "bind_authorized_execution_verification",
     "AuthorizedExecutionRecovery",
     "build_authorized_execution_recovery",
+    "AuthorizedExecutionReconciliation",
+    "build_authorized_execution_reconciliation",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
@@ -250,5 +256,6 @@ __all__ = [
     "AgencyLifecycleState",
     "build_agency_lifecycle_state",
     "AgencyLifecycleIntegration",
-    "build_agency_lifecycle_integration",
+    "
+    "
 ]
