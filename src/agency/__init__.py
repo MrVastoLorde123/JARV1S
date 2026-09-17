@@ -52,6 +52,11 @@ from .information_gain import (
     InformationGainOpportunity,
     build_information_gain_assessment,
 )
+from .proactive_proposal import (
+    ProactiveProposal,
+    ProactiveProposalSet,
+    build_proactive_proposal_set,
+)
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -120,6 +125,9 @@ __all__ = [
     "InformationGainAssessment",
     "InformationGainOpportunity",
     "build_information_gain_assessment",
+    "ProactiveProposal",
+    "ProactiveProposalSet",
+    "build_proactive_proposal_set",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
