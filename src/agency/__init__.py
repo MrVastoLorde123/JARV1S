@@ -256,6 +256,5 @@ __all__ = [
     "AgencyLifecycleState",
     "build_agency_lifecycle_state",
     "AgencyLifecycleIntegration",
-    "
-    "
+    "build_agency_lifecycle_integration",
 ]
