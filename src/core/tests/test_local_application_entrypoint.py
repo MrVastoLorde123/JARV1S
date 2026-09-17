@@ -9,6 +9,7 @@ from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_service import CodingAgentService
 from src.ai.model_routing import ModelRole
 from src.ai.model_routing_runtime import ModelRoutingRuntime
+from src.core.tool_authorization_evidence_recording import ToolAuthorizationEvidenceRecorder
 
 
 class _FakeToolInvoker:
@@ -101,6 +102,12 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
         tool_stack_builder.assert_called_once_with(
             ANY,
             confirmation_provider=confirmation_provider,
+            authorization_recorder=ANY,
+        )
+        authorization_recorder = tool_stack_builder.call_args.kwargs["authorization_recorder"]
+        self.assertIsInstance(
+            authorization_recorder,
+            ToolAuthorizationEvidenceRecorder,
         )
         coding_service_cls.from_ai_service.assert_called_once_with(
             ai_service,

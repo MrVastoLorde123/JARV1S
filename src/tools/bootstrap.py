@@ -34,6 +34,7 @@ def build_tool_stack(
     registry: Optional[ToolRegistry] = None,
     policy: Optional[Policy] = None,
     confirmation_provider: Optional[ConfirmationProvider] = None,
+    authorization_recorder=None,
 ) -> ToolStack:
     """Register handlers and wire registry, service, and policy gate."""
     registry = registry if registry is not None else ToolRegistry()
@@ -46,6 +47,7 @@ def build_tool_stack(
         service,
         policy or DefaultPolicy(),
         confirmation_provider,
+        authorization_recorder=authorization_recorder,
     )
     return ToolStack(registry=registry, service=service, gate=gate)
 
@@ -56,6 +58,7 @@ def build_workspace_tool_stack(
     registry: Optional[ToolRegistry] = None,
     policy: Optional[Policy] = None,
     confirmation_provider: Optional[ConfirmationProvider] = None,
+    authorization_recorder=None,
 ) -> ToolStack:
     """Build the standard workspace filesystem capability set."""
     handlers: list[ToolHandler] = [
@@ -69,6 +72,7 @@ def build_workspace_tool_stack(
         registry=registry,
         policy=policy,
         confirmation_provider=confirmation_provider,
+        authorization_recorder=authorization_recorder,
     )
 
 
@@ -78,6 +82,7 @@ def build_local_development_tool_stack(
     registry: Optional[ToolRegistry] = None,
     policy: Optional[Policy] = None,
     confirmation_provider: Optional[ConfirmationProvider] = None,
+    authorization_recorder=None,
 ) -> ToolStack:
     """Build workspace tools plus the constrained repository test/build runner."""
     handlers: list[ToolHandler] = [
@@ -92,4 +97,5 @@ def build_local_development_tool_stack(
         registry=registry,
         policy=policy,
         confirmation_provider=confirmation_provider,
+        authorization_recorder=authorization_recorder,
     )
