@@ -6,6 +6,7 @@ from src.agents.coding_confirmation import (
     CodingAgentConfirmationService,
     coding_plan_fingerprint,
 )
+from src.agents.coding_execution_learning import CodingExecutionLearningService
 from src.agents.coding_service import CodingAgentService
 from src.agents.coding_worker import CodingAgentTask
 from src.core.jarvis import JARVIS
@@ -20,6 +21,7 @@ class CodingAgentJARVIS(JARVIS):
         *args,
         coding_agent_service: CodingAgentService | None = None,
         coding_confirmation_service: CodingAgentConfirmationService | None = None,
+        coding_execution_learning_service: CodingExecutionLearningService | None = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -41,6 +43,18 @@ class CodingAgentJARVIS(JARVIS):
             )
 
         self.coding_agent_service = coding_agent_service
+        self.coding_execution_learning_service = (
+            coding_execution_learning_service
+            if coding_execution_learning_service is not None
+            else CodingExecutionLearningService()
+        )
+        if not isinstance(
+            self.coding_execution_learning_service,
+            CodingExecutionLearningService,
+        ):
+            raise TypeError(
+                "coding_execution_learning_service must be a CodingExecutionLearningService"
+            )
 
     def ask(self, query: str, provider_name: str | None = None) -> JARVISResponse:
         if not isinstance(query, str):
@@ -242,6 +256,11 @@ class CodingAgentJARVIS(JARVIS):
             },
         )
         result = self.coding_agent_service.execute(execution_task, confirmed.plan)
+        learning = self.coding_execution_learning_service.record(
+            execution_task,
+            confirmed.plan,
+            result,
+        )
         return JARVISResponse(
             content=(
                 f"Coding operation {result.status}.\n\n"
@@ -261,6 +280,7 @@ class CodingAgentJARVIS(JARVIS):
                 "edits_applied": result.edits_applied,
                 "blocked_tool": result.blocked_tool,
                 "verification": result.verification,
+                **learning.to_metadata(),
             },
         )
 

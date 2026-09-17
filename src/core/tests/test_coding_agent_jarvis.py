@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 from src.agents.coding_confirmation import CodingAgentConfirmationService
 from src.agents.coding_service import CodingAgentService
@@ -12,6 +13,7 @@ from src.agents.coding_worker import (
     CodingAgentVerification,
 )
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
+from src.tools.models import ToolResult
 
 
 class FakePlanner:
@@ -37,7 +39,7 @@ class FakeWorker:
 
     def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
         self.executed.append((task, plan))
-        return self.result
+        return replace(self.result, task_id=task.task_id)
 
 
 class DummyAIService:
@@ -62,7 +64,20 @@ class M28CodingAgentJARVISTests(unittest.TestCase):
             status="verified",
             edits_attempted=1,
             edits_applied=1,
-            verification=None,
+            verification=ToolResult(
+                success=True,
+                tool_name="run_test",
+                content={"exit_code": 0},
+                invocation_id="coding-jarvis-001-verification",
+            ),
+            edit_results=(
+                ToolResult(
+                    success=True,
+                    tool_name="write_file",
+                    content={"path": "ui/src/App.tsx", "written": True},
+                    invocation_id="coding-jarvis-001-edit-1",
+                ),
+            ),
             message="verification passed",
         )
         self.planner = FakePlanner(self.task_plan)
