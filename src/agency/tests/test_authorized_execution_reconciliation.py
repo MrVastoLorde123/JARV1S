@@ -1,6 +1,9 @@
 from unittest import TestCase
 
-from src.agency.authorized_execution_reconciliation import build_authorized_execution_reconciliation
+from src.agency.authorized_execution_reconciliation import (
+    AuthorizedExecutionReconciliation,
+    build_authorized_execution_reconciliation,
+)
 from src.agency.authorized_execution_recovery import AuthorizedExecutionRecovery
 from src.agency.authorized_execution_recovery import build_authorized_execution_recovery
 from src.agency.recovery_state import reconcile_recovery
