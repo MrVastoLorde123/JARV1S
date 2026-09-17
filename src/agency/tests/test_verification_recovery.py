@@ -9,13 +9,13 @@ class M38VerificationRecoveryTests(TestCase):
     def _objective(self):
         return Objective("objective-1", "finish bounded work", ObjectiveState.ACTIVE)
 
-    def _cycle(self):
-        return ContinuationCycle("cycle-1", "objective-1", 0, max_cycles=3)
+    def _cycle(self, observation_ids=()):
+        return ContinuationCycle("cycle-1", "objective-1", 0, observation_ids=tuple(observation_ids), max_cycles=3)
 
     def test_verified_outcome_completes_objective_without_execution_authority(self):
         decision = derive_recovery_decision(
             VerificationDecision("exec-1", VerificationDisposition.VERIFIED, "independent verification passed", evidence_id="evidence-1"),
-            self._objective(), self._cycle(), observation_ids=("obs-1",),
+            self._objective(), self._cycle(("obs-1",)), observation_ids=("obs-1",),
         )
         self.assertEqual(RecoveryDisposition.COMPLETE, decision.disposition)
         self.assertEqual("COMPLETED", decision.continuation.stop_reason.value)
@@ -25,7 +25,7 @@ class M38VerificationRecoveryTests(TestCase):
     def test_rejected_verification_can_propose_bounded_continuation(self):
         decision = derive_recovery_decision(
             VerificationDecision("exec-2", VerificationDisposition.REJECTED, "verification rejected"),
-            self._objective(), self._cycle(), observation_ids=("obs-2",), next_step="inspect the failed result",
+            self._objective(), self._cycle(("obs-2",)), observation_ids=("obs-2",), next_step="inspect the failed result",
         )
         self.assertEqual(RecoveryDisposition.CONTINUE, decision.disposition)
         self.assertIsNotNone(decision.continuation.proposal)
