@@ -1,8 +1,23 @@
+import os
 import sqlite3
 from pathlib import Path
 
 
-DATABASE_PATH = Path("data/processed/jarvis.db")
+DEFAULT_DATABASE_PATH = Path("data/processed/jarvis.db")
+DATABASE_PATH = DEFAULT_DATABASE_PATH
+
+
+def get_database_path():
+    """Return the canonical runtime database path, honoring JARVIS_DATA_DIR."""
+
+    if DATABASE_PATH != DEFAULT_DATABASE_PATH:
+        return DATABASE_PATH
+
+    configured_data_dir = os.environ.get("JARVIS_DATA_DIR")
+    if configured_data_dir:
+        return Path(configured_data_dir) / "processed" / "jarvis.db"
+
+    return DATABASE_PATH
 
 
 def get_connection():
@@ -14,8 +29,9 @@ def get_connection():
     part of the connection contract, not a caller responsibility.
     """
 
-    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(DATABASE_PATH)
+    database_path = get_database_path()
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(database_path)
 
     connection.execute("PRAGMA foreign_keys = ON")
 
@@ -43,7 +59,7 @@ if __name__ == "__main__":
     connection = get_connection()
 
     print()
-    print(f"Database: {DATABASE_PATH}")
+    print(f"Database: {get_database_path()}")
     print("Connection: OK")
 
     foreign_keys = connection.execute(
