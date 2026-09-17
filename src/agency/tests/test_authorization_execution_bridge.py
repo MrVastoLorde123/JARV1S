@@ -2,7 +2,12 @@ import unittest
 
 from src.agency.authorization_decision import AuthorizationDecision, AuthorizationDisposition
 from src.agency.authorization_execution_bridge import create_authorization_execution_bridge
-from src.context.execution_semantics import ExecutionPreparation, ExecutionPreparationStatus, ExecutionRequest
+from src.context.execution_semantics import (
+    ExecutionPreparation,
+    ExecutionPreparationStatus,
+    ExecutionPreparationViolation,
+    ExecutionRequest,
+)
 
 
 class M53AuthorizationExecutionBridgeTests(unittest.TestCase):
@@ -59,7 +64,12 @@ class M53AuthorizationExecutionBridgeTests(unittest.TestCase):
             request="Perform approved operation",
             execution_id="exec:1",
             status=ExecutionPreparationStatus.BLOCKED,
-            violations=(),
+            violations=(
+                ExecutionPreparationViolation(
+                    "blocked_for_test",
+                    "blocked fixture for bridge rejection test",
+                ),
+            ),
         )
         with self.assertRaises(ValueError):
             create_authorization_execution_bridge(self._authorization(), blocked)
