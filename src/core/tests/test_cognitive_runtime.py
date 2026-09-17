@@ -12,7 +12,7 @@ from src.core.cognitive_runtime import (
     CognitiveRuntimeValidationError,
     candidate_plan,
 )
-from src.core.planning_decision import Goal
+from src.core.planning_decision import Goal, PlanningDecisionSystem
 from src.core.reasoning import EvidencePolarity, ReasoningSystem
 from src.core.proactive_initiative import ProactiveInitiativeSystem
 from src.core.world_model import WorldEntity, WorldEntityType, WorldModelSystem, WorldObservation
@@ -26,9 +26,7 @@ class Phase10CognitiveRuntimeTests(unittest.TestCase):
         self.runtime = CognitiveRuntime(
             world_model=WorldModelSystem(),
             reasoning_system=ReasoningSystem(),
-            planning_system=__import__(
-                "src.core.planning_decision", fromlist=["PlanningDecisionSystem"]
-            ).PlanningDecisionSystem(),
+            planning_system=PlanningDecisionSystem(),
             proactive_initiative=ProactiveInitiativeSystem(),
         )
         self.goal = Goal(
