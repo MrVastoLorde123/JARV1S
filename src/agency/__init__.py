@@ -36,6 +36,7 @@ from .world_model_qualification import (
     assess_world_model,
 )
 from .current_context import CurrentContext, CurrentContextFact, build_current_context
+from .reasoning import ReasoningHypothesis, ReasoningResult, build_reasoning_result
 from .work_state import WorkBlocker, WorkRole, WorkStage, WorkState, WorkStatus, infer_work_role
 from .work_planning import PlanStepKind, WorkPlan, WorkPlanStep, build_work_plan, next_ready_steps
 from .task_orchestration import (
@@ -92,6 +93,9 @@ __all__ = [
     "CurrentContext",
     "CurrentContextFact",
     "build_current_context",
+    "ReasoningHypothesis",
+    "ReasoningResult",
+    "build_reasoning_result",
     "ContinuationCycle",
     "ContinuationDecision",
     "ContinuationStopReason",
