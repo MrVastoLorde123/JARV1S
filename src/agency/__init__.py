@@ -54,6 +54,7 @@ from .execution_outcome import (
     classify_agency_outcome,
 )
 from .verification_recovery import RecoveryDecision, RecoveryDisposition, derive_recovery_decision
+from .recovery_state import RecoveryReconciliation, RecoveryStateDisposition, reconcile_recovery
 
 __all__ = [
     "AgentEntity",
@@ -119,4 +120,7 @@ __all__ = [
     "RecoveryDecision",
     "RecoveryDisposition",
     "derive_recovery_decision",
+    "RecoveryReconciliation",
+    "RecoveryStateDisposition",
+    "reconcile_recovery",
 ]
