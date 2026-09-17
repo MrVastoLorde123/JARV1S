@@ -1,6 +1,9 @@
 from unittest import TestCase
 
 from src.agency.authorized_execution_reconciliation import build_authorized_execution_reconciliation
+from src.agency.authorized_execution_recovery import AuthorizedExecutionRecovery
+from src.agency.authorized_execution_recovery import build_authorized_execution_recovery
+from src.agency.recovery_state import reconcile_recovery
 from src.agency.tests.test_authorized_execution_recovery import _M58Fixture
 from src.agency.work_state import WorkRole, WorkStage, WorkState, WorkStatus
 
@@ -17,8 +20,6 @@ class M59AuthorizedExecutionReconciliationTests(_M58Fixture):
         )
 
     def _recovery(self):
-        from src.agency.authorized_execution_recovery import build_authorized_execution_recovery
-
         return build_authorized_execution_recovery(
             self._verification(),
             self._objective(),
@@ -34,16 +35,23 @@ class M59AuthorizedExecutionReconciliationTests(_M58Fixture):
         self.assertEqual(self._work_state(), result.reconciliation.before)
         self.assertEqual("COMPLETE", result.reconciliation.after.stage.value)
 
-    def test_mismatched_work_identity_is_rejected(self):
-        wrong = WorkState(
+    def test_mismatched_reconciliation_work_identity_is_rejected(self):
+        recovery = self._recovery()
+        original_state = self._work_state()
+        other_state = WorkState(
             work_id="other-work",
             objective="recover bounded work",
             stage=WorkStage.EXECUTING,
             status=WorkStatus.ACTIVE,
             role=WorkRole.TECHNICAL_LEAD,
         )
+        other_reconciliation = reconcile_recovery(other_state, recovery.recovery)
         with self.assertRaises(ValueError):
-            build_authorized_execution_reconciliation(self._recovery(), wrong)
+            AuthorizedExecutionReconciliation(
+                authorized_recovery=recovery,
+                work_state=original_state,
+                reconciliation=other_reconciliation,
+            )
 
     def test_non_recovery_input_is_rejected(self):
         with self.assertRaises(TypeError):
