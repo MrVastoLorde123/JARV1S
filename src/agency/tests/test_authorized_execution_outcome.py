@@ -1,11 +1,12 @@
 from unittest import TestCase
+from unittest.mock import Mock
 
 from src.agency.authorized_execution_admission import create_authorized_execution_admission
 from src.agency.authorized_execution_outcome import build_authorized_execution_outcome
 from src.agency.authorized_execution_runtime_admission import create_authorized_execution_runtime_admission
 from src.agency.authorization_decision import AuthorizationDecision, AuthorizationDisposition
 from src.agency.authorization_execution_bridge import create_authorization_execution_bridge
-from src.agency.controlled_agency import ControlledAgencyResult
+from src.agency.controlled_agency import AgencyStopReason, ControlledAgencyResult
 from src.agency.execution_bridge import AgencyExecutionBridgeResult
 from src.agency.execution_handoff import create_execution_handoff
 from src.agency.work_dispatch import DispatchRequest, WorkDispatcher
@@ -16,7 +17,6 @@ from src.context.authorization_integrity_semantics import AuthorizationIntegrity
 from src.context.authorization_semantics import AuthorizationDecision as LegacyAuthorizationDecision, AuthorizationStatus
 from src.context.execution_semantics import ExecutionGate
 from src.context.working_context import WorkingContext
-from unittest.mock import Mock
 
 
 class _M56Fixture(TestCase):
@@ -78,7 +78,7 @@ class _M56Fixture(TestCase):
             observations=(),
             lifecycles=(),
             working_context=Mock(spec=WorkingContext),
-            stop_reason="completed",
+            stop_reason=AgencyStopReason.COMPLETED,
         )
         execution_result = AgencyExecutionBridgeResult(
             handoff=admission.execution_handoff,
