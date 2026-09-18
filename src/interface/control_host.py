@@ -243,18 +243,22 @@ def start_control_plane_http(runtime: JARVISRuntime, *, ai_service: AIService | 
     def autonomous_supplier():
         if runtime.operational_runtime is None:
             return ()
+        def bounded(value, maximum=2000):
+            text = str(value or "")
+            return text if len(text) <= maximum else text[:maximum] + "...[truncated]"
+
         records = []
         for job in runtime.operational_runtime.list_jobs(limit=100):
             records.append(
                 {
                     "job_id": job.job_id,
-                    "goal": job.goal,
+                    "goal": bounded(job.goal),
                     "status": job.status.value,
                     "step_count": job.step_count,
                     "max_steps": job.max_steps,
-                    "waiting_reason": job.waiting_reason,
-                    "result": job.result,
-                    "failure_reason": job.failure_reason,
+                    "waiting_reason": bounded(job.waiting_reason),
+                    "result": bounded(job.result),
+                    "failure_reason": bounded(job.failure_reason),
                     "resumable": job.resumable,
                     "terminal": job.terminal,
                     "authority_granted": False,
