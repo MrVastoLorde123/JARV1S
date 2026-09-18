@@ -141,32 +141,32 @@ Cognition remains advisory and non-authoritative.
 
 ### OPS-03 live implementation
 
-The live JARVIS task path now composes the canonical cognitive runtime before deterministic capability realization and execution planning.
+The live `JARVIS` task path now runs the canonical cognitive runtime inside the existing task execution boundary and carries its goal/plan/proposal lineage onto the deterministic execution plan.
 
-The cognitive result is carried as explicit operational lineage:
+The current causal seam is:
 
 ```
 intent
   ↓
-cognition
+capability discovery / realization (existing bounded path)
+  ↓
+deterministic execution plan
+  ↓
+cognitive context attached to the operational plan
   ├─ world snapshot
   ├─ reasoning result
   ├─ goal
   ├─ selected advisory plan
   └─ proposal
         ↓
-capability realization
-        ↓
-deterministic execution plan
-        ↓
-validation / policy / confirmation / execution
+validation / policy / confirmation / authorization / execution
 ```
 
-The execution plan records the cognitive lineage, but downstream policy and authorization remain authoritative.
+Cognition changes the inspectable plan context, but it does not become an execution authority. Existing task and planner object contracts remain unchanged.
 
-Cognition therefore changes the inspectable operational plan without becoming an execution authority. A cognitive-runtime failure is surfaced as UNAVAILABLE; it does not silently become permission to act and it does not create a second execution path.
+A cognitive-runtime failure is represented as `UNAVAILABLE`; it does not silently become permission to act and it does not create a second execution path.
 
-The compatibility UnifiedRequestRuntime also avoids running cognition twice when wrapping the integrated JARVIS processor.
+The compatibility `UnifiedRequestRuntime` avoids running cognition twice when it wraps an already-integrated JARVIS processor.
 ### OPS-04 — Capability → Agency
 
 Connect goal/planning outputs to real capability discovery, selection, realization, validation, policy, confirmation, authorization, execution, and verification.
