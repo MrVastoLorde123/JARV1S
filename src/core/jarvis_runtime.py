@@ -215,17 +215,7 @@ class JARVISRuntime:
         except Exception as exc:
             # Preserve the original control-flow/authority semantics while still
             # making failures visible to the observational control plane.
-            failure_response = InterfaceResponse(
-                request_id=request.request_id,
-                operation=request.operation,
-                status=InterfaceResponseStatus.FAILED,
-                payload={},
-                metadata={
-                    "stage": "RUNTIME",
-                    "error_type": type(exc).__name__,
-                },
-            )
-            self._control_plane.record_response(request, failure_response)
+            self._control_plane.record_failure(request, exc)
             raise
 
     def respond(self, result: RecoveryIntegratedResult) -> InterfaceResponse:
