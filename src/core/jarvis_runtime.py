@@ -193,13 +193,14 @@ class JARVISRuntime:
         metadata: dict[str, object] | None = None,
     ) -> RecoveryIntegratedResult:
         """Process interface traffic through the canonical integrated path."""
-        return self._recovery_runtime.receive(
+        request = InterfaceRequest(
             request_id=request_id,
             channel=channel,
             content=content,
             session_id=session_id,
-            metadata=metadata,
+            metadata={} if metadata is None else metadata,
         )
+        return self.process(request)
 
     def process(self, request: InterfaceRequest) -> RecoveryIntegratedResult:
         """Process an existing interface request and project operational state."""
