@@ -25,6 +25,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Bootstrap database
+        run: python -m src.database_bootstrap
+
       - name: Run CS8 core red-team
         run: python -m unittest src.core.tests.test_deployment_closure_cs8_boundary_red_team -v
 
