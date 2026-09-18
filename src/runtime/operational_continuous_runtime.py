@@ -336,6 +336,7 @@ class OperationalContinuousRuntime:
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._lock = threading.RLock()
+        self._pending_operations: dict[str, str] = {}
 
     @property
     def scheduler(self) -> AutonomousRuntimeScheduler:
@@ -390,12 +391,54 @@ class OperationalContinuousRuntime:
         max_backoff_multiplier: int = 8,
     ) -> tuple[AutonomousRuntimeScheduleResult, ...]:
         current_time = time.time() if now is None else now
-        return self._scheduler.tick(
+        results = self._scheduler.tick(
             current_time,
             max_jobs=max_jobs,
             lease_seconds=lease_seconds,
             max_backoff_multiplier=max_backoff_multiplier,
         )
+        for result in results:
+            job = getattr(getattr(result, "run", None), "job", None)
+            if job is None or job.status is not AutonomousJobStatus.WAITING_AUTHORIZATION:
+                continue
+            operation_id = job.working_context.get("pending_operation_id")
+            if isinstance(operation_id, str) and operation_id.strip():
+                self._pending_operations[operation_id] = job.job_id
+        return results
+
+    def reconcile_confirmation(self, metadata: Mapping[str, Any]) -> AutonomousJob | None:
+        """Synchronize an externally confirmed JARVIS operation into its waiting job."""
+        if not isinstance(metadata, Mapping):
+            raise TypeError("metadata must be a mapping")
+        operation_id = metadata.get("operation_id")
+        if not isinstance(operation_id, str) or not operation_id.strip():
+            return None
+        job_id = self._pending_operations.get(operation_id)
+        if job_id is None:
+            return None
+
+        job = self.inspect(job_id)
+        if job is None or job.status is not AutonomousJobStatus.WAITING_AUTHORIZATION:
+            self._pending_operations.pop(operation_id, None)
+            return None
+
+        command = str(metadata.get("command", "")).upper()
+        execution_status = str(metadata.get("execution_status", "")).upper()
+        success = metadata.get("success")
+        if command != "CONFIRM":
+            return None
+        if success is False:
+            return None
+        if execution_status and execution_status != "COMPLETED":
+            return None
+
+        completed = job.start()
+        completed = completed.complete(
+            str(metadata.get("result") or "Autonomous authorization completed through JARVIS.")
+        )
+        self._persistence.persist(completed)
+        self._pending_operations.pop(operation_id, None)
+        return completed
 
     def resume(
         self,
