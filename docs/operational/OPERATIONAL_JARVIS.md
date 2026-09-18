@@ -233,6 +233,28 @@ Basic session identity and conversation persistence already exist through `Durab
 
 Expose the causal operation lifecycle to the human interface so the user can see what JARVIS is doing, why, what it needs, what happened, what was verified, and what was learned.
 
+### OPS-06 live implementation
+
+The active `JARVISRuntime` now exposes one observational control plane built from the existing M25 activity stream and session-state projector.
+
+```
+live interface request
+  ↓
+JARVISRuntime
+  ↓
+OperationalControlPlane
+  ├─ RuntimeActivityStream
+  └─ InterfaceSessionStateProjector
+        ↓
+current operation / session state
+        ↓
+existing UI/runtime consumers
+```
+
+The live conversational request is adapted into a `STATUS` observation envelope only for the existing activity/state infrastructure. The real task semantics remain in event metadata (`route`, `stage`, `plan_id`, capability, policy, execution status, cognitive context, and outcomes).
+
+The control plane is observational and derived. It cannot authorize execution, execute capabilities, mutate runtime policy, persist state, establish truth, or establish certainty.
+
 ### OPS-07 — Feedback → Learning → Adaptation
 
 Close the outcome loop from verified execution evidence into experience, learning, evaluation, bounded adaptation, and future behavior.
