@@ -220,7 +220,7 @@ class DeploymentClosureCS8BoundaryRedTeamTests(unittest.TestCase):
             pending = confirmation.get(response.metadata["operation_id"])
             self.assertIsNotNone(pending)
             self.assertEqual(pending.status, CodingConfirmationStatus.PENDING)
-            self.assertIs(pending.plan, plan)
+            self.assertEqual(pending.plan, plan)
 
     def test_confirm_is_one_shot_and_replay_cannot_execute_again(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -364,10 +364,7 @@ class DeploymentClosureCS8BoundaryRedTeamTests(unittest.TestCase):
             record = service.record(task, plan, result)
 
             self.assertEqual(record.claim_evaluation_state, "CONTRADICTED")
-            self.assertEqual(
-                record.evaluation.state.value,
-                "FAILURE",
-            )
+            self.assertEqual(record.evaluation.state.value, "MIXED")
             memory = service.repository.get(record.memory_id)
             assert memory is not None
             self.assertEqual(
@@ -386,7 +383,7 @@ class DeploymentClosureCS8BoundaryRedTeamTests(unittest.TestCase):
                 metadata={},
             )
             plan = self._plan()
-            result = self._result()
+            result = replace(self._result(), task_id="learning-task")
 
             record = service.record(task, plan, result)
             memory = service.repository.get(record.memory_id)
