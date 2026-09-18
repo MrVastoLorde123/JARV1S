@@ -242,7 +242,7 @@ try {
                 if (Test-Path -LiteralPath $stderrLog) { $tail = (Get-Content -LiteralPath $stderrLog -Tail 50 -ErrorAction SilentlyContinue) -join "`n" }
                 Fail "llama-server exited during startup with code $exitCode.`n`n$tail"
             }
-            if (Test-TcpPort -TargetHost $BindHost -TargetPort $Port -and (Test-HttpReady -BaseUrl $baseUrl)) { $ready = $true; break }
+            if ((Test-TcpPort -TargetHost $BindHost -TargetPort $Port) -and (Test-HttpReady -BaseUrl $baseUrl)) { $ready = $true; break }
         }
         if (-not $ready) {
             $tail = ""
