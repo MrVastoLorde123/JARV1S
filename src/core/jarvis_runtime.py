@@ -22,6 +22,7 @@ from src.core.event_integrated_runtime import EventIntegratedRuntime
 from src.core.operational_control_plane import OperationalControlPlane
 from src.core.recovery_integrated_runtime import RecoveryIntegratedResult, RecoveryIntegratedRuntime
 from src.core.system_runtime import SystemRuntime
+from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
 from src.interface.boundary import InterfaceChannel, InterfaceRequest, InterfaceResponse
 from src.interface.boundary import InterfaceChannel, InterfaceRequest, InterfaceResponse
 from src.core.interface_backend import InterfaceResponseStatus
@@ -37,6 +38,7 @@ class JARVISRuntime:
         recovery_runtime: RecoveryIntegratedRuntime,
         *,
         world_runtime: AgentWorldRuntime | None = None,
+        operational_runtime: OperationalContinuousRuntime | None = None,
     ) -> None:
         if not isinstance(recovery_runtime, RecoveryIntegratedRuntime):
             raise TypeError("recovery_runtime must be a RecoveryIntegratedRuntime")
@@ -45,6 +47,14 @@ class JARVISRuntime:
         self._recovery_runtime = recovery_runtime
         self._world_runtime = world_runtime
         self._control_plane = OperationalControlPlane()
+        if operational_runtime is not None and not isinstance(
+            operational_runtime,
+            OperationalContinuousRuntime,
+        ):
+            raise TypeError(
+                "operational_runtime must be an OperationalContinuousRuntime or None"
+            )
+        self._operational_runtime = operational_runtime
 
     @classmethod
     def from_processor(
@@ -58,6 +68,7 @@ class JARVISRuntime:
         reliability_runtime: InterfaceReliabilityRuntime | None = None,
         recovery_id_factory: Callable[[], str] | None = None,
         world_runtime: AgentWorldRuntime | None = None,
+        operational_runtime: OperationalContinuousRuntime | None = None,
     ) -> "JARVISRuntime":
         """Build the canonical runtime around one existing JARVIS processor."""
         system_runtime = SystemRuntime(
@@ -75,7 +86,11 @@ class JARVISRuntime:
             reliability_runtime=reliability_runtime,
             recovery_id_factory=recovery_id_factory,
         )
-        return cls(recovery_integrated_runtime, world_runtime=world_runtime)
+        return cls(
+            recovery_integrated_runtime,
+            world_runtime=world_runtime,
+            operational_runtime=operational_runtime,
+        )
 
     @property
     def control_plane(self) -> OperationalControlPlane:
@@ -96,6 +111,45 @@ class JARVISRuntime:
     @property
     def world_runtime(self) -> AgentWorldRuntime | None:
         return self._world_runtime
+
+    @property
+    def operational_runtime(self) -> OperationalContinuousRuntime | None:
+        return self._operational_runtime
+
+    def submit_autonomous(self, goal: str, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.submit(goal, **kwargs)
+
+    def inspect_autonomous(self, job_id: str):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.inspect(job_id)
+
+    def resume_autonomous(self, job_id: str, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.resume(job_id, **kwargs)
+
+    def cancel_autonomous(self, job_id: str, reason: str = "Autonomous job cancelled"):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.cancel(job_id, reason)
+
+    def tick_autonomous(self, *args, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.tick(*args, **kwargs)
+
+    def start_autonomous_runtime(self) -> None:
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        self._operational_runtime.start()
+
+    def stop_autonomous_runtime(self) -> None:
+        if self._operational_runtime is not None:
+            self._operational_runtime.stop()
+
 
     def coordinate_world_delegation(self, plan: DelegationPlan) -> DelegationResult:
         """Validate and order a real M9.5 delegation plan before world instantiation."""
