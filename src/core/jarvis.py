@@ -7,6 +7,7 @@ from src.context.memory_context_source_provider import MemoryContextSourceProvid
 from src.context.models import ContextOptions
 from src.context.working_context_consumption import WorkingContextConsumptionBoundary
 from src.context.working_context_runtime import WorkingContextRuntime
+from src.core.canonical_cognitive_runtime import CanonicalCognitiveRuntime
 from src.core.capability_argument_planner import (
     AIRequestArgumentPlanner,
     CapabilityInvocationError,
@@ -59,6 +60,7 @@ class JARVIS:
         capability_selection_service: CapabilitySelectionService | None = None,
         capability_invocation_service: CapabilityInvocationService | None = None,
         capability_realization_service: CapabilityRealizationService | None = None,
+        cognitive_runtime: CanonicalCognitiveRuntime | None = None,
         working_context_runtime: WorkingContextRuntime | None = None,
         working_context_consumption_boundary: WorkingContextConsumptionBoundary | None = None,
     ):
@@ -68,6 +70,9 @@ class JARVIS:
         self._enable_memory_formation = enable_memory_formation
         self.request_router = request_router if request_router is not None else RequestRouter()
         self.intelligent_request_router = intelligent_request_router
+        if cognitive_runtime is not None and not callable(getattr(cognitive_runtime, "run", None)):
+            raise TypeError("cognitive_runtime must provide a callable run method")
+        self.cognitive_runtime = cognitive_runtime or CanonicalCognitiveRuntime()
 
         if working_context_runtime is not None and not isinstance(working_context_runtime, WorkingContextRuntime):
             raise TypeError("working_context_runtime must be a WorkingContextRuntime.")
@@ -200,6 +205,18 @@ class JARVIS:
 
         if route.request_type.value == "TASK" and route.task is not None:
             task = route.task
+            cognitive_context = self._build_cognitive_task_context(
+                task.content,
+                route.metadata,
+            )
+            task = TaskRequest(
+                content=task.content,
+                task_type=task.task_type,
+                metadata={
+                    **task.metadata,
+                    "cognitive_context": cognitive_context,
+                },
+            )
             realized_metadata = {}
             is_natural_tool = (
                 route.metadata.get("intent_kind") == "tool"
@@ -223,6 +240,7 @@ class JARVIS:
                             "success": False,
                             "intent_kind": route.metadata.get("intent_kind"),
                             "intent_confidence": route.metadata.get("intent_confidence"),
+                            "cognitive_context": cognitive_context,
                         },
                     )
                 except CapabilityInvocationError as exc:
@@ -239,6 +257,7 @@ class JARVIS:
                             "success": False,
                             "intent_kind": route.metadata.get("intent_kind"),
                             "intent_confidence": route.metadata.get("intent_confidence"),
+                            "cognitive_context": cognitive_context,
                         },
                     )
                 except (TypeError, ValueError) as exc:
@@ -255,6 +274,7 @@ class JARVIS:
                             "success": False,
                             "intent_kind": route.metadata.get("intent_kind"),
                             "intent_confidence": route.metadata.get("intent_confidence"),
+                            "cognitive_context": cognitive_context,
                         },
                     )
 
@@ -284,6 +304,7 @@ class JARVIS:
                 {
                     "intent_kind": route.metadata.get("intent_kind"),
                     "intent_confidence": route.metadata.get("intent_confidence"),
+                    "cognitive_context": cognitive_context,
                     **realized_metadata,
                 }
             )
@@ -294,6 +315,68 @@ class JARVIS:
             provider_name=provider_name,
             original_input=original_query,
         )
+
+    def _build_cognitive_task_context(
+        self,
+        query: str,
+        route_metadata: dict[str, object],
+    ) -> dict[str, object]:
+        try:
+            result = self.cognitive_runtime.run(
+                query,
+                metadata={
+                    "intent_kind": route_metadata.get("intent_kind"),
+                    "intent_confidence": route_metadata.get("intent_confidence"),
+                    "intent_reasoning": route_metadata.get("intent_reasoning"),
+                },
+            )
+        except Exception as exc:
+            return {
+                "status": "UNAVAILABLE",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "authority_granted": False,
+                "authorization_granted": False,
+                "execution_requested": False,
+                "execution_performed": False,
+            }
+
+        context = result.to_context()
+        context["status"] = "COMPLETED"
+        context["intent_kind"] = route_metadata.get("intent_kind")
+        context["intent_confidence"] = route_metadata.get("intent_confidence")
+        context["goal"] = result.planning.context.goal.to_context()
+
+        selected_plan_id = result.planning.ranking.advisory_selected_plan_id
+        selected_plan = next(
+            (
+                candidate
+                for candidate in (
+                    getattr(result.initiative.context, "selected_plan", None),
+                )
+                if candidate is not None
+            ),
+            None,
+        )
+        if selected_plan is not None:
+            context["selected_plan"] = selected_plan.to_context()
+        else:
+            context["selected_plan"] = None
+
+        selected_evaluation = next(
+            (
+                evaluation
+                for evaluation in result.planning.evaluations
+                if evaluation.plan_id == selected_plan_id
+            ),
+            None,
+        )
+        context["selected_evaluation"] = (
+            None if selected_evaluation is None else selected_evaluation.to_context()
+        )
+        proposal = result.initiative.proposal
+        context["proposal"] = None if proposal is None else proposal.to_dict()
+        return context
 
     def ask_task(self, task: TaskRequest) -> JARVISResponse:
         route = self.request_router.route_task(task)
@@ -361,6 +444,7 @@ class JARVIS:
                     "operation_id": pending.operation_id,
                     "plan_fingerprint": pending.metadata["plan_fingerprint"],
                     "policy_decision": policy.decision.value,
+                    "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
                 },
             )
 
@@ -470,6 +554,7 @@ class JARVIS:
                 "valid": False,
                 "plan_id": validation.plan.plan_id,
                 "issues": tuple(issue.code for issue in validation.issues),
+                "execution_plan_cognitive_context": validation.plan.metadata.get("cognitive_context"),
             },
         )
 
@@ -491,6 +576,7 @@ class JARVIS:
                 "plan_id": policy.plan.plan_id,
                 "policy_decision": policy.decision.value,
                 "issues": tuple(issue.code for issue in policy.issues),
+                "execution_plan_cognitive_context": policy.plan.metadata.get("cognitive_context"),
             },
         )
 
@@ -528,6 +614,7 @@ class JARVIS:
                 "step_count": execution.step_count,
                 "failed_steps": tuple(step.step_id for step in execution.failed_steps),
                 "execution_outputs": outputs,
+                "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
             },
         )
 
