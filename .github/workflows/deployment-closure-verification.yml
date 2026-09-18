@@ -1,0 +1,72 @@
+name: Deployment Closure Verification
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/deployment-closure-cs*"
+  pull_request:
+    branches:
+      - main
+      - "feature/deployment-closure-cs*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bootstrap database
+        run: python -m src.database_bootstrap
+
+      - name: Historical interface focused tests
+        run: >
+          python -m unittest
+          src.interface.tests.test_http_command
+          src.interface.tests.test_http_capabilities
+          src.interface.tests.test_boundary
+          src.tools.tests.test_test_runner
+
+      - name: Current AI provider and routing tests
+        run: >
+          python -m unittest
+          src.ai.tests.test_local_model_policy
+          src.ai.tests.test_service_provider_model_observation
+
+      - name: Full core regression
+        run: python -m unittest discover -s src/core/tests -p "test_*.py"
+
+  ui:
+    name: UI verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install interface dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Build interface
+        working-directory: ui
+        run: npm run build

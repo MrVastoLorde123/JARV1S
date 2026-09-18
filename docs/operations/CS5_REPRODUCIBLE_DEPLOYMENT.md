@@ -2,109 +2,90 @@
 
 ## Status
 
-CS5 is an active closure stage. The reproducibility work is now bounded around runtime data paths, committed UI dependencies, and the Python runtime contract. It is **not** a completion receipt until the clean-checkout rehearsal is recorded.
+CS5 is **verified / closed** on the Deployment Closure stack.
 
-## Implemented
+The reproducibility work is bounded around runtime data paths, committed UI dependencies, the Python runtime contract, and a successful clean-checkout deployment rehearsal.
 
-### Canonical data directory
+## Canonical data directory
 
-The production runtime now establishes `JARVIS_DATA_DIR` before database bootstrap.
+The production runtime establishes \`JARVIS_DATA_DIR\` before database bootstrap.
 
 The canonical local database path is:
 
-```
-<JARVIS_DATA_DIR>/processed/jarvis.db
-```
+\`<JARVIS_DATA_DIR>/processed/jarvis.db\`
 
-The legacy default remains `data/processed/jarvis.db` when no deployment data directory is supplied.
+The legacy default remains \`data/processed/jarvis.db\` when no deployment data directory is supplied.
 
 The launcher exposes the same configuration explicitly:
 
-```powershell
-.\scripts\run_jarvis.ps1 -DataDir "C:\JARVIS\data"
-```
+\`.\scripts\run_jarvis.ps1 -DataDir "C:\JARVIS\data"\`
 
-The script also preserves/restores a pre-existing `JARVIS_DATA_DIR` environment value.
+The script also preserves/restores a pre-existing \`JARVIS_DATA_DIR\` environment value.
 
-This removes the previous split where persistent learning used the configured data directory while legacy conversation/bootstrap persistence could still silently use the repository-relative database path.
+## Model-provider boundary
 
-### Model-provider boundary
-
-The local model remains an external capability provider. `scripts/run_jarvis.ps1` requires an explicit or discoverable `llama-server.exe` and GGUF model, and the runtime receives only the resolved OpenAI-compatible endpoint/model identity.
+The local model remains an external capability provider. \`scripts/run_jarvis.ps1\` requires an explicit or discoverable \`llama-server.exe\` and GGUF model, and the runtime receives only the resolved OpenAI-compatible endpoint/model identity.
 
 Machine-specific executable/model locations are not committed to the repository.
 
-### UI dependency graph
+## UI dependency graph
 
-The UI now declares exact direct dependency versions and commits `ui/package-lock.json`:
+The UI declares exact direct dependency versions and commits \`ui/package-lock.json\`.
 
-- React `19.3.0`
-- React DOM `19.3.0`
-- Vite `8.3.0`
-- @types/react `19.3.0`
-- @types/react-dom `19.3.0`
-- @vitejs/plugin-react `6.1.1`
-- TypeScript `7.0.2`
+Verified deployment commands:
 
-The lockfile is npm lockfile version 3 and records the resolved dependency graph with integrity metadata.
-
-Local verification on the deployment workstation:
-
-```powershell
-cd ui
-npm ci
-npm run build
-```
+\`cd ui\`
+\`npm ci\`
+\`npm run build\`
 
 Both commands passed; the production build completed successfully.
 
-## Remaining reproducibility gaps
+## Python runtime contract
 
-### Python runtime contract
+The backend has no third-party Python package manifest because the inspected runtime surface is standard-library-only.
 
-The backend has no third-party Python package manifest because the inspected runtime surface is standard-library-only. Runtime code uses Python standard-library modules for persistence (`sqlite3`), HTTP transport (`http.server`, `urllib`), filesystem/process control, JSON, typing, and related services.
-
-The reproducible interpreter contract is:
+The reproducible interpreter contract remains:
 
 - Python **3.12**
 - Python standard library only for the backend/runtime
-- no `requirements.txt`, `pyproject.toml`, or Python package lockfile is required by the current runtime
+- no Python dependency manifest is required by the current runtime
 
-The existing CI configuration targets Python 3.12. A clean-checkout rehearsal performed under another interpreter version does not substitute for a Python 3.12 verification.
+The clean-checkout rehearsal used Python **3.14.7** because Python 3.12 was not installed on that workstation. It therefore proves the deployment path on the available interpreter but is not a separate Python 3.12 execution receipt.
 
-This avoids introducing a dependency manifest that would claim packages the runtime does not actually require.
+## Clean-checkout deployment proof — COMPLETE
 
-### Clean-checkout deployment proof
+Final rehearsal checkout:
 
-The final CS5 proof must start from a clean checkout of this branch and use only committed repository configuration plus explicitly supplied model-provider artifacts.
+\`C:\Users\jeoop\JARV1S-CS5-CLEAN\`
 
-The rehearsal should prove:
+Branch:
 
-1. the branch checks out cleanly;
-2. `python -m src.database_bootstrap` creates the configured data-root database;
-3. the backend regression suite is run **after bootstrap** against that initialized database;
-4. `cd ui; npm ci; npm run build` succeeds from the committed lockfile;
-5. `scripts/run_jarvis.ps1 -DataDir <explicit-data-dir> ...` reaches its normal startup gates;
-6. no generated runtime artifacts are required to be committed.
+\`feature/deployment-closure-cs5-reproducible-deployment\`
 
-The local model executable and GGUF remain deployment inputs rather than repository dependencies.
+Verified:
 
-### CI boundary
+- focused provider-routing verification: **7/7 OK**
+- database bootstrap: **PASS**
+- real \`llama-server\`: **READY**
+- exposed model: \`qwen3-4b-local\`
+- AI provider regression during deployment: **11/11 OK**
+- core regression during deployment: **3294/3294 OK**
+- real interactive JARVIS request: **PASS**
+- interactive \`:quit\`: **PASS**
+- final \`git status --short\`: **CLEAN**
 
-The existing workflow at `.github/workflows/m28-verification.yml` is still scoped to the historical M28 branch. Changing its trigger topology and broadening CI coverage is a **CS6 Verification & CI Closure** concern rather than a CS5 deployment-manifest requirement.
+The real clean-checkout runtime accepted an interactive request and returned:
 
-Once CS6 owns that workflow, the UI install step should use `npm ci` because the lockfile is now committed.
+\`Hello, Master. How can I assist you today?\`
 
+The launcher then exited through \`:quit\` and returned the checkout to a clean working tree.
 
-## Verification evidence
+## CS6 handoff
 
-Verified on the deployment workstation:
+The historical M28-only CI workflow is retired by CS6.
 
-```
-Database/data-directory tests: 5/5 OK
-Core regression: 3294/3294 OK
-npm ci: PASS
-npm run build: PASS
-```
+Canonical CI coverage is now owned by:
 
-CS5 remains open/draft until the clean-checkout deployment rehearsal is recorded.
+\`.github/workflows/deployment-closure-verification.yml\`
+
+CS5 deployment responsibilities are complete. CI verification and closure evidence continue in **CS6 Verification & CI Closure**.
