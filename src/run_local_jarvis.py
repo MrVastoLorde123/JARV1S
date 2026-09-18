@@ -16,6 +16,8 @@ from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.core.persistent_intelligence import PersistentMemoryRepository
 from src.core.conversation_store import ConversationStore
+from src.core.intelligent_request_router import IntelligentRequestRouter
+from src.core.request_intent import AIRequestIntentClassifier
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
 from src.core.tool_authorization_evidence_recording import ToolAuthorizationEvidenceRecorder
@@ -80,6 +82,8 @@ def main():
     )
     ai_service.register_provider(provider)
     ai_service.observe_provider_models("local")
+    intent_classifier = AIRequestIntentClassifier(ai_service)
+    intelligent_request_router = IntelligentRequestRouter(intent_classifier)
 
     conversation_store = ConversationStore()
     personalization_store = PersonalizationStore(
@@ -150,6 +154,7 @@ def main():
             coding_agent_service=coding_agent_service,
             coding_confirmation_service=coding_confirmation_service,
             coding_execution_learning_service=coding_execution_learning_service,
+            intelligent_request_router=intelligent_request_router,
         )
 
     default_processor = CodingAgentJARVIS(
@@ -158,6 +163,7 @@ def main():
         coding_agent_service=coding_agent_service,
         coding_confirmation_service=coding_confirmation_service,
         coding_execution_learning_service=coding_execution_learning_service,
+        intelligent_request_router=intelligent_request_router,
     )
     world_runtime = create_local_world_runtime() if enable_world_http else None
     runtime = JARVISRuntime.from_processor(
