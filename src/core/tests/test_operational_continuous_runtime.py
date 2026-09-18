@@ -193,7 +193,6 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             runtime.start()
             deadline = time.time() + 1.0
             while time.time() < deadline:
-                current = runtime.inspect(runtime.submit.__name__) if False else None
                 if processor.calls:
                     break
                 time.sleep(0.01)
@@ -212,11 +211,6 @@ class OPS08RuntimeFacadeTests(unittest.TestCase):
                 processor,
                 connection_factory=db_factory(path),
             )
-        facade = JARVISRuntime.from_processor(
-            processor,
-            operational_runtime=runtime,
-        )
-
             facade = JARVISRuntime.from_processor(
                 processor,
                 operational_runtime=runtime,
@@ -233,6 +227,3 @@ class OPS08RuntimeFacadeTests(unittest.TestCase):
                 AutonomousJobStatus.QUEUED,
             )
 
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
