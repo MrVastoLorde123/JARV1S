@@ -35,21 +35,24 @@ class ModelContinuationPlannerTests(unittest.TestCase):
                 ),
             ),
         )
+        execution = PlanExecutionResult(
+            plan_id="plan-1",
+            status=PlanExecutionStatus.FAILED,
+            steps=(
+                StepExecutionResult(
+                    step_id="step-1",
+                    action="PROVIDE_INFORMATION",
+                    status=StepExecutionStatus.FAILED,
+                    error="boom",
+                ),
+            ),
+            error="boom",
+        )
+        state = ExecutionState.from_execution("do it", execution)
         self.observation = ExecutionObservation(
             self.plan,
-            PlanExecutionResult(
-                plan_id="plan-1",
-                status=PlanExecutionStatus.FAILED,
-                steps=(
-                    StepExecutionResult(
-                        step_id="step-1",
-                        action="PROVIDE_INFORMATION",
-                        status=StepExecutionStatus.FAILED,
-                        error="boom",
-                    ),
-                ),
-                error="boom",
-            ),
+            execution,
+            state=state,
         )
 
     def test_model_proposal_becomes_task_request(self):
