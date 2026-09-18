@@ -1,59 +1,72 @@
 # CS10 — Final Closure Audit
 
-## Boundary
+## Status
 
-CS10 is the final deployment-closure audit. It does not add runtime behavior. It verifies that the entire closure chain remains coherent after CS9 architecture cleanup.
+**VERIFIED / CLOSED** on final audit head:
 
-The audit covers:
+`e504f38a4d74e3cec11ba9da73bcdd3cc405bcd8`
 
-1. deployment reproducibility;
-2. canonical runtime composition;
-3. deterministic execution authority;
-4. durable authorization evidence;
-5. outcome → learning continuity;
-6. durable restart continuity;
-7. CI and UI reproducibility;
-8. boundary red-team coverage;
-9. removal of obsolete compatibility contracts;
-10. repository and closure-artifact cleanliness.
+Final audit PR: **#431** — open / draft / unmerged.
 
-## Canonical authority
+## Final audit receipts
 
-The final audit preserves one execution authority chain:
+On `e504f38a4d74e3cec11ba9da73bcdd3cc405bcd8`:
+
+- Deployment Closure CS10 Final Closure Audit: **SUCCESS** — run **#3**
+- Deployment Closure Verification: **SUCCESS** — run **#62**
+- Deployment Acceptance: **SUCCESS** — run **#19**
+- Deployment Closure CS9 Architecture Cleanup: **SUCCESS** — run **#29**
+- Deployment Closure CS8 Boundary Red-Team: **SUCCESS** — run **#41**
+
+## Audited boundaries
+
+### Runtime and deployment
+
+- closure artifacts and operator documentation are present;
+- canonical deployment entrypoint and database bootstrap remain present;
+- configured data-root composition remains intact;
+- local provider inventory is observed before role routing;
+- shared durable learning and runtime composition remain explicit.
+
+### Authority
+
+Canonical execution remains:
 
 `policy → confirmation → authorization evidence → integrity → sandbox admission → execution preparation → execution attempt → observation → learning`
 
-AI/model routing, interface transport, recovery, memory, observation, evaluation, learning, and initiative remain outside that authority boundary.
+No AI/model, interface, recovery, memory, observation, evaluation, or learning path becomes execution authority.
 
-## CS9 carry-forward
+### Architecture cleanup
 
-CS9 is verified on its final cleanup head:
+The CS9 cleanup remains applied and verified:
 
-`83017df389f6a630211d5ee6fddb7d5ce8b5a497`
+- `ObservingToolInvoker.__eq__` legacy identity compatibility shim is absent;
+- `ExecutionObservation.state` optional reconstruction fallback is absent;
+- canonical callers provide explicit `ExecutionState`.
 
-Its cleanup removed:
+No replacement execution or authority path was introduced.
 
-- `ObservingToolInvoker.__eq__` legacy identity compatibility behavior;
-- optional `ExecutionObservation.state` reconstruction.
+### Boundary red-team
 
-Existing tests were migrated to the explicit canonical observation contract.
+CS8 remains green:
 
-## Final audit gates
+- core adversarial suite: **10/10**
+- model/provider authority suite: **1/1**
 
-The dedicated CS10 workflow verifies:
+### Regression and verification
 
-- all deployment-closure receipts and operator documentation are present;
-- the retired M28-only verification workflow is absent;
-- canonical runtime/authority wiring remains present;
-- retired CS9 compatibility signatures remain absent;
-- CS8 core and model/provider red-team suites pass;
-- historical interface/tool/AI gates pass;
-- authoritative core regression remains **3304/3304**;
-- UI `npm ci` and production build pass;
-- the checkout ends clean.
+- historical interface/tool/AI closure gates: **25/25**
+- authoritative core regression: **3304/3304**
+- UI `npm ci`: **PASS**
+- UI production build: **PASS**
+- repository cleanliness: **PASS**
 
-## Closure rule
+## Closure result
 
-CS10 is **VERIFIED / CLOSED** only on a final head where the dedicated final-audit workflow and inherited closure workflows all succeed.
+The deployment-closure sequence has reached its final audit boundary with all closure workflows green on the audited head.
 
-No merge is performed as part of CS10. The closure PR remains draft/unmerged until the user explicitly directs the release/merge action.
+No `main` change was made.
+No PR was merged.
+No runtime authority was expanded by CS10.
+
+The remaining action is release/merge control, which stays outside this audit until explicitly directed.
