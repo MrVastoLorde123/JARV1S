@@ -343,6 +343,39 @@ This creates the operational condition the project was missing: JARVIS can remai
 
 Integrate long-horizon work, continuation, recovery, waiting states, proactive behavior, and resumability where they materially improve real operation.
 
+### OPS-09 — Operator / Control Surface
+
+Make the durable runtime directly driveable and observable through the existing human operator and cockpit surfaces.
+
+### OPS-09 live implementation
+
+Operator commands now delegate to the canonical JARVISRuntime autonomous facade:
+
+```
+:work <goal>
+:jobs
+:job <job-id>
+:resume <job-id> confirm
+:resume <job-id> {"key":"value"}
+:cancel <job-id>
+```
+
+These are interface mechanics only. They do not bypass the canonical task path, policy, authorization, confirmation, capability realization, execution, verification, or learning boundaries.
+
+The control-plane snapshot now includes bounded autonomous-job projections containing identity, goal, lifecycle state, progress, waiting/result/failure summaries, and explicit false authority flags. Working context is not projected.
+
+```
+operator / cockpit
+       ↓
+JARVISRuntime autonomous facade
+       ↓
+OperationalContinuousRuntime
+       ↓
+durable autonomous state
+```
+
+This closes the practical loop required by the operational strategy: JARVIS can be left working while development continues, and the operator can inspect, resume, or cancel that work without introducing a second runtime authority.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
