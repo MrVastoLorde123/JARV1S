@@ -168,6 +168,45 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             self.assertEqual(completed.run.job.status, AutonomousJobStatus.COMPLETED)
             self.assertEqual(len(second_processor.calls), 1)
 
+    def test_external_confirmation_reconciles_waiting_job_without_reexecution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            processor = ScriptedProcessor(
+                [
+                    FakeResponse(
+                        "confirmation required",
+                        {
+                            "route": "TASK",
+                            "stage": "CONFIRMATION",
+                            "operation_id": "operation-456",
+                            "plan_id": "plan-456",
+                            "plan_fingerprint": "fingerprint-456",
+                        },
+                    )
+                ]
+            )
+            runtime = OperationalContinuousRuntime(
+                processor,
+                connection_factory=db_factory(path),
+            )
+            job = runtime.submit("Change the protected device.", now=100, interval=10)
+            result = runtime.tick(100)[0]
+            self.assertEqual(result.run.job.status, AutonomousJobStatus.WAITING_AUTHORIZATION)
+
+            reconciled = runtime.reconcile_confirmation(
+                {
+                    "command": "CONFIRM",
+                    "operation_id": "operation-456",
+                    "execution_status": "COMPLETED",
+                }
+            )
+
+            self.assertEqual(reconciled.status, AutonomousJobStatus.COMPLETED)
+            self.assertEqual(runtime.inspect(job.job_id).status, AutonomousJobStatus.COMPLETED)
+            self.assertEqual(len(processor.calls), 1)
+            self.assertEqual(runtime.tick(200), ())
+
+
     def test_background_runtime_starts_and_stops_cleanly(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jarvis.db"
