@@ -379,6 +379,20 @@ class JARVIS:
         return context
 
     def ask_task(self, task: TaskRequest) -> JARVISResponse:
+        if not isinstance(task, TaskRequest):
+            raise TypeError("task must be a TaskRequest.")
+        if "cognitive_context" not in task.metadata:
+            task = TaskRequest(
+                content=task.content,
+                task_type=task.task_type,
+                metadata={
+                    **task.metadata,
+                    "cognitive_context": self._build_cognitive_task_context(
+                        task.content,
+                        {},
+                    ),
+                },
+            )
         route = self.request_router.route_task(task)
         return self._handle_task(route.task)
 
@@ -723,5 +737,6 @@ class JARVIS:
                 "stage": "CAPABILITY_REALIZATION",
                 "success": False,
                 "task_type": task.task_type.value,
+                "cognitive_context": task.metadata.get("cognitive_context"),
             },
         )
