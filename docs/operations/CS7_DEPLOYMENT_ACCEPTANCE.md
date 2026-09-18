@@ -30,7 +30,7 @@ A deployment is accepted only when the following surfaces agree:
 
 4. **Verification**
    - CS6 canonical CI remains green.
-   - The authoritative core regression remains **3294/3294**.
+   - The authoritative core regression remains **3304/3304**.
    - The current AI provider/routing checks remain part of the CI boundary.
 
 5. **Operator documentation**
