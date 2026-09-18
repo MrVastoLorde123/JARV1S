@@ -7,7 +7,7 @@ Deployment Closure CS9 — Architecture Cleanup
 ## Verified implementation
 
 - Branch: `feature/deployment-closure-cs9-architecture-cleanup`
-- Implementation head before receipt: `0a2656915703a0591286a077b33ad3c8e3c64bae`
+- Verified cleanup head: `567722cdff04e61e7c79e1653fe71266d7218ccb`
 - Base: `feature/deployment-closure-cs8-boundary-red-team`
 - Pull request: #430
 - State: open / draft / unmerged
@@ -23,7 +23,7 @@ The regression suite identified nine existing tests still using the retired obse
 
 ## Verification
 
-CS9 Architecture Cleanup workflow: **SUCCESS**
+CS9 Architecture Cleanup workflow: **SUCCESS** — focused compatibility-shim checks
 
 - compatibility-shim absence checks: **PASS**
 - historical interface/tool/AI closure gates: **25/25 PASS**
@@ -48,6 +48,6 @@ policy → confirmation → authorization evidence → integrity → sandbox adm
 
 CS9 is **VERIFIED / CLOSED** for the verified implementation head.
 
-The final receipt commit is documentation-only and must be independently revalidated before CS9 is marked closed at the final branch head.
+The final cleanup head was independently revalidated after the receipt update.
 
 No `main` change and no merge performed.
