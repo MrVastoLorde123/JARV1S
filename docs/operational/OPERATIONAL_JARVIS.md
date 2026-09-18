@@ -203,6 +203,32 @@ The deterministic capability selector was also hardened so punctuation is normal
 
 Unify conversational continuity, persistent memory, provenance, working context, and learning-facing memory state into one operational lifecycle.
 
+### OPS-05 live implementation
+
+Task execution now enters the existing `WorkingContextRuntime` before canonical cognition whenever persistent conversation state is available.
+
+```
+persistent conversation / memory sources
+  ↓
+WorkingContextRuntime
+  ├─ memory context items
+  ├─ provenance
+  ├─ conversation state
+  └─ current task
+        ↓
+CanonicalCognitiveRuntime
+  ├─ context ids
+  └─ memory ids
+        ↓
+reasoning / planning / proposal
+        ↓
+existing deterministic agency path
+```
+
+Persistent context remains evidence-bearing context, not authority or truth. Memory/context failures are exposed as `UNAVAILABLE` metadata and do not grant authorization or silently create a different execution path.
+
+Basic session identity and conversation persistence already exist through `DurableSessionRuntime`, `SessionRuntime`, and `ConversationStore`; OPS-05 connects that persistent context to actual task cognition rather than treating it as conversation-only state.
+
 ### OPS-06 — Operation State / Control Plane
 
 Expose the causal operation lifecycle to the human interface so the user can see what JARVIS is doing, why, what it needs, what happened, what was verified, and what was learned.
