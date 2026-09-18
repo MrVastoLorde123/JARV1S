@@ -36,3 +36,6 @@ ui/dist/
 # Local runtime state
 data/active_session.json
 data/personalization.json
+
+# Local launcher logs
+logs/local/
