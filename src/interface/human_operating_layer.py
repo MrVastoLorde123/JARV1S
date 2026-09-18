@@ -297,20 +297,6 @@ class HumanOperatingLayer:
             return f"Could not cancel autonomous job: {type(exc).__name__}: {exc}"
         return f"Autonomous job cancelled: {job.job_id}"
 
-        if command.name == "help":
-            return self.HELP_TEXT
-        if command.name == "session":
-            return f"Active session: {self._session_id}"
-        if command.name == "new":
-            if self._session_identity is None:
-                self._session_id = self._new_id("local")
-            else:
-                self._session_id = self._session_identity.new_session()
-            return f"Started new session: {self._session_id}"
-        if command.name in {"quit", "exit"}:
-            return "__QUIT__"
-        return f"Unknown command: :{command.name}. Use :help."
-
     def _resolve_initial_session_id(self, requested_session_id: str | None) -> str:
         if self._session_identity is not None:
             return self._session_identity.get_or_create(requested_session_id)
