@@ -6,7 +6,9 @@ from src.commands.service import CommandService
 from src.context.memory_context_source_provider import MemoryContextSourceProvider
 from src.context.models import ContextOptions
 from src.context.working_context_consumption import WorkingContextConsumptionBoundary
+from src.context.working_context import WorkingContext
 from src.context.working_context_runtime import WorkingContextRuntime
+from src.core.canonical_cognitive_runtime import CanonicalCognitiveRuntime
 from src.core.capability_argument_planner import (
     AIRequestArgumentPlanner,
     CapabilityInvocationError,
@@ -59,15 +61,20 @@ class JARVIS:
         capability_selection_service: CapabilitySelectionService | None = None,
         capability_invocation_service: CapabilityInvocationService | None = None,
         capability_realization_service: CapabilityRealizationService | None = None,
+        cognitive_runtime: CanonicalCognitiveRuntime | None = None,
         working_context_runtime: WorkingContextRuntime | None = None,
         working_context_consumption_boundary: WorkingContextConsumptionBoundary | None = None,
     ):
         self.ai_service = ai_service
         self.context_options = context_options if context_options is not None else ContextOptions()
         self.conversation_store = conversation_store
+        self._last_working_context_error = None
         self._enable_memory_formation = enable_memory_formation
         self.request_router = request_router if request_router is not None else RequestRouter()
         self.intelligent_request_router = intelligent_request_router
+        if cognitive_runtime is not None and not callable(getattr(cognitive_runtime, "run", None)):
+            raise TypeError("cognitive_runtime must provide a callable run method")
+        self.cognitive_runtime = cognitive_runtime or CanonicalCognitiveRuntime()
 
         if working_context_runtime is not None and not isinstance(working_context_runtime, WorkingContextRuntime):
             raise TypeError("working_context_runtime must be a WorkingContextRuntime.")
@@ -239,6 +246,7 @@ class JARVIS:
                             "success": False,
                             "intent_kind": route.metadata.get("intent_kind"),
                             "intent_confidence": route.metadata.get("intent_confidence"),
+                            "cognitive_context": cognitive_context,
                         },
                     )
                 except (TypeError, ValueError) as exc:
@@ -255,6 +263,7 @@ class JARVIS:
                             "success": False,
                             "intent_kind": route.metadata.get("intent_kind"),
                             "intent_confidence": route.metadata.get("intent_confidence"),
+                            "cognitive_context": cognitive_context,
                         },
                     )
 
@@ -295,6 +304,125 @@ class JARVIS:
             original_input=original_query,
         )
 
+    def _build_cognitive_task_context(
+        self,
+        query: str,
+        route_metadata: dict[str, object],
+        *,
+        working_context: WorkingContext | None = None,
+    ) -> dict[str, object]:
+        context_ids: tuple[str, ...] = ()
+        memory_ids: tuple[str, ...] = ()
+        working_context_payload = None
+        if working_context is not None:
+            working_context_payload = working_context.to_context()
+            if working_context.source_selection is not None:
+                context_ids = tuple(working_context.source_selection.selected_source_ids)
+            ordered_memory_ids = []
+            seen_memory_ids = set()
+            for item in working_context.context_package.items:
+                memory_id = item.provenance.get("memory_id")
+                if memory_id is None:
+                    continue
+                normalized = str(memory_id)
+                if normalized in seen_memory_ids:
+                    continue
+                seen_memory_ids.add(normalized)
+                ordered_memory_ids.append(normalized)
+            memory_ids = tuple(ordered_memory_ids)
+
+        try:
+            result = self.cognitive_runtime.run(
+                query,
+                context_ids=context_ids,
+                memory_ids=memory_ids,
+                metadata={
+                    "intent_kind": route_metadata.get("intent_kind"),
+                    "intent_confidence": route_metadata.get("intent_confidence"),
+                    "intent_reasoning": route_metadata.get("intent_reasoning"),
+                    "working_context": working_context_payload,
+                },
+            )
+        except Exception as exc:
+            return {
+                "status": "UNAVAILABLE",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "authority_granted": False,
+                "authorization_granted": False,
+                "execution_requested": False,
+                "execution_performed": False,
+            }
+
+        context = result.to_context()
+        context["status"] = "COMPLETED"
+        context["intent_kind"] = route_metadata.get("intent_kind")
+        context["intent_confidence"] = route_metadata.get("intent_confidence")
+        context["contextualization_status"] = (
+            "COMPLETED"
+            if working_context is not None
+            else (
+                "UNAVAILABLE"
+                if self._last_working_context_error is not None
+                else "NOT_ATTACHED"
+            )
+        )
+        context["contextualization_error"] = self._last_working_context_error
+        context["context_ids"] = context_ids
+        context["memory_ids"] = memory_ids
+        context["working_context"] = working_context_payload
+        context["goal"] = result.planning.context.goal.to_context()
+
+        selected_plan_id = result.planning.ranking.advisory_selected_plan_id
+        selected_plan = next(
+            (
+                candidate
+                for candidate in (
+                    getattr(result.initiative.context, "selected_plan", None),
+                )
+                if candidate is not None
+            ),
+            None,
+        )
+        if selected_plan is not None:
+            context["selected_plan"] = selected_plan.to_context()
+        else:
+            context["selected_plan"] = None
+
+        selected_evaluation = next(
+            (
+                evaluation
+                for evaluation in result.planning.evaluations
+                if evaluation.plan_id == selected_plan_id
+            ),
+            None,
+        )
+        context["selected_evaluation"] = (
+            None if selected_evaluation is None else selected_evaluation.to_context()
+        )
+        proposal = result.initiative.proposal
+        context["proposal"] = None if proposal is None else proposal.to_dict()
+        return context
+
+    def _build_task_working_context(self, task: TaskRequest) -> WorkingContext | None:
+        self._last_working_context_error = None
+        if self.conversation_store is None:
+            return None
+
+        try:
+            return self.working_context_runtime.compose(
+                task.content,
+                options=self.context_options,
+                conversation_state=self.conversation.snapshot(),
+                task=task,
+            )
+        except Exception as exc:
+            self._last_working_context_error = {
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+            return None
+
     def ask_task(self, task: TaskRequest) -> JARVISResponse:
         route = self.request_router.route_task(task)
         return self._handle_task(route.task)
@@ -328,14 +456,129 @@ class JARVIS:
         )
 
     def _handle_task(self, task: TaskRequest) -> JARVISResponse:
+        working_context = self._build_task_working_context(task)
+        cognitive_context = task.metadata.get("cognitive_context")
+        if cognitive_context is None:
+            cognitive_context = self._build_cognitive_task_context(
+                task.content,
+                {},
+                working_context=working_context,
+            )
+
+        capability_metadata = {}
+        if (
+            task.task_type == TaskType.ACTION
+            and self.capability_realization_service is not None
+            and not task.metadata.get("tool_name")
+        ):
+            capability_query = task.content
+            if isinstance(cognitive_context, dict):
+                goal = cognitive_context.get("goal")
+                if isinstance(goal, dict):
+                    desired_outcome = goal.get("desired_outcome")
+                    if isinstance(desired_outcome, str) and desired_outcome.strip():
+                        capability_query = desired_outcome.strip()
+
+            try:
+                realization = self.capability_realization_service.realize(
+                    capability_query,
+                )
+            except LookupError:
+                return JARVISResponse(
+                    content="I could not find a registered capability that matches the planned action.",
+                    ai_response=None,
+                    context=None,
+                    metadata={
+                        "route": "TASK",
+                        "stage": "CAPABILITY_SELECTION",
+                        "success": False,
+                        "cognitive_context": cognitive_context,
+                        "capability_query": capability_query,
+                    },
+                )
+            except CapabilityInvocationError as exc:
+                return JARVISResponse(
+                    content=(
+                        "I identified a capability for the planned action, "
+                        "but I could not build a valid invocation.\n\n"
+                        f"{exc}"
+                    ),
+                    ai_response=None,
+                    context=None,
+                    metadata={
+                        "route": "TASK",
+                        "stage": "CAPABILITY_INVOCATION",
+                        "success": False,
+                        "cognitive_context": cognitive_context,
+                        "capability_query": capability_query,
+                    },
+                )
+            except (TypeError, ValueError) as exc:
+                return JARVISResponse(
+                    content=(
+                        "I could not safely realize a capability for the planned action.\n\n"
+                        f"{exc}"
+                    ),
+                    ai_response=None,
+                    context=None,
+                    metadata={
+                        "route": "TASK",
+                        "stage": "CAPABILITY_REALIZATION",
+                        "success": False,
+                        "cognitive_context": cognitive_context,
+                        "capability_query": capability_query,
+                    },
+                )
+
+            task = TaskRequest(
+                content=task.content,
+                task_type=TaskType.TOOL,
+                metadata={
+                    **task.metadata,
+                    "tool_name": realization.request.tool_name,
+                    "arguments": dict(realization.request.arguments),
+                    **(
+                        {"invocation_id": realization.request.invocation_id}
+                        if realization.request.invocation_id is not None
+                        else {}
+                    ),
+                },
+            )
+            capability_metadata = {
+                "capability": realization.request.tool_name,
+                "capability_score": realization.candidate.score,
+                "capability_reason": realization.candidate.reason,
+                "capability_query": capability_query,
+                "capability_realized": True,
+            }
+
         plan = self.execution_planner.plan(task)
+        if not isinstance(cognitive_context, dict):
+            raise TypeError("cognitive_context must be mapping-compatible")
+        plan.metadata["cognitive_context"] = dict(cognitive_context)
+        selected_plan = cognitive_context.get("selected_plan")
+        if isinstance(selected_plan, dict):
+            planned_steps = selected_plan.get("steps")
+            if isinstance(planned_steps, (tuple, list)) and planned_steps:
+                first_step = planned_steps[0]
+                if isinstance(first_step, dict):
+                    description = first_step.get("description")
+                    if isinstance(description, str) and description.strip():
+                        plan.metadata["cognitive_advisory_step"] = description
+                        for step in plan.steps:
+                            step.metadata["cognitive_advisory_step"] = description
+                            step.metadata["cognitive_context"] = dict(cognitive_context)
         validation = self.plan_validator.validate(plan)
         if not validation.valid:
-            return self._validation_response(validation)
+            response = self._validation_response(validation)
+            response.metadata["cognitive_context"] = cognitive_context
+            return response
 
         policy = self.execution_policy.evaluate(plan)
         if policy.decision == PolicyDecision.DENY:
-            return self._policy_response(policy)
+            response = self._policy_response(policy)
+            response.metadata["cognitive_context"] = cognitive_context
+            return response
 
         if policy.decision == PolicyDecision.REQUIRE_CONFIRMATION:
             pending = self.execution_confirmation_service.stage(
@@ -361,11 +604,17 @@ class JARVIS:
                     "operation_id": pending.operation_id,
                     "plan_fingerprint": pending.metadata["plan_fingerprint"],
                     "policy_decision": policy.decision.value,
+                    "cognitive_context": cognitive_context,
+                    "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
+                    **capability_metadata,
                 },
             )
 
         execution = self.plan_executor.execute(plan, policy)
-        return self._execution_response(execution, plan, policy)
+        response = self._execution_response(execution, plan, policy)
+        response.metadata["cognitive_context"] = cognitive_context
+        response.metadata.update(capability_metadata)
+        return response
 
     def _handle_conversation(
         self,
@@ -470,6 +719,7 @@ class JARVIS:
                 "valid": False,
                 "plan_id": validation.plan.plan_id,
                 "issues": tuple(issue.code for issue in validation.issues),
+                "execution_plan_cognitive_context": validation.plan.metadata.get("cognitive_context"),
             },
         )
 
@@ -491,6 +741,7 @@ class JARVIS:
                 "plan_id": policy.plan.plan_id,
                 "policy_decision": policy.decision.value,
                 "issues": tuple(issue.code for issue in policy.issues),
+                "execution_plan_cognitive_context": policy.plan.metadata.get("cognitive_context"),
             },
         )
 
@@ -528,6 +779,7 @@ class JARVIS:
                 "step_count": execution.step_count,
                 "failed_steps": tuple(step.step_id for step in execution.failed_steps),
                 "execution_outputs": outputs,
+                "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
             },
         )
 
@@ -636,5 +888,6 @@ class JARVIS:
                 "stage": "CAPABILITY_REALIZATION",
                 "success": False,
                 "task_type": task.task_type.value,
+                "cognitive_context": task.metadata.get("cognitive_context"),
             },
         )

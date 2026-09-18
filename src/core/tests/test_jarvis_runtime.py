@@ -19,8 +19,13 @@ class FakeProcessor:
             content=f"handled: {query}",
             ai_response=None,
             context=None,
-            metadata={"handled": True},
+            metadata={"handled": True, "route": "TASK", "stage": "EXECUTION"},
         )
+
+
+class FailingProcessor:
+    def ask(self, query):
+        raise RuntimeError("processor failure")
 
 
 class JARVISRuntimeTests(unittest.TestCase):
@@ -95,6 +100,65 @@ class JARVISRuntimeTests(unittest.TestCase):
         runtime = JARVISRuntime.from_processor(self.processor)
         with self.assertRaises(TypeError):
             runtime.respond(object())
+
+    def test_live_control_plane_projects_operation_state(self):
+        runtime = JARVISRuntime.from_processor(
+            self.processor,
+            event_id_factory=iter(["event-1", "event-2"]).__next__,
+        )
+
+        result = runtime.receive(
+            request_id="req-control",
+            channel=InterfaceChannel.TEXT,
+            content="do the task",
+            session_id="session-control",
+        )
+
+        operation = runtime.control_plane.current_operation("req-control")
+        self.assertIsNotNone(operation)
+        self.assertEqual(operation.request_id, "req-control")
+        self.assertEqual(operation.stage, "EXECUTION")
+        self.assertEqual(operation.metadata["route"], "TASK")
+        self.assertEqual(runtime.control_plane.activity_stream.size, 2)
+
+        state = runtime.control_plane.session_state("session-control")
+        self.assertIsNotNone(state)
+        self.assertEqual(state.event_count, 2)
+        self.assertEqual(state.latest_request_id, "req-control")
+        self.assertEqual(state.latest_stage, "EXECUTION")
+
+        self.assertIsInstance(result, RecoveryIntegratedResult)
+
+    def test_control_plane_observes_runtime_failure_without_swallowing_it(self):
+        runtime = JARVISRuntime.from_processor(FailingProcessor())
+
+        with self.assertRaisesRegex(RuntimeError, "processor failure"):
+            runtime.receive(
+                request_id="req-failure",
+                channel=InterfaceChannel.TEXT,
+                content="fail",
+                session_id="session-failure",
+            )
+
+        operation = runtime.control_plane.current_operation("req-failure")
+        self.assertIsNotNone(operation)
+        self.assertEqual(operation.stage, "RUNTIME")
+        self.assertEqual(operation.kind.value, "REQUEST_FAILED")
+        self.assertEqual(operation.metadata["error_type"], "RuntimeError")
+
+    def test_control_plane_has_no_authority_or_persistence_powers(self):
+        runtime = JARVISRuntime.from_processor(self.processor)
+        control_plane = runtime.control_plane
+
+        for name in (
+            "authorizes_execution",
+            "executes_capability",
+            "mutates_runtime_state",
+            "persists_state",
+            "establishes_truth",
+            "establishes_certainty",
+        ):
+            self.assertFalse(getattr(control_plane, name))
 
     def test_response_projection_remains_non_authoritative(self):
         runtime = JARVISRuntime.from_processor(self.processor)
