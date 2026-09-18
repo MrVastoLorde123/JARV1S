@@ -266,6 +266,8 @@ class JARVISRuntime:
             result = self._recovery_runtime.process(request)
             response = self._recovery_runtime.respond(result)
             self._control_plane.record_response(request, response)
+            if self._operational_runtime is not None:
+                self._operational_runtime.reconcile_confirmation(response.metadata)
             return result
         except Exception as exc:
             # Preserve the original control-flow/authority semantics while still
