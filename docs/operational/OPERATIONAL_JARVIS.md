@@ -173,6 +173,32 @@ Connect goal/planning outputs to real capability discovery, selection, realizati
 
 No unrestricted generic action executor is introduced merely to make the path appear complete.
 
+### OPS-04 live implementation
+
+Planned ACTION requests now cross the existing capability boundary instead of receiving a generic executable action surface.
+
+```
+ACTION
+  ↓
+cognitive goal / desired outcome
+  ↓
+capability discovery + selection
+  ↓
+argument proposal
+  ↓
+deterministic invocation validation
+  ↓
+TOOL execution plan
+  ↓
+plan validation → policy → confirmation / authorization
+  ↓
+tool policy gate → execution
+```
+
+If no registered capability matches, the operation stops at capability selection. No generic `PERFORM_ACTION` handler is introduced.
+
+The deterministic capability selector was also hardened so punctuation is normalized and generic stopwords do not create false matches. This keeps discovery a proposal boundary rather than silently turning weak lexical overlap into agency.
+
 ### OPS-05 — Canonical Memory / Continuity
 
 Unify conversational continuity, persistent memory, provenance, working context, and learning-facing memory state into one operational lifecycle.
