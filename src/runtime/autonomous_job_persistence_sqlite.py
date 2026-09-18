@@ -63,6 +63,39 @@ class SQLiteAutonomousJobStore(AutonomousJobStore):
         finally:
             connection.close()
 
+    def list_jobs(self, *, limit: int = 100) -> tuple[AutonomousJob, ...]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("limit must be an integer from 1 to 500")
+        connection = self._connection_factory()
+        try:
+            rows = connection.execute(
+                """
+                SELECT snapshot_json, revision
+                FROM autonomous_jobs
+                ORDER BY rowid DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        finally:
+            connection.close()
+
+        jobs: list[AutonomousJob] = []
+        for snapshot_json, revision in rows:
+            if revision != self._revision(snapshot_json):
+                raise AutonomousJobValidationError(
+                    "stored autonomous-job revision does not match snapshot"
+                )
+            try:
+                snapshot = json.loads(snapshot_json)
+                job = self._from_dict(snapshot)
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise AutonomousJobValidationError(
+                    "stored autonomous-job snapshot is invalid"
+                ) from exc
+            jobs.append(job)
+        return tuple(jobs)
+
     def load(self, job_id: str) -> AutonomousJob | None:
         if not isinstance(job_id, str) or not job_id.strip():
             raise ValueError("job_id must be a non-empty string")
