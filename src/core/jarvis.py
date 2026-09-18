@@ -397,13 +397,101 @@ class JARVIS:
         )
 
     def _handle_task(self, task: TaskRequest) -> JARVISResponse:
-        plan = self.execution_planner.plan(task)
         cognitive_context = task.metadata.get("cognitive_context")
         if cognitive_context is None:
             cognitive_context = self._build_cognitive_task_context(
                 task.content,
                 {},
             )
+
+        capability_metadata = {}
+        if (
+            task.task_type == TaskType.ACTION
+            and self.capability_realization_service is not None
+            and not task.metadata.get("tool_name")
+        ):
+            capability_query = task.content
+            if isinstance(cognitive_context, dict):
+                goal = cognitive_context.get("goal")
+                if isinstance(goal, dict):
+                    desired_outcome = goal.get("desired_outcome")
+                    if isinstance(desired_outcome, str) and desired_outcome.strip():
+                        capability_query = desired_outcome.strip()
+
+            try:
+                realization = self.capability_realization_service.realize(
+                    capability_query,
+                )
+            except LookupError:
+                return JARVISResponse(
+                    content="I could not find a registered capability that matches the planned action.",
+                    ai_response=None,
+                    context=None,
+                    metadata={
+                        "route": "TASK",
+                        "stage": "CAPABILITY_SELECTION",
+                        "success": False,
+                        "cognitive_context": cognitive_context,
+                        "capability_query": capability_query,
+                    },
+                )
+            except CapabilityInvocationError as exc:
+                return JARVISResponse(
+                    content=(
+                        "I identified a capability for the planned action, "
+                        "but I could not build a valid invocation.\n\n"
+                        f"{exc}"
+                    ),
+                    ai_response=None,
+                    context=None,
+                    metadata={
+                        "route": "TASK",
+                        "stage": "CAPABILITY_INVOCATION",
+                        "success": False,
+                        "cognitive_context": cognitive_context,
+                        "capability_query": capability_query,
+                    },
+                )
+            except (TypeError, ValueError) as exc:
+                return JARVISResponse(
+                    content=(
+                        "I could not safely realize a capability for the planned action.\n\n"
+                        f"{exc}"
+                    ),
+                    ai_response=None,
+                    context=None,
+                    metadata={
+                        "route": "TASK",
+                        "stage": "CAPABILITY_REALIZATION",
+                        "success": False,
+                        "cognitive_context": cognitive_context,
+                        "capability_query": capability_query,
+                    },
+                )
+
+            task = TaskRequest(
+                content=task.content,
+                task_type=TaskType.TOOL,
+                metadata={
+                    **task.metadata,
+                    "tool_name": realization.request.tool_name,
+                    "arguments": dict(realization.request.arguments),
+                    **(
+                        {"invocation_id": realization.request.invocation_id}
+                        if realization.request.invocation_id is not None
+                        else {}
+                    ),
+                },
+            )
+            capability_metadata = {
+                "capability": realization.request.tool_name,
+                "capability_score": realization.candidate.score,
+                "capability_reason": realization.candidate.reason,
+                "capability_query": capability_query,
+                "capability_realized": True,
+            }
+
+        plan = self.execution_planner.plan(task)
         if not isinstance(cognitive_context, dict):
             raise TypeError("cognitive_context must be mapping-compatible")
         plan.metadata["cognitive_context"] = dict(cognitive_context)
@@ -457,12 +545,14 @@ class JARVIS:
                     "policy_decision": policy.decision.value,
                     "cognitive_context": cognitive_context,
                     "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
+                    **capability_metadata,
                 },
             )
 
         execution = self.plan_executor.execute(plan, policy)
         response = self._execution_response(execution, plan, policy)
         response.metadata["cognitive_context"] = cognitive_context
+        response.metadata.update(capability_metadata)
         return response
 
     def _handle_conversation(
