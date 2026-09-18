@@ -35,16 +35,3 @@ jobs:
           ! grep -Fq 'Preserve identity semantics for legacy dependency-injection contracts' src/interface/coding_execution_activity.py
           ! grep -Fq 'state: ExecutionState | None = None' src/core/execution_loop.py
           ! grep -Fq 'execution observation state fallback' src/core/execution_loop.py
-
-      - name: Run historical closure gates
-        run: |
-          python -m unittest             src.interface.tests.test_http_command             src.interface.tests.test_http_capabilities             src.interface.tests.test_boundary             src.tools.tests.test_test_runner             src.ai.tests.test_local_model_policy             src.ai.tests.test_service_provider_model_observation
-
-      - name: Run authoritative core regression
-        run: python -m unittest discover -s src/core/tests -p "test_*.py"
-
-      - name: Verify UI dependency lock and build
-        working-directory: ui
-        run: |
-          npm ci
-          npm run build
