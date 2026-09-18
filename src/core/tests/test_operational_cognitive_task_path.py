@@ -269,5 +269,7 @@ class OperationalCognitiveTaskPathTests(unittest.TestCase):
         self.assertFalse(response.metadata["cognitive_context"]["authorization_granted"])
 
 
+# OPS-05 CI verification marker: functional code is inherited unchanged from the feature head.
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
