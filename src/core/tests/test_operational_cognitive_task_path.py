@@ -53,6 +53,16 @@ class CognitiveOperationalToolGateway(ToolCapabilityGateway):
         )
 
 
+class StaticActionIntentClassifier:
+    def classify(self, text):
+        return RequestIntent(
+            kind=IntentKind.TASK,
+            content=text,
+            confidence=0.99,
+            reasoning="deterministic operational action fixture",
+        )
+
+
 class OperationalCognitiveTaskPathTests(unittest.TestCase):
     def test_cognition_feeds_the_live_execution_plan_without_authorizing_execution(self):
         gateway = CognitiveOperationalToolGateway()
@@ -94,6 +104,65 @@ class OperationalCognitiveTaskPathTests(unittest.TestCase):
         )
         self.assertFalse(execution_context["authorization_granted"])
         self.assertFalse(execution_context["execution_requested"])
+
+    def test_planned_action_is_realized_through_existing_capability_stack(self):
+        gateway = CognitiveOperationalToolGateway()
+        cognition = CanonicalCognitiveRuntime(
+            clock=lambda: datetime(2026, 9, 18, 14, 0, tzinfo=timezone.utc),
+        )
+        router = IntelligentRequestRouter(StaticActionIntentClassifier())
+        jarvis = JARVIS(
+            ai_service=AIService(default_provider="unused"),
+            intelligent_request_router=router,
+            cognitive_runtime=cognition,
+            tool_invoker=gateway,
+            capability_invocation_service=CapabilityInvocationService(
+                EmptyArgumentPlanner(),
+            ),
+        )
+
+        response = jarvis.ask("Report the current runtime status.")
+
+        self.assertEqual(response.metadata["route"], "TASK")
+        self.assertEqual(response.metadata["stage"], "EXECUTION")
+        self.assertEqual(response.metadata["capability"], "report_status")
+        self.assertTrue(response.metadata["capability_realized"])
+        self.assertEqual(
+            response.metadata["capability_query"],
+            "Report the current runtime status.",
+        )
+        self.assertEqual(len(gateway.requests), 1)
+
+        cognitive_context = response.metadata["cognitive_context"]
+        self.assertEqual(
+            cognitive_context["goal"]["desired_outcome"],
+            response.metadata["capability_query"],
+        )
+        self.assertFalse(cognitive_context["authorization_granted"])
+
+    def test_planned_action_without_capability_stops_before_execution(self):
+        gateway = CognitiveOperationalToolGateway()
+        cognition = CanonicalCognitiveRuntime(
+            clock=lambda: datetime(2026, 9, 18, 14, 0, tzinfo=timezone.utc),
+        )
+        router = IntelligentRequestRouter(StaticActionIntentClassifier())
+        jarvis = JARVIS(
+            ai_service=AIService(default_provider="unused"),
+            intelligent_request_router=router,
+            cognitive_runtime=cognition,
+            tool_invoker=gateway,
+            capability_invocation_service=CapabilityInvocationService(
+                EmptyArgumentPlanner(),
+            ),
+        )
+
+        response = jarvis.ask("Deploy the production database.")
+
+        self.assertEqual(response.metadata["route"], "TASK")
+        self.assertEqual(response.metadata["stage"], "CAPABILITY_SELECTION")
+        self.assertFalse(response.metadata["success"])
+        self.assertEqual(len(gateway.requests), 0)
+        self.assertFalse(response.metadata["cognitive_context"]["authorization_granted"])
 
     def test_cognition_failure_does_not_become_execution_authority(self):
         class FailingCognitiveRuntime:
