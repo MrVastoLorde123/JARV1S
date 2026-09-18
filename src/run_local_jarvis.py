@@ -20,6 +20,7 @@ from src.core.intelligent_request_router import IntelligentRequestRouter
 from src.core.request_intent import AIRequestIntentClassifier
 from src.core.jarvis_runtime import JARVISRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
+from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
 from src.core.tool_authorization_evidence_recording import ToolAuthorizationEvidenceRecorder
 from src.core.tool_authorization_evidence_store import ToolAuthorizationEvidenceStore
 from src.database_bootstrap import bootstrap_database
@@ -166,11 +167,17 @@ def main():
         intelligent_request_router=intelligent_request_router,
     )
     world_runtime = create_local_world_runtime() if enable_world_http else None
+    autonomous_runtime = OperationalContinuousRuntime(
+        default_processor,
+        poll_interval=float(os.environ.get("JARVIS_AUTONOMOUS_POLL_SECONDS", "1.0")),
+    )
+
     runtime = JARVISRuntime.from_processor(
         default_processor,
         conversation_store=conversation_store,
         durable_processor_factory=processor_factory,
         world_runtime=world_runtime,
+        operational_runtime=autonomous_runtime,
     )
 
     world_host = None
@@ -220,9 +227,18 @@ def main():
         session_identity=session_identity,
     )
 
+    autonomous_runtime_enabled = os.environ.get(
+        "JARVIS_AUTONOMOUS_RUNTIME",
+        "1",
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    if autonomous_runtime_enabled:
+        runtime.start_autonomous_runtime()
+        print("JARVIS Continuous Autonomous Runtime enabled")
+
     try:
         operator.run()
     finally:
+        runtime.stop_autonomous_runtime()
         if control_plane_host is not None:
             control_plane_host.close()
         if capability_host is not None:
