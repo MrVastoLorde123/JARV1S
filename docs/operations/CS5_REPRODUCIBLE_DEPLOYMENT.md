@@ -2,7 +2,7 @@
 
 ## Status
 
-CS5 is an active closure stage. This PR contains the first bounded reproducibility slice; it is **not** a completion receipt.
+CS5 is an active closure stage. The reproducibility work is now bounded around runtime data paths, committed UI dependencies, and the Python runtime contract. It is **not** a completion receipt until the clean-checkout rehearsal is recorded.
 
 ## Implemented
 
@@ -34,37 +34,21 @@ The local model remains an external capability provider. `scripts/run_jarvis.ps1
 
 Machine-specific executable/model locations are not committed to the repository.
 
-## Remaining reproducibility gaps
+### UI dependency graph
 
-### UI dependency lock
+The UI now declares exact direct dependency versions and commits `ui/package-lock.json`:
 
-`ui/package.json` currently declares React, React DOM, Vite, TypeScript, and related packages as `latest`.
+- React `19.3.0`
+- React DOM `19.3.0`
+- Vite `8.3.0`
+- @types/react `19.3.0`
+- @types/react-dom `19.3.0`
+- @vitejs/plugin-react `6.1.1`
+- TypeScript `7.0.2`
 
-A reproducible clean checkout requires:
+The lockfile is npm lockfile version 3 and records the resolved dependency graph with integrity metadata.
 
-1. pinning direct dependency versions;
-2. committing `ui/package-lock.json`;
-3. changing CI/install behavior from `npm install` to `npm ci`;
-4. proving `npm ci && npm run build` from the clean checkout.
-
-The current environment could not reach the npm registry, so a real lockfile was not generated here. This remains an explicit CS5 gate rather than an assumed success.
-
-### Python environment declaration
-
-The backend currently has no committed Python dependency lock/manifest. The closure audit must verify whether the runtime is intentionally standard-library-only or define the required Python package set before CS5 can close.
-
-### Clean-checkout launch proof
-
-After dependency/runtime manifests are fixed, CS5 needs a clean-checkout launch rehearsal using only committed configuration plus explicitly supplied model-provider artifacts.
-
-## Verification planned
-
-```powershell
-python -m unittest src.tests.test_database src.tests.test_database_bootstrap -v
-python -m unittest discover -s src.core.tests -p "test_*.py"
-```
-
-After the UI manifest is pinned:
+Local verification on the deployment workstation:
 
 ```powershell
 cd ui
@@ -72,4 +56,57 @@ npm ci
 npm run build
 ```
 
-CS5 remains open/draft until the full reproducibility contract is satisfied.
+Both commands passed; the production build completed successfully.
+
+## Remaining reproducibility gaps
+
+### Python runtime contract
+
+The backend has no third-party Python package manifest because the inspected runtime surface is standard-library-only. Runtime code uses Python standard-library modules for persistence (`sqlite3`), HTTP transport (`http.server`, `urllib`), filesystem/process control, JSON, typing, and related services.
+
+The reproducible interpreter contract is:
+
+- Python **3.12**
+- Python standard library only for the backend/runtime
+- no `requirements.txt`, `pyproject.toml`, or Python package lockfile is required by the current runtime
+
+The existing CI configuration already uses Python 3.12, and the deployment workstation has passed the full backend regression suite under that interpreter.
+
+This avoids introducing a dependency manifest that would claim packages the runtime does not actually require.
+
+### Clean-checkout deployment proof
+
+The final CS5 proof must start from a clean checkout of this branch and use only committed repository configuration plus explicitly supplied model-provider artifacts.
+
+The rehearsal should prove:
+
+1. the branch checks out cleanly;
+2. `python -m src.database_bootstrap` creates the configured data-root database;
+3. `cd ui; npm ci; npm run build` succeeds from the committed lockfile;
+4. `scripts/run_jarvis.ps1 -DataDir <explicit-data-dir> ...` reaches its normal startup gates;
+5. no generated runtime artifacts are required to be committed.
+
+The local model executable and GGUF remain deployment inputs rather than repository dependencies.
+
+### CI boundary
+
+The existing workflow at `.github/workflows/m28-verification.yml` is still scoped to the historical M28 branch. Changing its trigger topology and broadening CI coverage is a **CS6 Verification & CI Closure** concern rather than a CS5 deployment-manifest requirement.
+
+Once CS6 owns that workflow, the UI install step should use `npm ci` because the lockfile is now committed.
+
+### Clean-checkout launch proof
+
+After dependency/runtime manifests are fixed, CS5 needs a clean-checkout launch rehearsal using only committed configuration plus explicitly supplied model-provider artifacts.
+
+## Verification evidence
+
+Verified on the deployment workstation:
+
+```
+Database/data-directory tests: 5/5 OK
+Core regression: 3294/3294 OK
+npm ci: PASS
+npm run build: PASS
+```
+
+CS5 remains open/draft until the clean-checkout deployment rehearsal is recorded.
