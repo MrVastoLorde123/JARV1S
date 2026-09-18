@@ -57,21 +57,13 @@ class _FakePlanner:
 
 
 class _FakeWorker:
-    def __init__(self, result: CodingAgentResult) -> None:
+    def __init__(self, plan: CodingAgentPlan, result: CodingAgentResult) -> None:
+        self.plan_value = plan
         self.result = result
         self.executed: list[tuple[CodingAgentTask, CodingAgentPlan]] = []
 
     def plan(self, task: CodingAgentTask) -> CodingAgentPlan:
-        return self.result_plan
-
-    @property
-    def result_plan(self) -> CodingAgentPlan:
-        return CodingAgentPlan(
-            edits=(
-                CodingAgentEdit(path="src/example.py", content="approved", overwrite=True),
-            ),
-            verification=CodingAgentVerification(runner="python_unittest"),
-        )
+        return self.plan_value
 
     def execute(self, task: CodingAgentTask, plan: CodingAgentPlan) -> CodingAgentResult:
         self.executed.append((task, plan))
@@ -191,7 +183,7 @@ class DeploymentClosureCS8BoundaryRedTeamTests(unittest.TestCase):
 
     def _jarvis_fixture(self, tmp: Path):
         plan = self._plan()
-        worker = _FakeWorker(self._result())
+        worker = _FakeWorker(plan, self._result())
         from src.agents.coding_service import CodingAgentService
 
         service = CodingAgentService(
@@ -394,7 +386,7 @@ class DeploymentClosureCS8BoundaryRedTeamTests(unittest.TestCase):
             self.assertFalse(record.experience.provenance["authority_granted"])
             self.assertFalse(memory.to_context()["authority_granted"])
             self.assertFalse(memory.to_context()["truth_established"])
-            self.assertFalse(memory.to_context()["certainty_established"])
+            self.assertFalse(record.to_metadata()["certainty_established"])
 
     def test_recovery_failure_does_not_retry_semantic_processing(self) -> None:
         processor = _FailingProcessor()
