@@ -432,7 +432,7 @@ class OperationalContinuousRuntime:
         if execution_status and execution_status != "COMPLETED":
             return None
 
-        completed = job.start()
+        completed = job.resume()
         completed = completed.complete(
             str(metadata.get("result") or "Autonomous authorization completed through JARVIS.")
         )
