@@ -19,9 +19,12 @@ from src.context.execution_semantics import ExecutionPreparation
 from src.context.working_context import WorkingContext
 from src.core.conversation_store import ConversationStore
 from src.core.event_integrated_runtime import EventIntegratedRuntime
+from src.core.operational_control_plane import OperationalControlPlane
 from src.core.recovery_integrated_runtime import RecoveryIntegratedResult, RecoveryIntegratedRuntime
 from src.core.system_runtime import SystemRuntime
 from src.interface.boundary import InterfaceChannel, InterfaceRequest, InterfaceResponse
+from src.interface.boundary import InterfaceChannel, InterfaceRequest, InterfaceResponse
+from src.core.interface_backend import InterfaceResponseStatus
 from src.interface.events import InterfaceEventRuntime
 from src.interface.reliability import InterfaceReliabilityRuntime
 
@@ -41,6 +44,7 @@ class JARVISRuntime:
             raise TypeError("world_runtime must be an AgentWorldRuntime or None")
         self._recovery_runtime = recovery_runtime
         self._world_runtime = world_runtime
+        self._control_plane = OperationalControlPlane()
 
     @classmethod
     def from_processor(
@@ -72,6 +76,10 @@ class JARVISRuntime:
             recovery_id_factory=recovery_id_factory,
         )
         return cls(recovery_integrated_runtime, world_runtime=world_runtime)
+
+    @property
+    def control_plane(self) -> OperationalControlPlane:
+        return self._control_plane
 
     @property
     def recovery_runtime(self) -> RecoveryIntegratedRuntime:
@@ -194,10 +202,31 @@ class JARVISRuntime:
         )
 
     def process(self, request: InterfaceRequest) -> RecoveryIntegratedResult:
-        """Process an existing interface request through the canonical path."""
+        """Process an existing interface request and project operational state."""
         if not isinstance(request, InterfaceRequest):
             raise TypeError("request must be an InterfaceRequest")
-        return self._recovery_runtime.process(request)
+
+        self._control_plane.record_request(request)
+        try:
+            result = self._recovery_runtime.process(request)
+            response = self._recovery_runtime.respond(result)
+            self._control_plane.record_response(request, response)
+            return result
+        except Exception as exc:
+            # Preserve the original control-flow/authority semantics while still
+            # making failures visible to the observational control plane.
+            failure_response = InterfaceResponse(
+                request_id=request.request_id,
+                operation=request.operation,
+                status=InterfaceResponseStatus.FAILED,
+                payload={},
+                metadata={
+                    "stage": "RUNTIME",
+                    "error_type": type(exc).__name__,
+                },
+            )
+            self._control_plane.record_response(request, failure_response)
+            raise
 
     def respond(self, result: RecoveryIntegratedResult) -> InterfaceResponse:
         """Project a canonical result back to the interface boundary."""
