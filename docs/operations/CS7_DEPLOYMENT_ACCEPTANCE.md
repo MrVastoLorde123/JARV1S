@@ -104,7 +104,7 @@ The inherited CS6 verification workflow also passed on the same CS7 head, preser
 
 - historical interface checks: **18/18 OK**
 - AI provider/routing checks: **7/7 OK**
-- authoritative core regression: **3294/3294 OK**
+- authoritative core regression: **3304/3304 OK**
 
 Together with the CS5 real clean-checkout deployment receipt, this establishes the current deployment candidate as accepted across local runtime, automated verification, and acceptance-surface checks.
 
