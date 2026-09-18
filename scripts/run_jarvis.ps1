@@ -163,7 +163,7 @@ function Stop-StartedServer {
     catch { Write-Host "Warning: llama-server may still be running. PID $($Process.Id)" -ForegroundColor Yellow }
 }
 
-$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 $serverProcess = $null
 $startedByScript = $false
