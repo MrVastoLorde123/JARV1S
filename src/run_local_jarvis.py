@@ -48,7 +48,8 @@ def main():
         "qwen3-4b-local",
     )
     requested_session_id = os.environ.get("JARVIS_SESSION_ID")
-    data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data"))
+    data_dir = Path(os.environ.get("JARVIS_DATA_DIR", "data")).resolve()
+    os.environ["JARVIS_DATA_DIR"] = str(data_dir)
     workspace_dir = Path(os.environ.get("JARVIS_WORKSPACE_DIR", Path.cwd())).resolve()
     enable_world_http = os.environ.get("JARVIS_WORLD_HTTP", "0").strip().lower() in {"1", "true", "yes", "on"}
     enable_command_http = os.environ.get(
@@ -78,6 +79,7 @@ def main():
         model_routing_runtime=model_routing_runtime,
     )
     ai_service.register_provider(provider)
+    ai_service.observe_provider_models("local")
 
     conversation_store = ConversationStore()
     personalization_store = PersonalizationStore(

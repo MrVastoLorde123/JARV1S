@@ -1,6 +1,7 @@
 import unittest
 
 from src.ai.errors import InvalidRequestError
+from src.ai.local_model_policy import build_local_model_role_policy
 from src.ai.model_role_policy import ModelRolePolicy, ModelRolePolicyRule
 from src.ai.model_routing import ModelRole
 from src.ai.model_routing_runtime import ModelRoutingRuntime
@@ -58,6 +59,21 @@ class AIServiceProviderModelObservationTests(unittest.TestCase):
         self.runtime = runtime
         self.service = AIService(default_provider="observable", model_routing_runtime=runtime)
         self.service.register_provider(_ObservableProvider(["qwen3-coder:30b", "unknown-model"]))
+
+    def test_local_launcher_alias_routes_general_after_observation(self) -> None:
+        runtime = ModelRoutingRuntime(build_local_model_role_policy())
+        service = AIService(
+            default_provider="observable",
+            model_routing_runtime=runtime,
+        )
+        service.register_provider(_ObservableProvider(["qwen3-4b-local"]))
+
+        service.observe_provider_models()
+
+        self.assertEqual(
+            service.route_model(ModelRole.GENERAL).model_id,
+            "qwen3-4b-local",
+        )
 
     def test_provider_inventory_is_observed_without_generation(self) -> None:
         observed = self.service.observe_provider_models()

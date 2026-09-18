@@ -22,14 +22,16 @@ git branch --show-current
 
 For milestone development, switch to the feature branch named by the current milestone. Do **not** use `main` as the working branch for milestone implementation.
 
-## 2. Verify Python
+## 2. Verify the Python runtime
 
-JARVIS currently expects Python to be available on `PATH`.
+JARVIS currently targets **Python 3.12** and the backend runtime uses the Python standard library rather than a third-party package set.
 
 ```powershell
 python --version
 python -c "import src; print('JARVIS Python environment OK')"
 ```
+
+The repository does not require a Python package installation step for the current backend/runtime.
 
 ## 3. Verify llama-server
 
@@ -58,7 +60,27 @@ For an explicit model path:
 .\scripts\run_jarvis.ps1 -ModelPath "<PATH_TO_MODEL_GGUF>"
 ```
 
-## 5. Normal JARVIS startup
+## 5. Choose the persistent data directory
+
+The runtime uses `JARVIS_DATA_DIR` as the canonical persistence root.
+
+For a reproducible explicit deployment:
+
+```powershell
+.\scripts\run_jarvis.ps1 -DataDir "C:\JARVIS\data"
+```
+
+The canonical SQLite database will be created at:
+
+```text
+C:\JARVIS\data\processed\jarvis.db
+```
+
+When `-DataDir` is omitted, an existing `JARVIS_DATA_DIR` environment value is honored. Otherwise the launcher defaults to the repository's `data` directory.
+
+The launcher restores the caller's original `JARVIS_DATA_DIR` value when it exits.
+
+## 6. Normal JARVIS startup
 
 From the repository root:
 
@@ -184,11 +206,12 @@ If the port is occupied, it checks `/v1/models` before using that server. It doe
 
 If the existing service is healthy, JARVIS reuses it instead of starting another server.
 
-## 11. Environment variables used by JARVIS
+## 13. Environment variables used by JARVIS
 
 Before launching the runtime, the script sets:
 
 ```text
+JARVIS_DATA_DIR=<resolved persistent data root>
 JARVIS_LOCAL_BASE_URL=http://127.0.0.1:8080
 JARVIS_LOCAL_MODEL=<resolved model id>
 JARVIS_SESSION_ID=<optional durable session id>
@@ -265,7 +288,29 @@ Local model
 
 JARVIS owns the runtime semantics. The interface is only the human operating surface, and the model is a capability provider.
 
-## 16. Development rule
+## 17. Clean-checkout rehearsal
+
+For deployment closure, the strongest local proof is a clean checkout of the target feature branch with no generated UI or runtime artifacts carried forward.
+
+After checkout:
+
+```powershell
+git status --short
+
+python --version
+python -m src.database_bootstrap
+
+cd ui
+npm ci
+npm run build
+cd ..
+
+.\scripts\run_jarvis.ps1 -DataDir "<FRESH_DATA_DIR>" -LlamaServerPath "<PATH_TO_LLAMA_SERVER_EXE>" -ModelPath "<PATH_TO_MODEL_GGUF>"
+```
+
+The repository should not need a committed database, `node_modules`, `ui/dist`, runtime JSON state, or machine-specific model/server paths.
+
+## 18. Development rule
 
 Before starting a milestone:
 

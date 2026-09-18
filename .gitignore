@@ -28,3 +28,14 @@ data/raw/*
 .DS_Store
 Thumbs.db
 *.swp
+
+# Local UI build/install output
+ui/node_modules/
+ui/dist/
+
+# Local runtime state
+data/active_session.json
+data/personalization.json
+
+# Local launcher logs
+logs/local/

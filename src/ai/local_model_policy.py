@@ -71,6 +71,12 @@ _LOCAL_ROLE_RULES = (
         notes="Small local lightweight role.",
     ),
     ModelRolePolicyRule(
+        "qwen3-4b-local",
+        frozenset({ModelRole.GENERAL, ModelRole.LIGHTWEIGHT}),
+        priority=50,
+        notes="Launcher alias for the local Qwen3 4B model.",
+    ),
+    ModelRolePolicyRule(
         "qwen3:4b",
         frozenset({ModelRole.LIGHTWEIGHT}),
         priority=60,
