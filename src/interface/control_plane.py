@@ -71,7 +71,7 @@ class ControlPlaneSnapshot:
             value = getattr(self, name)
             if not isinstance(value, Mapping):
                 raise TypeError(f"{name} must be a mapping")
-        for name in ("agents", "approvals", "tools", "blockers", "events"):
+        for name in ("agents", "approvals", "tools", "blockers", "events", "autonomous"):
             value = getattr(self, name)
             if not isinstance(value, tuple):
                 raise TypeError(f"{name} must be a tuple")
