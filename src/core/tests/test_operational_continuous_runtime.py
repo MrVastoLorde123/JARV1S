@@ -63,7 +63,7 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
 
             self.assertEqual(len(results), 1)
             self.assertEqual(results[0].run.job.status, AutonomousJobStatus.COMPLETED)
-            self.assertIsNone(runtime.scheduler._store.load_due(1000))
+            self.assertEqual(runtime.scheduler._store.load_due(1000), [])
             restored = runtime.inspect(job.job_id)
             self.assertEqual(restored.status, AutonomousJobStatus.COMPLETED)
             self.assertEqual(len(processor.calls), 1)
@@ -192,9 +192,11 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
 
             runtime.start()
             deadline = time.time() + 1.0
-            while runtime.running and runtime.inspect(next(iter([runtime.submit])) if False else runtime.submit):  # pragma: no cover
-                break
-            time.sleep(0.08)
+            while time.time() < deadline:
+                current = runtime.inspect(runtime.submit.__name__) if False else None
+                if processor.calls:
+                    break
+                time.sleep(0.01)
             runtime.stop()
 
             self.assertFalse(runtime.running)
@@ -203,26 +205,33 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
 
 class OPS08RuntimeFacadeTests(unittest.TestCase):
     def test_facade_exposes_the_single_attached_operational_runtime(self):
-        processor = ScriptedProcessor([])
-        runtime = OperationalContinuousRuntime(
-            processor,
-            connection_factory=lambda: sqlite3.connect(":memory:"),
-        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            processor = ScriptedProcessor([])
+            runtime = OperationalContinuousRuntime(
+                processor,
+                connection_factory=db_factory(path),
+            )
         facade = JARVISRuntime.from_processor(
             processor,
             operational_runtime=runtime,
         )
 
-        self.assertIs(facade.operational_runtime, runtime)
-        submitted = facade.submit_autonomous(
-            "Read status.",
-            now=100,
-            interval=10,
-        )
-        self.assertEqual(
-            facade.inspect_autonomous(submitted.job_id).status,
-            AutonomousJobStatus.QUEUED,
-        )
+            facade = JARVISRuntime.from_processor(
+                processor,
+                operational_runtime=runtime,
+            )
+
+            self.assertIs(facade.operational_runtime, runtime)
+            submitted = facade.submit_autonomous(
+                "Read status.",
+                now=100,
+                interval=10,
+            )
+            self.assertEqual(
+                facade.inspect_autonomous(submitted.job_id).status,
+                AutonomousJobStatus.QUEUED,
+            )
 
 
 if __name__ == "__main__":
