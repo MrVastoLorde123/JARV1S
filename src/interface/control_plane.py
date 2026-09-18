@@ -58,6 +58,7 @@ class ControlPlaneSnapshot:
     events: tuple[Mapping[str, Any], ...]
     cursor: int
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    autonomous: tuple[Mapping[str, Any], ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         if self.schema != "control-plane.v1":
@@ -99,6 +100,7 @@ class ControlPlaneSnapshot:
             "model": _plain(self.model),
             "blockers": [_plain(item) for item in self.blockers],
             "verification": _plain(self.verification),
+            "autonomous": [_plain(item) for item in self.autonomous],
             "events": [_plain(item) for item in self.events],
             "cursor": self.cursor,
             "metadata": _plain(self.metadata),
@@ -247,6 +249,7 @@ class ControlPlaneSnapshotBuilder:
         model_supplier: Callable[[], Mapping[str, Any]] | None = None,
         blockers_supplier: Callable[[], tuple[Mapping[str, Any], ...]] | None = None,
         verification_supplier: Callable[[], Mapping[str, Any]] | None = None,
+        autonomous_supplier: Callable[[], tuple[Mapping[str, Any], ...]] | None = None,
         clock: Callable[[], str] | None = None,
     ) -> None:
         if not callable(world_supplier):
@@ -262,6 +265,7 @@ class ControlPlaneSnapshotBuilder:
         self._model_supplier = model_supplier or (lambda: {})
         self._blockers_supplier = blockers_supplier or (lambda: ())
         self._verification_supplier = verification_supplier or (lambda: {})
+        self._autonomous_supplier = autonomous_supplier or (lambda: ())
         self._clock = clock or (lambda: datetime.now(timezone.utc).isoformat())
 
     def build(self, *, after_cursor: int = 0, limit: int = 50) -> ControlPlaneSnapshot:
@@ -291,6 +295,7 @@ class ControlPlaneSnapshotBuilder:
             model=self._require_mapping("model", self._model_supplier()),
             blockers=self._require_records("blockers", self._blockers_supplier()),
             verification=self._require_mapping("verification", self._verification_supplier()),
+            autonomous=self._require_records("autonomous", self._autonomous_supplier()),
             events=event_views,
             cursor=cursor,
             metadata={"event_count": len(event_views), "after_cursor": after_cursor},
