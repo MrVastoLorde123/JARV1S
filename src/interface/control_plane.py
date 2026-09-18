@@ -85,6 +85,7 @@ class ControlPlaneSnapshot:
         object.__setattr__(self, "model", _freeze(self.model))
         object.__setattr__(self, "blockers", tuple(_freeze(item) for item in self.blockers))
         object.__setattr__(self, "verification", _freeze(self.verification))
+        object.__setattr__(self, "autonomous", tuple(_freeze(item) for item in self.autonomous))
         object.__setattr__(self, "events", tuple(_freeze(item) for item in self.events))
         object.__setattr__(self, "metadata", _freeze(self.metadata))
 
