@@ -1,0 +1,50 @@
+name: Deployment Closure CS9 Architecture Cleanup
+
+on:
+  push:
+    branches:
+      - 'feature/deployment-closure-cs*'
+  pull_request:
+    branches:
+      - 'feature/deployment-closure-cs*'
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-cleanup:
+    name: Architecture Cleanup + Regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bootstrap database
+        run: python -m src.database_bootstrap
+
+      - name: Verify retired compatibility shims
+        shell: bash
+        run: |
+          ! grep -Fq 'Preserve identity semantics for legacy dependency-injection contracts' src/interface/coding_execution_activity.py
+          ! grep -Fq 'state: ExecutionState | None = None' src/core/execution_loop.py
+          ! grep -Fq 'execution observation state fallback' src/core/execution_loop.py
+
+      - name: Run historical closure gates
+        run: |
+          python -m unittest             src.interface.tests.test_http_command             src.interface.tests.test_http_capabilities             src.interface.tests.test_boundary             src.tools.tests.test_test_runner             src.ai.tests.test_local_model_policy             src.ai.tests.test_service_provider_model_observation
+
+      - name: Run authoritative core regression
+        run: python -m unittest discover -s src/core/tests -p "test_*.py"
+
+      - name: Verify UI dependency lock and build
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
