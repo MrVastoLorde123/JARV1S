@@ -139,6 +139,34 @@ Make the existing cognitive runtime materially feed the operational path rather 
 
 Cognition remains advisory and non-authoritative.
 
+### OPS-03 live implementation
+
+The live JARVIS task path now composes the canonical cognitive runtime before deterministic capability realization and execution planning.
+
+The cognitive result is carried as explicit operational lineage:
+
+```
+intent
+  ↓
+cognition
+  ├─ world snapshot
+  ├─ reasoning result
+  ├─ goal
+  ├─ selected advisory plan
+  └─ proposal
+        ↓
+capability realization
+        ↓
+deterministic execution plan
+        ↓
+validation / policy / confirmation / execution
+```
+
+The execution plan records the cognitive lineage, but downstream policy and authorization remain authoritative.
+
+Cognition therefore changes the inspectable operational plan without becoming an execution authority. A cognitive-runtime failure is surfaced as UNAVAILABLE; it does not silently become permission to act and it does not create a second execution path.
+
+The compatibility UnifiedRequestRuntime also avoids running cognition twice when wrapping the integrated JARVIS processor.
 ### OPS-04 — Capability → Agency
 
 Connect goal/planning outputs to real capability discovery, selection, realization, validation, policy, confirmation, authorization, execution, and verification.
