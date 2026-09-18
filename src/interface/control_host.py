@@ -240,6 +240,30 @@ def start_control_plane_http(runtime: JARVISRuntime, *, ai_service: AIService | 
         metadata = dict(operation.metadata)
         return ({"operation_id": operation.operation_id, "status": operation.status.value, "task_id": operation.task.task_id, "objective": operation.task.objective, "created_at": operation.created_at, "plan_fingerprint": metadata.get("plan_fingerprint"), "edit_count": len(operation.plan.edits), "verification_runner": operation.plan.verification.runner},)
 
+    def autonomous_supplier():
+        if runtime.operational_runtime is None:
+            return ()
+        records = []
+        for job in runtime.operational_runtime.list_jobs(limit=100):
+            records.append(
+                {
+                    "job_id": job.job_id,
+                    "goal": job.goal,
+                    "status": job.status.value,
+                    "step_count": job.step_count,
+                    "max_steps": job.max_steps,
+                    "waiting_reason": job.waiting_reason,
+                    "result": job.result,
+                    "failure_reason": job.failure_reason,
+                    "resumable": job.resumable,
+                    "terminal": job.terminal,
+                    "authority_granted": False,
+                    "authorization_granted": False,
+                    "execution_requested": False,
+                }
+            )
+        return tuple(records)
+
     def model_supplier():
         base_projection = local_model_projection(
             base_url=os.environ.get("JARVIS_LOCAL_BASE_URL", "http://127.0.0.1:8080"),
@@ -262,6 +286,7 @@ def start_control_plane_http(runtime: JARVISRuntime, *, ai_service: AIService | 
         model_supplier=model_supplier,
         blockers_supplier=lambda: _blockers_projection(activity_stream),
         verification_supplier=lambda: _verification_projection(activity_stream),
+        autonomous_supplier=autonomous_supplier,
     )
     server = create_control_plane_server(builder, config=config or ControlPlaneHTTPConfig())
     thread = Thread(target=server.serve_forever, name="jarvis-control-plane-http", daemon=True)
