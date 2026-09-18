@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from src.core.interface_backend import InterfaceRequest, InterfaceResponse
+from src.core.interface_backend import (
+    InterfaceOperation,
+    InterfaceRequest as BackendInterfaceRequest,
+    InterfaceResponse as BackendInterfaceResponse,
+    InterfaceResponseStatus,
+)
+from src.interface.boundary import InterfaceRequest, InterfaceResponse
 from src.core.interface_session_state import InterfaceSessionState, InterfaceSessionStateProjector
 from src.core.runtime_activity_stream import (
     InterfaceRuntimeActivityRecorder,
@@ -47,8 +53,47 @@ class OperationalControlPlane:
     def session_projector(self) -> InterfaceSessionStateProjector:
         return self._session_projector
 
+    @staticmethod
+    def _backend_request(request: InterfaceRequest) -> BackendInterfaceRequest:
+        session_id = request.session_id or "default"
+        actor_id = str(request.metadata.get("actor_id", "interface"))
+        return BackendInterfaceRequest(
+            request_id=request.request_id,
+            session_id=session_id,
+            actor_id=actor_id,
+            operation=InterfaceOperation.STATUS,
+            payload={
+                "channel": request.channel.value,
+                "content": request.content,
+            },
+            metadata={
+                **dict(request.metadata),
+                "operational_observation": True,
+            },
+        )
+
+    @staticmethod
+    def _backend_response(
+        request: InterfaceRequest,
+        response: InterfaceResponse,
+        *,
+        status: InterfaceResponseStatus,
+        error: str | None = None,
+    ) -> BackendInterfaceResponse:
+        metadata = dict(response.metadata)
+        if error is not None:
+            metadata["error_type"] = error
+        return BackendInterfaceResponse(
+            request_id=request.request_id,
+            operation=InterfaceOperation.STATUS,
+            status=status,
+            payload={"content": response.content},
+            metadata=metadata,
+        )
+
     def record_request(self, request: InterfaceRequest) -> RuntimeActivityEvent:
-        event = self._recorder.record_request(request)
+        backend_request = self._backend_request(request)
+        event = self._recorder.record_request(backend_request)
         self._session_projector.apply(event)
         return event
 
@@ -57,7 +102,40 @@ class OperationalControlPlane:
         request: InterfaceRequest,
         response: InterfaceResponse,
     ) -> RuntimeActivityEvent:
-        event = self._recorder.record_response(request, response)
+        backend_request = self._backend_request(request)
+        backend_response = self._backend_response(
+            request,
+            response,
+            status=InterfaceResponseStatus.ACCEPTED,
+        )
+        event = self._recorder.record_response(
+            backend_request,
+            backend_response,
+        )
+        self._session_projector.apply(event)
+        return event
+
+    def record_failure(
+        self,
+        request: InterfaceRequest,
+        exc: BaseException,
+    ) -> RuntimeActivityEvent:
+        backend_request = self._backend_request(request)
+        backend_response = BackendInterfaceResponse(
+            request_id=request.request_id,
+            operation=InterfaceOperation.STATUS,
+            status=InterfaceResponseStatus.FAILED,
+            payload={},
+            metadata={
+                "stage": "RUNTIME",
+                "error_type": type(exc).__name__,
+                "operational_observation": True,
+            },
+        )
+        event = self._recorder.record_response(
+            backend_request,
+            backend_response,
+        )
         self._session_projector.apply(event)
         return event
 
