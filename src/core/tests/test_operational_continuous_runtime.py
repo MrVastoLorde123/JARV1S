@@ -68,6 +68,26 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             self.assertEqual(restored.status, AutonomousJobStatus.COMPLETED)
             self.assertEqual(len(processor.calls), 1)
 
+    def test_list_jobs_reads_durable_job_snapshots_for_observation_surfaces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            processor = ScriptedProcessor([])
+            runtime = OperationalContinuousRuntime(
+                processor,
+                connection_factory=db_factory(path),
+            )
+            first = runtime.submit("First durable goal.", now=100, interval=10)
+            second = runtime.submit("Second durable goal.", now=100, interval=10)
+
+            jobs = runtime.list_jobs(limit=10)
+
+            ids = {job.job_id for job in jobs}
+            self.assertIn(first.job_id, ids)
+            self.assertIn(second.job_id, ids)
+            self.assertTrue(all(job.working_context == {} for job in jobs))
+            self.assertTrue(all(job.status is AutonomousJobStatus.QUEUED for job in jobs))
+
+
     def test_failed_execution_gets_bounded_recovery_then_completes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jarvis.db"
