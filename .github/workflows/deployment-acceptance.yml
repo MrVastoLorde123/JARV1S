@@ -1,0 +1,69 @@
+name: Deployment Acceptance
+
+on:
+  pull_request:
+    branches:
+      - "feature/deployment-closure-cs*"
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: Deployment acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify deployment surface
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f scripts/run_jarvis.ps1
+          test -f src/run_local_jarvis.py
+          test -f src/database_bootstrap.py
+          test -f ui/package.json
+          test -f ui/package-lock.json
+          test -f .github/workflows/deployment-closure-verification.yml
+
+          grep -q 'JARVIS_DATA_DIR' scripts/run_jarvis.ps1
+          grep -q 'ModelPath' scripts/run_jarvis.ps1
+          grep -q 'Database bootstrap' scripts/run_jarvis.ps1
+          grep -q 'Regression checks' scripts/run_jarvis.ps1
+          grep -q 'JARVIS_LOCAL_MODEL' src/run_local_jarvis.py
+          grep -q 'observe_provider_models("local")' src/run_local_jarvis.py
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Verify UI lockfile contract
+        working-directory: ui
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          npm ci
+          npm run build
+
+      - name: Verify deployment documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/operations/CS5_REPRODUCIBLE_DEPLOYMENT.md
+          test -f docs/operations/CS6_VERIFICATION_CI_CLOSURE.md
+          test -f docs/operations/RUNNING_JARVIS_LOCAL.md
+          grep -q 'Clean-checkout deployment proof' docs/operations/CS5_REPRODUCIBLE_DEPLOYMENT.md
+          grep -q 'CS6 status' docs/operations/CS6_VERIFICATION_CI_CLOSURE.md
+          grep -q 'DataDir' docs/operations/RUNNING_JARVIS_LOCAL.md
+
+      - name: Acceptance result
+        run: echo "Deployment surface, UI lockfile/build, and operator documentation accepted."
