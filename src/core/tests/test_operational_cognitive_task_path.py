@@ -270,6 +270,7 @@ class OperationalCognitiveTaskPathTests(unittest.TestCase):
 
 
 # OPS-05 disposable push verification marker; not part of the feature branch.
+# Second synchronize marker to trigger the PR validation lifecycle.
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
