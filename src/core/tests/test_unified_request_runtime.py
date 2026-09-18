@@ -80,6 +80,28 @@ class UnifiedRequestRuntimeTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             UnifiedRequestRuntime(object())
 
+    def test_integrated_core_owns_cognition_without_duplicate_sidecar_execution(self) -> None:
+        class CountingCognitiveRuntime:
+            def __init__(self):
+                self.calls = 0
+
+            def run(self, *args, **kwargs):
+                self.calls += 1
+                raise AssertionError("compatibility runtime must not invoke duplicate cognition")
+
+        cognitive = CountingCognitiveRuntime()
+
+        class IntegratedProcessor(FakeProcessor):
+            cognitive_runtime = object()
+
+        processor = IntegratedProcessor()
+        runtime = UnifiedRequestRuntime(processor, cognitive_runtime=cognitive)
+
+        runtime.process(self.request)
+
+        self.assertEqual(cognitive.calls, 0)
+        self.assertEqual(processor.calls, ["hello JARVIS"])
+
     def test_core_exception_is_not_converted_into_authorization(self) -> None:
         class FailingProcessor:
             def ask(self, query):
