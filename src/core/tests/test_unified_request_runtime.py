@@ -81,13 +81,16 @@ class UnifiedRequestRuntimeTests(unittest.TestCase):
             UnifiedRequestRuntime(object())
 
     def test_integrated_core_owns_cognition_without_duplicate_sidecar_execution(self) -> None:
-        class CountingCognitiveRuntime:
+        from src.core.canonical_cognitive_runtime import CanonicalCognitiveRuntime
+
+        class CountingCognitiveRuntime(CanonicalCognitiveRuntime):
             def __init__(self):
+                super().__init__()
                 self.calls = 0
 
             def run(self, *args, **kwargs):
                 self.calls += 1
-                raise AssertionError("compatibility runtime must not invoke duplicate cognition")
+                return super().run(*args, **kwargs)
 
         cognitive = CountingCognitiveRuntime()
 
