@@ -72,23 +72,6 @@ class ExecutionPlanner:
             "task_type": task.task_type.value,
         }
 
-        cognitive_context = task.metadata.get("cognitive_context")
-        if cognitive_context is not None:
-            if not isinstance(cognitive_context, dict):
-                raise ValueError(
-                    "Task 'cognitive_context' metadata must be a dictionary."
-                )
-            step_metadata["cognitive_context"] = dict(cognitive_context)
-            selected_plan = cognitive_context.get("selected_plan")
-            if isinstance(selected_plan, dict):
-                planned_steps = selected_plan.get("steps")
-                if isinstance(planned_steps, (tuple, list)) and planned_steps:
-                    first_step = planned_steps[0]
-                    if isinstance(first_step, dict):
-                        description = first_step.get("description")
-                        if isinstance(description, str) and description.strip():
-                            step_metadata["cognitive_advisory_step"] = description
-
         if remaining_work is not None:
             step_metadata["assessment_remaining_work"] = remaining_work.to_context()
 
@@ -144,16 +127,6 @@ class ExecutionPlanner:
                 "planner": "deterministic",
                 "task_type": task.task_type.value,
                 "step_count": 1,
-                **(
-                    {"cognitive_context": dict(cognitive_context)}
-                    if cognitive_context is not None
-                    else {}
-                ),
-                **(
-                    {"cognitive_advisory_step": step_metadata["cognitive_advisory_step"]}
-                    if "cognitive_advisory_step" in step_metadata
-                    else {}
-                ),
             },
         )
 
