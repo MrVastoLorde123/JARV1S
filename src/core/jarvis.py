@@ -30,6 +30,7 @@ from src.core.execution_planner import ExecutionPlanner
 from src.core.execution_policy_models import ExecutionPolicyResult, PolicyDecision
 from src.core.intelligent_request_router import IntelligentRequestRouter
 from src.core.models import JARVISResponse
+from src.core.operational_learning import OperationalLearningRuntime
 from src.core.plan_executor import PlanExecutor
 from src.core.plan_validator import PlanValidator
 from src.core.request_router import RequestRouter
@@ -64,6 +65,7 @@ class JARVIS:
         cognitive_runtime: CanonicalCognitiveRuntime | None = None,
         working_context_runtime: WorkingContextRuntime | None = None,
         working_context_consumption_boundary: WorkingContextConsumptionBoundary | None = None,
+        operational_learning_runtime: OperationalLearningRuntime | None = None,
     ):
         self.ai_service = ai_service
         self.context_options = context_options if context_options is not None else ContextOptions()
@@ -75,6 +77,17 @@ class JARVIS:
         if cognitive_runtime is not None and not callable(getattr(cognitive_runtime, "run", None)):
             raise TypeError("cognitive_runtime must provide a callable run method")
         self.cognitive_runtime = cognitive_runtime or CanonicalCognitiveRuntime()
+        if operational_learning_runtime is not None and not isinstance(
+            operational_learning_runtime, OperationalLearningRuntime
+        ):
+            raise TypeError(
+                "operational_learning_runtime must be an OperationalLearningRuntime or None."
+            )
+        self.operational_learning_runtime = (
+            operational_learning_runtime
+            if operational_learning_runtime is not None
+            else OperationalLearningRuntime()
+        )
 
         if working_context_runtime is not None and not isinstance(working_context_runtime, WorkingContextRuntime):
             raise TypeError("working_context_runtime must be a WorkingContextRuntime.")
@@ -331,6 +344,7 @@ class JARVIS:
                 ordered_memory_ids.append(normalized)
             memory_ids = tuple(ordered_memory_ids)
 
+        operational_learning_context = self.operational_learning_runtime.context_for(query)
         try:
             result = self.cognitive_runtime.run(
                 query,
@@ -341,6 +355,7 @@ class JARVIS:
                     "intent_confidence": route_metadata.get("intent_confidence"),
                     "intent_reasoning": route_metadata.get("intent_reasoning"),
                     "working_context": working_context_payload,
+                    "operational_learning": operational_learning_context,
                 },
             )
         except Exception as exc:
@@ -371,6 +386,7 @@ class JARVIS:
         context["context_ids"] = context_ids
         context["memory_ids"] = memory_ids
         context["working_context"] = working_context_payload
+        context["operational_learning"] = operational_learning_context
         context["goal"] = result.planning.context.goal.to_context()
 
         selected_plan_id = result.planning.ranking.advisory_selected_plan_id
@@ -612,6 +628,12 @@ class JARVIS:
 
         execution = self.plan_executor.execute(plan, policy)
         response = self._execution_response(execution, plan, policy)
+        response = self._attach_operational_learning(
+            response,
+            execution,
+            plan,
+            capability=capability_metadata.get("capability"),
+        )
         response.metadata["cognitive_context"] = cognitive_context
         response.metadata.update(capability_metadata)
         return response
@@ -745,6 +767,44 @@ class JARVIS:
             },
         )
 
+    def _attach_operational_learning(
+        self,
+        response: JARVISResponse,
+        execution: PlanExecutionResult,
+        plan: ExecutionPlan,
+        *,
+        capability: str | None = None,
+    ) -> JARVISResponse:
+        """Record one execution result as bounded experience for future cognition."""
+        try:
+            record = self.operational_learning_runtime.record_execution(
+                execution,
+                plan,
+                capability=capability,
+            )
+        except Exception as exc:
+            response.metadata["operational_learning_status"] = "UNAVAILABLE"
+            response.metadata["operational_learning_error"] = {
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+            return response
+
+        response.metadata["operational_learning_status"] = "RECORDED"
+        response.metadata["operational_learning"] = {
+            "experience_id": record.experience.experience_id,
+            "evaluation_id": record.evaluation.evaluation_id,
+            "evaluation_status": record.evaluation.status.value,
+            "adaptation_hint_id": record.adaptation_hint.hint_id,
+            "adaptation_hint_status": record.adaptation_hint.status.value,
+            "guidance": record.adaptation_hint.guidance,
+            "authority_granted": False,
+            "execution_requested": False,
+            "authorizes_retry": False,
+            "mutates_policy": False,
+        }
+        return response
+
     @staticmethod
     def _execution_response(
         execution: PlanExecutionResult,
@@ -875,6 +935,11 @@ class JARVIS:
             )
         execution = self.plan_executor.execute(confirmed.plan, policy)
         response = self._execution_response(execution, confirmed.plan, policy)
+        response = self._attach_operational_learning(
+            response,
+            execution,
+            confirmed.plan,
+        )
         response.metadata.update({"confirmation": True, "operation_id": confirmed.operation_id})
         return response
 
