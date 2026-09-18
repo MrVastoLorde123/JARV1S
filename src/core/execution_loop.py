@@ -19,7 +19,7 @@ class ExecutionObservation:
 
     plan: ExecutionPlan
     execution: PlanExecutionResult
-    state: ExecutionState | None = None
+    state: ExecutionState
     progress: ExecutionProgress | None = None
     metadata: dict = field(default_factory=dict)
 
@@ -28,10 +28,8 @@ class ExecutionObservation:
             raise TypeError("plan must be an ExecutionPlan.")
         if not isinstance(self.execution, PlanExecutionResult):
             raise TypeError("execution must be a PlanExecutionResult.")
-        if self.state is None:
-            object.__setattr__(self, "state", ExecutionState.from_execution(self.plan.task_description, self.execution))
-        elif not isinstance(self.state, ExecutionState):
-            raise TypeError("state must be an ExecutionState or None.")
+        if not isinstance(self.state, ExecutionState):
+            raise TypeError("state must be an ExecutionState.")
         if self.progress is not None and not isinstance(self.progress, ExecutionProgress):
             raise TypeError("progress must be an ExecutionProgress or None.")
 
