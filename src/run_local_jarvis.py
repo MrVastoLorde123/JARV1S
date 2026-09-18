@@ -79,6 +79,7 @@ def main():
         model_routing_runtime=model_routing_runtime,
     )
     ai_service.register_provider(provider)
+    ai_service.observe_provider_models("local")
 
     conversation_store = ConversationStore()
     personalization_store = PersonalizationStore(
