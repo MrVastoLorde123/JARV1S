@@ -261,6 +261,31 @@ Close the outcome loop from verified execution evidence into experience, learnin
 
 Learning may change behavior but may not change authority.
 
+### OPS-07 live implementation
+
+The live execution path now closes the operational feedback loop without creating a second authority path.
+
+```
+PlanExecutionResult
+      ↓
+OperationalLearningRuntime
+      ├─ immutable experience
+      ├─ deterministic evaluation
+      └─ bounded adaptation hint
+                ↓
+future task cognitive context
+                ↓
+reasoning / planning
+```
+
+`COMPLETED` execution becomes `SUCCESS_PATTERN` / `REINFORCE_PATTERN` evidence.
+`FAILED` execution becomes `FAILURE_PATTERN` / `CORRECT_PATTERN` evidence.
+`BLOCKED` execution becomes `BOUNDED_BLOCK` / `PRESERVE_BOUNDARY` evidence.
+
+The learning runtime is bounded to the live JARVIS process by default and keeps only a bounded history. Learning context is advisory evidence for future cognition; it cannot authorize retry, mutate policy, grant authority, request execution, or establish truth.
+
+The existing M23 learning-adaptation chain remains a separate, authority-bounded evidence system for learning-state adaptation. OPS-07 does not reinterpret raw tool execution as an M23.85 application artifact.
+
 ### OPS-08 — Continuous Runtime
 
 Integrate long-horizon work, continuation, recovery, waiting states, proactive behavior, and resumability where they materially improve real operation.
