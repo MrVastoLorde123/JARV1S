@@ -382,6 +382,10 @@ class OperationalContinuousRuntime:
     def inspect(self, job_id: str) -> AutonomousJob | None:
         return self._persistence.restore(job_id)
 
+    def list_jobs(self, *, limit: int = 100) -> tuple[AutonomousJob, ...]:
+        """Return bounded durable job snapshots for observation surfaces."""
+        return self._persistence.list_jobs(limit=limit)
+
     def tick(
         self,
         now: float | None = None,
