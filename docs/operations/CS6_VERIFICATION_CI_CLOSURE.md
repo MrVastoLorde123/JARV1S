@@ -74,7 +74,7 @@ It is retired in CS6 so the repository has one canonical closure verification wo
 
 The CS6 branch must be accepted only after GitHub Actions executes the new workflow successfully on this branch/PR.
 
-The authoritative backend count remains the current repository regression baseline established through CS5: **3294 core tests**.
+The CS6 receipt records the then-current baseline of **3294 core tests**. The authoritative regression count has since advanced to **3304** through CS8 adversarial coverage.
 
 The focused CS6 additions are:
 
