@@ -86,3 +86,27 @@ The UI gate remains \`npm ci\` + \`npm run build\`.
 ## Merge policy
 
 CS6 remains open/draft/unmerged. No merge is performed as part of this closure stage.
+
+
+## GitHub Actions verification receipt
+
+Final successful run:
+
+- Workflow: **Deployment Closure Verification**
+- Run: **#7**
+- Backend runtime: **Python 3.12.14**
+- Historical interface checks: **18/18 OK**
+- Current AI provider/routing checks: **7/7 OK**
+- Authoritative core regression: **3294/3294 OK**
+- UI runtime: **Node 22.23.2 / npm 10.9.8**
+- UI dependency installation: **npm ci PASS** — 24 packages added, 0 vulnerabilities
+- UI production build: **PASS** — Vite 8.3.0, 17 modules transformed
+- Both CI jobs: **SUCCESS**
+
+The first CS6 run correctly exposed a Python 3.12 portability defect in the regression command: dotted discovery of the namespace-style `src.core.tests` path failed because the imported namespace package had no `__file__`. The workflow was corrected to discover the filesystem path `src/core/tests`; the subsequent run passed the complete 3294-test regression.
+
+GitHub Actions also emitted Node 20 deprecation warnings from the current action wrapper versions. These warnings did not affect the successful verification and are not a CS6 gate failure.
+
+## CS6 status
+
+The canonical verification workflow is implemented and has a successful GitHub Actions receipt on the CS6 branch/PR.
