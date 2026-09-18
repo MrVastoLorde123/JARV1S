@@ -205,18 +205,6 @@ class JARVIS:
 
         if route.request_type.value == "TASK" and route.task is not None:
             task = route.task
-            cognitive_context = self._build_cognitive_task_context(
-                task.content,
-                route.metadata,
-            )
-            task = TaskRequest(
-                content=task.content,
-                task_type=task.task_type,
-                metadata={
-                    **task.metadata,
-                    "cognitive_context": cognitive_context,
-                },
-            )
             realized_metadata = {}
             is_natural_tool = (
                 route.metadata.get("intent_kind") == "tool"
@@ -240,7 +228,6 @@ class JARVIS:
                             "success": False,
                             "intent_kind": route.metadata.get("intent_kind"),
                             "intent_confidence": route.metadata.get("intent_confidence"),
-                            "cognitive_context": cognitive_context,
                         },
                     )
                 except CapabilityInvocationError as exc:
@@ -304,7 +291,6 @@ class JARVIS:
                 {
                     "intent_kind": route.metadata.get("intent_kind"),
                     "intent_confidence": route.metadata.get("intent_confidence"),
-                    "cognitive_context": cognitive_context,
                     **realized_metadata,
                 }
             )
@@ -379,20 +365,6 @@ class JARVIS:
         return context
 
     def ask_task(self, task: TaskRequest) -> JARVISResponse:
-        if not isinstance(task, TaskRequest):
-            raise TypeError("task must be a TaskRequest.")
-        if "cognitive_context" not in task.metadata:
-            task = TaskRequest(
-                content=task.content,
-                task_type=task.task_type,
-                metadata={
-                    **task.metadata,
-                    "cognitive_context": self._build_cognitive_task_context(
-                        task.content,
-                        {},
-                    ),
-                },
-            )
         route = self.request_router.route_task(task)
         return self._handle_task(route.task)
 
@@ -426,13 +398,38 @@ class JARVIS:
 
     def _handle_task(self, task: TaskRequest) -> JARVISResponse:
         plan = self.execution_planner.plan(task)
+        cognitive_context = task.metadata.get("cognitive_context")
+        if cognitive_context is None:
+            cognitive_context = self._build_cognitive_task_context(
+                task.content,
+                {},
+            )
+        if not isinstance(cognitive_context, dict):
+            raise TypeError("cognitive_context must be mapping-compatible")
+        plan.metadata["cognitive_context"] = dict(cognitive_context)
+        selected_plan = cognitive_context.get("selected_plan")
+        if isinstance(selected_plan, dict):
+            planned_steps = selected_plan.get("steps")
+            if isinstance(planned_steps, (tuple, list)) and planned_steps:
+                first_step = planned_steps[0]
+                if isinstance(first_step, dict):
+                    description = first_step.get("description")
+                    if isinstance(description, str) and description.strip():
+                        plan.metadata["cognitive_advisory_step"] = description
+                        for step in plan.steps:
+                            step.metadata["cognitive_advisory_step"] = description
+                            step.metadata["cognitive_context"] = dict(cognitive_context)
         validation = self.plan_validator.validate(plan)
         if not validation.valid:
-            return self._validation_response(validation)
+            response = self._validation_response(validation)
+            response.metadata["cognitive_context"] = cognitive_context
+            return response
 
         policy = self.execution_policy.evaluate(plan)
         if policy.decision == PolicyDecision.DENY:
-            return self._policy_response(policy)
+            response = self._policy_response(policy)
+            response.metadata["cognitive_context"] = cognitive_context
+            return response
 
         if policy.decision == PolicyDecision.REQUIRE_CONFIRMATION:
             pending = self.execution_confirmation_service.stage(
@@ -458,12 +455,15 @@ class JARVIS:
                     "operation_id": pending.operation_id,
                     "plan_fingerprint": pending.metadata["plan_fingerprint"],
                     "policy_decision": policy.decision.value,
+                    "cognitive_context": cognitive_context,
                     "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
                 },
             )
 
         execution = self.plan_executor.execute(plan, policy)
-        return self._execution_response(execution, plan, policy)
+        response = self._execution_response(execution, plan, policy)
+        response.metadata["cognitive_context"] = cognitive_context
+        return response
 
     def _handle_conversation(
         self,
