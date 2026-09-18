@@ -14,6 +14,7 @@ from src.core.execution_loop import (
     GuardedExecutionLoop,
 )
 from src.core.execution_plan_models import ExecutionPlan, PlanStatus, PlanStep, StepStatus
+from src.core.execution_state import ExecutionState
 from src.core.execution_policy import ExecutionPolicy
 from src.core.execution_policy_models import PolicyDecision
 from src.core.multi_step_planner import MultiStepExecutionPlanner
@@ -241,7 +242,8 @@ class GuardedExecutionLoopTests(unittest.TestCase):
             status=PlanExecutionStatus.COMPLETED,
             steps=(),
         )
-        observation = ExecutionObservation(plan("p1"), execution)
+        state = ExecutionState.from_execution("do it", execution)
+        observation = ExecutionObservation(plan("p1"), execution, state=state)
         decision = ExecutionContinuationService().decide(observation.state)
         self.assertEqual(decision.action, "COMPLETE")
         self.assertFalse(decision.should_continue)

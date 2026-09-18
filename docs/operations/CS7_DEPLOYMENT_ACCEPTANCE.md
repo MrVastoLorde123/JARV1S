@@ -30,7 +30,7 @@ A deployment is accepted only when the following surfaces agree:
 
 4. **Verification**
    - CS6 canonical CI remains green.
-   - The authoritative core regression remains **3294/3294**.
+   - The authoritative core regression remains **3304/3304**.
    - The current AI provider/routing checks remain part of the CI boundary.
 
 5. **Operator documentation**
@@ -62,7 +62,7 @@ CS5 already established the strongest available local deployment receipt:
 - real `llama-server`;
 - `qwen3-4b-local` model exposure;
 - AI provider regression **11/11**;
-- core regression **3294/3294**;
+- core regression **3304/3304**;
 - real interactive JARVIS response;
 - `:quit` clean shutdown;
 - final clean working tree.
@@ -104,7 +104,7 @@ The inherited CS6 verification workflow also passed on the same CS7 head, preser
 
 - historical interface checks: **18/18 OK**
 - AI provider/routing checks: **7/7 OK**
-- authoritative core regression: **3294/3294 OK**
+- authoritative core regression: **3304/3304 OK**
 
 Together with the CS5 real clean-checkout deployment receipt, this establishes the current deployment candidate as accepted across local runtime, automated verification, and acceptance-surface checks.
 

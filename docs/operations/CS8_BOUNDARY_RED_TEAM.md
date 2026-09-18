@@ -55,9 +55,7 @@ Focused red-team suites:
 
 Authoritative regression:
 
-    python -m unittest discover -s src/core/tests -p "test_*.py"
-
-The dedicated workflow also reruns the historical interface/tool/AI closure gates.
+The authoritative core regression is owned by `.github/workflows/deployment-closure-verification.yml`. The CS8 red-team workflow is intentionally focused and does not duplicate the canonical regression gate.
 
 ## Acceptance criteria
 

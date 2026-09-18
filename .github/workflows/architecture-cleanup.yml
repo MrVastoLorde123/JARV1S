@@ -1,0 +1,37 @@
+name: Deployment Closure CS9 Architecture Cleanup
+
+on:
+  push:
+    branches:
+      - 'feature/deployment-closure-cs*'
+  pull_request:
+    branches:
+      - 'feature/deployment-closure-cs*'
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-cleanup:
+    name: Architecture Cleanup + Regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bootstrap database
+        run: python -m src.database_bootstrap
+
+      - name: Verify retired compatibility shims
+        shell: bash
+        run: |
+          ! grep -Fq 'Preserve identity semantics for legacy dependency-injection contracts' src/interface/coding_execution_activity.py
+          ! grep -Fq 'state: ExecutionState | None = None' src/core/execution_loop.py
+          ! grep -Fq 'execution observation state fallback' src/core/execution_loop.py
