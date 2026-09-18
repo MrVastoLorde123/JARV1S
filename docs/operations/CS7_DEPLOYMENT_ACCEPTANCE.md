@@ -62,7 +62,7 @@ CS5 already established the strongest available local deployment receipt:
 - real `llama-server`;
 - `qwen3-4b-local` model exposure;
 - AI provider regression **11/11**;
-- core regression **3294/3294**;
+- core regression **3304/3304**;
 - real interactive JARVIS response;
 - `:quit` clean shutdown;
 - final clean working tree.
