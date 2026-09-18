@@ -851,6 +851,16 @@ class JARVIS:
             return None
         return rows[-1][0]
 
+    def confirm_operation(self, operation_id: str | None = None) -> JARVISResponse:
+        """Confirm one staged execution through the existing deterministic boundary."""
+        arguments = () if operation_id is None else (operation_id,)
+        return self._confirm_execution(arguments)
+
+    def cancel_operation(self, operation_id: str | None = None) -> JARVISResponse:
+        """Cancel one staged execution through the existing deterministic boundary."""
+        arguments = () if operation_id is None else (operation_id,)
+        return self._cancel_execution(arguments)
+
     def _cancel_execution(self, arguments: tuple[str, ...]) -> JARVISResponse:
         if len(arguments) > 1:
             return JARVISResponse(
