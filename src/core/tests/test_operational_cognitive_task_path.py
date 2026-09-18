@@ -269,5 +269,7 @@ class OperationalCognitiveTaskPathTests(unittest.TestCase):
         self.assertFalse(response.metadata["cognitive_context"]["authorization_granted"])
 
 
+# OPS-05 disposable push verification marker; not part of the feature branch.
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
