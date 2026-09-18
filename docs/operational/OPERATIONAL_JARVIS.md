@@ -290,6 +290,59 @@ The existing M23 learning-adaptation chain remains a separate, authority-bounded
 
 Integrate long-horizon work, continuation, recovery, waiting states, proactive behavior, and resumability where they materially improve real operation.
 
+### OPS-08 live implementation
+
+The canonical `JARVISRuntime` now owns an optional durable continuous runtime composed around the existing JARVIS processor.
+
+```
+JARVISRuntime
+    ↓
+OperationalContinuousRuntime
+    ├─ SQLite autonomous job snapshots
+    ├─ fenced durable schedules
+    ├─ bounded autonomous job driver
+    ├─ live JARVIS processor
+    └─ background pulse loop
+             ↓
+       existing JARVIS
+       understand → contextualize → reason → plan → capability →
+       policy → confirmation/authorization → execution → learning
+```
+
+The continuous runtime does not create a second policy, capability, authorization, execution, or learning authority. Its responsibility is orchestration: persist a job, wake it, ask the existing JARVIS spine to perform one bounded cycle, persist the resulting lifecycle state, and schedule the next cycle when continuation is permitted.
+
+Autonomous lifecycle states are durable across process restart:
+
+- `QUEUED`
+- `RUNNING`
+- `WAITING_AUTHORIZATION`
+- `WAITING_INPUT`
+- `WAITING_TOOL`
+- `PAUSED`
+- `COMPLETED`
+- `FAILED`
+- `CANCELLED`
+
+Execution failures receive a bounded recovery budget before the autonomous job becomes terminal. Scheduler-level failures use fenced leases and bounded backoff rather than silently spinning.
+
+A waiting authorization is persisted and removes the job from automatic scheduling. Resumption requires the existing explicit confirmation boundary; restart never implies authorization or execution.
+
+The local launcher starts the continuous runtime by default. Set `JARVIS_AUTONOMOUS_RUNTIME=0` to disable the background pulse loop, or use `JARVIS_AUTONOMOUS_POLL_SECONDS` to adjust cadence.
+
+The runtime is intentionally available through the canonical facade:
+
+```
+runtime.submit_autonomous(...)
+runtime.inspect_autonomous(...)
+runtime.resume_autonomous(...)
+runtime.cancel_autonomous(...)
+runtime.tick_autonomous(...)
+```
+
+This creates the operational condition the project was missing: JARVIS can remain alive and perform durable bounded work while the architecture continues evolving.
+
+Integrate long-horizon work, continuation, recovery, waiting states, proactive behavior, and resumability where they materially improve real operation.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
