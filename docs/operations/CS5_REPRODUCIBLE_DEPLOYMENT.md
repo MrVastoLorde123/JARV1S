@@ -70,7 +70,7 @@ The reproducible interpreter contract is:
 - Python standard library only for the backend/runtime
 - no `requirements.txt`, `pyproject.toml`, or Python package lockfile is required by the current runtime
 
-The existing CI configuration already uses Python 3.12, and the deployment workstation has passed the full backend regression suite under that interpreter.
+The existing CI configuration targets Python 3.12. A clean-checkout rehearsal performed under another interpreter version does not substitute for a Python 3.12 verification.
 
 This avoids introducing a dependency manifest that would claim packages the runtime does not actually require.
 
@@ -82,9 +82,10 @@ The rehearsal should prove:
 
 1. the branch checks out cleanly;
 2. `python -m src.database_bootstrap` creates the configured data-root database;
-3. `cd ui; npm ci; npm run build` succeeds from the committed lockfile;
-4. `scripts/run_jarvis.ps1 -DataDir <explicit-data-dir> ...` reaches its normal startup gates;
-5. no generated runtime artifacts are required to be committed.
+3. the backend regression suite is run **after bootstrap** against that initialized database;
+4. `cd ui; npm ci; npm run build` succeeds from the committed lockfile;
+5. `scripts/run_jarvis.ps1 -DataDir <explicit-data-dir> ...` reaches its normal startup gates;
+6. no generated runtime artifacts are required to be committed.
 
 The local model executable and GGUF remain deployment inputs rather than repository dependencies.
 
@@ -94,9 +95,6 @@ The existing workflow at `.github/workflows/m28-verification.yml` is still scope
 
 Once CS6 owns that workflow, the UI install step should use `npm ci` because the lockfile is now committed.
 
-### Clean-checkout launch proof
-
-After dependency/runtime manifests are fixed, CS5 needs a clean-checkout launch rehearsal using only committed configuration plus explicitly supplied model-provider artifacts.
 
 ## Verification evidence
 
