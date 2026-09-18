@@ -68,6 +68,7 @@ class JARVIS:
         self.ai_service = ai_service
         self.context_options = context_options if context_options is not None else ContextOptions()
         self.conversation_store = conversation_store
+        self._last_working_context_error = None
         self._enable_memory_formation = enable_memory_formation
         self.request_router = request_router if request_router is not None else RequestRouter()
         self.intelligent_request_router = intelligent_request_router
@@ -358,8 +359,15 @@ class JARVIS:
         context["intent_kind"] = route_metadata.get("intent_kind")
         context["intent_confidence"] = route_metadata.get("intent_confidence")
         context["contextualization_status"] = (
-            "COMPLETED" if working_context is not None else "NOT_ATTACHED"
+            "COMPLETED"
+            if working_context is not None
+            else (
+                "UNAVAILABLE"
+                if self._last_working_context_error is not None
+                else "NOT_ATTACHED"
+            )
         )
+        context["contextualization_error"] = self._last_working_context_error
         context["context_ids"] = context_ids
         context["memory_ids"] = memory_ids
         context["working_context"] = working_context_payload
@@ -397,6 +405,7 @@ class JARVIS:
         return context
 
     def _build_task_working_context(self, task: TaskRequest) -> WorkingContext | None:
+        self._last_working_context_error = None
         if self.conversation_store is None:
             return None
 
