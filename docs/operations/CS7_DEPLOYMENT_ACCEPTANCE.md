@@ -91,8 +91,8 @@ CS7 may be marked **VERIFIED / CLOSED** only after the acceptance workflow succe
 
 The actual CS7 branch head was verified by GitHub Actions.
 
-- Deployment Acceptance run **#1**: **SUCCESS**
-- Deployment Closure Verification run **#14**: **SUCCESS**
+- Deployment Acceptance workflow on the acceptance branch: **SUCCESS**
+- Deployment Closure Verification workflow on the same branch head: **SUCCESS**
 - Deployment surface contract: **PASS**
 - Node 22 setup: **PASS**
 - UI `npm ci`: **PASS**
