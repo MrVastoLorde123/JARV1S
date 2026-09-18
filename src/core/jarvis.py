@@ -6,6 +6,7 @@ from src.commands.service import CommandService
 from src.context.memory_context_source_provider import MemoryContextSourceProvider
 from src.context.models import ContextOptions
 from src.context.working_context_consumption import WorkingContextConsumptionBoundary
+from src.context.working_context import WorkingContext
 from src.context.working_context_runtime import WorkingContextRuntime
 from src.core.canonical_cognitive_runtime import CanonicalCognitiveRuntime
 from src.core.capability_argument_planner import (
@@ -306,14 +307,39 @@ class JARVIS:
         self,
         query: str,
         route_metadata: dict[str, object],
+        *,
+        working_context: WorkingContext | None = None,
     ) -> dict[str, object]:
+        context_ids: tuple[str, ...] = ()
+        memory_ids: tuple[str, ...] = ()
+        working_context_payload = None
+        if working_context is not None:
+            working_context_payload = working_context.to_context()
+            if working_context.source_selection is not None:
+                context_ids = tuple(working_context.source_selection.selected_source_ids)
+            ordered_memory_ids = []
+            seen_memory_ids = set()
+            for item in working_context.context_package.items:
+                memory_id = item.provenance.get("memory_id")
+                if memory_id is None:
+                    continue
+                normalized = str(memory_id)
+                if normalized in seen_memory_ids:
+                    continue
+                seen_memory_ids.add(normalized)
+                ordered_memory_ids.append(normalized)
+            memory_ids = tuple(ordered_memory_ids)
+
         try:
             result = self.cognitive_runtime.run(
                 query,
+                context_ids=context_ids,
+                memory_ids=memory_ids,
                 metadata={
                     "intent_kind": route_metadata.get("intent_kind"),
                     "intent_confidence": route_metadata.get("intent_confidence"),
                     "intent_reasoning": route_metadata.get("intent_reasoning"),
+                    "working_context": working_context_payload,
                 },
             )
         except Exception as exc:
@@ -331,6 +357,12 @@ class JARVIS:
         context["status"] = "COMPLETED"
         context["intent_kind"] = route_metadata.get("intent_kind")
         context["intent_confidence"] = route_metadata.get("intent_confidence")
+        context["contextualization_status"] = (
+            "COMPLETED" if working_context is not None else "NOT_ATTACHED"
+        )
+        context["context_ids"] = context_ids
+        context["memory_ids"] = memory_ids
+        context["working_context"] = working_context_payload
         context["goal"] = result.planning.context.goal.to_context()
 
         selected_plan_id = result.planning.ranking.advisory_selected_plan_id
@@ -363,6 +395,24 @@ class JARVIS:
         proposal = result.initiative.proposal
         context["proposal"] = None if proposal is None else proposal.to_dict()
         return context
+
+    def _build_task_working_context(self, task: TaskRequest) -> WorkingContext | None:
+        if self.conversation_store is None:
+            return None
+
+        try:
+            return self.working_context_runtime.compose(
+                task.content,
+                options=self.context_options,
+                conversation_state=self.conversation.snapshot(),
+                task=task,
+            )
+        except Exception as exc:
+            self._last_working_context_error = {
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+            return None
 
     def ask_task(self, task: TaskRequest) -> JARVISResponse:
         route = self.request_router.route_task(task)
@@ -397,11 +447,13 @@ class JARVIS:
         )
 
     def _handle_task(self, task: TaskRequest) -> JARVISResponse:
+        working_context = self._build_task_working_context(task)
         cognitive_context = task.metadata.get("cognitive_context")
         if cognitive_context is None:
             cognitive_context = self._build_cognitive_task_context(
                 task.content,
                 {},
+                working_context=working_context,
             )
 
         capability_metadata = {}
