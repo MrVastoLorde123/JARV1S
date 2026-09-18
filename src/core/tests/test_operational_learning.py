@@ -160,6 +160,45 @@ class OPS07OperationalLearningTests(unittest.TestCase):
         self.assertEqual(record.experience.failure_reason, "simulated execution failure")
         self.assertFalse(record.evaluation.authorizes_retry)
 
+    def test_blocked_execution_preserves_the_authorization_boundary_without_retry(self):
+        runtime = OperationalLearningRuntime()
+        plan = ExecutionPlan(
+            plan_id="plan-3",
+            task_description="Perform a protected operation",
+            steps=(
+                PlanStep(
+                    step_id="step-1",
+                    description="Perform a protected operation",
+                    action="USE_TOOL",
+                    order=0,
+                    status=StepStatus.READY,
+                ),
+            ),
+            status=PlanStatus.READY,
+        )
+        execution = PlanExecutionResult(
+            plan_id="plan-3",
+            status=PlanExecutionStatus.BLOCKED,
+            steps=(),
+            error="Execution is not authorized by policy.",
+        )
+
+        record = runtime.record_execution(execution, plan)
+
+        self.assertEqual(
+            record.evaluation.status,
+            OperationalLearningEvaluationStatus.BOUNDED_BLOCK,
+        )
+        self.assertEqual(
+            record.adaptation_hint.status,
+            OperationalAdaptationHintStatus.PRESERVE_BOUNDARY,
+        )
+        self.assertFalse(record.experience.grants_authority)
+        self.assertFalse(record.experience.authorizes_retry)
+        self.assertFalse(record.evaluation.creates_authority)
+        self.assertFalse(record.adaptation_hint.changes_policy)
+
+
     def test_live_jarvis_exposes_learning_after_execution_and_feeds_it_forward(self):
         gateway = LearningToolGateway()
         jarvis = JARVIS(
