@@ -40,8 +40,8 @@ class AIRequestIntentClassifier:
     _KINDS = {kind.value: kind for kind in IntentKind}
 
     def __init__(self, ai_service: AIService, *, provider_name: str | None = None) -> None:
-        if not isinstance(ai_service, AIService):
-            raise TypeError("ai_service must be an AIService")
+        if not callable(getattr(ai_service, "generate_for_role", None)):
+            raise TypeError("ai_service must provide generate_for_role")
         self._ai_service = ai_service
         self._provider_name = provider_name
 

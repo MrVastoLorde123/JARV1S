@@ -68,6 +68,26 @@ class CapabilitySelectionTests(unittest.TestCase):
         self.assertEqual((), result.candidates)
         self.assertIsNone(result.best)
 
+    def test_generic_stopwords_do_not_create_false_capability_match(self):
+        capabilities = (
+            ToolDefinition(
+                name="report_status",
+                description="Report the current runtime status.",
+                version="1.0.0",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+                risk_level=RiskLevel.LOW,
+            ),
+        )
+
+        result = self.selector.select(
+            "Deploy the production database.",
+            capabilities,
+        )
+
+        self.assertEqual((), result.candidates)
+        self.assertIsNone(result.best)
+
     def test_empty_query_is_rejected(self):
         with self.assertRaises(ValueError):
             self.selector.select(" ", self.capabilities)

@@ -12,7 +12,7 @@ from src.agents.consequence_feedback_evaluation import (
 
 
 class M37ConsequenceFeedbackEvaluationTests(unittest.TestCase):
-    def _feedback(self, kind, *, execution_id="exec-1", reason=None):
+    def _feedback(self, kind, *, execution_id="exec-1", reason=None, externally_verified=False):
         return ConsequenceExecutionFeedback(
             feedback_id=f"feedback-{kind.value.lower()}",
             outcome_id=f"outcome-{kind.value.lower()}",
@@ -27,16 +27,32 @@ class M37ConsequenceFeedbackEvaluationTests(unittest.TestCase):
             tool_name="demo_tool",
             invocation_id="invoke-1",
             kind=kind,
-            payload={"observed": True},
+            payload={
+                "observed": True,
+                "externally_verified": externally_verified,
+            },
             authorization_granted=True,
             evidence_refs=("evidence-1",),
             verification_refs=("verification-1",),
             reason=reason,
         )
 
-    def test_success_maps_to_success_signal(self):
+    def test_unverified_success_maps_to_execution_success_signal(self):
         result = ConsequenceFeedbackEvaluationService().evaluate(
             self._feedback(ConsequenceExecutionFeedbackKind.SUCCESS)
+        )
+        self.assertEqual(
+            result.signal,
+            ConsequenceFeedbackEvaluationSignal.EXECUTION_SUCCESS_SIGNAL,
+        )
+        self.assertEqual(result.execution_id, "exec-1")
+
+    def test_verified_success_maps_to_learning_success_signal(self):
+        result = ConsequenceFeedbackEvaluationService().evaluate(
+            self._feedback(
+                ConsequenceExecutionFeedbackKind.SUCCESS,
+                externally_verified=True,
+            )
         )
         self.assertEqual(result.signal, ConsequenceFeedbackEvaluationSignal.SUCCESS_SIGNAL)
         self.assertEqual(result.execution_id, "exec-1")

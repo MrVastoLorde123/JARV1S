@@ -19,6 +19,7 @@ class ConsequenceFeedbackEvaluationSignal(str, Enum):
     """Classification produced by evaluating one observed feedback event."""
 
     SUCCESS_SIGNAL = "SUCCESS_SIGNAL"
+    EXECUTION_SUCCESS_SIGNAL = "EXECUTION_SUCCESS_SIGNAL"
     FAILURE_SIGNAL = "FAILURE_SIGNAL"
     NOT_EXECUTED_SIGNAL = "NOT_EXECUTED_SIGNAL"
 
@@ -137,21 +138,30 @@ class ConsequenceFeedbackEvaluationService:
         if not isinstance(feedback, ConsequenceExecutionFeedback):
             raise TypeError("feedback must be a ConsequenceExecutionFeedback")
 
-        mapping = {
-            ConsequenceExecutionFeedbackKind.SUCCESS: (
-                ConsequenceFeedbackEvaluationSignal.SUCCESS_SIGNAL,
-                "successful consequence execution provides an observed positive signal",
-            ),
-            ConsequenceExecutionFeedbackKind.FAILURE: (
-                ConsequenceFeedbackEvaluationSignal.FAILURE_SIGNAL,
-                "failed consequence execution provides an observed negative signal requiring a later decision",
-            ),
-            ConsequenceExecutionFeedbackKind.NOT_EXECUTED: (
-                ConsequenceFeedbackEvaluationSignal.NOT_EXECUTED_SIGNAL,
-                "not-executed consequence provides an operational signal requiring a later decision",
-            ),
-        }
-        signal, reason = mapping[feedback.kind]
+        if feedback.kind is ConsequenceExecutionFeedbackKind.SUCCESS:
+            verified = feedback.payload.get("externally_verified") is True
+            signal = (
+                ConsequenceFeedbackEvaluationSignal.SUCCESS_SIGNAL
+                if verified
+                else ConsequenceFeedbackEvaluationSignal.EXECUTION_SUCCESS_SIGNAL
+            )
+            reason = (
+                "externally verified consequence execution provides a learning-eligible positive signal"
+                if verified
+                else "successful execution was observed, but external verification is absent; later review is required"
+            )
+        else:
+            signal_map = {
+                ConsequenceExecutionFeedbackKind.FAILURE: (
+                    ConsequenceFeedbackEvaluationSignal.FAILURE_SIGNAL,
+                    "failed consequence execution provides an observed negative signal requiring a later decision",
+                ),
+                ConsequenceExecutionFeedbackKind.NOT_EXECUTED: (
+                    ConsequenceFeedbackEvaluationSignal.NOT_EXECUTED_SIGNAL,
+                    "not-executed consequence provides an operational signal requiring a later decision",
+                ),
+            }
+            signal, reason = signal_map[feedback.kind]
         evidence = {
             "feedback_kind": feedback.kind.value,
             "payload": dict(feedback.payload),

@@ -48,6 +48,44 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertTrue(payload["runtime"]["read_only"])
         json.loads(snapshot.to_json())
 
+    def test_snapshot_projects_bounded_autonomous_jobs(self):
+        builder = ControlPlaneSnapshotBuilder(
+            world_supplier=lambda: {"landscape": "TEST"},
+            activity_stream=self.stream,
+            autonomous_supplier=lambda: (
+                {
+                    "job_id": "autonomous-job-1",
+                    "goal": "Inspect the live switch status.",
+                    "status": "QUEUED",
+                    "step_count": 0,
+                    "max_steps": 32,
+                    "resumable": False,
+                    "terminal": False,
+                    "authority_granted": False,
+                    "authorization_granted": False,
+                    "execution_requested": False,
+                    "recovery_required": "AMBIGUOUS_EXECUTION",
+                    "unresolved_execution_attempt_id": "attempt-1",
+                    "external_effect_verified": False,
+                    "reconciliation_source": None,
+                },
+            ),
+            clock=lambda: "now",
+        )
+        payload = builder.build().to_dict()
+        self.assertEqual(payload["autonomous"][0]["status"], "QUEUED")
+        self.assertFalse(payload["autonomous"][0]["authority_granted"])
+        self.assertFalse(payload["autonomous"][0]["execution_requested"])
+        self.assertEqual(
+            payload["autonomous"][0]["recovery_required"],
+            "AMBIGUOUS_EXECUTION",
+        )
+        self.assertEqual(
+            payload["autonomous"][0]["unresolved_execution_attempt_id"],
+            "attempt-1",
+        )
+        self.assertFalse(payload["autonomous"][0]["external_effect_verified"])
+
     def test_cursor_filters_already_consumed_events(self):
         snapshot = self.builder.build(after_cursor=1)
         self.assertEqual([event["sequence"] for event in snapshot.events], [2])

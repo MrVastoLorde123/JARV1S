@@ -12,6 +12,10 @@ from src.agents.consequence_execution_attempt import (
     ConsequenceExecutionAttemptStatus,
 )
 from src.tools.models import ToolResult
+from src.tools.outcome import (
+    ExternalVerificationState,
+    ToolOutcome,
+)
 
 
 class ConsequenceExecutionOutcomeStatus(str, Enum):
@@ -40,6 +44,7 @@ class ConsequenceExecutionOutcome:
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
     execution_result: ToolResult | None
+    verification_state: ExternalVerificationState = ExternalVerificationState.UNVERIFIED
     reason: str | None = None
 
     def __post_init__(self) -> None:
@@ -66,6 +71,8 @@ class ConsequenceExecutionOutcome:
             raise TypeError("verification_refs must contain non-empty strings")
         if self.execution_result is not None and not isinstance(self.execution_result, ToolResult):
             raise TypeError("execution_result must be a ToolResult or None")
+        if not isinstance(self.verification_state, ExternalVerificationState):
+            raise TypeError("verification_state must be an ExternalVerificationState")
         if self.reason is not None and not isinstance(self.reason, str):
             raise TypeError("reason must be a string or None")
         if self.status is ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS:
@@ -109,6 +116,8 @@ class ConsequenceExecutionOutcome:
             "execution_outcome_observed": True,
             "execution_completed": self.completed,
             "execution_succeeded": self.successful,
+            "verification_state": self.verification_state.value,
+            "externally_verified": self.verification_state is ExternalVerificationState.VERIFIED,
             "authorization_granted": self.authorization_granted,
             "authority_granted": False,
             "retry_requested": False,
@@ -123,9 +132,22 @@ class ConsequenceExecutionOutcome:
 class ConsequenceExecutionOutcomeService:
     """Convert one M34 execution attempt into inert outcome evidence."""
 
-    def evaluate(self, attempt: ConsequenceExecutionAttempt) -> ConsequenceExecutionOutcome:
+    def evaluate(
+        self,
+        attempt: ConsequenceExecutionAttempt,
+        tool_outcome: ToolOutcome | None = None,
+    ) -> ConsequenceExecutionOutcome:
         if not isinstance(attempt, ConsequenceExecutionAttempt):
             raise TypeError("attempt must be a ConsequenceExecutionAttempt")
+        if tool_outcome is not None and not isinstance(tool_outcome, ToolOutcome):
+            raise TypeError("tool_outcome must be a ToolOutcome or None")
+        verification_state = (
+            tool_outcome.verification_state
+            if tool_outcome is not None
+            else ExternalVerificationState.UNVERIFIED
+        )
+        if tool_outcome is not None and tool_outcome.invocation_id != attempt.invocation_id:
+            raise ValueError("tool outcome invocation_id must match execution attempt")
         status = {
             ConsequenceExecutionAttemptStatus.ATTEMPTED_COMPLETED: ConsequenceExecutionOutcomeStatus.COMPLETED_SUCCESS,
             ConsequenceExecutionAttemptStatus.ATTEMPTED_FAILED: ConsequenceExecutionOutcomeStatus.COMPLETED_FAILURE,
@@ -148,6 +170,7 @@ class ConsequenceExecutionOutcomeService:
             evidence_refs=attempt.evidence_refs,
             verification_refs=attempt.verification_refs,
             execution_result=attempt.execution_result,
+            verification_state=verification_state,
             reason=attempt.reason,
         )
 

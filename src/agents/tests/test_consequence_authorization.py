@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 
 from src.agents.authority_handoff import AuthorityHandoffPolicy, AuthorityHandoffStatus
 from src.agents.claim_evidence import Claim
@@ -85,6 +86,96 @@ class M32ConsequenceAuthorizationTests(unittest.TestCase):
                 confirmation or AutoApproveConfirmationProvider(),
             )
         )
+
+    def test_current_verification_is_authorized_before_expiry(self):
+        consequence = ConsequenceRequest(
+            kind=ConsequenceKind.ADVANCE_WORKFLOW,
+            consequence_id="coding:advance-current",
+            metadata={
+                "scope": "coding",
+                "requires_current_verification": True,
+            },
+        )
+        decision = ConsequenceDecision(
+            claim_id=self.claim.claim_id,
+            task_id=self.claim.task_id,
+            consequence=consequence,
+            action=ConsequenceAction.ALLOW,
+            reason="fresh verification",
+            evidence_refs=("evidence-32",),
+            verification_refs=("verification-32",),
+            verification_freshness=__import__(
+                "src.agents.claim_evidence", fromlist=["VerificationFreshness"]
+            ).VerificationFreshness.FRESH,
+            verification_valid_until="2030-01-01T00:00:00+00:00",
+        )
+        handoff = AuthorityHandoffPolicy().handoff(
+            decision,
+            authority_target="coding_confirmation",
+            authority_context={"operation_id": "op-32"},
+        )
+        service = ConsequenceAuthorizationService(
+            ExplicitAuthorizationService(
+                DefaultPolicy(),
+                AutoApproveConfirmationProvider(),
+            ),
+            clock=lambda: datetime(2029, 1, 1, tzinfo=timezone.utc),
+        )
+        result = service.authorize(
+            handoff,
+            self.definition,
+            self.request(
+                authority_handoff_id=handoff.handoff_id,
+            ),
+            authorization_id="auth-current",
+        )
+        self.assertEqual(result.status, ConsequenceAuthorizationStatus.AUTHORIZED)
+
+    def test_current_verification_expiry_blocks_authorization_before_existing_policy(self):
+        consequence = ConsequenceRequest(
+            kind=ConsequenceKind.ADVANCE_WORKFLOW,
+            consequence_id="coding:advance-current-expired",
+            metadata={
+                "scope": "coding",
+                "requires_current_verification": True,
+            },
+        )
+        decision = ConsequenceDecision(
+            claim_id=self.claim.claim_id,
+            task_id=self.claim.task_id,
+            consequence=consequence,
+            action=ConsequenceAction.ALLOW,
+            reason="fresh verification",
+            evidence_refs=("evidence-32",),
+            verification_refs=("verification-32",),
+            verification_freshness=__import__(
+                "src.agents.claim_evidence", fromlist=["VerificationFreshness"]
+            ).VerificationFreshness.FRESH,
+            verification_valid_until="2020-01-01T00:00:00+00:00",
+        )
+        handoff = AuthorityHandoffPolicy().handoff(
+            decision,
+            authority_target="coding_confirmation",
+            authority_context={"operation_id": "op-32"},
+        )
+        service = ConsequenceAuthorizationService(
+            ExplicitAuthorizationService(
+                DefaultPolicy(),
+                AutoApproveConfirmationProvider(),
+            ),
+            clock=lambda: datetime(2029, 1, 1, tzinfo=timezone.utc),
+        )
+        result = service.authorize(
+            handoff,
+            self.definition,
+            self.request(
+                authority_handoff_id=handoff.handoff_id,
+            ),
+            authorization_id="auth-expired",
+        )
+        self.assertEqual(result.status, ConsequenceAuthorizationStatus.DENIED)
+        self.assertIsNone(result.underlying_decision)
+        self.assertIn("expired", result.reason)
 
     def test_ready_handoff_is_authorized_by_existing_m22_8_service(self):
         result = self.service().authorize(

@@ -219,11 +219,19 @@ class PlanExecutor:
                     step
                 )
 
+                step_metadata: dict[str, object] = {}
+                outcome_context = getattr(handler, "outcome_context", None)
+                if callable(outcome_context):
+                    observed_outcome = outcome_context()
+                    if isinstance(observed_outcome, dict):
+                        step_metadata["tool_outcome"] = observed_outcome
+
                 result = StepExecutionResult(
                     step_id=step.step_id,
                     action=step.action,
                     status=StepExecutionStatus.COMPLETED,
                     output=output,
+                    metadata=step_metadata,
                 )
 
                 results.append(
@@ -236,11 +244,19 @@ class PlanExecutor:
 
             except Exception as exc:
 
+                step_metadata: dict[str, object] = {}
+                outcome_context = getattr(handler, "outcome_context", None)
+                if callable(outcome_context):
+                    observed_outcome = outcome_context()
+                    if isinstance(observed_outcome, dict):
+                        step_metadata["tool_outcome"] = observed_outcome
+
                 result = StepExecutionResult(
                     step_id=step.step_id,
                     action=step.action,
                     status=StepExecutionStatus.FAILED,
                     error=str(exc),
+                    metadata=step_metadata,
                 )
 
                 results.append(

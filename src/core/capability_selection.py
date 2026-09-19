@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import re
 from typing import Protocol, Sequence, runtime_checkable
 
 from src.tools.models import ToolDefinition
@@ -70,11 +71,38 @@ class CapabilitySelector(Protocol):
         ...
 
 
+_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "at",
+    "can",
+    "could",
+    "for",
+    "from",
+    "in",
+    "is",
+    "me",
+    "my",
+    "of",
+    "on",
+    "or",
+    "please",
+    "send",
+    "that",
+    "the",
+    "this",
+    "to",
+    "with",
+}
+
 def _tokens(value: str) -> set[str]:
+    normalized = value.lower().replace("_", " ")
     return {
         token
-        for token in value.lower().replace("_", " ").split()
-        if token
+        for token in re.findall(r"[a-z0-9]+", normalized)
+        if token and token not in _STOP_WORDS
     }
 
 
