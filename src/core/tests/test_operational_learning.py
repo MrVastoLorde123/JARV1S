@@ -1,7 +1,9 @@
 """Acceptance tests for OPS-07 operational feedback → learning → adaptation."""
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
 from src.ai.service import AIService
 from src.core.capability_argument_planner import CapabilityInvocationService
@@ -14,6 +16,7 @@ from src.core.execution_executor_models import (
 from src.core.execution_plan_models import ExecutionPlan, PlanStep, PlanStatus, StepStatus
 from src.core.intelligent_request_router import IntelligentRequestRouter
 from src.core.jarvis import JARVIS
+from src.core.persistent_intelligence import PersistentMemoryRepository
 from src.core.operational_learning import (
     OperationalAdaptationHintStatus,
     OperationalLearningEvaluationStatus,
@@ -70,6 +73,102 @@ class LearningToolGateway(ToolCapabilityGateway):
 
 
 class OPS07OperationalLearningTests(unittest.TestCase):
+    def _plan(self, plan_id="plan-persist"):
+        return ExecutionPlan(
+            plan_id=plan_id,
+            task_description="Report runtime status",
+            steps=(
+                PlanStep(
+                    step_id=f"{plan_id}-step",
+                    description="Report runtime status",
+                    action="USE_TOOL",
+                    order=0,
+                    status=StepStatus.READY,
+                ),
+            ),
+            status=PlanStatus.READY,
+        )
+
+    def _failed_execution(self, plan_id):
+        return PlanExecutionResult(
+            plan_id=plan_id,
+            status=PlanExecutionStatus.FAILED,
+            steps=(
+                StepExecutionResult(
+                    step_id=f"{plan_id}-step",
+                    action="USE_TOOL",
+                    status=StepExecutionStatus.FAILED,
+                    error="persisted operational failure",
+                ),
+            ),
+            error="persisted operational failure",
+        )
+
+    def test_learning_record_survives_runtime_reconstruction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = PersistentMemoryRepository(Path(directory) / "learning.db")
+            first = OperationalLearningRuntime(repository=repository)
+            plan = self._plan()
+            record = first.record_execution(
+                self._failed_execution(plan.plan_id),
+                plan,
+                capability="report_status",
+            )
+
+            self.assertTrue(record.persisted)
+            second = OperationalLearningRuntime(repository=repository)
+
+            context = second.context_for("Report runtime status")
+            self.assertTrue(context["available"])
+            self.assertEqual(len(context["matches"]), 1)
+            self.assertEqual(
+                context["matches"][0]["adaptation_hint_status"],
+                "CORRECT_PATTERN",
+            )
+            self.assertFalse(context["authority_granted"])
+            self.assertFalse(context["execution_requested"])
+
+    def test_fresh_jarvis_instance_consumes_persisted_learning_without_authority_expansion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = PersistentMemoryRepository(Path(directory) / "learning.db")
+            gateway = LearningToolGateway(fail=True)
+
+            first = JARVIS(
+                ai_service=AIService(default_provider="unused"),
+                intelligent_request_router=IntelligentRequestRouter(StaticTaskIntentClassifier()),
+                tool_invoker=gateway,
+                capability_invocation_service=CapabilityInvocationService(EmptyArgumentPlanner()),
+                operational_learning_runtime=OperationalLearningRuntime(repository=repository),
+            )
+            first_response = first.ask("Report the current runtime status.")
+            self.assertEqual(first_response.metadata["execution_status"], "FAILED")
+            self.assertEqual(
+                first_response.metadata["operational_learning"]["adaptation_hint_status"],
+                "CORRECT_PATTERN",
+            )
+
+            gateway.fail = False
+            second = JARVIS(
+                ai_service=AIService(default_provider="unused"),
+                intelligent_request_router=IntelligentRequestRouter(StaticTaskIntentClassifier()),
+                tool_invoker=gateway,
+                capability_invocation_service=CapabilityInvocationService(EmptyArgumentPlanner()),
+                operational_learning_runtime=OperationalLearningRuntime(repository=repository),
+            )
+            second_response = second.ask("Report the current runtime status.")
+
+            self.assertEqual(second_response.metadata["execution_status"], "COMPLETED")
+            learning = second_response.metadata["cognitive_context"]["operational_learning"]
+            self.assertTrue(learning["available"])
+            self.assertGreaterEqual(len(learning["matches"]), 1)
+            step_description = second_response.metadata["cognitive_context"]["selected_plan"]["steps"][0]["description"]
+            self.assertIn("Prior operational learning guidance:", step_description)
+            self.assertIn("consider correction before repeating", step_description)
+            self.assertFalse(second_response.metadata["cognitive_context"]["authority_granted"])
+            self.assertFalse(second_response.metadata["cognitive_context"]["authorization_granted"])
+            self.assertFalse(second_response.metadata["cognitive_context"]["execution_requested"])
+
+
     def test_runtime_turns_execution_result_into_bounded_learning_and_future_hint(self):
         runtime = OperationalLearningRuntime()
         plan = ExecutionPlan(
