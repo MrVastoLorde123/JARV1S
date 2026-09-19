@@ -417,6 +417,41 @@ Fresh exact-head verification PR #456:
 
 Temporary verifier PRs #454, #455, and #456 were closed unmerged after their receipts.
 
+### OPS-12 — Durable Authorization Reconciliation
+
+Authorization waiting is now restart-safe across the autonomous control plane.
+
+An autonomous job stores its pending JARVIS operation ID in durable working context. If the runtime process restarts, the volatile confirmation map is gone, but `reconcile_confirmation()` now searches persisted `WAITING_AUTHORIZATION` jobs for the operation ID before synchronizing a completed confirmation.
+
+```
+durable WAITING_AUTHORIZATION job
+        ↓
+process restart
+        ↓
+normal JARVIS confirmation executes
+        ↓
+durable pending operation ID lookup
+        ↓
+autonomous job → COMPLETED
+```
+
+The reconciliation path never authorizes an operation itself. It only synchronizes durable autonomous state after the existing confirmation/authorization/execution boundary has already completed.
+
+### Exact OPS-12 verification
+
+Feature head:
+`ccfd316d770525d46fe042914055925075ed128a`
+
+Fresh exact-head verification PR #458:
+- Deployment Closure Verification #180 — **SUCCESS**
+- Backend core regression: **3339/3339 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #136 — **SUCCESS**
+- CS8 Boundary Red-Team #159 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #147 — **SUCCESS**
+
+Temporary verifier PR #458 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
