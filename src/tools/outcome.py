@@ -274,6 +274,7 @@ class ToolOutcomeService:
             outcome_id=outcome.outcome_id,
             tool_name=outcome.tool_name,
             invocation_id=outcome.invocation_id,
+            target_ref=outcome.target_ref,
             execution_state=outcome.execution_state,
             observation_state=outcome.observation_state,
             verification_state=state,
