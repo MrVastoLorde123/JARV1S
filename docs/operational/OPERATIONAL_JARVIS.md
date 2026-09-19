@@ -792,6 +792,48 @@ Fresh exact-head verification PR #483:
 
 Temporary verifier PR #483 was closed unmerged.
 
+### OPS-22 — Execution Success vs Externally Verified Success
+
+The consequence-learning chain no longer treats handler-reported execution success as an externally verified outcome.
+
+M35 execution success remains exactly that: an execution result. M36 preserves whether external verification exists. M37 now distinguishes:
+
+- `SUCCESS_SIGNAL` — the execution is backed by explicit external verification;
+- `EXECUTION_SUCCESS_SIGNAL` — the handler/executor succeeded, but external verification is absent.
+
+M38 maps `EXECUTION_SUCCESS_SIGNAL` to `REVIEW_REQUIRED` rather than `LEARNING_ELIGIBLE`.
+
+```
+handler success
+     ↓
+EXECUTION_SUCCESS_SIGNAL
+     ↓
+REVIEW_REQUIRED
+
+handler success + external verification
+     ↓
+SUCCESS_SIGNAL
+     ↓
+LEARNING_ELIGIBLE
+```
+
+This closes the feedback-to-learning semantic leak while preserving execution evidence, provenance, and all authority boundaries.
+
+### Exact OPS-22 verification
+
+Repaired feature head:
+`c77a6379c2df5a7eeff58eabbbbcde65a4a552d9`
+
+Fresh exact-head verification PR #486:
+- Deployment Closure Verification #271 — **SUCCESS**
+- Backend core regression: **3359/3359 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #227 — **SUCCESS**
+- CS8 Boundary Red-Team #250 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #238 — **SUCCESS**
+
+Temporary verifier PRs #485 and #486 were closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
