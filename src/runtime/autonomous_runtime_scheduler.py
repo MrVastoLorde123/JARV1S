@@ -162,7 +162,8 @@ class AutonomousRuntimeScheduler:
                 continue
             finally:
                 heartbeat_stop.set()
-                heartbeat.join(timeout=max(0.5, lease_seconds))
+                if heartbeat is not None:
+                    heartbeat.join(timeout=max(0.5, lease_seconds))
 
             lease_lost = bool(heartbeat_state["lease_lost"])
             if lease_lost:
