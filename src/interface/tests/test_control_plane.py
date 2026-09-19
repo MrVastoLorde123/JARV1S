@@ -64,6 +64,10 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
                     "authority_granted": False,
                     "authorization_granted": False,
                     "execution_requested": False,
+                    "recovery_required": "AMBIGUOUS_EXECUTION",
+                    "unresolved_execution_attempt_id": "attempt-1",
+                    "external_effect_verified": False,
+                    "reconciliation_source": None,
                 },
             ),
             clock=lambda: "now",
@@ -72,6 +76,15 @@ class ControlPlaneSnapshotTests(unittest.TestCase):
         self.assertEqual(payload["autonomous"][0]["status"], "QUEUED")
         self.assertFalse(payload["autonomous"][0]["authority_granted"])
         self.assertFalse(payload["autonomous"][0]["execution_requested"])
+        self.assertEqual(
+            payload["autonomous"][0]["recovery_required"],
+            "AMBIGUOUS_EXECUTION",
+        )
+        self.assertEqual(
+            payload["autonomous"][0]["unresolved_execution_attempt_id"],
+            "attempt-1",
+        )
+        self.assertFalse(payload["autonomous"][0]["external_effect_verified"])
 
     def test_cursor_filters_already_consumed_events(self):
         snapshot = self.builder.build(after_cursor=1)
