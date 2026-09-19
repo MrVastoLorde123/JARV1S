@@ -376,6 +376,47 @@ durable autonomous state
 
 This closes the practical loop required by the operational strategy: JARVIS can be left working while development continues, and the operator can inspect, resume, or cancel that work without introducing a second runtime authority.
 
+### OPS-11 — Autonomous Learning Continuity
+
+Operational learning now survives autonomous processor reconstruction through the existing persistent-intelligence repository.
+
+```
+execution outcome
+      ↓
+OperationalLearningRuntime
+      ├─ immutable experience
+      ├─ deterministic evaluation
+      ├─ bounded adaptation hint
+      └─ candidate episodic persistence
+                ↓
+fresh JARVIS processor
+                ↓
+hydrate advisory learning evidence
+                ↓
+cognition / advisory plan
+```
+
+Learning evidence is persisted as `EPISODIC` + `CANDIDATE` state with explicit experience provenance. It is never promoted to active memory automatically and cannot become policy, authorization, retry permission, execution, or truth.
+
+Every launcher-created processor uses the same SQLite-backed `PersistentMemoryRepository`, while each processor receives its own bounded `OperationalLearningRuntime` instance hydrated from that repository.
+
+Fresh autonomous processors therefore retain prior outcome-derived guidance without sharing mutable runtime state or creating a second authority path.
+
+### Exact OPS-11 verification
+
+Final feature head:
+`76ba21334885321ed1ead9a511345882b7fe4f2a`
+
+Fresh exact-head verification PR #456:
+- Deployment Closure Verification #175 — **SUCCESS**
+- Backend core regression: **3338/3338 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #131 — **SUCCESS**
+- CS8 Boundary Red-Team #154 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #142 — **SUCCESS**
+
+Temporary verifier PRs #454, #455, and #456 were closed unmerged after their receipts.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
