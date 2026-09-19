@@ -614,6 +614,45 @@ Fresh exact-head verification PR #470:
 
 Temporary verifier PRs #467, #468, #469, and #470 were closed unmerged.
 
+### OPS-17 — Execution Result → External Outcome Verification
+
+Generic tool execution now distinguishes handler-reported execution from independently supplied external outcome evidence.
+
+```
+EXECUTED
+   ≠
+OBSERVED
+   ≠
+VERIFIED
+   ≠
+TRUTH
+```
+
+`ToolResult.success == True` remains backward-compatible and means only that the tool handler reported successful execution. The new inert `ToolOutcome` evidence layer records:
+
+- `EXECUTED` / `FAILED` — what the handler reported about execution;
+- `OBSERVED` / `NOT_OBSERVED` — whether an independent external observation was supplied;
+- `VERIFIED` / `CONTRADICTED` / `INCONCLUSIVE` / `UNVERIFIED` — the state of an explicit external verification artifact.
+
+Verification requires an exact observation identity. No outcome artifact can establish truth, authorization, permission, retry authority, or execution authority.
+
+The existing plan executor carries this outcome evidence into step metadata and the live JARVIS response surface without changing existing tool return content or caller compatibility.
+
+### Exact OPS-17 verification
+
+Repaired feature head:
+`e817701d767a1f9c1c86a83ed7bc3283114ad32e`
+
+Fresh exact-head verification PR #473:
+- Deployment Closure Verification #230 — **SUCCESS**
+- Backend core regression: **3355/3355 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #186 — **SUCCESS**
+- CS8 Boundary Red-Team #209 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #197 — **SUCCESS**
+
+Temporary verifier PRs #472 and #473 were closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
