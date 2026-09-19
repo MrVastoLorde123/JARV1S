@@ -261,6 +261,17 @@ def start_control_plane_http(runtime: JARVISRuntime, *, ai_service: AIService | 
                     "failure_reason": bounded(job.failure_reason),
                     "resumable": job.resumable,
                     "terminal": job.terminal,
+                    "recovery_required": job.working_context.get("recovery_required"),
+                    "unresolved_execution_attempt_id": job.working_context.get(
+                        "unresolved_execution_attempt_id"
+                    ),
+                    "external_effect_verified": job.working_context.get(
+                        "external_effect_verified",
+                        False,
+                    ),
+                    "reconciliation_source": job.working_context.get(
+                        "reconciliation_source"
+                    ),
                     "authority_granted": False,
                     "authorization_granted": False,
                     "execution_requested": False,
