@@ -13,6 +13,7 @@ from src.tools.outcome import (
     ExternalObservationState,
     ExternalVerification,
     ExternalVerificationState,
+    VerificationFreshnessState,
     ToolExecutionState,
     ToolOutcomeService,
 )
@@ -139,6 +140,142 @@ class OutcomeTests(unittest.TestCase):
         self.assertEqual(verified.verification_state, ExternalVerificationState.VERIFIED)
         self.assertTrue(verified.verified)
         self.assertFalse(verified.truth_established)
+
+    def test_verified_observation_can_be_fresh(self):
+        request = ToolRequest(
+            tool_name="read_status",
+            invocation_id="invoke-fresh",
+        )
+        outcome = ToolOutcomeService.classify(request, self._result(invocation_id="invoke-fresh"))
+        observed = ToolOutcomeService.observe(
+            outcome,
+            ExternalObservation(
+                observation_id="observation-fresh",
+                source="independent_status_reader",
+                subject_ref=outcome.target_ref,
+                payload={"external_status": "ok"},
+                observed_at="2026-09-19T01:00:00+00:00",
+            ),
+        )
+        verified = ToolOutcomeService.verify(
+            observed,
+            ExternalVerification(
+                verification_id="verification-fresh",
+                observation_id="observation-fresh",
+                verifier="status_policy_check",
+                passed=True,
+            ),
+        )
+
+        fresh = ToolOutcomeService.assess_freshness(
+            verified,
+            as_of="2026-09-19T01:00:30+00:00",
+            max_age_seconds=60,
+        )
+
+        self.assertEqual(fresh.verification_state, ExternalVerificationState.VERIFIED)
+        self.assertEqual(fresh.freshness_state, VerificationFreshnessState.FRESH)
+        self.assertTrue(fresh.verified)
+        self.assertFalse(fresh.truth_established)
+
+    def test_verified_observation_can_be_stale_without_becoming_false(self):
+        request = ToolRequest(
+            tool_name="read_status",
+            invocation_id="invoke-stale",
+        )
+        outcome = ToolOutcomeService.classify(request, self._result(invocation_id="invoke-stale"))
+        observed = ToolOutcomeService.observe(
+            outcome,
+            ExternalObservation(
+                observation_id="observation-stale",
+                source="independent_status_reader",
+                subject_ref=outcome.target_ref,
+                payload={"external_status": "ok"},
+                observed_at="2026-09-18T23:00:00+00:00",
+            ),
+        )
+        verified = ToolOutcomeService.verify(
+            observed,
+            ExternalVerification(
+                verification_id="verification-stale",
+                observation_id="observation-stale",
+                verifier="status_policy_check",
+                passed=True,
+            ),
+        )
+
+        stale = ToolOutcomeService.assess_freshness(
+            verified,
+            as_of="2026-09-19T01:00:00+00:00",
+            max_age_seconds=60,
+        )
+
+        self.assertEqual(stale.verification_state, ExternalVerificationState.VERIFIED)
+        self.assertEqual(stale.freshness_state, VerificationFreshnessState.STALE)
+        self.assertTrue(stale.verified)
+        self.assertFalse(stale.truth_established)
+
+    def test_missing_or_future_observation_timestamp_is_unknown_freshness(self):
+        request = ToolRequest(
+            tool_name="read_status",
+            invocation_id="invoke-unknown",
+        )
+        outcome = ToolOutcomeService.classify(
+            request,
+            self._result(invocation_id="invoke-unknown"),
+        )
+        observed = ToolOutcomeService.observe(
+            outcome,
+            ExternalObservation(
+                observation_id="observation-unknown",
+                source="independent_status_reader",
+                subject_ref=outcome.target_ref,
+                payload={"external_status": "ok"},
+            ),
+        )
+        verified = ToolOutcomeService.verify(
+            observed,
+            ExternalVerification(
+                verification_id="verification-unknown",
+                observation_id="observation-unknown",
+                verifier="status_policy_check",
+                passed=True,
+            ),
+        )
+
+        unknown = ToolOutcomeService.assess_freshness(
+            verified,
+            as_of="2026-09-19T01:00:00+00:00",
+            max_age_seconds=60,
+        )
+        self.assertEqual(unknown.freshness_state, VerificationFreshnessState.UNKNOWN)
+
+        future_observed = ToolOutcomeService.observe(
+            outcome,
+            ExternalObservation(
+                observation_id="observation-future",
+                source="independent_status_reader",
+                subject_ref=outcome.target_ref,
+                payload={"external_status": "ok"},
+                observed_at="2026-09-19T02:00:00+00:00",
+            ),
+        )
+        future_verified = ToolOutcomeService.verify(
+            future_observed,
+            ExternalVerification(
+                verification_id="verification-future",
+                observation_id="observation-future",
+                verifier="status_policy_check",
+                passed=True,
+            ),
+        )
+        future = ToolOutcomeService.assess_freshness(
+            future_verified,
+            as_of="2026-09-19T01:00:00+00:00",
+            max_age_seconds=60,
+        )
+        self.assertEqual(future.freshness_state, VerificationFreshnessState.UNKNOWN)
+
 
     def test_failed_handler_result_is_execution_failure_not_external_contradiction(self):
         request = ToolRequest(
