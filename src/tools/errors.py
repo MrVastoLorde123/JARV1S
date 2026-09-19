@@ -30,6 +30,10 @@ class DuplicateToolError(ToolLayerError):
     """Raised when registering a tool name that is already registered."""
 
 
+class DuplicateVerificationSourceError(ToolLayerError):
+    """Raised when a verifier source identity is already bound to another handler."""
+
+
 class UnknownToolError(ToolLayerError):
     """Raised when a request references a tool the registry does not know."""
 
