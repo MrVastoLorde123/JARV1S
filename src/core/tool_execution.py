@@ -34,7 +34,7 @@ from src.tools.outcome import (
 )
 from src.tools.protocol import (
     ToolObservationProvider,
-    ToolVerificationAdmissibilityProvider,
+    ToolVerificationBindingProvider,
     ToolVerificationProvider,
 )
 
@@ -224,7 +224,16 @@ class ToolPlanStepHandler:
 
             if isinstance(candidate, ExternalVerification):
                 admissible_sources: tuple[str, ...] = ()
-                if isinstance(provider, ToolVerificationAdmissibilityProvider):
+                bound_source_id: str | None = None
+                if isinstance(provider, ToolVerificationBindingProvider):
+                    try:
+                        bound_source_id = provider.verification_source_id(request)
+                    except Exception:
+                        bound_source_id = None
+
+                if bound_source_id is not None:
+                    admissible_sources = (bound_source_id,)
+                elif hasattr(provider, "admissible_verification_sources"):
                     try:
                         configured_sources = provider.admissible_verification_sources(request)
                     except Exception:
@@ -239,6 +248,7 @@ class ToolPlanStepHandler:
                         outcome,
                         candidate,
                         admissible_sources=admissible_sources,
+                        bound_source_id=bound_source_id,
                     )
                 except (TypeError, ValueError):
                     pass
