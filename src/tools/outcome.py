@@ -162,8 +162,18 @@ class ToolOutcomeService:
             raise TypeError("result must be a ToolResult")
         if request.tool_name.strip().lower() != result.tool_name.strip().lower():
             raise ValueError("request and result tool identities must match")
-        if request.invocation_id != result.invocation_id:
-            raise ValueError("request and result invocation identities must match")
+        if (
+            result.invocation_id is not None
+            and request.invocation_id is not None
+            and request.invocation_id != result.invocation_id
+        ):
+            raise ValueError("request and result invocation identities conflict")
+
+        execution_invocation_id = (
+            request.invocation_id
+            if request.invocation_id is not None
+            else result.invocation_id
+        )
 
         execution_state = (
             ToolExecutionState.EXECUTED
@@ -172,7 +182,7 @@ class ToolOutcomeService:
         )
         payload = {
             "tool_name": request.tool_name.strip().lower(),
-            "invocation_id": request.invocation_id,
+            "invocation_id": execution_invocation_id,
             "execution_state": execution_state.value,
             "success": result.success,
         }
@@ -181,7 +191,7 @@ class ToolOutcomeService:
         return ToolOutcome(
             outcome_id=outcome_id,
             tool_name=result.tool_name,
-            invocation_id=result.invocation_id,
+            invocation_id=execution_invocation_id,
             execution_state=execution_state,
             observation_state=ExternalObservationState.NOT_OBSERVED,
             verification_state=ExternalVerificationState.UNVERIFIED,
