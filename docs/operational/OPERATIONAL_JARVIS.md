@@ -750,6 +750,48 @@ Fresh exact-head verification PR #481:
 
 Temporary verifier PR #481 was closed unmerged.
 
+### OPS-21 — Freshness Validity Across Authority Handoff
+
+Current verification is now time-bounded across the authority handoff, not merely checked at the moment M30 grants consequence eligibility.
+
+For a consequence that requires current verification:
+
+- verification evidence must be `FRESH`;
+- the evidence must carry an explicit `verification_fresh_until` deadline;
+- M31 preserves that deadline in the authority handoff;
+- M32 rechecks the deadline immediately before authorization;
+- an expired deadline denies authorization without invoking the underlying policy/confirmation authorizer.
+
+```
+M30: fresh + deadline
+        ↓
+M31: preserve validity
+        ↓
+time passes
+        ↓
+M32: recheck deadline
+        ↓
+valid → authorization boundary
+expired → DENIED
+```
+
+This closes the temporal gap between evidence eligibility and later authority evaluation without granting freshness any authority or turning it into truth.
+
+### Exact OPS-21 verification
+
+Feature head:
+`e90ba61161c4ac3eae031eb8137a0bc59e6b3266`
+
+Fresh exact-head verification PR #483:
+- Deployment Closure Verification #259 — **SUCCESS**
+- Backend core regression: **3359/3359 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #215 — **SUCCESS**
+- CS8 Boundary Red-Team #238 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #226 — **SUCCESS**
+
+Temporary verifier PR #483 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
