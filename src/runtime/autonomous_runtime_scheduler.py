@@ -78,9 +78,9 @@ class AutonomousRuntimeScheduler:
     def __init__(self, store: AutonomousRuntimeScheduleStore, run_loop) -> None:
         if not all(
             hasattr(store, name)
-            for name in ("save", "load_due", "claim", "renew_claim")
+            for name in ("save", "load_due", "claim")
         ):
-            raise TypeError("store must implement save, load_due, claim, and renew_claim")
+            raise TypeError("store must implement save, load_due, and claim")
         if not callable(getattr(run_loop, "run", None)):
             raise TypeError("run_loop must provide callable run(job_id, ...)")
         self._store = store
@@ -121,19 +121,22 @@ class AutonomousRuntimeScheduler:
                 "error": None,
                 "renewals": 0,
             }
-            heartbeat = threading.Thread(
-                target=self._lease_heartbeat,
-                args=(
-                    schedule,
-                    claim,
-                    lease_seconds,
-                    heartbeat_stop,
-                    heartbeat_state,
-                ),
-                name=f"jarvis-lease-heartbeat-{schedule.job_id}",
-                daemon=True,
-            )
-            heartbeat.start()
+            renew_claim = getattr(self._store, "renew_claim", None)
+            heartbeat = None
+            if callable(renew_claim):
+                heartbeat = threading.Thread(
+                    target=self._lease_heartbeat,
+                    args=(
+                        schedule,
+                        claim,
+                        lease_seconds,
+                        heartbeat_stop,
+                        heartbeat_state,
+                    ),
+                    name=f"jarvis-lease-heartbeat-{schedule.job_id}",
+                    daemon=True,
+                )
+                heartbeat.start()
 
             try:
                 run = self._run_loop.run(schedule.job_id, max_pulses=1)
