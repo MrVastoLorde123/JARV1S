@@ -88,6 +88,103 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             self.assertTrue(all(job.status is AutonomousJobStatus.QUEUED for job in jobs))
 
 
+    def test_ambiguous_execution_requires_reconciliation_before_resume(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ambiguous.db"
+            first = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            job = first.submit(
+                "Execute a protected external operation.",
+                now=100,
+                interval=10,
+            )
+            running = first.inspect(job.job_id).start().with_working_context(
+                {
+                    "active_execution_attempt_id": "attempt-ambiguous-1",
+                    "active_execution_attempt_state": "IN_FLIGHT",
+                }
+            )
+            first.persistence.persist(running)
+
+            second = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+
+            restored = second.inspect(job.job_id)
+            self.assertEqual(restored.status, AutonomousJobStatus.PAUSED)
+            self.assertEqual(
+                restored.working_context["recovery_required"],
+                "AMBIGUOUS_EXECUTION",
+            )
+            self.assertEqual(
+                restored.working_context["unresolved_execution_attempt_id"],
+                "attempt-ambiguous-1",
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "unresolved execution attempt",
+            ):
+                second.resume(job.job_id)
+
+            reconciled = second.reconcile_ambiguous_execution(
+                job.job_id,
+                outcome="COMPLETED",
+                evidence="Operator verified the external system state.",
+                result="External operation outcome reconciled without replay.",
+            )
+
+            self.assertEqual(
+                reconciled.status,
+                AutonomousJobStatus.COMPLETED,
+            )
+            self.assertFalse(reconciled.working_context["external_effect_verified"])
+            self.assertEqual(reconciled.working_context["reconciliation_source"], "operator")
+            self.assertEqual(len(second.scheduler._store.list_all()), 0)
+
+    def test_ambiguous_execution_can_be_reconciled_as_failed_without_replay(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ambiguous-failed.db"
+            first = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            job = first.submit(
+                "Execute a protected external operation.",
+                now=100,
+                interval=10,
+            )
+            running = first.inspect(job.job_id).start().with_working_context(
+                {
+                    "active_execution_attempt_id": "attempt-ambiguous-2",
+                    "active_execution_attempt_state": "IN_FLIGHT",
+                }
+            )
+            first.persistence.persist(running)
+
+            second_processor = ScriptedProcessor([])
+            second = OperationalContinuousRuntime(
+                second_processor,
+                connection_factory=db_factory(path),
+            )
+
+            reconciled = second.reconcile_ambiguous_execution(
+                job.job_id,
+                outcome="FAILED",
+                evidence="Operator verified that the external operation did not occur.",
+                reason="External operation did not commit.",
+            )
+
+            self.assertEqual(
+                reconciled.status,
+                AutonomousJobStatus.FAILED,
+            )
+            self.assertEqual(len(second_processor.calls), 0)
+            self.assertEqual(len(second.scheduler._store.list_all()), 0)
+
     def test_restart_recovery_pauses_running_job_after_expired_lease(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "restart.db"
