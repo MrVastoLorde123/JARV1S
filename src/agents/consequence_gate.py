@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Mapping
 
-from src.agents.claim_evidence import ClaimEvaluation, ClaimState
+from src.agents.claim_evidence import (
+    ClaimEvaluation,
+    ClaimState,
+    VerificationFreshness,
+)
 
 
 class ConsequenceAction(str, Enum):
@@ -45,6 +49,9 @@ class ConsequenceRequest:
             raise ValueError("consequence_id must be a non-empty string")
         if self.metadata is not None and not isinstance(self.metadata, Mapping):
             raise TypeError("metadata must be a mapping or None")
+        if self.metadata is not None and "requires_current_verification" in self.metadata:
+            if not isinstance(self.metadata["requires_current_verification"], bool):
+                raise TypeError("requires_current_verification must be a bool")
 
 
 @dataclass(frozen=True)
@@ -58,6 +65,7 @@ class ConsequenceDecision:
     reason: str
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
+    verification_freshness: VerificationFreshness = VerificationFreshness.UNASSESSED
 
     @property
     def eligible(self) -> bool:
@@ -68,6 +76,11 @@ class ConsequenceDecision:
     def authorized(self) -> bool:
         """M30 never grants execution authority."""
         return False
+
+    @property
+    def requires_current_verification(self) -> bool:
+        metadata = self.consequence.metadata or {}
+        return bool(metadata.get("requires_current_verification", False))
 
 
 class EvidenceGatedConsequencePolicy:
@@ -93,8 +106,19 @@ class EvidenceGatedConsequencePolicy:
 
         if consequence.kind in self._REQUIRED_VERIFICATION:
             if state is ClaimState.VERIFIED:
-                action = ConsequenceAction.ALLOW
-                reason = "required verification evidence is present"
+                if consequence.requires_current_verification:
+                    if evaluation.verification_freshness is VerificationFreshness.FRESH:
+                        action = ConsequenceAction.ALLOW
+                        reason = "required current verification evidence is fresh"
+                    else:
+                        action = ConsequenceAction.REQUIRE_REVIEW
+                        reason = (
+                            "verification is historical but not admissible as current evidence: "
+                            f"{evaluation.verification_freshness.value}"
+                        )
+                else:
+                    action = ConsequenceAction.ALLOW
+                    reason = "required verification evidence is present"
             elif state is ClaimState.SUPPORTED:
                 action = ConsequenceAction.REQUIRE_REVIEW
                 reason = "supporting evidence exists but required verification is absent"
@@ -119,6 +143,7 @@ class EvidenceGatedConsequencePolicy:
             reason=reason,
             evidence_refs=evaluation.evidence_refs,
             verification_refs=evaluation.verification_refs,
+            verification_freshness=evaluation.verification_freshness,
         )
 
 
