@@ -190,6 +190,8 @@ class HumanOperatingLayer:
             return self._inspect_autonomous(command.argument)
         if command.name == "resume":
             return self._resume_autonomous(command.argument)
+        if command.name == "reconcile":
+            return self._reconcile_autonomous(command.argument)
         if command.name == "cancel":
             return self._cancel_autonomous(command.argument)
         if command.name in {"quit", "exit"}:
@@ -286,6 +288,44 @@ class HumanOperatingLayer:
         except Exception as exc:
             return f"Could not resume autonomous job: {type(exc).__name__}: {exc}"
         return f"Autonomous job resumed: {job.job_id} [{job.status.value}]"
+
+    def _reconcile_autonomous(self, argument: str) -> str:
+        text = argument.strip()
+        if not text:
+            return 'Usage: :reconcile <job-id> {"outcome":"COMPLETED|FAILED","evidence":"...","result":"...","reason":"..."}'
+        job_id, separator, remainder = text.partition(" ")
+        if not separator:
+            return 'Usage: :reconcile <job-id> {"outcome":"COMPLETED|FAILED","evidence":"..."}'
+        try:
+            payload = json.loads(remainder)
+        except json.JSONDecodeError as exc:
+            return f"Reconciliation input must be a JSON object: {exc}"
+        if not isinstance(payload, dict) or not payload:
+            return "Reconciliation input JSON must be a non-empty object."
+
+        outcome = payload.get("outcome")
+        evidence = payload.get("evidence")
+        result = payload.get("result")
+        reason = payload.get("reason")
+        if not isinstance(outcome, str) or outcome.strip().upper() not in {"COMPLETED", "FAILED"}:
+            return "Reconciliation outcome must be COMPLETED or FAILED."
+        if not isinstance(evidence, str) or not evidence.strip():
+            return "Reconciliation evidence must be a non-empty string."
+
+        try:
+            job = self.runtime.reconcile_autonomous(
+                job_id,
+                outcome=outcome,
+                evidence=evidence,
+                result=result,
+                reason=reason,
+            )
+        except Exception as exc:
+            return f"Could not reconcile autonomous job: {type(exc).__name__}: {exc}"
+        return (
+            f"Autonomous job reconciled: {job.job_id} "
+            f"[{job.status.value}]"
+        )
 
     def _cancel_autonomous(self, argument: str) -> str:
         job_id = argument.strip()
