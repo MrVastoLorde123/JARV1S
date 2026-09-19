@@ -19,9 +19,13 @@ from src.context.execution_semantics import ExecutionPreparation
 from src.context.working_context import WorkingContext
 from src.core.conversation_store import ConversationStore
 from src.core.event_integrated_runtime import EventIntegratedRuntime
+from src.core.operational_control_plane import OperationalControlPlane
 from src.core.recovery_integrated_runtime import RecoveryIntegratedResult, RecoveryIntegratedRuntime
 from src.core.system_runtime import SystemRuntime
+from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
 from src.interface.boundary import InterfaceChannel, InterfaceRequest, InterfaceResponse
+from src.interface.boundary import InterfaceChannel, InterfaceRequest, InterfaceResponse
+from src.core.interface_backend import InterfaceResponseStatus
 from src.interface.events import InterfaceEventRuntime
 from src.interface.reliability import InterfaceReliabilityRuntime
 
@@ -34,6 +38,7 @@ class JARVISRuntime:
         recovery_runtime: RecoveryIntegratedRuntime,
         *,
         world_runtime: AgentWorldRuntime | None = None,
+        operational_runtime: OperationalContinuousRuntime | None = None,
     ) -> None:
         if not isinstance(recovery_runtime, RecoveryIntegratedRuntime):
             raise TypeError("recovery_runtime must be a RecoveryIntegratedRuntime")
@@ -41,6 +46,15 @@ class JARVISRuntime:
             raise TypeError("world_runtime must be an AgentWorldRuntime or None")
         self._recovery_runtime = recovery_runtime
         self._world_runtime = world_runtime
+        self._control_plane = OperationalControlPlane()
+        if operational_runtime is not None and not isinstance(
+            operational_runtime,
+            OperationalContinuousRuntime,
+        ):
+            raise TypeError(
+                "operational_runtime must be an OperationalContinuousRuntime or None"
+            )
+        self._operational_runtime = operational_runtime
 
     @classmethod
     def from_processor(
@@ -54,6 +68,7 @@ class JARVISRuntime:
         reliability_runtime: InterfaceReliabilityRuntime | None = None,
         recovery_id_factory: Callable[[], str] | None = None,
         world_runtime: AgentWorldRuntime | None = None,
+        operational_runtime: OperationalContinuousRuntime | None = None,
     ) -> "JARVISRuntime":
         """Build the canonical runtime around one existing JARVIS processor."""
         system_runtime = SystemRuntime(
@@ -71,7 +86,15 @@ class JARVISRuntime:
             reliability_runtime=reliability_runtime,
             recovery_id_factory=recovery_id_factory,
         )
-        return cls(recovery_integrated_runtime, world_runtime=world_runtime)
+        return cls(
+            recovery_integrated_runtime,
+            world_runtime=world_runtime,
+            operational_runtime=operational_runtime,
+        )
+
+    @property
+    def control_plane(self) -> OperationalControlPlane:
+        return self._control_plane
 
     @property
     def recovery_runtime(self) -> RecoveryIntegratedRuntime:
@@ -88,6 +111,50 @@ class JARVISRuntime:
     @property
     def world_runtime(self) -> AgentWorldRuntime | None:
         return self._world_runtime
+
+    @property
+    def operational_runtime(self) -> OperationalContinuousRuntime | None:
+        return self._operational_runtime
+
+    def submit_autonomous(self, goal: str, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.submit(goal, **kwargs)
+
+    def inspect_autonomous(self, job_id: str):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.inspect(job_id)
+
+    def resume_autonomous(self, job_id: str, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.resume(job_id, **kwargs)
+
+    def reconcile_autonomous(self, job_id: str, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.reconcile_ambiguous_execution(job_id, **kwargs)
+
+    def cancel_autonomous(self, job_id: str, reason: str = "Autonomous job cancelled"):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.cancel(job_id, reason)
+
+    def tick_autonomous(self, *args, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.tick(*args, **kwargs)
+
+    def start_autonomous_runtime(self) -> None:
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        self._operational_runtime.start()
+
+    def stop_autonomous_runtime(self) -> None:
+        if self._operational_runtime is not None:
+            self._operational_runtime.stop()
+
 
     def coordinate_world_delegation(self, plan: DelegationPlan) -> DelegationResult:
         """Validate and order a real M9.5 delegation plan before world instantiation."""
@@ -185,19 +252,33 @@ class JARVISRuntime:
         metadata: dict[str, object] | None = None,
     ) -> RecoveryIntegratedResult:
         """Process interface traffic through the canonical integrated path."""
-        return self._recovery_runtime.receive(
+        request = InterfaceRequest(
             request_id=request_id,
             channel=channel,
             content=content,
             session_id=session_id,
-            metadata=metadata,
+            metadata={} if metadata is None else metadata,
         )
+        return self.process(request)
 
     def process(self, request: InterfaceRequest) -> RecoveryIntegratedResult:
-        """Process an existing interface request through the canonical path."""
+        """Process an existing interface request and project operational state."""
         if not isinstance(request, InterfaceRequest):
             raise TypeError("request must be an InterfaceRequest")
-        return self._recovery_runtime.process(request)
+
+        self._control_plane.record_request(request)
+        try:
+            result = self._recovery_runtime.process(request)
+            response = self._recovery_runtime.respond(result)
+            self._control_plane.record_response(request, response)
+            if self._operational_runtime is not None:
+                self._operational_runtime.reconcile_confirmation(response.metadata)
+            return result
+        except Exception as exc:
+            # Preserve the original control-flow/authority semantics while still
+            # making failures visible to the observational control plane.
+            self._control_plane.record_failure(request, exc)
+            raise
 
     def respond(self, result: RecoveryIntegratedResult) -> InterfaceResponse:
         """Project a canonical result back to the interface boundary."""
