@@ -13,6 +13,8 @@ from src.core.conversation import ConversationState
 from src.core.conversation_store import ConversationStore
 from src.core.intelligent_request_router import IntelligentRequestRouter
 from src.core.jarvis import JARVIS
+from src.core.persistent_intelligence import PersistentMemoryRepository
+from src.core.operational_learning import OperationalLearningRuntime
 from src.core.request_intent import IntentKind, RequestIntent
 from src.core.tool_execution import ToolCapabilityGateway
 from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
@@ -164,6 +166,79 @@ def db_factory(path: Path):
 
 
 class OPS10AutonomousContextContinuityTests(unittest.TestCase):
+    def test_autonomous_rebuilt_processor_consumes_persisted_operational_learning(self):
+        conversation_store = StubConversationStore()
+        gateway = ContinuityToolGateway()
+        processors = []
+        with tempfile.TemporaryDirectory() as directory:
+            repository = PersistentMemoryRepository(Path(directory) / "ops-10-learning.db")
+
+            def processor_factory(job):
+                conversation_id = f"autonomous-{job.job_id}"
+                if conversation_store.get_conversation(conversation_id) is None:
+                    conversation_store.create_conversation(
+                        title=f"Autonomous {job.goal}",
+                        conversation_id=conversation_id,
+                    )
+                processor = JARVIS(
+                    ai_service=AIService(default_provider="unused"),
+                    intelligent_request_router=IntelligentRequestRouter(
+                        StaticToolIntentClassifier()
+                    ),
+                    tool_invoker=gateway,
+                    capability_invocation_service=CapabilityInvocationService(
+                        EmptyArgumentPlanner()
+                    ),
+                    conversation_store=conversation_store,
+                    conversation_id=conversation_id,
+                    enable_memory_formation=False,
+                    operational_learning_runtime=OperationalLearningRuntime(
+                        repository=repository,
+                    ),
+                )
+                processors.append(processor)
+                return processor
+
+            gateway.calls.clear()
+            runtime = OperationalContinuousRuntime(
+                processor_factory=processor_factory,
+                connection_factory=db_factory(Path(directory) / "ops-10-runtime.db"),
+                max_recovery_attempts=1,
+            )
+            job = runtime.submit(
+                "Report the current runtime status.",
+                now=100,
+                interval=10,
+            )
+
+            gateway.fail_first = True
+            first = runtime.tick(100)[0]
+            self.assertEqual(first.run.job.status.value, "RUNNING")
+
+            gateway.fail_first = False
+            second = runtime.tick(110)[0]
+            self.assertEqual(second.run.job.status.value, "COMPLETED")
+
+            self.assertEqual(len(processors), 2)
+            second_learning = processors[1].operational_learning_runtime.context_for(
+                "Report the current runtime status."
+            )
+            self.assertTrue(second_learning["available"])
+            self.assertGreaterEqual(len(second_learning["matches"]), 1)
+            self.assertEqual(
+                second_learning["matches"][0]["adaptation_hint_status"],
+                "CORRECT_PATTERN",
+            )
+            response_context = processors[1].ask("Report the current runtime status.").metadata["cognitive_context"]
+            self.assertIn(
+                "Prior operational learning guidance:",
+                response_context["selected_plan"]["steps"][0]["description"],
+            )
+            self.assertFalse(response_context["authority_granted"])
+            self.assertFalse(response_context["authorization_granted"])
+            self.assertFalse(response_context["execution_requested"])
+
+
     def test_autonomous_factory_rehydrates_prior_cycle_context(self):
         conversation_store = StubConversationStore()
         gateway = ContinuityToolGateway()
