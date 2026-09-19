@@ -88,6 +88,61 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             self.assertTrue(all(job.status is AutonomousJobStatus.QUEUED for job in jobs))
 
 
+    def test_reconcile_restores_missing_schedule_for_queued_job(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            runtime = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            job = runtime.submit("Restore my queue slot.", now=100, interval=10)
+            self.assertEqual(
+                [item.job_id for item in runtime.scheduler._store.list_all()],
+                [job.job_id],
+            )
+            runtime.scheduler._store.delete(job.job_id)
+
+            result = runtime.reconcile_durable_state(200)
+
+            self.assertEqual(result["queued_schedules_restored"], 1)
+            self.assertEqual(
+                [item.job_id for item in runtime.scheduler._store.list_all()],
+                [job.job_id],
+            )
+
+    def test_reconcile_removes_orphan_schedule_without_reviving_work(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            runtime = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            runtime.scheduler.schedule("missing-job", next_due=100, interval=10)
+            self.assertEqual(
+                [item.job_id for item in runtime.scheduler._store.list_all()],
+                ["missing-job"],
+            )
+
+            result = runtime.reconcile_durable_state(200)
+
+            self.assertEqual(result["stale_schedules_removed"], 1)
+            self.assertEqual(runtime.scheduler._store.list_all(), ())
+
+    def test_cancel_removes_schedule_immediately(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            runtime = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            job = runtime.submit("Cancel this durable job.", now=100, interval=10)
+
+            cancelled = runtime.cancel(job.job_id)
+
+            self.assertEqual(cancelled.status, AutonomousJobStatus.CANCELLED)
+            self.assertEqual(runtime.scheduler._store.list_all(), ())
+
+
     def test_failed_execution_gets_bounded_recovery_then_completes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jarvis.db"
