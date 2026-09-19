@@ -227,6 +227,68 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             self.assertEqual(runtime.tick(200), ())
 
 
+    def test_confirmation_reconciliation_survives_runtime_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jarvis.db"
+            first = OperationalContinuousRuntime(
+                ScriptedProcessor(
+                    [
+                        FakeResponse(
+                            "confirmation required",
+                            {
+                                "route": "TASK",
+                                "stage": "CONFIRMATION",
+                                "operation_id": "operation-restart-1",
+                                "plan_id": "plan-restart-1",
+                                "plan_fingerprint": "fingerprint-restart-1",
+                            },
+                        )
+                    ]
+                ),
+                connection_factory=db_factory(path),
+            )
+            job = first.submit(
+                "Change the protected device.",
+                now=100,
+                interval=10,
+            )
+            waiting = first.tick(100)[0]
+            self.assertEqual(
+                waiting.run.job.status,
+                AutonomousJobStatus.WAITING_AUTHORIZATION,
+            )
+            first.stop()
+
+            second = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            self.assertIsNone(
+                second._pending_operations.get("operation-restart-1"),
+            )
+
+            reconciled = second.reconcile_confirmation(
+                {
+                    "command": "CONFIRM",
+                    "operation_id": "operation-restart-1",
+                    "execution_status": "COMPLETED",
+                }
+            )
+
+            self.assertIsNotNone(reconciled)
+            self.assertEqual(
+                reconciled.status,
+                AutonomousJobStatus.COMPLETED,
+            )
+            self.assertEqual(
+                second.inspect(job.job_id).status,
+                AutonomousJobStatus.COMPLETED,
+            )
+            self.assertNotIn(
+                "operation-restart-1",
+                second._pending_operations,
+            )
+
     def test_background_runtime_starts_and_stops_cleanly(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jarvis.db"
