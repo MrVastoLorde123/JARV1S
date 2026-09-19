@@ -112,6 +112,13 @@ class TestVerificationSourceBinding(unittest.TestCase):
             "verified-source",
         )
 
+    def test_verifier_binding_must_match_capability_allowlist(self) -> None:
+        with self.assertRaises(InvalidHandlerError):
+            self.registry.register(
+                VerificationHandler(name="mismatch"),
+                verification_source_id="other-source",
+            )
+
     def test_duplicate_verifier_identity_is_rejected(self) -> None:
         self.registry.register(
             VerificationHandler(name="first"),
