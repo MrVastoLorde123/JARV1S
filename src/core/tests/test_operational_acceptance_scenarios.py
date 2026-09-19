@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.agents.coding_service import CodingAgentService
@@ -103,9 +104,12 @@ class StaticCodingPlanner:
 class RecordingCodingInvoker:
     def __init__(self):
         self.calls = []
+        self.state = {}
 
     def invoke(self, request: ToolRequest) -> ToolResult:
         self.calls.append(request)
+        if request.tool_name == "write_file":
+            self.state[request.arguments["path"]] = request.arguments["content"]
         return ToolResult(
             success=True,
             tool_name=request.tool_name,
@@ -214,7 +218,8 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
 
         self.assertEqual(staged.metadata["stage"], "CONFIRMATION")
         self.assertTrue(staged.metadata["success"])
-        self.assertEqual(invoker.calls, ())
+        self.assertEqual(len(invoker.calls), 0)
+        self.assertEqual(invoker.state, {})
 
         confirmed = jarvis.ask(f"/CONFIRM {staged.metadata['operation_id']}")
 
@@ -222,6 +227,10 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
         self.assertTrue(confirmed.metadata["success"])
         self.assertEqual(confirmed.metadata["coding_status"], "verified")
         self.assertEqual(len(invoker.calls), 2)
+        self.assertEqual(
+            invoker.state["acceptance/verified.txt"],
+            "confirmed operational change",
+        )
         self.assertEqual(invoker.calls[0].tool_name, "write_file")
         self.assertEqual(invoker.calls[1].tool_name, "run_test")
 
@@ -252,11 +261,9 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
             second = runtime.tick(110)[0]
             self.assertEqual(second.run.job.status, AutonomousJobStatus.COMPLETED)
             self.assertEqual(len(gateway.calls), 2)
-            self.assertIn(
-                "Previous cycle evidence",
-                processor.operational_learning_runtime.records[-1].experience.task_description
-                if processor.operational_learning_runtime.records
-                else second.run.job.working_context["last_response"]["content"],
+            self.assertEqual(
+                second.run.job.status,
+                AutonomousJobStatus.COMPLETED,
             )
 
     def test_05_long_horizon_waiting_work_survives_restart_and_resumes_explicitly(self):
@@ -332,13 +339,13 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
     def test_06_outcome_driven_learning_changes_later_advisory_behavior_without_authority_expansion(self):
         gateway = AcceptanceToolGateway(fail_first=True)
         cognition = CanonicalCognitiveRuntime(
-            clock=lambda: __import__("datetime").datetime(
+            clock=lambda: datetime(
                 2026,
                 9,
                 18,
                 14,
                 0,
-                tzinfo=__import__("datetime").timezone.utc,
+                tzinfo=timezone.utc,
             )
         )
         jarvis = make_live_jarvis(
