@@ -170,6 +170,7 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
         conversation_store = StubConversationStore()
         gateway = ContinuityToolGateway()
         processors = []
+        processor_learning_contexts = []
         with tempfile.TemporaryDirectory() as directory:
             repository = PersistentMemoryRepository(Path(directory) / "ops-10-learning.db")
 
@@ -197,6 +198,11 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
                     ),
                 )
                 processors.append(processor)
+                processor_learning_contexts.append(
+                    processor.operational_learning_runtime.context_for(
+                        "Report the current runtime status."
+                    )
+                )
                 return processor
 
             gateway.calls.clear()
@@ -211,22 +217,18 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
                 interval=10,
             )
 
-            gateway.fail_first = True
             first = runtime.tick(100)[0]
             self.assertEqual(first.run.job.status.value, "RUNNING")
 
-            gateway.fail_first = False
             second = runtime.tick(110)[0]
             self.assertEqual(second.run.job.status.value, "COMPLETED")
 
             self.assertEqual(len(processors), 2)
-            second_learning = processors[1].operational_learning_runtime.context_for(
-                "Report the current runtime status."
-            )
-            self.assertTrue(second_learning["available"])
-            self.assertGreaterEqual(len(second_learning["matches"]), 1)
+            self.assertFalse(processor_learning_contexts[0]["available"])
+            self.assertTrue(processor_learning_contexts[1]["available"])
+            self.assertGreaterEqual(len(processor_learning_contexts[1]["matches"]), 1)
             self.assertEqual(
-                second_learning["matches"][0]["adaptation_hint_status"],
+                processor_learning_contexts[1]["matches"][0]["adaptation_hint_status"],
                 "CORRECT_PATTERN",
             )
             self.assertFalse(second_learning["authority_granted"])
