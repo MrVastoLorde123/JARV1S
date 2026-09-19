@@ -19,6 +19,7 @@ from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
+from src.tools.outcome import ToolOutcome, ToolOutcomeService
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,14 @@ class ToolCapabilityGateway(ToolInvoker, Protocol):
         ...
 
 
+@runtime_checkable
+class ToolOutcomeProvider(Protocol):
+    """Typed provider for one invocation's inert outcome evidence."""
+
+    def outcome_context(self) -> ToolOutcome | None:
+        ...
+
+
 class ToolPlanStepHandler:
     """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker.
 
@@ -69,6 +78,7 @@ class ToolPlanStepHandler:
         if not isinstance(invoker, ToolInvoker):
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
+        self._last_outcome: ToolOutcome | None = None
 
     @staticmethod
     def build_request(step: PlanStep) -> ToolRequest:
@@ -111,6 +121,9 @@ class ToolPlanStepHandler:
         confirmation: ToolExecutionConfirmation | None = None,
     ) -> tuple[ToolRequest, ToolResult]:
         """Invoke a validated step and return the raw execution observation."""
+        # Never allow an outcome from an earlier invocation to survive into
+        # a later attempt that fails before the new tool result is classified.
+        self._last_outcome = None
         request = self.build_request(step)
 
         if step.requires_confirmation:
@@ -123,7 +136,12 @@ class ToolPlanStepHandler:
                 f"Tool invoker returned {type(result).__name__}, expected ToolResult"
             )
 
+        self._last_outcome = ToolOutcomeService.classify(request, result)
         return request, result
+
+    def outcome_context(self) -> ToolOutcome | None:
+        """Return typed evidence for the current invocation, if one exists."""
+        return self._last_outcome
 
     def __call__(
         self,

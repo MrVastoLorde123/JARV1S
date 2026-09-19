@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import uuid
 
 from src.runtime.autonomous_job import AutonomousJob, AutonomousJobStatus
 from src.runtime.autonomous_job_driver import AutonomousJobDriver
@@ -47,16 +48,53 @@ class AutonomousJobExecutionPulse:
             raise LookupError(f"autonomous job not found: {job_id}")
 
         current = job
+        if job.status is AutonomousJobStatus.RUNNING and job.working_context.get(
+            "active_execution_attempt_id"
+        ):
+            paused = job.pause(
+                "A previous execution attempt has an unresolved outcome; explicit reconciliation is required before resume."
+            ).with_working_context(
+                {
+                    "recovery_required": "AMBIGUOUS_EXECUTION",
+                    "unresolved_execution_attempt_id": job.working_context.get(
+                        "active_execution_attempt_id"
+                    ),
+                }
+            )
+            receipt = self._persistence.persist(paused)
+            return AutonomousJobExecutionPulseResult(
+                job=paused,
+                persistence_receipt=receipt,
+                progressed=True,
+            )
+
         if job.status is AutonomousJobStatus.QUEUED:
             current = job.start()
+
+        attempt_id = f"autonomous-attempt-{uuid.uuid4().hex}"
+        current = current.with_working_context(
+            {
+                "active_execution_attempt_id": attempt_id,
+                "active_execution_attempt_state": "IN_FLIGHT",
+                "active_execution_attempt_step_count": current.step_count,
+            }
+        )
+        self._persistence.persist(current)
+
+        if current.status is AutonomousJobStatus.RUNNING:
             current = self._driver.tick(current)
-        elif job.status is AutonomousJobStatus.RUNNING:
-            current = self._driver.tick(job)
+
+        if not current.terminal:
+            current = current.with_working_context(
+                {
+                    "active_execution_attempt_id": None,
+                    "active_execution_attempt_state": None,
+                    "active_execution_attempt_step_count": None,
+                }
+            )
 
         progressed = current != job
-        receipt = None
-        if progressed:
-            receipt = self._persistence.persist(current)
+        receipt = self._persistence.persist(current)
 
         return AutonomousJobExecutionPulseResult(
             job=current,

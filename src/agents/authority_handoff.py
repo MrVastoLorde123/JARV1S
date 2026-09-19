@@ -14,7 +14,11 @@ import json
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from src.agents.consequence_gate import ConsequenceAction, ConsequenceDecision, ConsequenceKind
+from src.agents.consequence_gate import (
+    ConsequenceAction,
+    ConsequenceDecision,
+    ConsequenceKind,
+)
 
 
 class AuthorityHandoffStatus(str, Enum):
@@ -67,6 +71,8 @@ def _handoff_id(
         "reason": decision.reason,
         "evidence_refs": decision.evidence_refs,
         "verification_refs": decision.verification_refs,
+        "verification_freshness": decision.verification_freshness.value,
+        "verification_valid_until": decision.verification_valid_until,
         "authority_target": authority_target,
         "authority_context": authority_context,
     }
@@ -95,6 +101,8 @@ class AuthorityHandoffRequest:
     reason: str
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
+    verification_freshness: str = "UNASSESSED"
+    verification_valid_until: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.handoff_id, str) or not self.handoff_id.strip():
@@ -121,6 +129,13 @@ class AuthorityHandoffRequest:
             raise TypeError("evidence_refs must contain non-empty strings")
         if any(not isinstance(ref, str) or not ref for ref in self.verification_refs):
             raise TypeError("verification_refs must contain non-empty strings")
+        if not isinstance(self.verification_freshness, str) or not self.verification_freshness.strip():
+            raise TypeError("verification_freshness must be a non-empty string")
+        if self.verification_valid_until is not None and (
+            not isinstance(self.verification_valid_until, str)
+            or not self.verification_valid_until.strip()
+        ):
+            raise TypeError("verification_valid_until must be a non-empty string or None")
 
     @property
     def ready_for_authority(self) -> bool:
@@ -177,6 +192,8 @@ class AuthorityHandoffPolicy:
             reason=reason,
             evidence_refs=decision.evidence_refs,
             verification_refs=decision.verification_refs,
+            verification_freshness=decision.verification_freshness.value,
+            verification_valid_until=decision.verification_valid_until,
         )
 
 

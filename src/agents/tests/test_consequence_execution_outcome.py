@@ -11,7 +11,8 @@ from src.agents.consequence_execution_outcome import (
     ConsequenceExecutionOutcomeStatus,
 )
 from src.tools.execution_attempt import ExecutionAttemptResult, ExecutionAttemptStatus
-from src.tools.models import ToolError, ToolResult
+from src.tools.models import ToolError, ToolRequest, ToolResult
+from src.tools.outcome import ExternalObservation, ExternalVerification, ExternalVerificationState, ToolOutcomeService
 
 
 class M35ConsequenceExecutionOutcomeTests(unittest.TestCase):
@@ -56,6 +57,71 @@ class M35ConsequenceExecutionOutcomeTests(unittest.TestCase):
         self.assertTrue(outcome.completed)
         self.assertTrue(outcome.successful)
         self.assertEqual(outcome.execution_result.content["changed"], True)
+
+    def test_successful_execution_is_unverified_by_default(self):
+        result = ToolResult(
+            success=True,
+            tool_name="write_file",
+            content={"changed": True},
+            invocation_id="invocation-35",
+        )
+        outcome = ConsequenceExecutionOutcomeService().evaluate(
+            self._attempt(ConsequenceExecutionAttemptStatus.ATTEMPTED_COMPLETED, result=result)
+        )
+        self.assertEqual(
+            outcome.verification_state,
+            ExternalVerificationState.UNVERIFIED,
+        )
+        self.assertFalse(outcome.to_context()["externally_verified"])
+
+    def test_explicit_verified_tool_outcome_promotes_execution_outcome_only(self):
+        result = ToolResult(
+            success=True,
+            tool_name="write_file",
+            content={"changed": True},
+            invocation_id="invocation-verified",
+        )
+        attempt = self._attempt(
+            ConsequenceExecutionAttemptStatus.ATTEMPTED_COMPLETED,
+            result=result,
+        )
+        request = ToolRequest(
+            tool_name="write_file",
+            arguments={"path": "example.txt", "content": "ok"},
+            invocation_id="invocation-verified",
+        )
+        raw = ToolOutcomeService.classify(request, result)
+        observed = ToolOutcomeService.observe(
+            raw,
+            ExternalObservation(
+                observation_id="observation-verified",
+                source="independent_reader",
+                subject_ref=raw.target_ref,
+                payload={"changed": True},
+                observed_at="2026-09-19T01:00:00+00:00",
+            ),
+        )
+        verified = ToolOutcomeService.verify(
+            observed,
+            ExternalVerification(
+                verification_id="verification-verified",
+                observation_id="observation-verified",
+                verifier="independent_reader_check",
+                passed=True,
+            ),
+        )
+
+        outcome = ConsequenceExecutionOutcomeService().evaluate(
+            attempt,
+            verified,
+        )
+
+        self.assertEqual(
+            outcome.verification_state,
+            ExternalVerificationState.VERIFIED,
+        )
+        self.assertTrue(outcome.to_context()["externally_verified"])
+
 
     def test_failed_attempt_becomes_failure_outcome(self):
         outcome = ConsequenceExecutionOutcomeService().evaluate(

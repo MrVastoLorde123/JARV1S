@@ -82,8 +82,26 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest discover -s src/core/tests -p "test_*.py" 2>&1 | tee /tmp/jarvis-core-regression.txt
-          grep -Eq 'Ran 3304 tests' /tmp/jarvis-core-regression.txt
-          grep -Eq 'OK$' /tmp/jarvis-core-regression.txt
+          grep -Eq 'Ran [0-9]+ tests' /tmp/jarvis-core-regression.txt
+          actual_tests=$(grep -Eo 'Ran [0-9]+ tests' /tmp/jarvis-core-regression.txt | tail -1 | awk '{print $2}')
+          test "$actual_tests" -ge 3304
+          grep -Eq 'OK
+      - name: Verify UI reproducibility
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+
+      - name: Verify repository cleanliness
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          test -z "$(git status --short)"
+
+      - name: Final audit result
+        run: echo "JARVIS deployment closure audit PASSED."
+ /tmp/jarvis-core-regression.txt
 
       - name: Verify UI reproducibility
         working-directory: ui

@@ -185,6 +185,8 @@ class ConsequenceExecutionFeedbackService:
         result = outcome.execution_result
         return {
             "execution_outcome_status": outcome.status.value,
+            "verification_state": outcome.verification_state.value,
+            "externally_verified": outcome.verification_state.value == "VERIFIED",
             "result": result.content if result is not None else None,
             "result_metadata": dict(result.metadata) if result is not None else {},
         }
