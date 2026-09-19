@@ -231,8 +231,8 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
                 processor_learning_contexts[1]["matches"][0]["adaptation_hint_status"],
                 "CORRECT_PATTERN",
             )
-            self.assertFalse(second_learning["authority_granted"])
-            self.assertFalse(second_learning["execution_requested"])
+            self.assertFalse(processor_learning_contexts[1]["authority_granted"])
+            self.assertFalse(processor_learning_contexts[1]["execution_requested"])
 
 
     def test_autonomous_factory_rehydrates_prior_cycle_context(self):
