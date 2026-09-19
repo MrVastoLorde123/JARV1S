@@ -1070,6 +1070,83 @@ Focused regressions added:
 
 Temporary verifier PR #502 was closed **unmerged**.
 
+
+### OPS-28 — Concrete Verification-Source Identity Binding
+
+Verification provenance is now bound to the concrete capability instance that is registered to execute the tool.
+
+The live boundary is now:
+
+```
+CAPABILITY
+    ↓
+typed observation / verification
+    ↓
+VerificationProvenance
+    ↓
+registered handler instance → bound verifier identity
+    ↓
+admissibility
+    ↓
+ToolOutcomeService
+    ↓
+VERIFIED
+```
+
+The tool registry accepts an explicit `verification_source_id` only at registration time. When supplied:
+
+- the capability must implement the typed verification-provider contract;
+- the source ID must be declared in the capability's admissible verification-source set;
+- the source ID is bound to that concrete registered handler instance;
+- the same source identity cannot be bound to another registered handler;
+- unregistering the capability removes the binding.
+
+The live execution path obtains the bound identity from `ToolRegistry` through `ToolService`. `ToolOutcomeService.verify()` now requires the claimed provenance identity to match that registration binding before a passing verification can become `VERIFIED`.
+
+Therefore:
+
+- a capability may no longer manufacture a trusted verifier identity merely by returning the expected source string;
+- a typed verifier from an allowlisted source is still `UNADMITTED` when that concrete handler has no registration binding;
+- a bound capability whose verification payload claims a different source identity remains `UNADMITTED`;
+- duplicate verifier identities are rejected at registration;
+- the binding establishes source identity, not truth, certainty, authority, authorization, retry permission, or policy mutation.
+
+The resulting semantic wall is:
+
+```
+typed ≠ admissible
+admissible ≠ bound identity
+bound identity ≠ truth
+VERIFIED ≠ authority
+```
+
+This closes the identity-minting gap without introducing another verification framework.
+
+### Exact OPS-28 verification
+
+Implementation head:
+`e16010832f4e03c915fe62fb9403ca13761d6e81`
+
+Fresh exact-head verifier PR #504, based on:
+`8e3adf736dff884a169ecb55cb8718cc74413e03`
+
+Verification matrix:
+- Deployment Closure Verification #333 — **SUCCESS**
+- Backend core regression: **3379/3379 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #289 — **SUCCESS**
+- CS8 Boundary Red-Team #312 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #301 — **SUCCESS**
+
+Focused regressions added:
+- verifier identity binds to the concrete registered handler;
+- duplicate verifier identities are rejected;
+- an allowlisted but unbound typed verifier remains `UNADMITTED`;
+- a provider cannot override its registration-bound identity with a different provenance source;
+- untyped and mismatched observation evidence remain blocked.
+
+Temporary verifier PR #504 was closed **unmerged**.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
