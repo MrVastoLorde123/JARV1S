@@ -27,6 +27,15 @@ class ClaimState(str, Enum):
     REJECTED = "REJECTED"
 
 
+class VerificationFreshness(str, Enum):
+    """Temporal admissibility of supplied verification evidence."""
+
+    UNASSESSED = "UNASSESSED"
+    FRESH = "FRESH"
+    STALE = "STALE"
+    UNKNOWN = "UNKNOWN"
+
+
 class EvidenceType(str, Enum):
     """Source class for independently inspectable evidence."""
 
@@ -168,12 +177,24 @@ class ClaimEvaluation:
     state: ClaimState
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
+    verification_freshness: VerificationFreshness = VerificationFreshness.UNASSESSED
 
     def __post_init__(self) -> None:
         if not isinstance(self.claim, Claim):
             raise TypeError("claim must be a Claim")
         if not isinstance(self.state, ClaimState):
             raise TypeError("state must be a ClaimState")
+        if not isinstance(self.verification_freshness, VerificationFreshness):
+            try:
+                object.__setattr__(
+                    self,
+                    "verification_freshness",
+                    VerificationFreshness(self.verification_freshness),
+                )
+            except (TypeError, ValueError) as exc:
+                raise TypeError(
+                    "verification_freshness must be a VerificationFreshness"
+                ) from exc
         if any(not isinstance(ref, str) or not ref for ref in self.evidence_refs):
             raise TypeError("evidence_refs must contain non-empty strings")
         if any(not isinstance(ref, str) or not ref for ref in self.verification_refs):
@@ -198,11 +219,36 @@ class ClaimEvidenceEvaluator:
             raise ValueError("evidence task_id must match claim task_id")
 
         evidence_refs = tuple(item.evidence_id for item in evidence)
-        verification_refs = tuple(
-            item.evidence_id
+        verification_evidence = tuple(
+            item
             for item in evidence
             if item.source_type in {EvidenceType.TEST_RESULT, EvidenceType.BUILD_RESULT}
         )
+        verification_refs = tuple(item.evidence_id for item in verification_evidence)
+
+        freshness_values: list[VerificationFreshness] = []
+        for item in verification_evidence:
+            raw = item.payload.get("verification_freshness_state")
+            if raw is None:
+                raw = item.provenance.get("verification_freshness_state")
+            if raw is None:
+                freshness_values.append(VerificationFreshness.UNASSESSED)
+                continue
+            try:
+                freshness_values.append(VerificationFreshness(raw))
+            except (TypeError, ValueError):
+                freshness_values.append(VerificationFreshness.UNKNOWN)
+
+        if not freshness_values:
+            verification_freshness = VerificationFreshness.UNASSESSED
+        elif all(value is VerificationFreshness.FRESH for value in freshness_values):
+            verification_freshness = VerificationFreshness.FRESH
+        elif any(value is VerificationFreshness.STALE for value in freshness_values):
+            verification_freshness = VerificationFreshness.STALE
+        elif any(value is VerificationFreshness.UNKNOWN for value in freshness_values):
+            verification_freshness = VerificationFreshness.UNKNOWN
+        else:
+            verification_freshness = VerificationFreshness.UNASSESSED
 
         if not evidence:
             state = ClaimState.UNKNOWN
@@ -231,6 +277,7 @@ class ClaimEvidenceEvaluator:
             state=state,
             evidence_refs=evidence_refs,
             verification_refs=verification_refs,
+            verification_freshness=verification_freshness,
         )
 
     @staticmethod
@@ -255,6 +302,7 @@ __all__ = [
     "ClaimEvidenceEvaluator",
     "ClaimEvaluation",
     "ClaimState",
+    "VerificationFreshness",
     "Evidence",
     "EvidenceType",
 ]
