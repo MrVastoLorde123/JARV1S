@@ -478,9 +478,26 @@ class OperationalContinuousRuntime:
             if lease_active:
                 continue
 
+            attempt_id = job.working_context.get("active_execution_attempt_id")
             paused = job.pause(
-                "Runtime restarted while this job was in-flight; explicit resume is required."
+                (
+                    "A previous execution attempt may have produced an external effect; "
+                    "explicit outcome reconciliation is required before resume."
+                    if attempt_id
+                    else "Runtime restarted while this job was in-flight; explicit resume is required."
+                )
             )
+            if attempt_id:
+                paused = paused.with_working_context(
+                    {
+                        "recovery_required": "AMBIGUOUS_EXECUTION",
+                        "unresolved_execution_attempt_id": attempt_id,
+                        "recovery_reason": (
+                            "The process ended while an execution attempt was in flight. "
+                            "The external outcome is unknown."
+                        ),
+                    }
+                )
             self._persistence.persist(paused)
             if schedule is not None:
                 self._schedule_store.delete(job.job_id)
