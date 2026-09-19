@@ -433,6 +433,72 @@ class PlanExecutorOutcomeIntegrationTests(unittest.TestCase):
         self.assertNotIn("tool_outcome", execution.steps[1].metadata)
         self.assertIn("tool plan step requires a non-empty 'tool_name'", execution.steps[1].error)
 
+    def test_concurrent_tool_invocations_keep_outcomes_thread_local(self):
+        import threading
+
+        from src.core.tool_execution import ToolPlanStepHandler
+
+        class Invoker:
+            def invoke(self, request):
+                return ToolResult(
+                    success=True,
+                    tool_name=request.tool_name,
+                    content={"tool": request.tool_name},
+                    invocation_id=request.invocation_id,
+                )
+
+        handler = ToolPlanStepHandler(Invoker())
+        step_a = PlanStep(
+            step_id="step-a",
+            description="Read A",
+            action="USE_TOOL",
+            order=0,
+            metadata={
+                "tool_name": "read_a",
+                "arguments": {},
+            },
+        )
+        step_b = PlanStep(
+            step_id="step-b",
+            description="Read B",
+            action="USE_TOOL",
+            order=0,
+            metadata={
+                "tool_name": "read_b",
+                "arguments": {},
+            },
+        )
+
+        first_ready = threading.Event()
+        release_first = threading.Event()
+        observed = {}
+
+        def first_worker():
+            handler.invoke(step_a)
+            first_ready.set()
+            release_first.wait(timeout=2)
+            outcome = handler.outcome_context()
+            observed["first"] = None if outcome is None else outcome.tool_name
+
+        def second_worker():
+            first_ready.wait(timeout=2)
+            handler.invoke(step_b)
+            outcome = handler.outcome_context()
+            observed["second"] = None if outcome is None else outcome.tool_name
+            release_first.set()
+
+        thread_a = threading.Thread(target=first_worker)
+        thread_b = threading.Thread(target=second_worker)
+        thread_a.start()
+        thread_b.start()
+        thread_a.join(timeout=3)
+        thread_b.join(timeout=3)
+
+        self.assertFalse(thread_a.is_alive())
+        self.assertFalse(thread_b.is_alive())
+        self.assertEqual(observed["first"], "read_a")
+        self.assertEqual(observed["second"], "read_b")
+
     def test_jarvis_response_surfaces_tool_outcome_without_claiming_verification(self):
         from src.ai.service import AIService
         from src.core.capability_argument_planner import CapabilityInvocationService
