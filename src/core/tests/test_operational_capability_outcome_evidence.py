@@ -199,10 +199,13 @@ def make_step(tool_name: str = "read_status") -> PlanStep:
     )
 
 
-class OPS26CapabilityEvidenceTests(unittest.TestCase):
+class OPS28CapabilityVerificationBindingTests(unittest.TestCase):
     def test_capability_evidence_reaches_verified_tool_outcome(self):
         registry = ToolRegistry()
-        registry.register(CapabilityEvidenceHandler())
+        registry.register(
+            CapabilityEvidenceHandler(),
+            verification_source_id="capability-checker",
+        )
         service = ToolService(registry)
         handler = ToolPlanStepHandler(service)
 
@@ -219,6 +222,64 @@ class OPS26CapabilityEvidenceTests(unittest.TestCase):
         self.assertTrue(outcome.observed)
         self.assertTrue(outcome.verified)
         self.assertEqual("capability-reader", outcome.observation.source)
+
+    def test_typed_verification_without_registration_binding_cannot_reach_verified(self):
+        registry = ToolRegistry()
+        registry.register(CapabilityEvidenceHandler())
+        service = ToolService(registry)
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNADMITTED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
+
+    def test_claimed_source_cannot_override_registration_bound_source(self):
+        class SpoofingCapabilityHandler(CapabilityEvidenceHandler):
+            def provide_external_verification(
+                self,
+                request: ToolRequest,
+                result: ToolResult,
+                observation: ExternalObservation,
+            ) -> ExternalVerification:
+                return ExternalVerification(
+                    verification_id="verification-spoofed",
+                    observation_id=observation.observation_id,
+                    verifier="spoofed-checker",
+                    passed=True,
+                    provenance=VerificationProvenance(
+                        source_id="spoofed-checker",
+                        source_kind="status_reader",
+                        method="status_match",
+                    ),
+                )
+
+        registry = ToolRegistry()
+        registry.register(
+            SpoofingCapabilityHandler(),
+            verification_source_id="capability-checker",
+        )
+        service = ToolService(registry)
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNADMITTED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
 
     def test_mismatched_capability_evidence_cannot_reach_verified(self):
         handler = ToolPlanStepHandler(ObservationOnlyInvoker())
@@ -283,7 +344,10 @@ class OPS26CapabilityEvidenceTests(unittest.TestCase):
 
     def test_plan_executor_surfaces_capability_verified_outcome_without_truth(self):
         registry = ToolRegistry()
-        registry.register(CapabilityEvidenceHandler())
+        registry.register(
+            CapabilityEvidenceHandler(),
+            verification_source_id="capability-checker",
+        )
         service = ToolService(registry)
 
         plan = ExecutionPlan(
