@@ -458,6 +458,10 @@ class OperationalContinuousRuntime:
             return None
         job_id = self._pending_operations.get(operation_id)
         if job_id is None:
+            job_id = self._find_waiting_authorization_job(operation_id)
+            if job_id is not None:
+                self._pending_operations[operation_id] = job_id
+        if job_id is None:
             return None
 
         job = self.inspect(job_id)
@@ -482,6 +486,16 @@ class OperationalContinuousRuntime:
         self._persistence.persist(completed)
         self._pending_operations.pop(operation_id, None)
         return completed
+
+    def _find_waiting_authorization_job(self, operation_id: str) -> str | None:
+        """Find a persisted authorization wait when the in-memory map was lost."""
+        for job in self._persistence.list_jobs(limit=500):
+            if job.status is not AutonomousJobStatus.WAITING_AUTHORIZATION:
+                continue
+            pending = job.working_context.get("pending_operation_id")
+            if pending == operation_id:
+                return job.job_id
+        return None
 
     def resume(
         self,
