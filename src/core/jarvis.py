@@ -439,6 +439,71 @@ class JARVIS:
             }
             return None
 
+    def record_operational_turn(self, query: str, response: str) -> None:
+        """Persist one autonomous cycle as normal conversational context."""
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("query must be a non-empty string")
+        if not isinstance(response, str):
+            raise TypeError("response must be a string")
+
+        normalized_query = query.strip()
+        normalized_response = response.strip()
+
+        snapshot = self.conversation.snapshot()
+        if len(snapshot.turns) >= 2:
+            previous_user = snapshot.turns[-2]
+            previous_assistant = snapshot.turns[-1]
+            if (
+                previous_user.role == "user"
+                and previous_assistant.role == "assistant"
+                and previous_user.content == normalized_query
+                and previous_assistant.content == normalized_response
+            ):
+                return
+
+        previous_message_id = self._get_last_persistent_message_id()
+        self.conversation.add_turn("user", normalized_query)
+        user_snapshot = self.conversation.snapshot()
+        user_created_at = user_snapshot.turns[-1].timestamp
+
+        user_message_id = None
+        if self.conversation_store is not None:
+            stored_user = self.conversation_store.append_message(
+                conversation_id=self.conversation.conversation_id,
+                role="user",
+                content=normalized_query,
+                parent_id=previous_message_id,
+                created_at=user_created_at,
+            )
+            user_message_id = stored_user["message_id"]
+
+        self.conversation.add_turn("assistant", normalized_response)
+        assistant_snapshot = self.conversation.snapshot()
+        assistant_created_at = assistant_snapshot.turns[-1].timestamp
+
+        if self.conversation_store is not None:
+            self.conversation_store.append_message(
+                conversation_id=self.conversation.conversation_id,
+                role="assistant",
+                content=normalized_response,
+                parent_id=user_message_id,
+                created_at=assistant_created_at,
+            )
+
+        self._persist_state()
+        if self._enable_memory_formation:
+            process_turn(
+                user_query=normalized_query,
+                assistant_response=normalized_response,
+                conversation_id=(
+                    self.conversation.conversation_id
+                    if self.conversation_store is not None
+                    else None
+                ),
+                message_id=user_message_id,
+                source_created_at=user_created_at,
+            )
+
     def ask_task(self, task: TaskRequest) -> JARVISResponse:
         route = self.request_router.route_task(task)
         return self._handle_task(route.task)
