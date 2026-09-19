@@ -1,11 +1,13 @@
-"""The stable contract every tool implementation must satisfy.
+"""The stable contracts every tool implementation must satisfy.
 
-``ToolHandler`` is intentionally minimal: a handler describes itself
-(``definition``) and executes one request (``execute``). It never
-decides *whether* it should run -- that decision belongs to JARVIS
-core, mediated by the (future) policy/confirmation layer. A handler
-that inspects conversation state, memory, or user intent to decide
-whether to act is out of architectural bounds for this layer.
+The ToolHandler contract is intentionally minimal: a handler describes itself
+(definition) and executes one request (execute). It never decides whether it
+should run -- that decision belongs to JARVIS core, mediated by the future
+policy/confirmation layer.
+
+Optional outcome-evidence provider contracts are additive: capabilities may
+expose typed external observation and verification evidence without making
+evidence mandatory for ordinary tool execution.
 """
 
 from __future__ import annotations
@@ -13,36 +15,44 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from .models import ToolDefinition, ToolRequest, ToolResult
+from .outcome import ExternalObservation, ExternalVerification
 
 
 @runtime_checkable
 class ToolHandler(Protocol):
-    """Structural contract for a tool implementation.
-
-    Any object exposing these two methods with these signatures
-    satisfies the contract, regardless of its base class. This keeps
-    tool implementations free of a mandatory inheritance hierarchy
-    while still giving the registry something concrete to validate
-    against via ``isinstance``.
-    """
+    """Structural contract for a tool implementation."""
 
     def definition(self) -> ToolDefinition:
-        """Return this tool's static ``ToolDefinition``.
-
-        Implementations should return a stable definition -- the same
-        ``ToolDefinition`` (or an equal one) on every call. The
-        registry may call this multiple times.
-        """
+        """Return this tool's static ToolDefinition."""
         ...
 
     def execute(self, request: ToolRequest) -> ToolResult:
-        """Execute one invocation and return its ``ToolResult``.
+        """Execute one invocation and return its ToolResult."""
+        ...
 
-        Implementations execute; they do not decide whether execution
-        should happen. Any exception raised here is treated by
-        ``ToolService`` as an execution-time failure and wrapped into
-        a failed ``ToolResult`` -- handlers are not required to catch
-        their own exceptions, though they may choose to for richer
-        error content.
-        """
+
+@runtime_checkable
+class ToolObservationProvider(Protocol):
+    """Optional typed external-observation evidence for one invocation."""
+
+    def provide_external_observation(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+    ) -> ExternalObservation | None:
+        """Return typed observation evidence or None when unavailable."""
+        ...
+
+
+@runtime_checkable
+class ToolVerificationProvider(Protocol):
+    """Optional typed verification evidence for one observed invocation."""
+
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification | None:
+        """Return typed verification evidence or None when unavailable."""
         ...
