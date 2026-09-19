@@ -37,6 +37,7 @@ from src.core.request_router import RequestRouter
 from src.core.task_models import TaskRequest, TaskType
 from src.core.tool_execution import ToolCapabilityGateway, ToolInvoker, ToolPlanStepHandler
 from src.memory.memory_formation import process_turn
+from src.tools.outcome import ExternalOutcomeState, ToolOutcomeService
 
 
 class JARVIS:
@@ -881,8 +882,43 @@ class JARVIS:
             for step in execution.steps
             if step.status.value == "COMPLETED" and step.output is not None
         )
+        tool_outcomes = tuple(
+            step.metadata["tool_outcome"]
+            for step in execution.steps
+            if isinstance(step.metadata, dict) and "tool_outcome" in step.metadata
+        )
+        external_outcome_state = ToolOutcomeService.aggregate_contexts(tool_outcomes)
+
         if execution.status == PlanExecutionStatus.COMPLETED:
-            content = "Task completed successfully.\n\n" f"Completed {execution.step_count} step(s)."
+            if external_outcome_state is ExternalOutcomeState.VERIFIED:
+                content = (
+                    "Task execution completed and the recorded external outcomes are independently verified; "
+                    "this does not establish truth.\n\n"
+                    f"Completed {execution.step_count} step(s)."
+                )
+            elif external_outcome_state is ExternalOutcomeState.OBSERVED_UNVERIFIED:
+                content = (
+                    "Task execution completed and an external observation was recorded, but the outcome "
+                    "is not independently verified.\n\n"
+                    f"Completed {execution.step_count} step(s)."
+                )
+            elif external_outcome_state is ExternalOutcomeState.CONTRADICTED:
+                content = (
+                    "Task execution completed, but external verification evidence contradicted the expected outcome.\n\n"
+                    f"Completed {execution.step_count} step(s)."
+                )
+            elif external_outcome_state is ExternalOutcomeState.INCONCLUSIVE:
+                content = (
+                    "Task execution completed, but external verification was inconclusive.\n\n"
+                    f"Completed {execution.step_count} step(s)."
+                )
+            elif external_outcome_state is ExternalOutcomeState.EXECUTED_UNVERIFIED:
+                content = (
+                    "Task execution completed at the handler/execution boundary; the external outcome is not verified.\n\n"
+                    f"Completed {execution.step_count} step(s)."
+                )
+            else:
+                content = "Task completed successfully.\n\n" f"Completed {execution.step_count} step(s)."
             if outputs:
                 if len(outputs) == 1:
                     content += "\n\nResult:\n" + str(outputs[0])
@@ -891,11 +927,6 @@ class JARVIS:
         else:
             content = "The task could not be completed.\n\n" + (execution.error or "Execution failed.")
 
-        tool_outcomes = tuple(
-            step.metadata["tool_outcome"]
-            for step in execution.steps
-            if isinstance(step.metadata, dict) and "tool_outcome" in step.metadata
-        )
         return JARVISResponse(
             content=content,
             ai_response=None,
@@ -910,6 +941,10 @@ class JARVIS:
                 "failed_steps": tuple(step.step_id for step in execution.failed_steps),
                 "execution_outputs": outputs,
                 "tool_outcomes": tool_outcomes,
+                "external_outcome_state": external_outcome_state.value,
+                "external_outcome_verified": external_outcome_state is ExternalOutcomeState.VERIFIED,
+                "truth_established": False,
+                "certainty_established": False,
                 "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
             },
         )
