@@ -59,18 +59,28 @@ class PersistentAcceptanceMemoryProvider(ContextSourceProvider):
             memory = get_memory_by_id(memory_id)
             if memory is None:
                 continue
+            (
+                persisted_memory_id,
+                memory_key,
+                content,
+                category,
+                confidence,
+                importance,
+                status,
+            ) = memory
             items[source.source_id] = ContextItem(
                 source_type=MEMORY,
-                content=memory.content,
+                content=content,
                 relevance_score=source.relevance_score,
-                confidence=memory.confidence,
-                importance=memory.importance,
+                confidence=confidence,
+                importance=importance,
                 privacy_level=PRIVATE,
                 provenance={
                     "source_id": source.source_id,
-                    "memory_id": memory.memory_id,
-                    "memory_key": memory.memory_key,
-                    "category": memory.category,
+                    "memory_id": persisted_memory_id,
+                    "memory_key": memory_key,
+                    "category": category,
+                    "status": status,
                 },
             )
         return items
