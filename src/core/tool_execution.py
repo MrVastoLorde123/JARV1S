@@ -1,24 +1,42 @@
 """Orchestrate tool invocation behind explicit plan-step boundaries.
 
-``ToolService`` remains the low-level tool boundary: it validates a
-``ToolRequest``, resolves a registered tool, invokes it, and validates the
+ToolService remains the low-level tool boundary: it validates a
+ToolRequest, resolves a registered tool, invokes it, and validates the
 result. This module adds the plan-step adapter above that boundary.
 
 The plan-step adapter deliberately does not own policy or authority. A step
-that declares ``requires_confirmation=True`` must carry a separate,
-request-bound ``ToolExecutionConfirmation`` artifact before this adapter will
+that declares requires_confirmation=True must carry a separate,
+request-bound ToolExecutionConfirmation artifact before this adapter will
 invoke the tool. Confirmation is an execution precondition only; it is not
 permission, authorization, or verification truth.
+
+Optional capability observation/verification evidence is admitted only
+through the existing ExternalObservation, ExternalVerification, and
+ToolOutcomeService contracts. Evidence is additive and failure to obtain
+valid optional evidence never converts a completed tool execution into a
+different execution result.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+import threading
 from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
+from src.tools.outcome import (
+    ExternalObservation,
+    ExternalVerification,
+    ToolOutcome,
+    ToolOutcomeService,
+)
+from src.tools.protocol import (
+    ToolObservationProvider,
+    ToolVerificationBindingProvider,
+    ToolVerificationProvider,
+)
 
 
 @dataclass(frozen=True)
@@ -54,8 +72,16 @@ class ToolCapabilityGateway(ToolInvoker, Protocol):
         ...
 
 
+@runtime_checkable
+class ToolOutcomeProvider(Protocol):
+    """Typed provider for one invocation's inert outcome evidence."""
+
+    def outcome_context(self) -> ToolOutcome | None:
+        ...
+
+
 class ToolPlanStepHandler:
-    """Adapt an explicit ``USE_TOOL`` plan step to a tool invoker.
+    """Adapt an explicit USE_TOOL plan step to a tool invoker.
 
     This adapter performs structural request validation and enforces the
     plan's explicit confirmation requirement. It never decides policy and
@@ -69,6 +95,7 @@ class ToolPlanStepHandler:
         if not isinstance(invoker, ToolInvoker):
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
+        self._outcome_state = threading.local()
 
     @staticmethod
     def build_request(step: PlanStep) -> ToolRequest:
@@ -111,6 +138,11 @@ class ToolPlanStepHandler:
         confirmation: ToolExecutionConfirmation | None = None,
     ) -> tuple[ToolRequest, ToolResult]:
         """Invoke a validated step and return the raw execution observation."""
+        # Never allow an outcome from an earlier invocation to survive into
+        # a later attempt that fails before the new tool result is classified.
+        # Thread-local storage also prevents concurrent handler calls from
+        # exchanging outcome evidence between requests.
+        self._outcome_state.last_outcome = None
         request = self.build_request(step)
 
         if step.requires_confirmation:
@@ -123,7 +155,18 @@ class ToolPlanStepHandler:
                 f"Tool invoker returned {type(result).__name__}, expected ToolResult"
             )
 
+        outcome = ToolOutcomeService.classify(request, result)
+        self._outcome_state.last_outcome = self._admit_capability_evidence(
+            request,
+            result,
+            outcome,
+            self._invoker,
+        )
         return request, result
+
+    def outcome_context(self) -> ToolOutcome | None:
+        """Return typed evidence for the current invocation, if one exists."""
+        return getattr(self._outcome_state, "last_outcome", None)
 
     def __call__(
         self,
@@ -140,6 +183,68 @@ class ToolPlanStepHandler:
             )
 
         return result.content
+
+    @staticmethod
+    def _admit_capability_evidence(
+        request: ToolRequest,
+        result: ToolResult,
+        outcome: ToolOutcome,
+        invoker: ToolInvoker | None = None,
+    ) -> ToolOutcome:
+        """Admit only typed, contract-valid capability evidence."""
+        provider = invoker
+        if provider is None:
+            return outcome
+
+        observation: ExternalObservation | None = None
+
+        if isinstance(provider, ToolObservationProvider):
+            try:
+                candidate = provider.provide_external_observation(request, result)
+            except Exception:
+                candidate = None
+
+            if isinstance(candidate, ExternalObservation):
+                try:
+                    outcome = ToolOutcomeService.observe(outcome, candidate)
+                except (TypeError, ValueError):
+                    candidate = None
+                else:
+                    observation = candidate
+
+        if observation is not None and isinstance(provider, ToolVerificationProvider):
+            try:
+                candidate = provider.provide_external_verification(
+                    request,
+                    result,
+                    observation,
+                )
+            except Exception:
+                candidate = None
+
+            if isinstance(candidate, ExternalVerification):
+                admissible_sources: tuple[str, ...] = ()
+                bound_source_id: str | None = None
+                if isinstance(provider, ToolVerificationBindingProvider):
+                    try:
+                        bound_source_id = provider.verification_source_id(request)
+                    except Exception:
+                        bound_source_id = None
+
+                if bound_source_id is not None:
+                    admissible_sources = (bound_source_id,)
+
+                try:
+                    outcome = ToolOutcomeService.verify(
+                        outcome,
+                        candidate,
+                        admissible_sources=admissible_sources,
+                        bound_source_id=bound_source_id,
+                    )
+                except (TypeError, ValueError):
+                    pass
+
+        return outcome
 
     @staticmethod
     def _require_confirmation(

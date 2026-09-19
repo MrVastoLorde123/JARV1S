@@ -9,6 +9,7 @@ Authorization is still distinct from execution.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 
 from src.agents.authority_handoff import AuthorityHandoffRequest, AuthorityHandoffStatus
@@ -36,6 +37,8 @@ class ConsequenceAuthorizationDecision:
     underlying_decision: AuthorizationDecision | None
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
+    verification_freshness: str = "UNASSESSED"
+    verification_valid_until: str | None = None
     reason: str | None = None
 
     def __post_init__(self) -> None:
@@ -63,6 +66,13 @@ class ConsequenceAuthorizationDecision:
             raise TypeError("evidence_refs must contain non-empty strings")
         if any(not isinstance(ref, str) or not ref for ref in self.verification_refs):
             raise TypeError("verification_refs must contain non-empty strings")
+        if not isinstance(self.verification_freshness, str) or not self.verification_freshness.strip():
+            raise TypeError("verification_freshness must be a non-empty string")
+        if self.verification_valid_until is not None and (
+            not isinstance(self.verification_valid_until, str)
+            or not self.verification_valid_until.strip()
+        ):
+            raise TypeError("verification_valid_until must be a non-empty string or None")
         if self.reason is not None and not isinstance(self.reason, str):
             raise TypeError("reason must be a string or None")
 
@@ -86,6 +96,8 @@ class ConsequenceAuthorizationDecision:
             "tool_name": self.tool_name,
             "invocation_id": self.invocation_id,
             "authorization_granted": self.authorized,
+            "verification_freshness": self.verification_freshness,
+            "verification_valid_until": self.verification_valid_until,
             "execution_requested": False,
         }
 
@@ -98,6 +110,7 @@ class ConsequenceAuthorizationService:
         authorization_service: ExplicitAuthorizationService,
         *,
         authority_target: str = "coding_confirmation",
+        clock=None,
     ) -> None:
         if not isinstance(authorization_service, ExplicitAuthorizationService):
             raise TypeError("authorization_service must be an ExplicitAuthorizationService")
@@ -105,6 +118,7 @@ class ConsequenceAuthorizationService:
             raise ValueError("authority_target must be a non-empty string")
         self._authorization_service = authorization_service
         self._authority_target = authority_target
+        self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     def authorize(
         self,
@@ -152,6 +166,42 @@ class ConsequenceAuthorizationService:
                 reason="tool request task_id does not match the authority handoff",
             )
 
+        requires_current = bool(
+            (handoff.consequence_metadata or {}).get("requires_current_verification", False)
+        )
+        if requires_current:
+            valid_until = handoff.verification_valid_until
+            if not isinstance(valid_until, str) or not valid_until.strip():
+                return self._denied(
+                    handoff,
+                    request,
+                    authorization_id,
+                    reason="current verification handoff has no validity deadline",
+                )
+            try:
+                expiry = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
+            except ValueError:
+                return self._denied(
+                    handoff,
+                    request,
+                    authorization_id,
+                    reason="current verification validity deadline is invalid",
+                )
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            now = self._clock()
+            if not isinstance(now, datetime):
+                raise TypeError("clock must return a datetime")
+            if now.tzinfo is None:
+                now = now.replace(tzinfo=timezone.utc)
+            if now >= expiry:
+                return self._denied(
+                    handoff,
+                    request,
+                    authorization_id,
+                    reason="current verification evidence expired before authorization",
+                )
+
         underlying = self._authorization_service.authorize(
             definition,
             request,
@@ -174,6 +224,8 @@ class ConsequenceAuthorizationService:
             underlying_decision=underlying,
             evidence_refs=handoff.evidence_refs,
             verification_refs=handoff.verification_refs,
+            verification_freshness=handoff.verification_freshness,
+            verification_valid_until=handoff.verification_valid_until,
             reason=underlying.reason,
         )
 
@@ -197,6 +249,8 @@ class ConsequenceAuthorizationService:
             underlying_decision=None,
             evidence_refs=handoff.evidence_refs,
             verification_refs=handoff.verification_refs,
+            verification_freshness=handoff.verification_freshness,
+            verification_valid_until=handoff.verification_valid_until,
             reason=reason,
         )
 

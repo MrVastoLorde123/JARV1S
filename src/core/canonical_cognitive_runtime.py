@@ -185,14 +185,35 @@ class CanonicalCognitiveRuntime:
         )
 
     @staticmethod
-    def _candidate(goal: Goal, query: str, request_id: str) -> CandidatePlan:
+    def _candidate(
+        goal: Goal,
+        query: str,
+        request_id: str,
+        metadata: Mapping[str, object] | None = None,
+    ) -> CandidatePlan:
+        learning_guidance = None
+        if isinstance(metadata, Mapping):
+            learning = metadata.get("operational_learning")
+            if isinstance(learning, Mapping):
+                matches = learning.get("matches", ())
+                if isinstance(matches, (tuple, list)) and matches:
+                    first = matches[0]
+                    if isinstance(first, Mapping):
+                        guidance = first.get("guidance")
+                        if isinstance(guidance, str) and guidance.strip():
+                            learning_guidance = guidance.strip()
+
+        description = f"Review the request and prepare a safe next step: {query}"
+        if learning_guidance:
+            description += f" Prior operational learning guidance: {learning_guidance}"
+
         return CandidatePlan(
             plan_id=f"plan-{request_id}",
             goal_id=goal.goal_id,
             steps=(
                 PlannedStep(
                     step_id=f"step-{request_id}",
-                    description=f"Review the request and prepare a safe next step: {query}",
+                    description=description,
                 ),
             ),
             expected_benefit=0.5,
@@ -255,7 +276,12 @@ class CanonicalCognitiveRuntime:
             )
 
             goal = self._goal(request.query, request.request_id)
-            candidate = self._candidate(goal, request.query, request.request_id)
+            candidate = self._candidate(
+                goal,
+                request.query,
+                request.request_id,
+                request.metadata,
+            )
             planning_context = PlanningContext(
                 context_id=f"planning-{request.request_id}",
                 created_at=request.created_at,

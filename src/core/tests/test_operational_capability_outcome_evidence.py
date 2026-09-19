@@ -1,0 +1,427 @@
+"""OPS-29 focused tests for independent live verification admission."""
+from __future__ import annotations
+
+import unittest
+
+from src.core.execution_executor_models import PlanExecutionStatus
+from src.core.execution_plan_models import ExecutionPlan, PlanStep
+from src.core.execution_policy_models import ExecutionPolicyResult, PolicyDecision
+from src.core.plan_executor import PlanExecutor
+from src.core.tool_execution import ToolPlanStepHandler
+from src.tools.errors import InvalidHandlerError
+from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
+from src.tools.outcome import (
+    ExternalObservation,
+    ExternalOutcomeState,
+    ExternalVerification,
+    ToolOutcomeService,
+    VerificationProvenance,
+)
+from src.tools.registry import ToolRegistry
+from src.tools.service import ToolService
+
+
+class CapabilityEvidenceHandler:
+    def definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name="read_status",
+            description="Read a status value and expose observation evidence.",
+            version="1.0.0",
+            input_schema={"type": "object"},
+            output_schema={"type": "object"},
+            risk_level=RiskLevel.LOW,
+            admissible_verification_sources=("capability-checker",),
+        )
+
+    def execute(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=request.tool_name,
+            content={"status": "ok"},
+            invocation_id=request.invocation_id,
+        )
+
+    def provide_external_observation(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+    ) -> ExternalObservation:
+        classified = ToolOutcomeService.classify(request, result)
+        return ExternalObservation(
+            observation_id=f"obs-{request.invocation_id}",
+            source="capability-reader",
+            subject_ref=classified.target_ref,
+            payload={"status": "ok"},
+        )
+
+
+class CapabilityVerificationProvider:
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id=f"verification-{request.invocation_id}",
+            observation_id=observation.observation_id,
+            verifier="capability-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="capability-checker",
+                source_kind="status_reader",
+                method="status_match",
+            ),
+        )
+
+
+class SelfVerifyingCapabilityHandler(CapabilityEvidenceHandler):
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id=f"self-verification-{request.invocation_id}",
+            observation_id=observation.observation_id,
+            verifier="capability-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="capability-checker",
+                source_kind="self_report",
+                method="self_check",
+            ),
+        )
+
+
+class SpoofingVerificationProvider(CapabilityVerificationProvider):
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification-spoofed",
+            observation_id=observation.observation_id,
+            verifier="spoofed-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="spoofed-checker",
+                source_kind="status_reader",
+                method="status_match",
+            ),
+        )
+
+
+class ObservationOnlyInvoker:
+    def invoke(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=request.tool_name,
+            content={"status": "ok"},
+            invocation_id=request.invocation_id,
+        )
+
+    def provide_external_observation(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+    ) -> ExternalObservation:
+        classified = ToolOutcomeService.classify(request, result)
+        return ExternalObservation(
+            observation_id="obs-wrong-scope",
+            source="capability-reader",
+            subject_ref=classified.target_ref + "-different",
+            payload={"status": "ok"},
+        )
+
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification-wrong-scope",
+            observation_id=observation.observation_id,
+            verifier="capability-checker",
+            passed=True,
+        )
+
+
+class NonAdmissibleTypedEvidenceInvoker:
+    def invoke(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=request.tool_name,
+            content={"status": "ok"},
+            invocation_id=request.invocation_id,
+        )
+
+    def provide_external_observation(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+    ) -> ExternalObservation:
+        classified = ToolOutcomeService.classify(request, result)
+        return ExternalObservation(
+            observation_id="obs-untrusted",
+            source="untrusted-reader",
+            subject_ref=classified.target_ref,
+            payload={"status": "ok"},
+        )
+
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification-untrusted",
+            observation_id=observation.observation_id,
+            verifier="untrusted-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="untrusted-checker",
+                source_kind="status_reader",
+                method="status_match",
+            ),
+        )
+
+
+class UntypedEvidenceInvoker:
+    def invoke(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=request.tool_name,
+            content={"status": "ok"},
+            invocation_id=request.invocation_id,
+        )
+
+    def provide_external_observation(self, request, result):
+        return {
+            "observation_id": "forged",
+            "subject_ref": "unrelated-target",
+            "payload": {"verified": True},
+        }
+
+    def provide_external_verification(self, request, result, observation):
+        return {
+            "verification_id": "forged-verification",
+            "observation_id": "forged",
+            "passed": True,
+        }
+
+
+class FailingEvidenceInvoker:
+    def invoke(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=request.tool_name,
+            content={"status": "ok"},
+            invocation_id=request.invocation_id,
+        )
+
+    def provide_external_observation(self, request, result):
+        raise RuntimeError("observation backend unavailable")
+
+
+def make_step(tool_name: str = "read_status") -> PlanStep:
+    return PlanStep(
+        step_id="step-evidence",
+        description="Read status",
+        action="USE_TOOL",
+        order=0,
+        metadata={
+            "tool_name": tool_name,
+            "arguments": {},
+        },
+    )
+
+
+class OPS29IndependentVerificationTests(unittest.TestCase):
+    def _bound_service(self, verifier=None):
+        registry = ToolRegistry()
+        handler = CapabilityEvidenceHandler()
+        registry.register(
+            handler,
+            verification_source_id="capability-checker" if verifier else None,
+            verification_provider=verifier,
+        )
+        return ToolService(registry)
+
+    def test_independent_registered_verifier_reaches_verified(self):
+        service = self._bound_service(CapabilityVerificationProvider())
+        handler = ToolPlanStepHandler(service)
+
+        output = handler(make_step())
+
+        self.assertEqual({"status": "ok"}, output)
+        outcome = handler.outcome_context()
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.VERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertTrue(outcome.observed)
+        self.assertTrue(outcome.verified)
+        self.assertEqual("capability-reader", outcome.observation.source)
+
+    def test_executor_owned_verifier_is_not_used_without_independent_binding(self):
+        registry = ToolRegistry()
+        registry.register(SelfVerifyingCapabilityHandler())
+        service = ToolService(registry)
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNVERIFIED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
+
+    def test_executor_cannot_register_itself_as_live_verifier(self):
+        registry = ToolRegistry()
+        handler = SelfVerifyingCapabilityHandler()
+
+        with self.assertRaises(InvalidHandlerError):
+            registry.register(
+                handler,
+                verification_source_id="capability-checker",
+                verification_provider=handler,
+            )
+
+    def test_spoofed_source_cannot_override_bound_independent_verifier(self):
+        service = self._bound_service(SpoofingVerificationProvider())
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNADMITTED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
+
+    def test_typed_verification_without_registration_binding_cannot_reach_verified(self):
+        registry = ToolRegistry()
+        registry.register(CapabilityEvidenceHandler())
+        service = ToolService(registry)
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNVERIFIED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
+
+    def test_mismatched_capability_evidence_cannot_reach_verified(self):
+        handler = ToolPlanStepHandler(ObservationOnlyInvoker())
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertTrue(outcome.observed)
+        self.assertFalse(outcome.verified)
+
+    def test_typed_but_unadmissible_verification_cannot_reach_verified(self):
+        handler = ToolPlanStepHandler(NonAdmissibleTypedEvidenceInvoker())
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNADMITTED", outcome.verification_state.value)
+        self.assertTrue(outcome.observed)
+        self.assertFalse(outcome.verified)
+
+    def test_untyped_capability_evidence_cannot_advance_outcome(self):
+        handler = ToolPlanStepHandler(UntypedEvidenceInvoker())
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.EXECUTED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertFalse(outcome.observed)
+        self.assertFalse(outcome.verified)
+
+    def test_optional_evidence_failure_does_not_change_execution_result(self):
+        handler = ToolPlanStepHandler(FailingEvidenceInvoker())
+
+        output = handler(make_step())
+
+        self.assertEqual({"status": "ok"}, output)
+        outcome = handler.outcome_context()
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.EXECUTED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+
+    def test_plan_executor_surfaces_verified_outcome_without_truth(self):
+        service = self._bound_service(CapabilityVerificationProvider())
+
+        plan = ExecutionPlan(
+            plan_id="ops-29-plan",
+            task_description="Read status",
+            steps=(make_step(),),
+        )
+        policy = ExecutionPolicyResult(
+            decision=PolicyDecision.ALLOW,
+            plan=plan,
+            issues=(),
+        )
+
+        execution = PlanExecutor(
+            {"USE_TOOL": ToolPlanStepHandler(service)}
+        ).execute(plan, policy)
+
+        self.assertEqual(PlanExecutionStatus.COMPLETED, execution.status)
+        context = execution.steps[0].metadata["tool_outcome"]
+        self.assertEqual(
+            ExternalOutcomeState.VERIFIED.value,
+            context["external_outcome_state"],
+        )
+        self.assertTrue(context["observed"])
+        self.assertTrue(context["verified"])
+        self.assertFalse(context["truth_established"])
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

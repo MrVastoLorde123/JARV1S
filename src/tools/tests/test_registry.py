@@ -2,9 +2,72 @@ from __future__ import annotations
 
 import unittest
 
-from src.tools.errors import DuplicateToolError, InvalidHandlerError, UnknownToolError
+from src.tools.errors import (
+    DuplicateToolError,
+    DuplicateVerificationSourceError,
+    InvalidHandlerError,
+    UnknownToolError,
+)
+from src.tools.models import ToolDefinition, ToolRequest, ToolResult
+from src.tools.outcome import ExternalVerification, VerificationProvenance
 from src.tools.registry import ToolRegistry, normalize_name
 from src.tools.tests.support import BadDefinitionHandler, EchoHandler, NotAHandler
+
+
+class VerificationProvider:
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification",
+            observation_id=observation.observation_id,
+            verifier="verified-source",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="verified-source",
+                source_kind="test",
+                method="test",
+            ),
+        )
+
+
+class VerificationHandler(EchoHandler):
+    def definition(self) -> ToolDefinition:
+        definition = super().definition()
+        return type(definition)(
+            name=definition.name,
+            description=definition.description,
+            version=definition.version,
+            input_schema=definition.input_schema,
+            output_schema=definition.output_schema,
+            risk_level=definition.risk_level,
+            requires_confirmation=definition.requires_confirmation,
+            metadata=definition.metadata,
+            admissible_verification_sources=("verified-source",),
+        )
+
+
+class DualRoleVerifier(VerificationHandler):
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification",
+            observation_id=observation.observation_id,
+            verifier="verified-source",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="verified-source",
+                source_kind="test",
+                method="test",
+            ),
+        )
 
 
 class TestNormalizeName(unittest.TestCase):
@@ -60,6 +123,110 @@ class TestRegister(unittest.TestCase):
     def test_rejects_plain_objects(self) -> None:
         with self.assertRaises(InvalidHandlerError):
             self.registry.register(object())  # type: ignore[arg-type]
+
+
+class TestVerificationSourceBinding(unittest.TestCase):
+    def setUp(self) -> None:
+        self.registry = ToolRegistry()
+
+    def test_registration_binds_verifier_identity_to_concrete_provider(self) -> None:
+        handler = VerificationHandler(name="read_status")
+        provider = VerificationProvider()
+
+        self.registry.register(
+            handler,
+            verification_source_id="verified-source",
+            verification_provider=provider,
+        )
+
+        self.assertEqual(
+            self.registry.verification_source_id("read_status"),
+            "verified-source",
+        )
+        self.assertIs(
+            self.registry.verification_provider("read_status"),
+            provider,
+        )
+
+    def test_executor_cannot_be_its_own_verifier(self):
+        handler = DualRoleVerifier(name="read_status")
+
+        with self.assertRaises(InvalidHandlerError):
+            self.registry.register(
+                handler,
+                verification_source_id="verified-source",
+                verification_provider=handler,
+            )
+
+    def test_verifier_provider_cannot_also_be_a_registered_executor(self):
+        provider = DualRoleVerifier(name="provider")
+        self.registry.register(
+            VerificationHandler(name="read_status"),
+            verification_source_id="verified-source",
+            verification_provider=provider,
+        )
+
+        with self.assertRaises(InvalidHandlerError):
+            self.registry.register(provider)
+
+    def test_registered_executor_cannot_also_become_a_verifier_provider(self):
+        provider = DualRoleVerifier(name="provider")
+        self.registry.register(provider)
+
+        with self.assertRaises(InvalidHandlerError):
+            self.registry.register(
+                VerificationHandler(name="read_status"),
+                verification_source_id="verified-source",
+                verification_provider=provider,
+            )
+
+    def test_verifier_binding_must_match_capability_allowlist(self):
+        with self.assertRaises(InvalidHandlerError):
+            self.registry.register(
+                VerificationHandler(name="mismatch"),
+                verification_source_id="other-source",
+                verification_provider=VerificationProvider(),
+            )
+
+    def test_duplicate_verifier_identity_is_rejected(self):
+        self.registry.register(
+            VerificationHandler(name="first"),
+            verification_source_id="verified-source",
+            verification_provider=VerificationProvider(),
+        )
+        with self.assertRaises(DuplicateVerificationSourceError):
+            self.registry.register(
+                VerificationHandler(name="second"),
+                verification_source_id="verified-source",
+                verification_provider=VerificationProvider(),
+            )
+
+    def test_same_concrete_verifier_provider_cannot_be_rebound(self):
+        provider = VerificationProvider()
+        self.registry.register(
+            VerificationHandler(name="first"),
+            verification_source_id="verified-source",
+            verification_provider=provider,
+        )
+        handler = VerificationHandler(name="second")
+        with self.assertRaises(DuplicateVerificationSourceError):
+            self.registry.register(
+                handler,
+                verification_source_id="another-source",
+                verification_provider=provider,
+            )
+
+    def test_unregister_removes_verifier_binding(self):
+        self.registry.register(
+            VerificationHandler(name="read_status"),
+            verification_source_id="verified-source",
+            verification_provider=VerificationProvider(),
+        )
+        self.registry.unregister("read_status")
+        with self.assertRaises(UnknownToolError):
+            self.registry.verification_source_id("read_status")
+        with self.assertRaises(UnknownToolError):
+            self.registry.verification_provider("read_status")
 
 
 class TestGetAndHas(unittest.TestCase):

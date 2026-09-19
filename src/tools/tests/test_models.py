@@ -19,6 +19,7 @@ class TestToolDefinition(unittest.TestCase):
         self.assertEqual(definition.risk_level, RiskLevel.LOW)
         self.assertFalse(definition.requires_confirmation)
         self.assertEqual(definition.metadata, {})
+        self.assertEqual(definition.admissible_verification_sources, ())
 
     def test_can_set_all_fields(self) -> None:
         definition = ToolDefinition(
@@ -34,6 +35,35 @@ class TestToolDefinition(unittest.TestCase):
         self.assertEqual(definition.risk_level, RiskLevel.HIGH)
         self.assertTrue(definition.requires_confirmation)
         self.assertEqual(definition.metadata, {"author": "jarvis-team"})
+
+    def test_normalizes_admissible_verification_sources(self) -> None:
+        definition = ToolDefinition(
+            name="read_status",
+            description="Reads status.",
+            version="1.0.0",
+            input_schema={},
+            output_schema={},
+            admissible_verification_sources=(
+                " status-check ",
+                "status-check",
+                "independent-reader",
+            ),
+        )
+        self.assertEqual(
+            definition.admissible_verification_sources,
+            ("status-check", "independent-reader"),
+        )
+
+    def test_rejects_invalid_admissible_verification_sources(self) -> None:
+        with self.assertRaises(ToolLayerError):
+            ToolDefinition(
+                name="read_status",
+                description="Reads status.",
+                version="1.0.0",
+                input_schema={},
+                output_schema={},
+                admissible_verification_sources=["status-check"],  # type: ignore[arg-type]
+            )
 
     def test_rejects_invalid_name(self) -> None:
         for bad_name in ["", "   ", None, 123]:

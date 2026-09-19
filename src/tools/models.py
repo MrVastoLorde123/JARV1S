@@ -80,6 +80,7 @@ class ToolDefinition:
     risk_level: RiskLevel = RiskLevel.LOW
     requires_confirmation: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    admissible_verification_sources: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name.strip():
@@ -104,6 +105,25 @@ class ToolDefinition:
             )
         if not _is_mapping(self.metadata):
             raise InvalidToolDefinitionError("ToolDefinition.metadata must be a mapping")
+        if not isinstance(self.admissible_verification_sources, tuple):
+            raise InvalidToolDefinitionError(
+                "ToolDefinition.admissible_verification_sources must be a tuple"
+            )
+        if any(
+            not isinstance(source, str) or not source.strip()
+            for source in self.admissible_verification_sources
+        ):
+            raise InvalidToolDefinitionError(
+                "ToolDefinition.admissible_verification_sources must contain "
+                "non-empty strings"
+            )
+        normalized_sources = tuple(
+            dict.fromkeys(
+                source.strip()
+                for source in self.admissible_verification_sources
+            )
+        )
+        object.__setattr__(self, "admissible_verification_sources", normalized_sources)
         object.__setattr__(self, "input_schema", _freeze(self.input_schema))
         object.__setattr__(self, "output_schema", _freeze(self.output_schema))
         object.__setattr__(self, "metadata", _freeze(self.metadata))
