@@ -233,15 +233,6 @@ class ToolPlanStepHandler:
 
                 if bound_source_id is not None:
                     admissible_sources = (bound_source_id,)
-                elif hasattr(provider, "admissible_verification_sources"):
-                    try:
-                        configured_sources = provider.admissible_verification_sources(request)
-                    except Exception:
-                        configured_sources = ()
-                    if isinstance(configured_sources, tuple):
-                        admissible_sources = configured_sources
-                    elif isinstance(configured_sources, list):
-                        admissible_sources = tuple(configured_sources)
 
                 try:
                     outcome = ToolOutcomeService.verify(
