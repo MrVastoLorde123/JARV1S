@@ -56,3 +56,15 @@ class ToolVerificationProvider(Protocol):
     ) -> ExternalVerification | None:
         """Return typed verification evidence or None when unavailable."""
         ...
+
+
+@runtime_checkable
+class ToolVerificationAdmissibilityProvider(Protocol):
+    """Optional deterministic trust anchor for verification source identities."""
+
+    def admissible_verification_sources(
+        self,
+        request: ToolRequest,
+    ) -> tuple[str, ...]:
+        """Return source IDs configured as admissible for this capability."""
+        ...
