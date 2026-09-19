@@ -25,6 +25,7 @@ from src.core.operational_learning import (
 from src.core.request_intent import IntentKind, RequestIntent
 from src.core.tool_execution import ToolCapabilityGateway
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
+from src.tools.outcome import ExternalObservation, ExternalVerification, ToolOutcomeService
 
 
 class StaticTaskIntentClassifier:
@@ -224,6 +225,110 @@ class OPS07OperationalLearningTests(unittest.TestCase):
         self.assertFalse(context["authority_granted"])
         self.assertFalse(context["execution_requested"])
 
+    def test_unverified_tool_success_requires_review_instead_of_reinforcement(self):
+        runtime = OperationalLearningRuntime()
+        plan = self._plan("plan-unverified")
+        execution = PlanExecutionResult(
+            plan_id=plan.plan_id,
+            status=PlanExecutionStatus.COMPLETED,
+            steps=(
+                StepExecutionResult(
+                    step_id=f"{plan.plan_id}-step",
+                    action="USE_TOOL",
+                    status=StepExecutionStatus.COMPLETED,
+                    output={"status": "ok"},
+                    metadata={
+                        "tool_outcome": {
+                            "verification_state": "UNVERIFIED",
+                            "execution_state": "EXECUTED",
+                            "observation_state": "NOT_OBSERVED",
+                        }
+                    },
+                ),
+            ),
+        )
+
+        record = runtime.record_execution(
+            execution,
+            plan,
+            capability="report_status",
+        )
+
+        self.assertEqual(
+            record.evaluation.status,
+            OperationalLearningEvaluationStatus.REVIEW_REQUIRED,
+        )
+        self.assertEqual(
+            record.adaptation_hint.status,
+            OperationalAdaptationHintStatus.REVIEW_REQUIRED,
+        )
+        self.assertNotEqual(
+            record.adaptation_hint.status,
+            OperationalAdaptationHintStatus.REINFORCE_PATTERN,
+        )
+
+    def test_verified_tool_success_can_reinforce_historical_pattern(self):
+        runtime = OperationalLearningRuntime()
+        plan = self._plan("plan-verified")
+        result = ToolResult(
+            success=True,
+            tool_name="report_status",
+            content={"status": "ok"},
+            invocation_id="invoke-verified",
+        )
+        request = ToolRequest(
+            tool_name="report_status",
+            invocation_id="invoke-verified",
+        )
+        raw = ToolOutcomeService.classify(request, result)
+        observed = ToolOutcomeService.observe(
+            raw,
+            ExternalObservation(
+                observation_id="obs-learning-verified",
+                source="independent-reader",
+                subject_ref=raw.target_ref,
+                payload={"status": "ok"},
+            ),
+        )
+        verified = ToolOutcomeService.verify(
+            observed,
+            ExternalVerification(
+                verification_id="verification-learning-verified",
+                observation_id="obs-learning-verified",
+                verifier="independent-reader",
+                passed=True,
+            ),
+        )
+
+        execution = PlanExecutionResult(
+            plan_id=plan.plan_id,
+            status=PlanExecutionStatus.COMPLETED,
+            steps=(
+                StepExecutionResult(
+                    step_id=f"{plan.plan_id}-step",
+                    action="USE_TOOL",
+                    status=StepExecutionStatus.COMPLETED,
+                    output=result.content,
+                    metadata={"tool_outcome": verified.to_context()},
+                ),
+            ),
+        )
+
+        record = runtime.record_execution(
+            execution,
+            plan,
+            capability="report_status",
+        )
+
+        self.assertEqual(
+            record.evaluation.status,
+            OperationalLearningEvaluationStatus.SUCCESS_PATTERN,
+        )
+        self.assertEqual(
+            record.adaptation_hint.status,
+            OperationalAdaptationHintStatus.REINFORCE_PATTERN,
+        )
+
     def test_failed_execution_becomes_correction_evidence_without_retry(self):
         runtime = OperationalLearningRuntime()
         plan = ExecutionPlan(
@@ -310,7 +415,8 @@ class OPS07OperationalLearningTests(unittest.TestCase):
         first = jarvis.ask("Report the current runtime status.")
         self.assertEqual(first.metadata["execution_status"], "COMPLETED")
         learning = first.metadata["operational_learning"]
-        self.assertEqual(learning["evaluation_status"], "SUCCESS_PATTERN")
+        self.assertEqual(learning["evaluation_status"], "REVIEW_REQUIRED")
+        self.assertEqual(learning["adaptation_hint_status"], "REVIEW_REQUIRED")
         self.assertFalse(learning["authority_granted"])
         self.assertFalse(learning["execution_requested"])
 
