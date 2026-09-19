@@ -76,8 +76,16 @@ class UnifiedRequestRuntime:
         if not isinstance(request, JARVISRequest):
             raise TypeError("request must be a JARVISRequest")
 
+        # The canonical JARVIS core now owns cognition for task execution.
+        # Keep the historical sidecar only for processors that do not expose
+        # the integrated cognitive runtime, avoiding duplicate cognition when
+        # this compatibility facade wraps the live JARVIS processor.
         cognitive_result = None
-        if not request.content.lstrip().startswith("/"):
+        integrated_cognitive_runtime = getattr(self._processor, "cognitive_runtime", None)
+        if (
+            integrated_cognitive_runtime is None
+            and not request.content.lstrip().startswith("/")
+        ):
             cognitive_result = self._cognitive_runtime.run(
                 request.content,
                 request_id=request.request_id,
