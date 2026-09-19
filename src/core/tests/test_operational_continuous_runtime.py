@@ -38,6 +38,54 @@ def db_factory(path: Path):
 
 
 class OPS08ContinuousRuntimeTests(unittest.TestCase):
+    def test_autonomous_job_preserves_unverified_external_outcome_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "outcome.db"
+            processor = ScriptedProcessor(
+                [
+                    FakeResponse(
+                        "execution completed; external outcome unverified",
+                        {
+                            "route": "TASK",
+                            "stage": "EXECUTION",
+                            "execution_status": "COMPLETED",
+                            "external_outcome_state": "EXECUTED_UNVERIFIED",
+                            "external_outcome_verified": False,
+                            "tool_outcomes": (
+                                {
+                                    "execution_state": "EXECUTED",
+                                    "observation_state": "NOT_OBSERVED",
+                                    "verification_state": "UNVERIFIED",
+                                    "external_outcome_state": "EXECUTED_UNVERIFIED",
+                                    "truth_established": False,
+                                },
+                            ),
+                        },
+                    )
+                ]
+            )
+            runtime = OperationalContinuousRuntime(
+                processor,
+                connection_factory=db_factory(path),
+            )
+
+            job = runtime.submit("Report runtime status.", now=100, interval=10)
+            result = runtime.tick(100)[0]
+
+            self.assertEqual(result.run.job.status, AutonomousJobStatus.COMPLETED)
+            last_response = result.run.job.working_context["last_response"]
+            metadata = last_response["metadata"]
+            self.assertEqual(
+                metadata["external_outcome_state"],
+                "EXECUTED_UNVERIFIED",
+            )
+            self.assertFalse(metadata["external_outcome_verified"])
+            self.assertEqual(
+                metadata["tool_outcomes"][0]["verification_state"],
+                "UNVERIFIED",
+            )
+            self.assertFalse(metadata["tool_outcomes"][0]["truth_established"])
+
     def test_completed_job_runs_through_live_processor_and_is_persisted(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jarvis.db"
