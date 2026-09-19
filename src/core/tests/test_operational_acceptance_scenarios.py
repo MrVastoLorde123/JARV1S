@@ -8,6 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.agents.coding_service import CodingAgentService
+from src.context.context_source_provider import ContextSourceProvider
+from src.context.context_source_selection import ContextSource
+from src.context.models import ContextItem, MEMORY, PRIVATE
+from src.context.working_context_runtime import WorkingContextRuntime
 from src.agents.coding_worker import (
     CodingAgentEdit,
     CodingAgentPlan,
@@ -25,8 +29,51 @@ from src.core.request_intent import IntentKind, RequestIntent
 from src.core.tool_execution import ToolCapabilityGateway
 from src.runtime.autonomous_job import AutonomousJobStatus
 from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
+from src.memory.memory_retrieval import get_memory, search_memories
+from src.memory.memory_store import add_memory, create_memory_table
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
+
+
+class PersistentAcceptanceMemoryProvider(ContextSourceProvider):
+    def get_sources(self, request):
+        return tuple(
+            ContextSource(
+                source_id=f"memory:{memory.memory_id}",
+                source_type=MEMORY,
+                relevance_score=memory.relevance_score,
+                priority=int(round(memory.importance * 100)),
+                persistent=True,
+                metadata={"memory_id": memory.memory_id},
+            )
+            for memory in search_memories(request, limit=10)
+        )
+
+    def get_context_items(self, request, sources):
+        del request
+        items = {}
+        for source in sources:
+            memory_id = source.metadata.get("memory_id")
+            if memory_id is None:
+                continue
+            memory = get_memory(memory_id)
+            if memory is None:
+                continue
+            items[source.source_id] = ContextItem(
+                source_type=MEMORY,
+                content=memory.content,
+                relevance_score=source.relevance_score,
+                confidence=memory.confidence,
+                importance=memory.importance,
+                privacy_level=PRIVATE,
+                provenance={
+                    "source_id": source.source_id,
+                    "memory_id": memory.memory_id,
+                    "memory_key": memory.memory_key,
+                    "category": memory.category,
+                },
+            )
+        return items
 
 
 class StaticToolIntentClassifier:
@@ -155,7 +202,8 @@ def make_live_jarvis(gateway: ToolCapabilityGateway, *, cognitive_runtime=None):
 
 
 class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
-    def test_01_persistent_memory_continuity_survives_runtime_restart(self):
+    def test_01_persistent_memory_survives_runtime_restart_and_reaches_cognition(self):
+        create_memory_table()
         store = ConversationStore()
         conversation = store.create_conversation(
             title="Operational acceptance continuity",
@@ -166,24 +214,56 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
             content="I am building JARVIS.",
         )
 
+        memory_id = add_memory(
+            content="User is building JARVIS.",
+            category="PROJECT",
+            memory_key="acceptance_building_jarvis",
+            source_conversation_id=conversation.conversation_id,
+            confidence=0.95,
+            importance=0.9,
+        )
+        self.assertIsNotNone(memory_id)
+
         first_runtime = JARVIS(
             ai_service=AIService(default_provider="unused"),
             conversation_store=store,
             conversation_id=conversation.conversation_id,
         )
-        first_turns = first_runtime.conversation.snapshot().turns
-        self.assertEqual(first_turns[-1].content, "I am building JARVIS.")
+        self.assertEqual(
+            first_runtime.conversation.snapshot().turns[-1].content,
+            "I am building JARVIS.",
+        )
 
         restarted_runtime = JARVIS(
             ai_service=AIService(default_provider="unused"),
+            intelligent_request_router=IntelligentRequestRouter(
+                StaticToolIntentClassifier(),
+            ),
+            tool_invoker=AcceptanceToolGateway(),
+            capability_invocation_service=CapabilityInvocationService(
+                EmptyArgumentPlanner(),
+            ),
             conversation_store=store,
             conversation_id=conversation.conversation_id,
+            working_context_runtime=WorkingContextRuntime(
+                PersistentAcceptanceMemoryProvider(),
+            ),
         )
-        restarted_turns = restarted_runtime.conversation.snapshot().turns
 
+        response = restarted_runtime.ask("Report the current runtime status.")
+
+        cognitive = response.metadata["cognitive_context"]
+        self.assertIn(str(memory_id), cognitive["memory_ids"])
         self.assertEqual(
-            tuple((turn.role, turn.content) for turn in restarted_turns),
-            tuple((turn.role, turn.content) for turn in first_turns),
+            cognitive["working_context"]["context"]["items"][0]["content"],
+            "User is building JARVIS.",
+        )
+        self.assertEqual(
+            tuple(
+                (turn.role, turn.content)
+                for turn in restarted_runtime.conversation.snapshot().turns
+            ),
+            (("user", "I am building JARVIS."),),
         )
 
     def test_02_useful_read_discovery_work_reaches_real_capability_execution(self):
