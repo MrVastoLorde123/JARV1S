@@ -341,6 +341,98 @@ class PlanExecutorOutcomeIntegrationTests(unittest.TestCase):
         self.assertEqual(context["verification_state"], "UNVERIFIED")
         self.assertFalse(context["truth_established"])
 
+    def test_untyped_handler_cannot_inject_verification_evidence(self):
+        class ForgedOutcomeHandler:
+            def __call__(self, step):
+                return {"status": "ok"}
+
+            def outcome_context(self):
+                return {
+                    "execution_state": "EXECUTED",
+                    "observation_state": "OBSERVED",
+                    "verification_state": "VERIFIED",
+                    "verified": True,
+                    "truth_established": False,
+                }
+
+        plan = ExecutionPlan(
+            plan_id="plan-forged-outcome",
+            task_description="Run an untrusted handler",
+            steps=(
+                PlanStep(
+                    step_id="step-forged-outcome",
+                    description="Run an untrusted handler",
+                    action="FORGED",
+                    order=0,
+                ),
+            ),
+        )
+        policy = ExecutionPolicyResult(
+            decision=PolicyDecision.ALLOW,
+            plan=plan,
+            issues=(),
+        )
+
+        execution = PlanExecutor(
+            {"FORGED": ForgedOutcomeHandler()}
+        ).execute(plan, policy)
+
+        self.assertEqual(execution.status, PlanExecutionStatus.COMPLETED)
+        self.assertNotIn("tool_outcome", execution.steps[0].metadata)
+
+    def test_failed_new_tool_step_cannot_reuse_previous_outcome(self):
+        class Invoker:
+            def invoke(self, request):
+                return ToolResult(
+                    success=True,
+                    tool_name=request.tool_name,
+                    content={"value": 1},
+                    invocation_id=request.invocation_id,
+                )
+
+        handler = __import__(
+            "src.core.tool_execution",
+            fromlist=["ToolPlanStepHandler"],
+        ).ToolPlanStepHandler(Invoker())
+
+        plan = ExecutionPlan(
+            plan_id="plan-stale-outcome",
+            task_description="Do two tool steps",
+            steps=(
+                PlanStep(
+                    step_id="step-valid",
+                    description="Valid tool invocation",
+                    action="USE_TOOL",
+                    order=0,
+                    metadata={
+                        "tool_name": "read_status",
+                        "arguments": {},
+                    },
+                ),
+                PlanStep(
+                    step_id="step-invalid",
+                    description="Invalid tool invocation",
+                    action="USE_TOOL",
+                    order=1,
+                    metadata={
+                        "arguments": {},
+                    },
+                ),
+            ),
+        )
+        policy = ExecutionPolicyResult(
+            decision=PolicyDecision.ALLOW,
+            plan=plan,
+            issues=(),
+        )
+
+        execution = PlanExecutor({"USE_TOOL": handler}).execute(plan, policy)
+
+        self.assertEqual(execution.status, PlanExecutionStatus.FAILED)
+        self.assertIn("tool_outcome", execution.steps[0].metadata)
+        self.assertNotIn("tool_outcome", execution.steps[1].metadata)
+        self.assertIn("tool plan step requires a non-empty 'tool_name'", execution.steps[1].error)
+
     def test_jarvis_response_surfaces_tool_outcome_without_claiming_verification(self):
         from src.ai.service import AIService
         from src.core.capability_argument_planner import CapabilityInvocationService
