@@ -118,6 +118,7 @@ class LocalApplicationEntrypointTests(unittest.TestCase):
             conversation_store=store,
             durable_processor_factory=ANY,
             world_runtime=None,
+            operational_runtime=ANY,
         )
         operator_cls.assert_called_once_with(
             runtime,

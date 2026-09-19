@@ -1,4 +1,4 @@
-"""M17 Human Operating Layer with M18 personal continuity.
+"""M17 Human Operating Layer with M18 personal continuity and OPS-09 autonomous controls.
 
 Provides the human-facing control loop around the canonical JARVIS runtime.
 It owns interaction mechanics only: command parsing, session identity,
@@ -12,6 +12,7 @@ identifier is continuity metadata only; it is never treated as authority.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import TYPE_CHECKING, Callable, Protocol
 from uuid import uuid4
 
@@ -181,9 +182,120 @@ class HumanOperatingLayer:
             else:
                 self._session_id = self._session_identity.new_session()
             return f"Started new session: {self._session_id}"
+        if command.name == "work":
+            return self._submit_autonomous(command.argument)
+        if command.name == "jobs":
+            return self._list_autonomous()
+        if command.name == "job":
+            return self._inspect_autonomous(command.argument)
+        if command.name == "resume":
+            return self._resume_autonomous(command.argument)
+        if command.name == "cancel":
+            return self._cancel_autonomous(command.argument)
         if command.name in {"quit", "exit"}:
             return "__QUIT__"
         return f"Unknown command: :{command.name}. Use :help."
+
+    def _require_operational_runtime(self):
+        runtime = getattr(self.runtime, "operational_runtime", None)
+        if runtime is None:
+            raise RuntimeError("The continuous autonomous runtime is not configured.")
+
+        return runtime
+
+    def _submit_autonomous(self, argument: str) -> str:
+        goal = argument.strip()
+        if not goal:
+            return "Usage: :work <goal>"
+        try:
+            job = self.runtime.submit_autonomous(goal)
+        except Exception as exc:
+            return f"Could not submit autonomous work: {type(exc).__name__}: {exc}"
+        return (
+            "Autonomous work submitted.\n\n"
+            f"Job ID: {job.job_id}\n"
+            f"Goal: {job.goal}\n"
+            f"Status: {job.status.value}"
+        )
+
+    def _list_autonomous(self) -> str:
+        try:
+            jobs = self._require_operational_runtime().list_jobs(limit=50)
+        except Exception as exc:
+            return f"Could not list autonomous jobs: {type(exc).__name__}: {exc}"
+        if not jobs:
+            return "No autonomous jobs are persisted."
+
+        lines = ["Autonomous jobs:"]
+        for job in jobs:
+            suffix = ""
+            if job.waiting_reason:
+                suffix = f" — {job.waiting_reason}"
+            lines.append(
+                f"- {job.job_id} [{job.status.value}] "
+                f"steps={job.step_count}/{job.max_steps}: {job.goal}{suffix}"
+            )
+        return "\n".join(lines)
+
+    def _inspect_autonomous(self, argument: str) -> str:
+        job_id = argument.strip()
+        if not job_id:
+            return "Usage: :job <job-id>"
+        try:
+            job = self.runtime.inspect_autonomous(job_id)
+        except Exception as exc:
+            return f"Could not inspect autonomous job: {type(exc).__name__}: {exc}"
+        if job is None:
+            return f"Autonomous job not found: {job_id}"
+        return (
+            f"Job ID: {job.job_id}\n"
+            f"Status: {job.status.value}\n"
+            f"Goal: {job.goal}\n"
+            f"Progress: {job.step_count}/{job.max_steps}\n"
+            f"Waiting: {job.waiting_reason or 'no'}\n"
+            f"Result: {job.result or 'none'}\n"
+            f"Failure: {job.failure_reason or 'none'}"
+        )
+
+    def _resume_autonomous(self, argument: str) -> str:
+        text = argument.strip()
+        if not text:
+            return "Usage: :resume <job-id> [confirm|JSON]"
+        job_id, separator, remainder = text.partition(" ")
+        confirmed = False
+        input_context = None
+        remainder = remainder.strip() if separator else ""
+
+        if remainder:
+            if remainder.casefold() == "confirm":
+                confirmed = True
+            else:
+                try:
+                    input_context = json.loads(remainder)
+                except json.JSONDecodeError as exc:
+                    return f"Resume input must be 'confirm' or a JSON object: {exc}"
+                if not isinstance(input_context, dict) or not input_context:
+                    return "Resume input JSON must be a non-empty object."
+
+        try:
+            job = self.runtime.resume_autonomous(
+                job_id,
+                confirmed=confirmed,
+                input_context=input_context,
+            )
+        except Exception as exc:
+            return f"Could not resume autonomous job: {type(exc).__name__}: {exc}"
+        return f"Autonomous job resumed: {job.job_id} [{job.status.value}]"
+
+    def _cancel_autonomous(self, argument: str) -> str:
+        job_id = argument.strip()
+        if not job_id:
+            return "Usage: :cancel <job-id>"
+        try:
+            job = self.runtime.cancel_autonomous(job_id)
+        except Exception as exc:
+            return f"Could not cancel autonomous job: {type(exc).__name__}: {exc}"
+        return f"Autonomous job cancelled: {job.job_id}"
 
     def _resolve_initial_session_id(self, requested_session_id: str | None) -> str:
         if self._session_identity is not None:
