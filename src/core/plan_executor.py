@@ -16,6 +16,7 @@ from src.core.execution_policy_models import (
     ExecutionPolicyResult,
     PolicyDecision,
 )
+from src.tools.outcome import ToolOutcome
 
 
 ExecutionHandler = Callable[
@@ -223,8 +224,8 @@ class PlanExecutor:
                 outcome_context = getattr(handler, "outcome_context", None)
                 if callable(outcome_context):
                     observed_outcome = outcome_context()
-                    if isinstance(observed_outcome, dict):
-                        step_metadata["tool_outcome"] = observed_outcome
+                    if isinstance(observed_outcome, ToolOutcome):
+                        step_metadata["tool_outcome"] = observed_outcome.to_context()
 
                 result = StepExecutionResult(
                     step_id=step.step_id,
@@ -248,8 +249,8 @@ class PlanExecutor:
                 outcome_context = getattr(handler, "outcome_context", None)
                 if callable(outcome_context):
                     observed_outcome = outcome_context()
-                    if isinstance(observed_outcome, dict):
-                        step_metadata["tool_outcome"] = observed_outcome
+                    if isinstance(observed_outcome, ToolOutcome):
+                        step_metadata["tool_outcome"] = observed_outcome.to_context()
 
                 result = StepExecutionResult(
                     step_id=step.step_id,
