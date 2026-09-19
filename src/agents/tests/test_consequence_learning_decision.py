@@ -42,6 +42,20 @@ class M38ConsequenceLearningDecisionTests(unittest.TestCase):
         self.assertTrue(decision.eligible)
         self.assertFalse(decision.requires_review)
 
+    def test_execution_success_requires_review(self):
+        decision = ConsequenceLearningDecisionService().decide(
+            self._make_evaluation(
+                ConsequenceFeedbackEvaluationSignal.EXECUTION_SUCCESS_SIGNAL
+            )
+        )
+        self.assertEqual(
+            decision.status,
+            ConsequenceLearningDecisionStatus.REVIEW_REQUIRED,
+        )
+        self.assertFalse(decision.eligible)
+        self.assertTrue(decision.requires_review)
+        self.assertIn("external verification", decision.reason)
+
     def test_failure_requires_review(self):
         decision = ConsequenceLearningDecisionService().decide(
             self._make_evaluation(ConsequenceFeedbackEvaluationSignal.FAILURE_SIGNAL)
