@@ -19,6 +19,7 @@ from src.core.conversation_store import ConversationStore
 from src.core.intelligent_request_router import IntelligentRequestRouter
 from src.core.request_intent import AIRequestIntentClassifier
 from src.core.jarvis_runtime import JARVISRuntime
+from src.core.operational_learning import OperationalLearningRuntime
 from src.core.runtime_activity_stream import RuntimeActivityStream
 from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
 from src.core.tool_authorization_evidence_recording import ToolAuthorizationEvidenceRecorder
@@ -155,6 +156,9 @@ def main():
             coding_agent_service=coding_agent_service,
             coding_confirmation_service=coding_confirmation_service,
             coding_execution_learning_service=coding_execution_learning_service,
+            operational_learning_runtime=OperationalLearningRuntime(
+                repository=persistent_memory_repository,
+            ),
             intelligent_request_router=intelligent_request_router,
         )
 
@@ -164,6 +168,9 @@ def main():
         coding_agent_service=coding_agent_service,
         coding_confirmation_service=coding_confirmation_service,
         coding_execution_learning_service=coding_execution_learning_service,
+        operational_learning_runtime=OperationalLearningRuntime(
+            repository=persistent_memory_repository,
+        ),
         intelligent_request_router=intelligent_request_router,
     )
 
