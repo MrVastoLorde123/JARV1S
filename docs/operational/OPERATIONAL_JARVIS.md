@@ -529,6 +529,42 @@ Fresh exact-head verification PR #463:
 
 Temporary verifier PRs #462 and #463 were closed unmerged.
 
+### OPS-15 — Safe In-Flight Restart Recovery
+
+An autonomous job that is durably `RUNNING` is no longer automatically replayed after a process restart when its scheduler ownership is gone.
+
+Startup recovery inspects the durable job plus its scheduler lease:
+
+- an expired/missing lease on a `RUNNING` job → pause the job and require explicit resume;
+- an active lease → leave the job untouched because another live scheduler still owns it;
+- the paused job's schedule is removed so it cannot be silently re-executed.
+
+```
+process restart
+     ↓
+RUNNING job + lease active     → preserve
+RUNNING job + lease missing    → PAUSED
+                                  ↓
+                           explicit resume
+```
+
+This closes the crash-replay window without granting restart authority or silently repeating state-changing work.
+
+### Exact OPS-15 verification
+
+Feature head:
+`106e70d20296814c9a8282eabbe6b699856558d0`
+
+Fresh exact-head verification PR #465:
+- Deployment Closure Verification #202 — **SUCCESS**
+- Backend core regression: **3347/3347 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #158 — **SUCCESS**
+- CS8 Boundary Red-Team #181 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #169 — **SUCCESS**
+
+Temporary verifier PR #465 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
