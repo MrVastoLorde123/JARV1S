@@ -8,6 +8,7 @@ successful execution; it does not establish external state or truth.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 import hashlib
 import json
@@ -34,12 +35,20 @@ class ExternalVerificationState(str, Enum):
     INCONCLUSIVE = "INCONCLUSIVE"
 
 
+class VerificationFreshnessState(str, Enum):
+    UNASSESSED = "UNASSESSED"
+    FRESH = "FRESH"
+    STALE = "STALE"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass(frozen=True)
 class ExternalObservation:
     observation_id: str
     source: str
     subject_ref: str
     payload: Mapping[str, Any]
+    observed_at: str | None = None
     provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -50,6 +59,10 @@ class ExternalObservation:
         ):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
+        if self.observed_at is not None and (
+            not isinstance(self.observed_at, str) or not self.observed_at.strip()
+        ):
+            raise ValueError("observed_at must be a non-empty string or None")
         if not isinstance(self.payload, Mapping):
             raise TypeError("payload must be a mapping")
         if not isinstance(self.provenance, Mapping):
@@ -92,6 +105,7 @@ class ToolOutcome:
     execution_result: ToolResult
     observation: ExternalObservation | None = None
     verification: ExternalVerification | None = None
+    freshness_state: VerificationFreshnessState = VerificationFreshnessState.UNASSESSED
     truth_established: bool = False
 
     def __post_init__(self) -> None:
@@ -110,6 +124,8 @@ class ToolOutcome:
             raise TypeError("observation_state must be an ExternalObservationState")
         if not isinstance(self.verification_state, ExternalVerificationState):
             raise TypeError("verification_state must be an ExternalVerificationState")
+        if not isinstance(self.freshness_state, VerificationFreshnessState):
+            raise TypeError("freshness_state must be a VerificationFreshnessState")
         if not isinstance(self.execution_result, ToolResult):
             raise TypeError("execution_result must be a ToolResult")
         if self.observation is not None and not isinstance(self.observation, ExternalObservation):
@@ -148,6 +164,7 @@ class ToolOutcome:
             "execution_state": self.execution_state.value,
             "observation_state": self.observation_state.value,
             "verification_state": self.verification_state.value,
+            "verification_freshness_state": self.freshness_state.value,
             "executed": self.executed,
             "observed": self.observed,
             "verified": self.verified,
@@ -243,6 +260,64 @@ class ToolOutcomeService:
             execution_result=outcome.execution_result,
             observation=observation,
             verification=outcome.verification,
+            freshness_state=outcome.freshness_state,
+        )
+
+    @staticmethod
+    def assess_freshness(
+        outcome: ToolOutcome,
+        *,
+        as_of: str,
+        max_age_seconds: float,
+    ) -> ToolOutcome:
+        if not isinstance(outcome, ToolOutcome):
+            raise TypeError("outcome must be a ToolOutcome")
+        if not outcome.observed or outcome.observation is None:
+            raise ValueError("freshness requires an external observation")
+        if not isinstance(as_of, str) or not as_of.strip():
+            raise ValueError("as_of must be a non-empty ISO timestamp")
+        if (
+            isinstance(max_age_seconds, bool)
+            or not isinstance(max_age_seconds, (int, float))
+            or max_age_seconds < 0
+        ):
+            raise ValueError("max_age_seconds must be a non-negative number")
+
+        observed_at = outcome.observation.observed_at
+        if observed_at is None:
+            freshness = VerificationFreshnessState.UNKNOWN
+        else:
+            try:
+                observed_dt = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+                as_of_dt = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError("observed_at and as_of must be valid ISO timestamps") from exc
+
+            if observed_dt.tzinfo is None:
+                observed_dt = observed_dt.replace(tzinfo=timezone.utc)
+            if as_of_dt.tzinfo is None:
+                as_of_dt = as_of_dt.replace(tzinfo=timezone.utc)
+
+            age_seconds = (as_of_dt - observed_dt).total_seconds()
+            if age_seconds < 0:
+                freshness = VerificationFreshnessState.UNKNOWN
+            elif age_seconds <= float(max_age_seconds):
+                freshness = VerificationFreshnessState.FRESH
+            else:
+                freshness = VerificationFreshnessState.STALE
+
+        return ToolOutcome(
+            outcome_id=outcome.outcome_id,
+            tool_name=outcome.tool_name,
+            invocation_id=outcome.invocation_id,
+            target_ref=outcome.target_ref,
+            execution_state=outcome.execution_state,
+            observation_state=outcome.observation_state,
+            verification_state=outcome.verification_state,
+            execution_result=outcome.execution_result,
+            observation=outcome.observation,
+            verification=outcome.verification,
+            freshness_state=freshness,
         )
 
     @staticmethod
@@ -281,6 +356,7 @@ class ToolOutcomeService:
             execution_result=outcome.execution_result,
             observation=outcome.observation,
             verification=verification,
+            freshness_state=VerificationFreshnessState.UNASSESSED,
         )
 
 
