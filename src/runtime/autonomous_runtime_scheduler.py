@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import threading
+import time
 import uuid
 from typing import Protocol, Any
 
@@ -51,6 +53,7 @@ class AutonomousRuntimeScheduleStore(Protocol):
     def list_all(self, *, limit: int = 500) -> tuple[AutonomousRuntimeSchedule, ...]: ...
     def delete(self, job_id: str) -> bool: ...
     def claim(self, schedule: AutonomousRuntimeSchedule, now: float, lease_seconds: float) -> str | None: ...
+    def renew_claim(self, schedule: AutonomousRuntimeSchedule, claim_token: str, now: float, lease_seconds: float) -> bool: ...
     def complete_claim(
         self,
         schedule: AutonomousRuntimeSchedule,
@@ -73,8 +76,11 @@ class AutonomousRuntimeScheduler:
     """Host-neutral durable scheduler with lease fencing and bounded backoff."""
 
     def __init__(self, store: AutonomousRuntimeScheduleStore, run_loop) -> None:
-        if not all(hasattr(store, name) for name in ("save", "load_due", "claim")):
-            raise TypeError("store must implement save, load_due, and claim")
+        if not all(
+            hasattr(store, name)
+            for name in ("save", "load_due", "claim", "renew_claim")
+        ):
+            raise TypeError("store must implement save, load_due, claim, and renew_claim")
         if not callable(getattr(run_loop, "run", None)):
             raise TypeError("run_loop must provide callable run(job_id, ...)")
         self._store = store
@@ -109,13 +115,33 @@ class AutonomousRuntimeScheduler:
                 results.append(AutonomousRuntimeScheduleResult(schedule, None, False))
                 continue
 
+            heartbeat_stop = threading.Event()
+            heartbeat_state = {
+                "lease_lost": False,
+                "error": None,
+                "renewals": 0,
+            }
+            heartbeat = threading.Thread(
+                target=self._lease_heartbeat,
+                args=(
+                    schedule,
+                    claim,
+                    lease_seconds,
+                    heartbeat_stop,
+                    heartbeat_state,
+                ),
+                name=f"jarvis-lease-heartbeat-{schedule.job_id}",
+                daemon=True,
+            )
+            heartbeat.start()
+
             try:
                 run = self._run_loop.run(schedule.job_id, max_pulses=1)
             except Exception as exc:
                 failure = f"{type(exc).__name__}: {exc}"
                 replacement = self._failure_replacement(
                     schedule,
-                    now,
+                    time.time(),
                     failure,
                     max_backoff_multiplier=max_backoff_multiplier,
                 )
@@ -124,6 +150,28 @@ class AutonomousRuntimeScheduler:
                     AutonomousRuntimeScheduleResult(
                         schedule,
                         None,
+                        False,
+                        claim,
+                        completed,
+                        failure,
+                    )
+                )
+                continue
+            finally:
+                heartbeat_stop.set()
+                heartbeat.join(timeout=max(0.5, lease_seconds))
+
+            lease_lost = bool(heartbeat_state["lease_lost"])
+            if lease_lost:
+                failure = str(
+                    heartbeat_state["error"]
+                    or "scheduler lease was lost during execution"
+                )
+                completed = self._complete_claim(schedule, claim, None)
+                results.append(
+                    AutonomousRuntimeScheduleResult(
+                        schedule,
+                        run,
                         False,
                         claim,
                         completed,
@@ -179,6 +227,40 @@ class AutonomousRuntimeScheduler:
             )
 
         return tuple(results)
+
+    def _lease_heartbeat(
+        self,
+        schedule: AutonomousRuntimeSchedule,
+        claim_token: str,
+        lease_seconds: float,
+        stop_event: threading.Event,
+        state: dict[str, object],
+    ) -> None:
+        interval = max(0.05, min(float(lease_seconds) / 3.0, 5.0))
+        while not stop_event.wait(interval):
+            now = time.time()
+            try:
+                renewed = self._store.renew_claim(
+                    schedule,
+                    claim_token,
+                    now,
+                    lease_seconds,
+                )
+            except Exception as exc:
+                state["error"] = f"lease renewal failed: {type(exc).__name__}: {exc}"
+                if schedule.lease_until is not None and now >= schedule.lease_until:
+                    state["lease_lost"] = True
+                    return
+                continue
+
+            if not renewed:
+                state["lease_lost"] = True
+                state["error"] = (
+                    "scheduler lease renewal was rejected by the durable store"
+                )
+                return
+
+            state["renewals"] = int(state["renewals"]) + 1
 
     def _complete_claim(
         self,
