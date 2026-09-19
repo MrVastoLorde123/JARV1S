@@ -628,30 +628,35 @@ VERIFIED
 TRUTH
 ```
 
-`ToolResult.success == True` remains backward-compatible and means only that the tool handler reported successful execution. The new inert `ToolOutcome` evidence layer records:
+`ToolResult.success == True` remains backward-compatible and means only that the tool handler reported successful execution. The inert `ToolOutcome` evidence layer now carries explicit execution, observation, verification, and freshness state.
 
-- `EXECUTED` / `FAILED` — what the handler reported about execution;
-- `OBSERVED` / `NOT_OBSERVED` — whether an independent external observation was supplied;
-- `VERIFIED` / `CONTRADICTED` / `INCONCLUSIVE` / `UNVERIFIED` — the state of an explicit external verification artifact.
+Aggregate external-outcome states are explicit:
 
-Verification requires an exact observation identity. No outcome artifact can establish truth, authorization, permission, retry authority, or execution authority.
+- `EXECUTED_UNVERIFIED` — execution completed, but no external observation/verification exists;
+- `OBSERVED_UNVERIFIED` — external evidence exists, but independent verification has not passed;
+- `VERIFIED` — an exact-target observation has been independently verified;
+- `CONTRADICTED` — verification evidence rejected the expected outcome;
+- `INCONCLUSIVE` — verification evidence could not establish a result;
+- `NOT_APPLICABLE` — no tool outcome exists.
 
-The existing plan executor carries this outcome evidence into step metadata and the live JARVIS response surface without changing existing tool return content or caller compatibility.
+Verification requires exact observation/target identity. Verified evidence remains evidence only: it does not establish truth, certainty, authority, authorization, retry permission, or policy mutation.
+
+The deterministic plan executor carries outcome evidence into step metadata. Live JARVIS responses report execution completion separately from external verification, and autonomous job evidence preserves the same distinction. Successful but unverified outcomes remain reviewable rather than being described as verified external success.
 
 ### Exact OPS-17 verification
 
-Repaired feature head:
-`e817701d767a1f9c1c86a83ed7bc3283114ad32e`
+Final feature tip:
+`747c35a494d40ce65a7045e6b64c43a7e9846c88`
 
-Fresh exact-head verification PR #473:
-- Deployment Closure Verification #230 — **SUCCESS**
-- Backend core regression: **3355/3355 OK**
+Fresh exact-current-tip verification PR #493:
+- Deployment Closure Verification #290 — **SUCCESS**
+- Backend core regression: **3368/3368 OK**
 - UI install/build — **SUCCESS**
-- Deployment Acceptance #186 — **SUCCESS**
-- CS8 Boundary Red-Team #209 — **SUCCESS**
-- CS9 Architecture Cleanup + Regression #197 — **SUCCESS**
+- Deployment Acceptance #246 — **SUCCESS**
+- CS8 Boundary Red-Team #269 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #257 — **SUCCESS**
 
-Temporary verifier PRs #472 and #473 were closed unmerged.
+Temporary verifier PRs #491, #492, and #493 were closed unmerged.
 
 ### OPS-18 — Verification Scope Binding
 
