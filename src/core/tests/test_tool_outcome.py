@@ -110,6 +110,7 @@ class OutcomeTests(unittest.TestCase):
             ExternalObservation(
                 observation_id="observation-1",
                 source="independent_status_reader",
+                subject_ref=outcome.target_ref,
                 payload={"external_status": "ok"},
             ),
         )
