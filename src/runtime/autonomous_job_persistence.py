@@ -25,6 +25,10 @@ class AutonomousJobStore(Protocol):
         """Load the exact job identity or return None when it is absent."""
         ...
 
+    def list_jobs(self, *, limit: int = 100) -> tuple[AutonomousJob, ...]:
+        """Return bounded job snapshots for observation surfaces."""
+        ...
+
 
 @dataclass(frozen=True)
 class AutonomousJobPersistenceReceipt:
@@ -98,6 +102,21 @@ class AutonomousJobPersistenceService:
             revision=revision,
             persisted=True,
         )
+
+    def list_jobs(self, *, limit: int = 100) -> tuple[AutonomousJob, ...]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("limit must be an integer from 1 to 500")
+        if self._store is None:
+            raise RuntimeError("autonomous job store is not bound")
+        list_jobs = getattr(self._store, "list_jobs", None)
+        if not callable(list_jobs):
+            raise RuntimeError("autonomous job store does not support list_jobs")
+        jobs = list_jobs(limit=limit)
+        if not isinstance(jobs, tuple) or not all(isinstance(job, AutonomousJob) for job in jobs):
+            raise AutonomousJobPersistenceValidationError(
+                "autonomous job store must return a tuple of AutonomousJob values"
+            )
+        return jobs
 
     def restore(self, job_id: str) -> AutonomousJob | None:
         if not isinstance(job_id, str) or not job_id.strip():

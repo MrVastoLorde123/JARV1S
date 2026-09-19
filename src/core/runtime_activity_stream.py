@@ -158,7 +158,12 @@ class InterfaceRuntimeActivityRecorder:
             if response.status is InterfaceResponseStatus.REJECTED
             else RuntimeActivityKind.REQUEST_FAILED
         )
-        stage = str(response.metadata.get("artifact_type", request.operation.value))
+        stage = str(
+            response.metadata.get(
+                "stage",
+                response.metadata.get("artifact_type", request.operation.value),
+            )
+        )
         event = self._next_event(
             session_id=request.session_id,
             actor_id=request.actor_id,
