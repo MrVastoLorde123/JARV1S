@@ -438,6 +438,7 @@ class ToolOutcomeService:
         verification: ExternalVerification,
         *,
         admissible_sources: tuple[str, ...] | list[str] | set[str] | None = None,
+        bound_source_id: str | None = None,
     ) -> ToolOutcome:
         if not isinstance(outcome, ToolOutcome):
             raise TypeError("outcome must be a ToolOutcome")
@@ -449,10 +450,15 @@ class ToolOutcomeService:
             raise TypeError("verification must be an ExternalVerification")
         if verification.observation_id != outcome.observation.observation_id:
             raise ValueError("verification must reference the exact observation identity")
+        if bound_source_id is not None and (
+            not isinstance(bound_source_id, str) or not bound_source_id.strip()
+        ):
+            raise TypeError("bound_source_id must be a non-empty string or None")
+
         if admissible_sources is None:
             # Preserve direct ToolOutcomeService callers from the pre-OPS-27
-            # contract. The live capability path always supplies an explicit
-            # configured source set, including an empty set when none is trusted.
+            # contract. The live capability path supplies both the registered
+            # admissible source set and the concrete registration binding.
             normalized_sources = {verification.verifier}
         elif not isinstance(admissible_sources, (tuple, list, set)):
             raise TypeError("admissible_sources must be a tuple, list, set, or None")
@@ -463,9 +469,15 @@ class ToolOutcomeService:
                 if isinstance(source, str) and source.strip()
             }
 
+        source_id = verification.provenance.source_id
+        source_matches_binding = (
+            bound_source_id is None
+            or source_id == bound_source_id.strip()
+        )
         if (
-            verification.provenance.source_id != verification.verifier
-            or verification.provenance.source_id not in normalized_sources
+            source_id != verification.verifier
+            or source_id not in normalized_sources
+            or not source_matches_binding
         ):
             state = ExternalVerificationState.UNADMITTED
         else:
