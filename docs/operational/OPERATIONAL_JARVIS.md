@@ -488,6 +488,47 @@ Fresh exact-head verification PR #460:
 
 Temporary verifier PR #460 was closed unmerged.
 
+### OPS-14 — Lease-Safe Long-Running Execution
+
+Scheduler ownership is now renewable for the full duration of a long autonomous execution pulse.
+
+The durable scheduler claim remains fenced by its exact claim token. A heartbeat renews the lease while the worker is executing, preventing an active pulse from silently outliving its ownership window.
+
+Critically, lease loss is terminal for that scheduler claimant: once renewal is rejected or the lease expires, that claimant cannot mutate the schedule. Durable lifecycle reconciliation owns the subsequent recovery.
+
+```
+claim
+  ↓
+renew ownership while executing
+  ↓
+execution completes
+  ↓
+fenced completion
+
+or
+
+lease lost
+  ↓
+no schedule mutation
+  ↓
+reconciliation / later safe recovery
+```
+
+### Exact OPS-14 verification
+
+Repaired feature head:
+`9b060819cc4285f8571aa3ef14b2df0577e02381`
+
+Fresh exact-head verification PR #463:
+- Deployment Closure Verification #198 — **SUCCESS**
+- Backend core regression: **3345/3345 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #154 — **SUCCESS**
+- CS8 Boundary Red-Team #177 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #165 — **SUCCESS**
+
+Temporary verifier PRs #462 and #463 were closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
