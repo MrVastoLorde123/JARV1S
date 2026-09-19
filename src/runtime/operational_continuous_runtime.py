@@ -606,6 +606,12 @@ class OperationalContinuousRuntime:
         job = self.inspect(job_id)
         if job is None:
             raise LookupError(f"autonomous job not found: {job_id}")
+        if job.status is AutonomousJobStatus.PAUSED and job.working_context.get(
+            "recovery_required"
+        ) == "AMBIGUOUS_EXECUTION":
+            raise ValueError(
+                "this job has an unresolved execution attempt; reconcile its outcome before resume"
+            )
         kinds = {
             AutonomousJobStatus.WAITING_AUTHORIZATION: AutonomousJobResumeKind.AUTHORIZATION,
             AutonomousJobStatus.WAITING_INPUT: AutonomousJobResumeKind.INPUT,
@@ -631,6 +637,45 @@ class OperationalContinuousRuntime:
             interval=float(interval),
         )
         return resumed.job
+
+    def reconcile_ambiguous_execution(
+        self,
+        job_id: str,
+        *,
+        outcome: str,
+        evidence: str,
+        result: str | None = None,
+        reason: str | None = None,
+    ) -> AutonomousJob:
+        """Close an unresolved execution attempt without replaying the action."""
+        job = self.inspect(job_id)
+        if job is None:
+            raise LookupError(f"autonomous job not found: {job_id}")
+        if job.status is not AutonomousJobStatus.PAUSED:
+            raise ValueError("only paused jobs can reconcile an ambiguous execution")
+        if job.working_context.get("recovery_required") != "AMBIGUOUS_EXECUTION":
+            raise ValueError("job does not contain an ambiguous execution requiring reconciliation")
+        if not isinstance(outcome, str):
+            raise TypeError("outcome must be a string")
+        normalized = outcome.strip().upper()
+        if normalized not in {"COMPLETED", "FAILED"}:
+            raise ValueError("outcome must be COMPLETED or FAILED")
+
+        if normalized == "COMPLETED":
+            if not isinstance(result, str) or not result.strip():
+                raise ValueError("result is required when reconciling a completed outcome")
+            reconciled = job.reconcile_completed(result, evidence)
+        else:
+            if not isinstance(reason, str) or not reason.strip():
+                raise ValueError("reason is required when reconciling a failed outcome")
+            reconciled = job.reconcile_failed(reason, evidence)
+
+        self._persistence.persist(reconciled)
+        self._schedule_store.delete(job_id)
+        attempt_id = job.working_context.get("unresolved_execution_attempt_id")
+        if isinstance(attempt_id, str):
+            self._pending_operations.pop(attempt_id, None)
+        return reconciled
 
     def cancel(self, job_id: str, reason: str = "Autonomous job cancelled") -> AutonomousJob:
         job = self.inspect(job_id)
