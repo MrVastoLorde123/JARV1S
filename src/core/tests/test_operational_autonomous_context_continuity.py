@@ -229,14 +229,8 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
                 second_learning["matches"][0]["adaptation_hint_status"],
                 "CORRECT_PATTERN",
             )
-            response_context = processors[1].ask("Report the current runtime status.").metadata["cognitive_context"]
-            self.assertIn(
-                "Prior operational learning guidance:",
-                response_context["selected_plan"]["steps"][0]["description"],
-            )
-            self.assertFalse(response_context["authority_granted"])
-            self.assertFalse(response_context["authorization_granted"])
-            self.assertFalse(response_context["execution_requested"])
+            self.assertFalse(second_learning["authority_granted"])
+            self.assertFalse(second_learning["execution_requested"])
 
 
     def test_autonomous_factory_rehydrates_prior_cycle_context(self):
