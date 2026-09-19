@@ -30,7 +30,7 @@ from src.core.tool_execution import ToolCapabilityGateway
 from src.runtime.autonomous_job import AutonomousJobStatus
 from src.runtime.operational_continuous_runtime import OperationalContinuousRuntime
 from src.memory.memory_retrieval import get_memory, search_memories
-from src.memory.memory_store import add_memory, create_memory_table
+from src.memory.memory_store import add_memory, create_memory_table, get_memory as get_memory_by_id
 from src.core.coding_agent_jarvis import CodingAgentJARVIS
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
 
@@ -56,7 +56,7 @@ class PersistentAcceptanceMemoryProvider(ContextSourceProvider):
             memory_id = source.metadata.get("memory_id")
             if memory_id is None:
                 continue
-            memory = get_memory(memory_id)
+            memory = get_memory_by_id(memory_id)
             if memory is None:
                 continue
             items[source.source_id] = ContextItem(
