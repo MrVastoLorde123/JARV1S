@@ -834,6 +834,43 @@ Fresh exact-head verification PR #486:
 
 Temporary verifier PRs #485 and #486 were closed unmerged.
 
+### OPS-23 — Verification-Aware Operational Learning
+
+Generic operational learning now respects the same execution/observation/verification distinction established by OPS-17.
+
+A completed plan that contains tool outcomes is no longer automatically treated as a successful learning pattern. Positive reinforcement requires explicit external verification:
+
+```
+tool execution succeeds
+       ↓
+no external verification → REVIEW_REQUIRED
+       ↓
+no reinforcement
+
+tool execution succeeds
+       ↓
+external verification = VERIFIED
+       ↓
+SUCCESS_PATTERN / REINFORCE_PATTERN
+```
+
+Failure and blocked execution semantics remain unchanged. Review-required evidence remains durable/advisory and cannot authorize execution, retry, policy mutation, or truth.
+
+### Exact OPS-23 verification
+
+Feature head:
+`3343c9d348295ca751d25ae69e140cf5506478dd`
+
+Fresh exact-head verification PR #489:
+- Deployment Closure Verification #277 — **SUCCESS**
+- Backend core regression: **3361/3361 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #233 — **SUCCESS**
+- CS8 Boundary Red-Team #256 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #244 — **SUCCESS**
+
+Temporary verifier PR #489 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
