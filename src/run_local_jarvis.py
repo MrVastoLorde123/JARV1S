@@ -166,9 +166,23 @@ def main():
         coding_execution_learning_service=coding_execution_learning_service,
         intelligent_request_router=intelligent_request_router,
     )
+
+    def autonomous_processor_factory(job):
+        conversation_id = f"autonomous-{job.job_id}"
+        if conversation_store.get_conversation(conversation_id) is None:
+            conversation_store.create_conversation(
+                title=f"Autonomous: {job.goal[:80]}",
+                conversation_id=conversation_id,
+            )
+        return processor_factory(
+            session_id=conversation_id,
+            conversation_id=conversation_id,
+        )
+
     world_runtime = create_local_world_runtime() if enable_world_http else None
     autonomous_runtime = OperationalContinuousRuntime(
         default_processor,
+        processor_factory=autonomous_processor_factory,
         poll_interval=float(os.environ.get("JARVIS_AUTONOMOUS_POLL_SECONDS", "1.0")),
     )
 
