@@ -19,6 +19,7 @@ from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
 from src.tools.models import ToolDefinition, ToolRequest, ToolResult
+from src.tools.outcome import ToolOutcome, ToolOutcomeService
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,7 @@ class ToolPlanStepHandler:
         if not isinstance(invoker, ToolInvoker):
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
+        self._last_outcome: ToolOutcome | None = None
 
     @staticmethod
     def build_request(step: PlanStep) -> ToolRequest:
@@ -123,7 +125,22 @@ class ToolPlanStepHandler:
                 f"Tool invoker returned {type(result).__name__}, expected ToolResult"
             )
 
+        self._last_outcome = ToolOutcomeService.classify(request, result)
         return request, result
+
+    def outcome_context(self) -> dict[str, object]:
+        """Return inert execution/observation/verification state for the last invocation."""
+        if self._last_outcome is None:
+            return {
+                "execution_state": "NOT_EXECUTED",
+                "observation_state": "NOT_OBSERVED",
+                "verification_state": "UNVERIFIED",
+                "executed": False,
+                "observed": False,
+                "verified": False,
+                "truth_established": False,
+            }
+        return self._last_outcome.to_context()
 
     def __call__(
         self,
