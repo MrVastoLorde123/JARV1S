@@ -27,8 +27,8 @@ from .models import ToolError, ToolRequest, ToolResult
 from .outcome import ExternalObservation, ExternalVerification
 from .protocol import (
     ToolObservationProvider,
-    ToolVerificationAdmissibilityProvider,
     ToolVerificationProvider,
+    ToolVerificationBindingProvider,
 )
 from .registry import ToolRegistry, normalize_name
 
@@ -111,6 +111,14 @@ class ToolService:
         handler = self._registry.get(request.tool_name)
         definition = handler.definition()
         return definition.admissible_verification_sources
+
+    def verification_source_id(
+        self,
+        request: ToolRequest,
+    ) -> str | None:
+        """Return the registry-bound verifier identity for this capability."""
+        self._validate_request(request)
+        return self._registry.verification_source_id(request.tool_name)
 
     def _validate_request(self, request: ToolRequest) -> None:
         if not isinstance(request, ToolRequest):
