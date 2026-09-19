@@ -191,6 +191,11 @@ class ToolOutcome:
         }
 
 
+class ToolOutcomeService:
+    """Create and advance inert execution/outcome evidence."""
+
+
+
     @staticmethod
     def aggregate_contexts(
         contexts: tuple[Mapping[str, Any], ...] | list[Mapping[str, Any]],
@@ -242,10 +247,6 @@ class ToolOutcome:
         ):
             return ExternalOutcomeState.OBSERVED_UNVERIFIED
         return ExternalOutcomeState.EXECUTED_UNVERIFIED
-
-
-class ToolOutcomeService:
-    """Create and advance inert execution/outcome evidence."""
 
     @staticmethod
     def classify(request: ToolRequest, result: ToolResult) -> ToolOutcome:
