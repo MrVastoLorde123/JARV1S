@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+import threading
 from typing import Protocol, runtime_checkable
 
 from src.core.execution_plan_models import PlanStep
@@ -78,7 +79,7 @@ class ToolPlanStepHandler:
         if not isinstance(invoker, ToolInvoker):
             raise TypeError("invoker must implement ToolInvoker")
         self._invoker = invoker
-        self._last_outcome: ToolOutcome | None = None
+        self._outcome_state = threading.local()
 
     @staticmethod
     def build_request(step: PlanStep) -> ToolRequest:
@@ -123,7 +124,9 @@ class ToolPlanStepHandler:
         """Invoke a validated step and return the raw execution observation."""
         # Never allow an outcome from an earlier invocation to survive into
         # a later attempt that fails before the new tool result is classified.
-        self._last_outcome = None
+        # Thread-local storage also prevents concurrent handler calls from
+        # exchanging outcome evidence between requests.
+        self._outcome_state.last_outcome = None
         request = self.build_request(step)
 
         if step.requires_confirmation:
@@ -136,12 +139,12 @@ class ToolPlanStepHandler:
                 f"Tool invoker returned {type(result).__name__}, expected ToolResult"
             )
 
-        self._last_outcome = ToolOutcomeService.classify(request, result)
+        self._outcome_state.last_outcome = ToolOutcomeService.classify(request, result)
         return request, result
 
     def outcome_context(self) -> ToolOutcome | None:
         """Return typed evidence for the current invocation, if one exists."""
-        return self._last_outcome
+        return getattr(self._outcome_state, "last_outcome", None)
 
     def __call__(
         self,
