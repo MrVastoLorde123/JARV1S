@@ -180,6 +180,53 @@ class SQLiteAutonomousRuntimeScheduleStore(AutonomousRuntimeScheduleStore):
         finally:
             connection.close()
 
+    def renew_claim(
+        self,
+        schedule: AutonomousRuntimeSchedule,
+        claim_token: str,
+        now: float,
+        lease_seconds: float,
+    ) -> bool:
+        if not isinstance(schedule, AutonomousRuntimeSchedule):
+            raise TypeError("schedule must be an AutonomousRuntimeSchedule")
+        if not isinstance(claim_token, str) or not claim_token.strip():
+            raise ValueError("claim_token must be a non-empty string")
+        if isinstance(now, bool) or not isinstance(now, (int, float)):
+            raise TypeError("now must be numeric")
+        if isinstance(lease_seconds, bool) or not isinstance(lease_seconds, (int, float)) or lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive")
+
+        connection = self._connection_factory()
+        new_lease_until = now + lease_seconds
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            cursor = connection.execute(
+                """
+                UPDATE autonomous_runtime_schedules
+                SET lease_until = ?
+                WHERE job_id = ?
+                  AND claim_token = ?
+                  AND lease_until IS NOT NULL
+                  AND lease_until > ?
+                """,
+                (
+                    new_lease_until,
+                    schedule.job_id,
+                    claim_token,
+                    now,
+                ),
+            )
+            if cursor.rowcount == 1:
+                connection.commit()
+                return True
+            connection.rollback()
+            return False
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
     def complete_claim(
         self,
         schedule: AutonomousRuntimeSchedule,
