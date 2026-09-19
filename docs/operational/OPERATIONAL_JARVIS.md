@@ -876,6 +876,50 @@ Fresh exact-head verification PR #489:
 
 Temporary verifier PR #489 was closed unmerged.
 
+### OPS-24 — Typed Execution Outcome Evidence Boundary
+
+The live execution boundary now admits tool outcome evidence only through the typed `ToolOutcome` contract.
+
+Two concrete provenance failures were closed:
+
+- an arbitrary handler mapping returned from `outcome_context()` can no longer inject `VERIFIED` or other outcome states into plan-step metadata;
+- a `USE_TOOL` failure that occurs before a new tool result is classified clears the previous invocation's outcome state, so stale evidence cannot be attached to the failed step.
+
+The boundary is now:
+
+```
+tool invocation
+    ↓
+ToolResult
+    ↓
+ToolOutcome classification
+    ↓
+typed outcome evidence
+    ↓
+plan-step metadata / response / learning
+```
+
+`ToolResult.success` still means only handler-reported execution success. Typed outcome evidence remains inert and cannot establish truth, certainty, authority, authorization, retry permission, or policy mutation.
+
+### Exact OPS-24 verification
+
+Implementation head:
+`5956bbd7afa8a8a52ba4c416199f166fcd468a98`
+
+Fresh exact-head verification PR #496:
+- Deployment Closure Verification #296 — **SUCCESS**
+- Backend core regression: **3370/3370 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #252 — **SUCCESS**
+- CS8 Boundary Red-Team #276 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #264 — **SUCCESS**
+
+Focused regressions added:
+- forged untyped outcome metadata is ignored;
+- a failed second tool step cannot reuse the first step's outcome evidence.
+
+Temporary verifier PR #496 was closed **unmerged**.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
