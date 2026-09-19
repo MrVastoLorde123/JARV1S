@@ -82,6 +82,7 @@ class M30ConsequenceGateTests(unittest.TestCase):
             payload={
                 "passed": True,
                 "verification_freshness_state": "FRESH",
+                "verification_fresh_until": "2030-01-01T00:00:00+00:00",
             },
             provenance={"invocation_id": "run-fresh"},
         )
@@ -98,6 +99,33 @@ class M30ConsequenceGateTests(unittest.TestCase):
         self.assertEqual(decision.action, ConsequenceAction.ALLOW)
         self.assertTrue(decision.eligible)
         self.assertFalse(decision.authorized)
+
+    def test_current_requirement_requires_validity_deadline(self):
+        claim = self.claim()
+        evidence = Evidence(
+            task_id=claim.task_id,
+            source_type=EvidenceType.BUILD_RESULT,
+            payload={
+                "passed": True,
+                "verification_freshness_state": "FRESH",
+            },
+            provenance={"invocation_id": "run-fresh-no-deadline"},
+        )
+        evaluation = self.evaluator.evaluate(claim, (evidence,))
+        consequence = ConsequenceRequest(
+            kind=ConsequenceKind.ADVANCE_WORKFLOW,
+            consequence_id="coding:advance-current-no-deadline",
+            metadata={"requires_current_verification": True},
+        )
+
+        decision = self.policy.decide(evaluation, consequence)
+
+        self.assertEqual(evaluation.verification_freshness, VerificationFreshness.FRESH)
+        self.assertIsNone(evaluation.verification_valid_until)
+        self.assertEqual(decision.action, ConsequenceAction.REQUIRE_REVIEW)
+        self.assertFalse(decision.eligible)
+        self.assertIn("valid_until=None", decision.reason)
+
 
     def test_current_requirement_rejects_stale_verification_as_review_required(self):
         claim = self.claim()
