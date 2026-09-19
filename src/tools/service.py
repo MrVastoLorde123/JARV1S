@@ -25,7 +25,11 @@ from __future__ import annotations
 from .errors import InvalidRequestError, InvalidResultError, UnknownToolError
 from .models import ToolError, ToolRequest, ToolResult
 from .outcome import ExternalObservation, ExternalVerification
-from .protocol import ToolObservationProvider, ToolVerificationProvider
+from .protocol import (
+    ToolObservationProvider,
+    ToolVerificationAdmissibilityProvider,
+    ToolVerificationProvider,
+)
 from .registry import ToolRegistry, normalize_name
 
 
@@ -97,6 +101,16 @@ class ToolService:
             result,
             observation,
         )
+
+    def admissible_verification_sources(
+        self,
+        request: ToolRequest,
+    ) -> tuple[str, ...]:
+        """Return the registered capability's deterministic verification allowlist."""
+        self._validate_request(request)
+        handler = self._registry.get(request.tool_name)
+        definition = handler.definition()
+        return definition.admissible_verification_sources
 
     def _validate_request(self, request: ToolRequest) -> None:
         if not isinstance(request, ToolRequest):
