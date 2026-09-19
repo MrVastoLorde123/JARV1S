@@ -162,15 +162,6 @@ class ConsequenceFeedbackEvaluationService:
                 ),
             }
             signal, reason = signal_map[feedback.kind]
-            ConsequenceExecutionFeedbackKind.FAILURE: (
-                ConsequenceFeedbackEvaluationSignal.FAILURE_SIGNAL,
-                "failed consequence execution provides an observed negative signal requiring a later decision",
-            ),
-            ConsequenceExecutionFeedbackKind.NOT_EXECUTED: (
-                ConsequenceFeedbackEvaluationSignal.NOT_EXECUTED_SIGNAL,
-                "not-executed consequence provides an operational signal requiring a later decision",
-            ),
-        }
         evidence = {
             "feedback_kind": feedback.kind.value,
             "payload": dict(feedback.payload),
