@@ -920,6 +920,37 @@ Focused regressions added:
 
 Temporary verifier PR #496 was closed **unmerged**.
 
+### OPS-25 — Concurrent Outcome Evidence Isolation
+
+The typed outcome boundary is now safe against concurrent reuse of the same `ToolPlanStepHandler` instance.
+
+The handler's current `ToolOutcome` is stored in thread-local state, so concurrent invocations cannot overwrite one another's evidence before the deterministic executor consumes it.
+
+```
+request A ──→ outcome A ──→ A's execution metadata
+request B ──→ outcome B ──→ B's execution metadata
+```
+
+This preserves causal identity without granting any new authority. Execution, observation, verification, freshness, and truth semantics remain unchanged.
+
+### Exact OPS-25 verification
+
+Implementation head:
+`14ebe08c5f19762ddbc09fc6459c4440e01b927b`
+
+Fresh exact-head verification PR #498:
+- Deployment Closure Verification #302 — **SUCCESS**
+- Backend core regression: **3371/3371 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #258 — **SUCCESS**
+- CS8 Boundary Red-Team #281 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #269 — **SUCCESS**
+
+Focused regression added:
+- concurrent `read_a` and `read_b` invocations retain their own typed outcome evidence.
+
+Temporary verifier PR #498 was closed **unmerged**.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
