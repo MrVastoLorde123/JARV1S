@@ -686,6 +686,33 @@ Fresh exact-head verification PR #477:
 
 Temporary verifier PRs #475, #476, and #477 were closed unmerged.
 
+### OPS-19 — Verification Freshness
+
+Verification now has an explicit freshness dimension separate from whether the underlying evidence was verified.
+
+An externally observed verification can therefore be:
+
+- `VERIFIED + FRESH` — the observation is within the caller-defined freshness window;
+- `VERIFIED + STALE` — the observation was verified, but it is older than the permitted window;
+- `VERIFIED + UNKNOWN` — freshness cannot be determined because the observation timestamp is missing or temporally ambiguous.
+
+Freshness does not invalidate the historical evidence itself and never establishes truth. It is an independent temporal property that downstream decision boundaries can require explicitly.
+
+### Exact OPS-19 verification
+
+Feature head:
+`83e05861010d66c1bdecfedd92f39602dde29ae7`
+
+Fresh exact-head verification PR #479:
+- Deployment Closure Verification #245 — **SUCCESS**
+- Backend core regression: **3359/3359 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #201 — **SUCCESS**
+- CS8 Boundary Red-Team #224 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #212 — **SUCCESS**
+
+Temporary verifier PR #479 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
