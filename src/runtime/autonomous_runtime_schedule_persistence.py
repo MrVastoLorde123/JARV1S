@@ -90,6 +90,39 @@ class SQLiteAutonomousRuntimeScheduleStore(AutonomousRuntimeScheduleStore):
         finally:
             connection.close()
 
+    def list_all(self, *, limit: int = 500) -> tuple[AutonomousRuntimeSchedule, ...]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("limit must be an integer from 1 to 500")
+        connection = self._connection_factory()
+        try:
+            rows = connection.execute(
+                """
+                SELECT job_id, next_due, interval, claim_token, lease_until,
+                       failure_count, last_failure, last_failure_at
+                FROM autonomous_runtime_schedules
+                ORDER BY next_due ASC, job_id ASC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            return tuple(self._row_to_schedule(row) for row in rows)
+        finally:
+            connection.close()
+
+    def delete(self, job_id: str) -> bool:
+        if not isinstance(job_id, str) or not job_id.strip():
+            raise ValueError("job_id must be a non-empty string")
+        connection = self._connection_factory()
+        try:
+            cursor = connection.execute(
+                "DELETE FROM autonomous_runtime_schedules WHERE job_id = ?",
+                (job_id,),
+            )
+            connection.commit()
+            return cursor.rowcount == 1
+        finally:
+            connection.close()
+
     def load_due(self, now: float) -> list[AutonomousRuntimeSchedule]:
         connection = self._connection_factory()
         try:
