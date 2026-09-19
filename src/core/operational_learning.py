@@ -30,12 +30,14 @@ class OperationalLearningEvaluationStatus(str, Enum):
     SUCCESS_PATTERN = "SUCCESS_PATTERN"
     FAILURE_PATTERN = "FAILURE_PATTERN"
     BOUNDED_BLOCK = "BOUNDED_BLOCK"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
 
 
 class OperationalAdaptationHintStatus(str, Enum):
     REINFORCE_PATTERN = "REINFORCE_PATTERN"
     CORRECT_PATTERN = "CORRECT_PATTERN"
     PRESERVE_BOUNDARY = "PRESERVE_BOUNDARY"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
 
 
 def _tokens(text: str) -> set[str]:
@@ -271,20 +273,38 @@ class OperationalLearningRuntime:
             capability=capability,
         )
 
-        evaluation_status, basis = {
-            PlanExecutionStatus.COMPLETED: (
-                OperationalLearningEvaluationStatus.SUCCESS_PATTERN,
-                "execution completed successfully; retain the observed task pattern as advisory evidence",
-            ),
-            PlanExecutionStatus.FAILED: (
-                OperationalLearningEvaluationStatus.FAILURE_PATTERN,
-                "execution failed; future similar work should consider correction before repetition",
-            ),
-            PlanExecutionStatus.BLOCKED: (
-                OperationalLearningEvaluationStatus.BOUNDED_BLOCK,
-                "execution was blocked; preserve existing policy, confirmation, and authorization boundaries",
-            ),
-        }[execution.status]
+        tool_outcomes = tuple(
+            step.metadata.get("tool_outcome")
+            for step in execution.steps
+            if isinstance(step.metadata, Mapping)
+            and isinstance(step.metadata.get("tool_outcome"), Mapping)
+        )
+        externally_verified = bool(tool_outcomes) and all(
+            str(outcome.get("verification_state", "")).upper() == "VERIFIED"
+            for outcome in tool_outcomes
+        )
+
+        if execution.status is PlanExecutionStatus.COMPLETED and tool_outcomes and not externally_verified:
+            evaluation_status = OperationalLearningEvaluationStatus.REVIEW_REQUIRED
+            basis = (
+                "execution completed successfully, but the tool outcome is not externally verified; "
+                "retain the execution evidence without reinforcing it as a verified success"
+            )
+        else:
+            evaluation_status, basis = {
+                PlanExecutionStatus.COMPLETED: (
+                    OperationalLearningEvaluationStatus.SUCCESS_PATTERN,
+                    "execution completed successfully; retain the observed task pattern as advisory evidence",
+                ),
+                PlanExecutionStatus.FAILED: (
+                    OperationalLearningEvaluationStatus.FAILURE_PATTERN,
+                    "execution failed; future similar work should consider correction before repetition",
+                ),
+                PlanExecutionStatus.BLOCKED: (
+                    OperationalLearningEvaluationStatus.BOUNDED_BLOCK,
+                    "execution was blocked; preserve existing policy, confirmation, and authorization boundaries",
+                ),
+            }[execution.status]
 
         evaluation = OperationalLearningEvaluation(
             evaluation_id=f"learning-evaluation-{experience.experience_id.removeprefix('experience-')}",
@@ -304,6 +324,10 @@ class OperationalLearningRuntime:
             OperationalLearningEvaluationStatus.BOUNDED_BLOCK: (
                 OperationalAdaptationHintStatus.PRESERVE_BOUNDARY,
                 "A similar future task should preserve the existing policy/confirmation boundary; prior attempts do not create permission.",
+            ),
+            OperationalLearningEvaluationStatus.REVIEW_REQUIRED: (
+                OperationalAdaptationHintStatus.REVIEW_REQUIRED,
+                "A similar future task should treat this execution as unverified evidence; do not reinforce it as externally verified success.",
             ),
         }[evaluation.status]
 
