@@ -994,12 +994,337 @@ That is the beginning of a **JARVIS Idea Memory** rather than merely a project b
 
 ---
 
-## 21. Current state
+## 22. New ideas — agent-system engineering
+
+### IDEA-040 — Engineer the agent system for maximum capability and productivity under real constraints
+
+The goal is not to design an idealized agent ecosystem and assume unlimited compute, context, latency, model quality, or tool access.
+
+Instead:
+
+> **Engineer the best system that can actually operate reliably with the resources and limitations available.**
+
+Constraints to account for include:
+
+- model capability
+- model size / VRAM / RAM
+- context limits
+- latency
+- concurrent workload
+- tool availability
+- network reliability
+- verification availability
+- persistence
+- human attention
+- failure/recovery cost
+
+The system should optimize the whole workflow rather than any single model.
+
+**Status:** OPEN DESIGN IDEA
+
+---
+
+### IDEA-041 — Engineer communication between agents as a first-class productivity system
+
+The question is not only:
+
+> How does communication between agents affect JARVIS?
+
+The deeper question is:
+
+> **What information does JARVIS need from agents, exactly, at the smallest useful level of detail, to produce maximum results?**
+
+Potential design dimensions:
+
+- what an agent needs to receive
+- what an agent must report
+- what context should be summarized vs preserved
+- what evidence must accompany a report
+- how uncertainty is communicated
+- how partial progress is represented
+- how dependencies are expressed
+- how blockers are surfaced
+- when agents should ask JARVIS vs other agents
+- how much communication is enough
+- when communication becomes wasteful
+- how provenance survives handoffs
+- how agent reports affect system-wide context
+- how agent failure is propagated without contaminating unrelated work
+
+The aim is not maximum communication.
+
+The aim is **maximum useful information transfer per unit of cost/complexity**.
+
+**Status:** OPEN DESIGN IDEA
+
+---
+
+### IDEA-042 — Optimize the JARVIS ↔ agent contract down to the smallest useful detail
+
+A future agent protocol should explicitly determine:
+
+- required input fields
+- optional context
+- task identity
+- authority scope
+- capability scope
+- expected output schema
+- evidence requirements
+- confidence/uncertainty
+- progress state
+- blockers
+- failure state
+- requested follow-up
+- verification state
+- provenance
+- completion criteria
+
+The protocol should be designed around what JARVIS genuinely needs to make better decisions, not around whatever information happens to be convenient for an agent to emit.
+
+**Status:** OPEN DESIGN IDEA
+
+---
+
+## 23. New ideas — remote access and continuous availability
+
+### IDEA-043 — Keep JARVIS continuously online on the current laptop
+
+Near-term operating model:
+
+```text
+JARVIS host laptop
+        │
+        ├── continuously running JARVIS
+        ├── model runtime
+        ├── persistent data
+        └── local capabilities
+```
+
+The current laptop remains the JARVIS host until a more capable machine/server becomes practical.
+
+**Status:** NEAR-TERM OPERATING REQUIREMENT
+
+---
+
+### IDEA-044 — Secure remote access to JARVIS from another laptop and phone
+
+Primary remote clients:
+
+- another laptop
+- phone
+
+The goal is to access JARVIS remotely without exposing the host unsafely.
+
+Candidate approaches already identified:
+
+1. Direct remote desktop configuration — currently recognized as potentially unsafe if exposed incorrectly.
+2. VPN + RDP into the JARVIS laptop.
+3. A JARVIS-native client/server architecture where the remote devices connect directly to a controlled JARVIS service.
+4. Other secure remote-access architectures to be evaluated.
+
+The design question is broader than “how do I remote into Windows?”
+
+It is:
+
+> **What is the safest, most usable, and most JARVIS-native way for the user to access a continuously running personal intelligence system from multiple devices?**
+
+Important considerations:
+
+- authentication
+- encryption
+- device identity
+- authorization
+- remote command scope
+- session continuity
+- network exposure
+- offline/reconnect behavior
+- phone usability
+- emergency recovery
+- auditability
+- least privilege
+- local vs remote capability boundaries
+
+**Status:** OPEN ARCHITECTURE QUESTION
+
+---
+
+### IDEA-045 — Separate JARVIS access from full host access
+
+Long-term remote access should not necessarily require giving a phone or secondary laptop full control of the JARVIS host.
+
+Potential architecture:
+
+```text
+Remote device
+    ↓
+secure JARVIS access layer
+    ↓
+JARVIS runtime
+    ↓
+host capabilities
+```
+
+This could allow:
+
+- talking to JARVIS
+- inspecting jobs
+- approving actions
+- viewing status
+- receiving alerts
+- submitting work
+
+without giving the remote device unrestricted operating-system access.
+
+**Status:** OPEN DESIGN IDEA
+
+---
+
+## 24. New ideas — external system inspiration
+
+### IDEA-046 — Extract useful mechanisms from JEV, PRAXIST Beta, and similar systems
+
+Study other advanced agent/intelligence systems for mechanisms that could improve JARVIS.
+
+The purpose is **not** to copy another architecture wholesale.
+
+Instead:
+
+```text
+external system
+→ identify useful mechanism
+→ understand why it works
+→ test whether it solves a JARVIS problem
+→ adapt to JARVIS authority/evidence architecture
+```
+
+Potential areas of interest already noticed:
+
+- recursive behavior
+- learning loops
+- calibration
+- self-evaluation
+- system-level feedback
+- agent coordination
+- memory/knowledge handling
+- adaptation
+- decomposition
+- other mechanisms still to be identified
+
+**JEV note:** the exact terminology/mechanisms to extract should be researched before being treated as architectural facts. The partially remembered “recursive / learning / calibration / D...” description is preserved here as a research lead, not a claim.
+
+**Status:** RESEARCH BACKLOG
+
+---
+
+### IDEA-047 — Extract useful workflow patterns from systems such as Corpus Map-Reduce and Ticket Triage
+
+Study proven decomposition/coordination patterns such as:
+
+- corpus map-reduce
+- ticket triage
+- parallel investigation
+- aggregation
+- prioritization
+- routing
+- specialization
+- structured handoff
+
+Question:
+
+> **Which workflow patterns can make JARVIS materially more productive with the compute and agent limits we actually have?**
+
+The goal is to turn external workflow patterns into reusable JARVIS orchestration primitives where justified.
+
+**Status:** RESEARCH BACKLOG
+
+---
+
+## 25. New ideas — specialist model ecosystem
+
+### IDEA-048 — Test specialist/small local models rather than only large general models
+
+Candidate specialist experiments currently identified:
+
+- Nanbeige
+- Liquid
+- Phi-4
+- Gemma 4 E2B
+- Qwen 3.5 4B for image understanding/scanning
+
+Possible specialist roles include:
+
+- narrow reasoning
+- lightweight classification
+- technical analysis
+- image understanding
+- scanning/inspection
+- verification support
+- low-cost high-frequency work
+
+The goal is not to maximize the number of models.
+
+The goal is to discover whether small specialists can outperform a larger general model for specific bounded tasks while reducing cost/latency/resource usage.
+
+**Status:** EXPLORATION / MODEL TESTING
+
+---
+
+### IDEA-049 — Treat model selection as systems engineering
+
+Model choice should eventually consider:
+
+- task fitness
+- latency
+- memory/VRAM requirements
+- context capacity
+- reliability
+- structured output quality
+- tool-use compatibility
+- reasoning quality
+- verification usefulness
+- energy/resource cost
+- failure characteristics
+
+The best model for JARVIS is therefore not necessarily the largest model.
+
+The objective is:
+
+> **Best system-level result under actual resource constraints.**
+
+**Status:** OPEN DESIGN PRINCIPLE
+
+---
+
+## 26. New idea-tracing rule
+
+The ideas above should remain separate from implementation milestones until evidence shows that a particular boundary is worth engineering.
+
+For every future idea:
+
+```text
+IDEA
+ ↓
+UNDERSTAND
+ ↓
+CONNECT TO EXISTING ARCHITECTURE
+ ↓
+TEST / RESEARCH
+ ↓
+OBSERVE REAL VALUE
+ ↓
+ONLY THEN
+IMPLEMENT
+```
+
+This preserves the V1 freeze while keeping the idea space alive.
+
+
+---
+
+## 27. Current state
 
 **V1 is frozen as the operational baseline.**
 
-This ledger is intentionally **not** a command to immediately implement every idea contained here.
-
-The correct next step is to use JARVIS in real life, observe where these ideas matter, and let real evidence determine the next boundary.
+These new entries are intentionally recorded as open design/research ideas rather than automatic implementation work.
 
 > **USE → OBSERVE → IMPROVE → USE BETTER**
