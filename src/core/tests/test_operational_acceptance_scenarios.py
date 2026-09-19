@@ -295,7 +295,7 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
                 waiting.run.job.status,
                 AutonomousJobStatus.WAITING_INPUT,
             )
-            first.stop()
+            first_runtime.stop()
 
             second = ScriptedProcessor(
                 [
