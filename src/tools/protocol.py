@@ -59,6 +59,15 @@ class ToolVerificationProvider(Protocol):
 
 
 @runtime_checkable
+class ToolVerificationBindingProvider(Protocol):
+    """Registration-bound identity of the concrete verification provider."""
+
+    def verification_source_id(self, request: ToolRequest) -> str | None:
+        """Return the verifier identity bound by the capability registry."""
+        ...
+
+
+@runtime_checkable
 class ToolVerificationAdmissibilityProvider(Protocol):
     """Optional deterministic trust anchor for verification source identities."""
 
