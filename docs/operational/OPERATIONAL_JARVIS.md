@@ -565,6 +565,55 @@ Fresh exact-head verification PR #465:
 
 Temporary verifier PR #465 was closed unmerged.
 
+### OPS-16 — Ambiguous External-Effect Protection
+
+Autonomous execution now records an explicit durable in-flight attempt marker before entering the canonical processor cycle.
+
+If the process ends while that marker is present, restart recovery treats the external outcome as ambiguous:
+
+- the job is paused;
+- normal resume is blocked;
+- the unresolved attempt identity is retained;
+- the operator can reconcile the outcome as `COMPLETED` or `FAILED` with explicit evidence;
+- reconciliation never claims independent external-effect verification and never replays the action.
+
+The operator surface exposes:
+
+`:reconcile <job-id> {"outcome":"COMPLETED|FAILED","evidence":"...", ...}`
+
+The cockpit projection also exposes the bounded ambiguity state without exposing authority or hidden reasoning.
+
+```
+tool / external effect
+        ↓
+durable in-flight marker
+        ↓
+crash / restart
+        ↓
+AMBIGUOUS_EXECUTION
+        ↓
+operator reconciliation
+        ↓
+COMPLETED or FAILED
+        ↓
+no replay
+```
+
+### Exact OPS-16 verification
+
+Final feature head before documentation:
+`2960ad190887c42052771083d64255e8d8dec7ad`
+
+Fresh exact-head verification PR #470:
+- Deployment Closure Verification #220 — **SUCCESS**
+- Backend core regression: **3349/3349 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #176 — **SUCCESS**
+- CS8 Boundary Red-Team #199 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #187 — **SUCCESS**
+
+Temporary verifier PRs #467, #468, #469, and #470 were closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
