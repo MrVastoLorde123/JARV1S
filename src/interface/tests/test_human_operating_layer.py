@@ -39,6 +39,18 @@ class FakeRuntime:
         self.jobs[index] = job
         return job
 
+    def reconcile_autonomous(self, job_id, *, outcome, evidence, result=None, reason=None):
+        job = self.inspect_autonomous(job_id)
+        if job is None:
+            raise LookupError(job_id)
+        if outcome.upper() == "COMPLETED":
+            job = job.reconcile_completed(result or "reconciled", evidence)
+        else:
+            job = job.reconcile_failed(reason or "reconciled failure", evidence)
+        index = next(index for index, item in enumerate(self.jobs) if item.job_id == job_id)
+        self.jobs[index] = job
+        return job
+
     def cancel_autonomous(self, job_id):
         job = self.inspect_autonomous(job_id)
         if job is None:
@@ -87,6 +99,26 @@ class HumanOperatingLayerTests(unittest.TestCase):
         cancelled = self.operator.handle(f":cancel {job.job_id}")
         self.assertIn("Autonomous job cancelled", cancelled)
         self.assertEqual(self.runtime.inspect_autonomous(job.job_id).status.value, "CANCELLED")
+
+    def test_reconcile_command_stays_local_and_delegates_bounded_outcome(self):
+        job = AutonomousJob.create("ambiguous external operation").start().pause(
+            "Previous execution outcome is ambiguous"
+        ).with_working_context(
+            {"recovery_required": "AMBIGUOUS_EXECUTION"}
+        )
+        self.runtime.jobs.append(job)
+
+        result = self.operator.handle(
+            f':reconcile {job.job_id} '
+            '{"outcome":"FAILED","evidence":"Operator verified no external effect occurred.","reason":"No external effect committed."}',
+        )
+
+        self.assertIn("Autonomous job reconciled", result)
+        self.assertEqual(
+            self.runtime.inspect_autonomous(job.job_id).status.value,
+            "FAILED",
+        )
+        self.assertEqual(len(self.runtime.received), 0)
 
     def test_resume_command_accepts_explicit_confirmation_without_touching_normal_runtime(self):
         job = AutonomousJob.create("wait for protected action").start().wait_for_authorization(
