@@ -377,6 +377,7 @@ class OperationalContinuousRuntime:
         self._stop_event = threading.Event()
         self._lock = threading.RLock()
         self._pending_operations: dict[str, str] = {}
+        self._startup_recovery = self.recover_after_restart(time.time())
 
     @property
     def scheduler(self) -> AutonomousRuntimeScheduler:
@@ -450,6 +451,44 @@ class OperationalContinuousRuntime:
             if isinstance(operation_id, str) and operation_id.strip():
                 self._pending_operations[operation_id] = job.job_id
         return results
+
+    def recover_after_restart(self, now: float) -> dict[str, int]:
+        """Pause only in-flight jobs whose scheduler ownership is no longer active."""
+        if isinstance(now, bool) or not isinstance(now, (int, float)):
+            raise TypeError("now must be numeric")
+
+        jobs = self._persistence.list_jobs(limit=500)
+        schedules = {
+            schedule.job_id: schedule
+            for schedule in self._schedule_store.list_all(limit=500)
+        }
+        recovered = 0
+
+        for job in jobs:
+            if job.status is not AutonomousJobStatus.RUNNING:
+                continue
+
+            schedule = schedules.get(job.job_id)
+            lease_active = (
+                schedule is not None
+                and schedule.claim_token is not None
+                and schedule.lease_until is not None
+                and schedule.lease_until > now
+            )
+            if lease_active:
+                continue
+
+            paused = job.pause(
+                "Runtime restarted while this job was in-flight; explicit resume is required."
+            )
+            self._persistence.persist(paused)
+            if schedule is not None:
+                self._schedule_store.delete(job.job_id)
+            recovered += 1
+
+        return {
+            "running_jobs_paused": recovered,
+        }
 
     def reconcile_durable_state(self, now: float) -> dict[str, int]:
         """Repair safe job/schedule drift without reviving RUNNING work."""
