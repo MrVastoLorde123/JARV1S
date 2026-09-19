@@ -8,6 +8,7 @@ memory, or grant authority. A claim may be evaluated only from supplied evidence
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 import hashlib
 import json
@@ -178,12 +179,20 @@ class ClaimEvaluation:
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
     verification_freshness: VerificationFreshness = VerificationFreshness.UNASSESSED
+    verification_fresh_until: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.claim, Claim):
             raise TypeError("claim must be a Claim")
         if not isinstance(self.state, ClaimState):
             raise TypeError("state must be a ClaimState")
+        if self.verification_fresh_until is not None:
+            if not isinstance(self.verification_fresh_until, str) or not self.verification_fresh_until.strip():
+                raise TypeError("verification_fresh_until must be a non-empty string or None")
+            try:
+                datetime.fromisoformat(self.verification_fresh_until.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError("verification_fresh_until must be an ISO timestamp") from exc
         if not isinstance(self.verification_freshness, VerificationFreshness):
             try:
                 object.__setattr__(
@@ -227,17 +236,30 @@ class ClaimEvidenceEvaluator:
         verification_refs = tuple(item.evidence_id for item in verification_evidence)
 
         freshness_values: list[VerificationFreshness] = []
+        freshness_deadlines: list[str] = []
         for item in verification_evidence:
             raw = item.payload.get("verification_freshness_state")
             if raw is None:
                 raw = item.provenance.get("verification_freshness_state")
             if raw is None:
                 freshness_values.append(VerificationFreshness.UNASSESSED)
-                continue
-            try:
-                freshness_values.append(VerificationFreshness(raw))
-            except (TypeError, ValueError):
-                freshness_values.append(VerificationFreshness.UNKNOWN)
+            else:
+                try:
+                    freshness_values.append(VerificationFreshness(raw))
+                except (TypeError, ValueError):
+                    freshness_values.append(VerificationFreshness.UNKNOWN)
+
+            deadline = item.payload.get("verification_fresh_until")
+            if deadline is None:
+                deadline = item.provenance.get("verification_fresh_until")
+            if isinstance(deadline, str) and deadline.strip():
+                try:
+                    datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+                except ValueError:
+                    freshness_deadlines = []
+                    continue
+                freshness_deadlines.append(deadline)
+
 
         if not freshness_values:
             verification_freshness = VerificationFreshness.UNASSESSED
@@ -278,6 +300,16 @@ class ClaimEvidenceEvaluator:
             evidence_refs=evidence_refs,
             verification_refs=verification_refs,
             verification_freshness=verification_freshness,
+            verification_fresh_until=(
+                min(
+                    freshness_deadlines,
+                    key=lambda value: datetime.fromisoformat(
+                        value.replace("Z", "+00:00")
+                    ).astimezone(timezone.utc),
+                )
+                if freshness_deadlines
+                else None
+            ),
         )
 
     @staticmethod
