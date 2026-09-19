@@ -434,6 +434,7 @@ class OperationalContinuousRuntime:
         max_backoff_multiplier: int = 8,
     ) -> tuple[AutonomousRuntimeScheduleResult, ...]:
         current_time = time.time() if now is None else now
+        self.reconcile_durable_state(current_time)
         results = self._scheduler.tick(
             current_time,
             max_jobs=max_jobs,
@@ -448,6 +449,45 @@ class OperationalContinuousRuntime:
             if isinstance(operation_id, str) and operation_id.strip():
                 self._pending_operations[operation_id] = job.job_id
         return results
+
+    def reconcile_durable_state(self, now: float) -> dict[str, int]:
+        """Repair safe job/schedule drift without reviving RUNNING work."""
+        if isinstance(now, bool) or not isinstance(now, (int, float)):
+            raise TypeError("now must be numeric")
+
+        jobs = self._persistence.list_jobs(limit=500)
+        schedules = self._schedule_store.list_all(limit=500)
+        jobs_by_id = {job.job_id: job for job in jobs}
+        schedules_by_id = {schedule.job_id: schedule for schedule in schedules}
+
+        removed_schedules = 0
+        restored_schedules = 0
+
+        for job in jobs:
+            schedule = schedules_by_id.get(job.job_id)
+            if job.terminal or job.resumable:
+                if schedule is not None and self._schedule_store.delete(job.job_id):
+                    removed_schedules += 1
+                continue
+
+            if job.status is AutonomousJobStatus.QUEUED and schedule is None:
+                self._schedule_store.save(
+                    __import__("src.runtime.autonomous_runtime_scheduler", fromlist=["AutonomousRuntimeSchedule"]).AutonomousRuntimeSchedule(
+                        job_id=job.job_id,
+                        next_due=float(now),
+                        interval=max(self._poll_interval, 1.0),
+                    )
+                )
+                restored_schedules += 1
+
+        for schedule in schedules:
+            if schedule.job_id not in jobs_by_id and self._schedule_store.delete(schedule.job_id):
+                removed_schedules += 1
+
+        return {
+            "queued_schedules_restored": restored_schedules,
+            "stale_schedules_removed": removed_schedules,
+        }
 
     def reconcile_confirmation(self, metadata: Mapping[str, Any]) -> AutonomousJob | None:
         """Synchronize an externally confirmed JARVIS operation into its waiting job."""
@@ -541,6 +581,7 @@ class OperationalContinuousRuntime:
             raise LookupError(f"autonomous job not found: {job_id}")
         cancelled = job.cancel(reason)
         self._persistence.persist(cancelled)
+        self._schedule_store.delete(job_id)
         return cancelled
 
     def start(self) -> None:
