@@ -38,11 +38,16 @@ class ExternalVerificationState(str, Enum):
 class ExternalObservation:
     observation_id: str
     source: str
+    subject_ref: str
     payload: Mapping[str, Any]
     provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        for field_name, value in (("observation_id", self.observation_id), ("source", self.source)):
+        for field_name, value in (
+            ("observation_id", self.observation_id),
+            ("source", self.source),
+            ("subject_ref", self.subject_ref),
+        ):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
         if not isinstance(self.payload, Mapping):
@@ -80,6 +85,7 @@ class ToolOutcome:
     outcome_id: str
     tool_name: str
     invocation_id: str | None
+    target_ref: str
     execution_state: ToolExecutionState
     observation_state: ExternalObservationState
     verification_state: ExternalVerificationState
@@ -89,7 +95,11 @@ class ToolOutcome:
     truth_established: bool = False
 
     def __post_init__(self) -> None:
-        for field_name, value in (("outcome_id", self.outcome_id), ("tool_name", self.tool_name)):
+        for field_name, value in (
+            ("outcome_id", self.outcome_id),
+            ("tool_name", self.tool_name),
+            ("target_ref", self.target_ref),
+        ):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
         if self.invocation_id is not None and not isinstance(self.invocation_id, str):
@@ -134,6 +144,7 @@ class ToolOutcome:
             "tool_outcome_id": self.outcome_id,
             "tool_name": self.tool_name,
             "invocation_id": self.invocation_id,
+            "target_ref": self.target_ref,
             "execution_state": self.execution_state.value,
             "observation_state": self.observation_state.value,
             "verification_state": self.verification_state.value,
@@ -180,9 +191,22 @@ class ToolOutcomeService:
             if result.success
             else ToolExecutionState.FAILED
         )
+        target_payload = {
+            "tool_name": request.tool_name.strip().lower(),
+            "arguments": dict(request.arguments),
+        }
+        target_encoded = json.dumps(
+            target_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=repr,
+        ).encode("utf-8")
+        target_ref = f"tool-target-{hashlib.sha256(target_encoded).hexdigest()[:24]}"
+
         payload = {
             "tool_name": request.tool_name.strip().lower(),
             "invocation_id": execution_invocation_id,
+            "target_ref": target_ref,
             "execution_state": execution_state.value,
             "success": result.success,
         }
@@ -192,6 +216,7 @@ class ToolOutcomeService:
             outcome_id=outcome_id,
             tool_name=result.tool_name,
             invocation_id=execution_invocation_id,
+            target_ref=target_ref,
             execution_state=execution_state,
             observation_state=ExternalObservationState.NOT_OBSERVED,
             verification_state=ExternalVerificationState.UNVERIFIED,
@@ -211,6 +236,7 @@ class ToolOutcomeService:
             outcome_id=outcome.outcome_id,
             tool_name=outcome.tool_name,
             invocation_id=outcome.invocation_id,
+            target_ref=outcome.target_ref,
             execution_state=outcome.execution_state,
             observation_state=ExternalObservationState.OBSERVED,
             verification_state=outcome.verification_state,
@@ -228,6 +254,8 @@ class ToolOutcomeService:
             raise TypeError("outcome must be a ToolOutcome")
         if not outcome.observed or outcome.observation is None:
             raise ValueError("external verification requires an observed outcome")
+        if outcome.observation.subject_ref != outcome.target_ref:
+            raise ValueError("external observation is scoped to a different execution target")
         if not isinstance(verification, ExternalVerification):
             raise TypeError("verification must be an ExternalVerification")
         if verification.observation_id != outcome.observation.observation_id:
