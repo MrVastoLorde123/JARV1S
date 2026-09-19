@@ -83,14 +83,25 @@ class JARVISAutonomousWorker:
     selection, execution, or learning authority.
     """
 
-    def __init__(self, processor, *, max_recovery_attempts: int = 2) -> None:
-        if not callable(getattr(processor, "ask", None)):
+    def __init__(
+        self,
+        processor=None,
+        *,
+        processor_factory=None,
+        max_recovery_attempts: int = 2,
+    ) -> None:
+        if processor is None and processor_factory is None:
+            raise ValueError("processor or processor_factory is required")
+        if processor is not None and not callable(getattr(processor, "ask", None)):
             raise TypeError("processor must provide ask(query)")
+        if processor_factory is not None and not callable(processor_factory):
+            raise TypeError("processor_factory must be callable")
         if isinstance(max_recovery_attempts, bool) or not isinstance(max_recovery_attempts, int):
             raise TypeError("max_recovery_attempts must be an integer")
         if max_recovery_attempts < 0:
             raise ValueError("max_recovery_attempts must be non-negative")
         self._processor = processor
+        self._processor_factory = processor_factory
         self._max_recovery_attempts = max_recovery_attempts
 
     def run_cycle(self, job: AutonomousJob) -> AutonomousCycleResult:
@@ -98,8 +109,28 @@ class JARVISAutonomousWorker:
             raise TypeError("job must be an AutonomousJob")
 
         prompt = self._build_prompt(job)
+        processor = self._processor
         try:
-            response = self._processor.ask(prompt)
+            if self._processor_factory is not None:
+                processor = self._processor_factory(job)
+            if not callable(getattr(processor, "ask", None)):
+                raise TypeError("processor factory must return an object providing ask(query)")
+            response = processor.ask(prompt)
+            record_turn = getattr(processor, "record_operational_turn", None)
+            if callable(record_turn):
+                try:
+                    record_turn(prompt, _safe_text(getattr(response, "content", "")))
+                except Exception as context_exc:
+                    # Operational context persistence is observational: never
+                    # convert a successful execution into a retry or authority.
+                    context_persistence_error = {
+                        "error_type": type(context_exc).__name__,
+                        "error": str(context_exc),
+                    }
+                else:
+                    context_persistence_error = None
+            else:
+                context_persistence_error = None
         except Exception as exc:
             attempts = self._recovery_attempts(job)
             if attempts < self._max_recovery_attempts:
@@ -136,6 +167,8 @@ class JARVISAutonomousWorker:
             "content": content,
             "metadata": _safe_metadata(metadata),
         }
+        if context_persistence_error is not None:
+            response_context["context_persistence_error"] = context_persistence_error
 
         if stage == "CONFIRMATION":
             operation_id = metadata.get("operation_id")
