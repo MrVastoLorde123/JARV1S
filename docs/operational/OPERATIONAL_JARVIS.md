@@ -1010,6 +1010,66 @@ Focused regressions added:
 
 Temporary verifier PR #500 was closed **unmerged**.
 
+
+### OPS-27 — Verification Provenance and Source Admissibility
+
+Typed verification evidence is no longer sufficient by itself to reach `VERIFIED` on the live capability path.
+
+The boundary is now:
+
+```
+CAPABILITY
+    ↓
+typed observation / verification
+    ↓
+verification provenance
+    ↓
+registered capability's admissible source set
+    ↓
+ToolOutcomeService
+    ↓
+VERIFIED or UNADMITTED
+```
+
+`ExternalVerification` now carries typed `VerificationProvenance` identifying the verification source, source kind, and method.
+
+A capability's registered `ToolDefinition` may declare `admissible_verification_sources`. The live `ToolService` exposes that deterministic allowlist to the execution boundary. The verification payload cannot make its own source admissible.
+
+Therefore:
+
+- typed provenance identifies where verification evidence claims to come from;
+- admissibility comes from the registered capability contract, not from the evidence payload;
+- a typed verification from an unconfigured source becomes `UNADMITTED`, not `VERIFIED`;
+- provenance whose source identity does not match the declared verifier is also unadmitted;
+- admissibility does not establish truth, certainty, authority, authorization, retry permission, or policy mutation;
+- direct legacy `ToolOutcomeService.verify()` callers retain compatibility, while the live capability path always supplies an explicit admissibility set.
+
+This closes the next semantic leak: **typed evidence ≠ trusted evidence ≠ truth**.
+
+### Exact OPS-27 verification
+
+Implementation head:
+`6a74171cf02c4f3131acfc6033f4e14a1ffb62a3`
+
+Fresh exact-head verifier PR #502, based on:
+`8e3adf736dff884a169ecb55cb8718cc74413e03`
+
+Verification matrix:
+- Deployment Closure Verification #321 — **SUCCESS**
+- Backend core regression: **3377/3377 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #277 — **SUCCESS**
+- CS8 Boundary Red-Team #300 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #288 — **SUCCESS**
+
+Focused regressions added:
+- registered capability definitions normalize and validate admissible verifier source IDs;
+- typed but unadmitted verification remains `UNADMITTED` and cannot aggregate to `VERIFIED`;
+- admissible capability-provided provenance can reach `VERIFIED`;
+- mismatched observation scope and untyped evidence remain blocked.
+
+Temporary verifier PR #502 was closed **unmerged**.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
