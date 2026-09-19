@@ -52,6 +52,18 @@ class ContinuityToolGateway(ToolCapabilityGateway):
 
     def invoke(self, request: ToolRequest):
         self.calls.append(request)
+        if len(self.calls) == 1:
+            from src.tools.models import ToolError
+
+            return ToolResult(
+                success=False,
+                tool_name=request.tool_name,
+                error=ToolError(
+                    code="ops_10_failure",
+                    message="first autonomous cycle failed",
+                ),
+                invocation_id=request.invocation_id,
+            )
         return ToolResult(
             success=True,
             tool_name=request.tool_name,
@@ -193,20 +205,16 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
             )
 
             first = runtime.tick(100)[0]
-            self.assertEqual(first.run.job.status.value, "COMPLETED")
+            self.assertEqual(first.run.job.status.value, "RUNNING")
+            self.assertEqual(
+                first.run.job.working_context["recovery_attempts"],
+                1,
+            )
 
             self.assertEqual(len(processors), 1)
             first_turns = processors[0].conversation.snapshot().turns
             self.assertEqual(len(first_turns), 2)
-            self.assertEqual(first_turns[0].role, "user")
-            self.assertEqual(first_turns[1].role, "assistant")
 
-            second_job = runtime.submit(
-                "Continue the current runtime status task.",
-                now=110,
-                interval=10,
-                job_id=f"{job.job_id}-second",
-            )
             second = runtime.tick(110)[0]
             self.assertEqual(second.run.job.status.value, "COMPLETED")
 
@@ -216,8 +224,7 @@ class OPS10AutonomousContextContinuityTests(unittest.TestCase):
                 tuple((turn.role, turn.content) for turn in second_turns[:2]),
                 tuple((turn.role, turn.content) for turn in first_turns),
             )
-            self.assertEqual(gateway.calls.__len__(), 2)
-            del second_job
+            self.assertEqual(len(gateway.calls), 2)
 
     def test_operational_turn_is_idempotent(self):
         conversation_store = StubConversationStore()
