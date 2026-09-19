@@ -42,6 +42,17 @@ class VerificationFreshnessState(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class ExternalOutcomeState(str, Enum):
+    """Aggregate external-outcome claim state for a completed execution."""
+
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    EXECUTED_UNVERIFIED = "EXECUTED_UNVERIFIED"
+    OBSERVED_UNVERIFIED = "OBSERVED_UNVERIFIED"
+    VERIFIED = "VERIFIED"
+    CONTRADICTED = "CONTRADICTED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+
+
 @dataclass(frozen=True)
 class ExternalObservation:
     observation_id: str
@@ -165,6 +176,7 @@ class ToolOutcome:
             "observation_state": self.observation_state.value,
             "verification_state": self.verification_state.value,
             "verification_freshness_state": self.freshness_state.value,
+            "external_outcome_state": ToolOutcomeService.aggregate((self,)).value,
             "executed": self.executed,
             "observed": self.observed,
             "verified": self.verified,
@@ -177,6 +189,31 @@ class ToolOutcome:
                 () if self.verification is None else self.verification.evidence_refs
             ),
         }
+
+
+    @staticmethod
+    def aggregate(outcomes: tuple[ToolOutcome, ...] | list[ToolOutcome]) -> ExternalOutcomeState:
+        """Aggregate tool evidence without converting it into truth."""
+        if not isinstance(outcomes, (tuple, list)):
+            raise TypeError("outcomes must be a tuple or list of ToolOutcome")
+        if not outcomes:
+            return ExternalOutcomeState.NOT_APPLICABLE
+        if any(not isinstance(outcome, ToolOutcome) for outcome in outcomes):
+            raise TypeError("outcomes must contain only ToolOutcome values")
+
+        states = {outcome.verification_state for outcome in outcomes}
+        if ExternalVerificationState.CONTRADICTED in states:
+            return ExternalOutcomeState.CONTRADICTED
+        if ExternalVerificationState.INCONCLUSIVE in states:
+            return ExternalOutcomeState.INCONCLUSIVE
+        if states == {ExternalVerificationState.VERIFIED}:
+            return ExternalOutcomeState.VERIFIED
+        if any(
+            outcome.observation_state is ExternalObservationState.OBSERVED
+            for outcome in outcomes
+        ):
+            return ExternalOutcomeState.OBSERVED_UNVERIFIED
+        return ExternalOutcomeState.EXECUTED_UNVERIFIED
 
 
 class ToolOutcomeService:
@@ -365,6 +402,7 @@ __all__ = [
     "ExternalObservationState",
     "ExternalVerification",
     "ExternalVerificationState",
+    "ExternalOutcomeState",
     "ToolExecutionState",
     "ToolOutcome",
     "ToolOutcomeService",
