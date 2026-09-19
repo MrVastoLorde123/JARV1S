@@ -332,14 +332,19 @@ class OperationalContinuousRuntime:
 
     def __init__(
         self,
-        processor,
+        processor=None,
         *,
+        processor_factory=None,
         connection_factory=None,
         max_recovery_attempts: int = 2,
         poll_interval: float = 1.0,
     ) -> None:
-        if not callable(getattr(processor, "ask", None)):
+        if processor is None and processor_factory is None:
+            raise ValueError("processor or processor_factory is required")
+        if processor is not None and not callable(getattr(processor, "ask", None)):
             raise TypeError("processor must provide ask(query)")
+        if processor_factory is not None and not callable(processor_factory):
+            raise TypeError("processor_factory must be callable")
         if connection_factory is not None and not callable(connection_factory):
             raise TypeError("connection_factory must be callable")
         if isinstance(poll_interval, bool) or not isinstance(poll_interval, (int, float)) or poll_interval <= 0:
@@ -353,6 +358,7 @@ class OperationalContinuousRuntime:
         self._schedule_store = SQLiteAutonomousRuntimeScheduleStore(factory)
         self._worker = JARVISAutonomousWorker(
             processor,
+            processor_factory=processor_factory,
             max_recovery_attempts=max_recovery_attempts,
         )
         self._pulse = AutonomousJobExecutionPulse(
