@@ -14,6 +14,7 @@ from src.tools.outcome import (
     ExternalOutcomeState,
     ExternalVerification,
     ToolOutcomeService,
+    VerificationProvenance,
 )
 from src.tools.registry import ToolRegistry
 from src.tools.service import ToolService
@@ -28,6 +29,7 @@ class CapabilityEvidenceHandler:
             input_schema={"type": "object"},
             output_schema={"type": "object"},
             risk_level=RiskLevel.LOW,
+            admissible_verification_sources=("capability-checker",),
         )
 
     def execute(self, request: ToolRequest) -> ToolResult:
@@ -62,6 +64,11 @@ class CapabilityEvidenceHandler:
             observation_id=observation.observation_id,
             verifier="capability-checker",
             passed=True,
+            provenance=VerificationProvenance(
+                source_id="capability-checker",
+                source_kind="status_reader",
+                method="status_match",
+            ),
         )
 
 
@@ -98,6 +105,47 @@ class ObservationOnlyInvoker:
             observation_id=observation.observation_id,
             verifier="capability-checker",
             passed=True,
+        )
+
+
+class NonAdmissibleTypedEvidenceInvoker:
+    def invoke(self, request: ToolRequest) -> ToolResult:
+        return ToolResult(
+            success=True,
+            tool_name=request.tool_name,
+            content={"status": "ok"},
+            invocation_id=request.invocation_id,
+        )
+
+    def provide_external_observation(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+    ) -> ExternalObservation:
+        classified = ToolOutcomeService.classify(request, result)
+        return ExternalObservation(
+            observation_id="obs-untrusted",
+            source="untrusted-reader",
+            subject_ref=classified.target_ref,
+            payload={"status": "ok"},
+        )
+
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification-untrusted",
+            observation_id=observation.observation_id,
+            verifier="untrusted-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="untrusted-checker",
+                source_kind="status_reader",
+                method="status_match",
+            ),
         )
 
 
@@ -184,6 +232,23 @@ class OPS26CapabilityEvidenceTests(unittest.TestCase):
             ExternalOutcomeState.OBSERVED_UNVERIFIED,
             ToolOutcomeService.aggregate((outcome,)),
         )
+        self.assertTrue(outcome.observed)
+        self.assertFalse(outcome.verified)
+
+
+    def test_typed_but_unadmissible_verification_cannot_reach_verified(self):
+        handler = ToolPlanStepHandler(NonAdmissibleTypedEvidenceInvoker())
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNADMITTED", outcome.verification_state.value)
         self.assertTrue(outcome.observed)
         self.assertFalse(outcome.verified)
 
