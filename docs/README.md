@@ -1,14 +1,17 @@
 # JARVIS Documentation
 
-This directory contains the architectural documentation, milestone records, and Architecture Decision Records (ADRs) for JARVIS.
+This directory contains the architectural documentation, milestone records, operational guides, and Architecture Decision Records (ADRs) for JARVIS.
 
-## Current Status
+## Current Operational Baseline
 
-**M7 — Deterministic Authority Pipeline: CLOSED**
+**JARVIS V1 — OPERATIONAL / DAILY-DRIVEN FREEZE**
 
-M7 ends at a provider-neutral execution handoff. The system can establish that an action is authorized and integrity-valid without allowing the semantic layer itself to execute it.
+The current operational feature branch has crossed the pre-operational assembly boundary. JARVIS can now be driven as a living system through its canonical runtime, human operator surface, durable autonomous jobs, restart-safe lifecycle, outcome evidence, verification, and bounded learning.
 
-Verified state at M7.10: **884 / 884 tests passing**.
+- [JARVIS V1 User Guide](JARVIS_V1_USER_GUIDE.md) — detailed operator manual for daily use, autonomous work, verification, recovery, UI, and troubleshooting
+- [JARVIS V1 Freeze and Post-V1 Milestone Map](JARVIS_V1_FREEZE_AND_NEXT_MILESTONE.md) — frozen baseline, V1 scope, post-V1 engineering doctrine, and candidate V2 north star
+- [Operational JARVIS](operational/OPERATIONAL_JARVIS.md) — implementation receipts and causal-boundary history
+- [Running JARVIS Locally](operations/RUNNING_JARVIS_LOCAL.md) — local startup and deployment instructions
 
 ## Architecture Guides
 
@@ -25,7 +28,7 @@ Verified state at M7.10: **884 / 884 tests passing**.
 
 - [M7 Complete](milestones/M7_COMPLETE.md) — final M7 scope and closure boundary
 
-Earlier milestones remain represented by their implementation and ADR history.
+Earlier milestones remain represented by their implementation and ADR history. The live feature branch, implementation, tests, and verified receipts override stale historical summaries.
 
 ## Architecture Decision Records
 
