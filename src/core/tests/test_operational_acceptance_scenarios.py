@@ -215,7 +215,7 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
         )
 
         memory_id = add_memory(
-            content="User is building JARVIS.",
+            content="User is building the JARVIS project.",
             category="PROJECT",
             memory_key="acceptance_building_jarvis",
             source_conversation_id=conversation.conversation_id,
@@ -250,13 +250,13 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
             ),
         )
 
-        response = restarted_runtime.ask("Report the current JARVIS runtime status.")
+        response = restarted_runtime.ask("Report the JARVIS project status.")
 
         cognitive = response.metadata["cognitive_context"]
         self.assertIn(str(memory_id), cognitive["memory_ids"])
         self.assertEqual(
             cognitive["working_context"]["context"]["items"][0]["content"],
-            "User is building JARVIS.",
+            "User is building the JARVIS project.",
         )
         self.assertEqual(
             tuple(
