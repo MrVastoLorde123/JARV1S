@@ -1,13 +1,12 @@
 """OPS-07: bounded operational experience, learning, and future-behavior hints."""
 from __future__ import annotations
 
+import hashlib
 import json
 import re
-import uuid
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime, timezone
-import hashlib
+from enum import Enum
 from typing import Any, Mapping
 
 from src.core.memory_provenance import ProvenanceChain, ProvenanceRef, ProvenanceSourceKind
