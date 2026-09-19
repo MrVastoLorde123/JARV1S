@@ -218,6 +218,22 @@ class ToolOutcome:
             "verification_evidence_refs": (
                 () if self.verification is None else self.verification.evidence_refs
             ),
+            "verification_source_id": (
+                None if self.verification is None
+                else self.verification.provenance.source_id
+            ),
+            "verification_source_kind": (
+                None if self.verification is None
+                else self.verification.provenance.source_kind
+            ),
+            "verification_method": (
+                None if self.verification is None
+                else self.verification.provenance.method
+            ),
+            "verification_source_admissible": (
+                None if self.verification is None
+                else self.verification_state is not ExternalVerificationState.UNADMITTED
+            ),
         }
 
 
@@ -421,7 +437,7 @@ class ToolOutcomeService:
         outcome: ToolOutcome,
         verification: ExternalVerification,
         *,
-        admissible_sources: tuple[str, ...] | list[str] | set[str] = (),
+        admissible_sources: tuple[str, ...] | list[str] | set[str] | None = None,
     ) -> ToolOutcome:
         if not isinstance(outcome, ToolOutcome):
             raise TypeError("outcome must be a ToolOutcome")
@@ -433,13 +449,19 @@ class ToolOutcomeService:
             raise TypeError("verification must be an ExternalVerification")
         if verification.observation_id != outcome.observation.observation_id:
             raise ValueError("verification must reference the exact observation identity")
-        if not isinstance(admissible_sources, (tuple, list, set)):
-            raise TypeError("admissible_sources must be a tuple, list, or set")
-        normalized_sources = {
-            source.strip()
-            for source in admissible_sources
-            if isinstance(source, str) and source.strip()
-        }
+        if admissible_sources is None:
+            # Preserve direct ToolOutcomeService callers from the pre-OPS-27
+            # contract. The live capability path always supplies an explicit
+            # configured source set, including an empty set when none is trusted.
+            normalized_sources = {verification.verifier}
+        elif not isinstance(admissible_sources, (tuple, list, set)):
+            raise TypeError("admissible_sources must be a tuple, list, set, or None")
+        else:
+            normalized_sources = {
+                source.strip()
+                for source in admissible_sources
+                if isinstance(source, str) and source.strip()
+            }
 
         if (
             verification.provenance.source_id != verification.verifier
