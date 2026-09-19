@@ -713,6 +713,43 @@ Fresh exact-head verification PR #479:
 
 Temporary verifier PR #479 was closed unmerged.
 
+### OPS-20 — Current Verification Admissibility
+
+M30 consequence eligibility now distinguishes historical verification from verification admissible for a current-state boundary.
+
+A `ConsequenceRequest` may explicitly declare `requires_current_verification=true`.
+
+```
+VERIFIED + historical
+        ↓
+ordinary evidence-gated consequence → allowed as before
+
+VERIFIED + FRESH
+        ↓
+current-evidence consequence → ALLOW
+
+VERIFIED + STALE / UNKNOWN / UNASSESSED
+        ↓
+current-evidence consequence → REQUIRE_REVIEW
+```
+
+This does not invalidate historical evidence and does not create authority. It only prevents temporal uncertainty from satisfying a boundary that explicitly requires current evidence.
+
+### Exact OPS-20 verification
+
+Feature head:
+`a5c1bf0c67cc5d73f0f07aaa74a8524b5c91e1de`
+
+Fresh exact-head verification PR #481:
+- Deployment Closure Verification #250 — **SUCCESS**
+- Backend core regression: **3359/3359 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #206 — **SUCCESS**
+- CS8 Boundary Red-Team #229 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #217 — **SUCCESS**
+
+Temporary verifier PR #481 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
