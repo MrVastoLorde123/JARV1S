@@ -891,6 +891,11 @@ class JARVIS:
         else:
             content = "The task could not be completed.\n\n" + (execution.error or "Execution failed.")
 
+        tool_outcomes = tuple(
+            step.metadata["tool_outcome"]
+            for step in execution.steps
+            if isinstance(step.metadata, dict) and "tool_outcome" in step.metadata
+        )
         return JARVISResponse(
             content=content,
             ai_response=None,
@@ -904,6 +909,7 @@ class JARVIS:
                 "step_count": execution.step_count,
                 "failed_steps": tuple(step.step_id for step in execution.failed_steps),
                 "execution_outputs": outputs,
+                "tool_outcomes": tool_outcomes,
                 "execution_plan_cognitive_context": plan.metadata.get("cognitive_context"),
             },
         )
