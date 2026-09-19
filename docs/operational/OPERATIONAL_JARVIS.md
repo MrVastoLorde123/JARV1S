@@ -452,6 +452,42 @@ Fresh exact-head verification PR #458:
 
 Temporary verifier PR #458 was closed unmerged.
 
+### OPS-13 — Durable Lifecycle Self-Healing
+
+The autonomous runtime now treats durable job state and scheduler state as a recoverable pair rather than assuming every write boundary succeeds perfectly.
+
+Safe reconciliation rules:
+
+- `QUEUED` jobs without a schedule are requeued at the next reconciliation point.
+- `WAITING_*` and terminal jobs have stale schedules removed.
+- schedules whose job no longer exists are deleted.
+- `RUNNING` jobs are not blindly resurrected; that avoids duplicating active work after an ambiguous crash.
+- explicit cancellation removes its schedule immediately.
+
+```
+durable jobs ↔ durable schedules
+       ↓
+reconcile_durable_state()
+       ├─ restore safe queued work
+       ├─ remove stale scheduling
+       └─ preserve running-work safety
+```
+
+### Exact OPS-13 verification
+
+Feature head:
+`5ee341374b5b993c14a50c38c4ff6a6073845a70`
+
+Fresh exact-head verification PR #460:
+- Deployment Closure Verification #188 — **SUCCESS**
+- Backend core regression: **3342/3342 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #144 — **SUCCESS**
+- CS8 Boundary Red-Team #167 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #155 — **SUCCESS**
+
+Temporary verifier PR #460 was closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
