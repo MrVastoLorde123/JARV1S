@@ -22,6 +22,7 @@ from src.runtime.autonomous_job_resume import (
 )
 from src.runtime.autonomous_runtime_schedule_persistence import SQLiteAutonomousRuntimeScheduleStore
 from src.runtime.autonomous_runtime_scheduler import (
+    AutonomousRuntimeSchedule,
     AutonomousRuntimeScheduleResult,
     AutonomousRuntimeScheduler,
 )
@@ -472,7 +473,7 @@ class OperationalContinuousRuntime:
 
             if job.status is AutonomousJobStatus.QUEUED and schedule is None:
                 self._schedule_store.save(
-                    __import__("src.runtime.autonomous_runtime_scheduler", fromlist=["AutonomousRuntimeSchedule"]).AutonomousRuntimeSchedule(
+                    AutonomousRuntimeSchedule(
                         job_id=job.job_id,
                         next_due=float(now),
                         interval=max(self._poll_interval, 1.0),
