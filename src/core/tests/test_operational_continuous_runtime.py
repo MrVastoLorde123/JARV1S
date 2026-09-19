@@ -88,6 +88,73 @@ class OPS08ContinuousRuntimeTests(unittest.TestCase):
             self.assertTrue(all(job.status is AutonomousJobStatus.QUEUED for job in jobs))
 
 
+    def test_restart_recovery_pauses_running_job_after_expired_lease(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "restart.db"
+            first = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            job = first.submit(
+                "Recover in-flight work safely.",
+                now=100,
+                interval=10,
+            )
+            running = first.inspect(job.job_id).start()
+            first.persistence.persist(running)
+
+            schedule = first.scheduler._store.list_all()[0]
+            first.scheduler._store.claim(
+                schedule,
+                time.time() - 2.0,
+                0.5,
+            )
+
+            second_processor = ScriptedProcessor([])
+            second = OperationalContinuousRuntime(
+                second_processor,
+                connection_factory=db_factory(path),
+            )
+
+            restored = second.inspect(job.job_id)
+            self.assertEqual(restored.status, AutonomousJobStatus.PAUSED)
+            self.assertIn("Runtime restarted", restored.waiting_reason)
+            self.assertEqual(second.scheduler._store.list_all(), ())
+            self.assertEqual(len(second_processor.calls), 0)
+
+    def test_restart_recovery_does_not_pause_job_with_active_lease(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "restart-active.db"
+            first = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+            job = first.submit(
+                "Preserve work owned by a live scheduler.",
+                now=100,
+                interval=10,
+            )
+            running = first.inspect(job.job_id).start()
+            first.persistence.persist(running)
+
+            schedule = first.scheduler._store.list_all()[0]
+            first.scheduler._store.claim(
+                schedule,
+                time.time(),
+                60.0,
+            )
+
+            second = OperationalContinuousRuntime(
+                ScriptedProcessor([]),
+                connection_factory=db_factory(path),
+            )
+
+            restored = second.inspect(job.job_id)
+            self.assertEqual(restored.status, AutonomousJobStatus.RUNNING)
+            schedules = second.scheduler._store.list_all()
+            self.assertEqual(len(schedules), 1)
+            self.assertIsNotNone(schedules[0].claim_token)
+
     def test_reconcile_restores_missing_schedule_for_queued_job(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "jarvis.db"
