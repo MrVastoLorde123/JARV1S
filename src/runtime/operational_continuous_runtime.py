@@ -49,11 +49,21 @@ def _safe_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "capability",
         "capability_realized",
         "operational_learning_status",
+        "external_outcome_state",
+        "external_outcome_verified",
     ):
         if key in metadata:
             value = metadata[key]
             if isinstance(value, (str, int, float, bool)) or value is None:
                 safe[key] = value
+    tool_outcomes = metadata.get("tool_outcomes")
+    if isinstance(tool_outcomes, (tuple, list)):
+        safe["tool_outcomes"] = tuple(
+            dict(outcome)
+            for outcome in tool_outcomes[:8]
+            if isinstance(outcome, Mapping)
+        )
+
     learning = metadata.get("operational_learning")
     if isinstance(learning, Mapping):
         safe["operational_learning"] = {
