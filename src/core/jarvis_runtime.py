@@ -131,6 +131,11 @@ class JARVISRuntime:
             raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
         return self._operational_runtime.resume(job_id, **kwargs)
 
+    def reconcile_autonomous(self, job_id: str, **kwargs):
+        if self._operational_runtime is None:
+            raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
+        return self._operational_runtime.reconcile_ambiguous_execution(job_id, **kwargs)
+
     def cancel_autonomous(self, job_id: str, reason: str = "Autonomous job cancelled"):
         if self._operational_runtime is None:
             raise RuntimeError("JARVISRuntime has no operational autonomous runtime configured")
