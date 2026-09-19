@@ -66,6 +66,7 @@ class ConsequenceDecision:
     evidence_refs: tuple[str, ...]
     verification_refs: tuple[str, ...]
     verification_freshness: VerificationFreshness = VerificationFreshness.UNASSESSED
+    verification_valid_until: str | None = None
 
     @property
     def eligible(self) -> bool:
@@ -107,14 +108,18 @@ class EvidenceGatedConsequencePolicy:
         if consequence.kind in self._REQUIRED_VERIFICATION:
             if state is ClaimState.VERIFIED:
                 if consequence.requires_current_verification:
-                    if evaluation.verification_freshness is VerificationFreshness.FRESH:
+                    if (
+                        evaluation.verification_freshness is VerificationFreshness.FRESH
+                        and evaluation.verification_valid_until is not None
+                    ):
                         action = ConsequenceAction.ALLOW
-                        reason = "required current verification evidence is fresh"
+                        reason = "required current verification evidence is fresh and time-bounded"
                     else:
                         action = ConsequenceAction.REQUIRE_REVIEW
                         reason = (
                             "verification is historical but not admissible as current evidence: "
-                            f"{evaluation.verification_freshness.value}"
+                            f"{evaluation.verification_freshness.value}; "
+                            f"valid_until={evaluation.verification_valid_until}"
                         )
                 else:
                     action = ConsequenceAction.ALLOW
@@ -144,6 +149,7 @@ class EvidenceGatedConsequencePolicy:
             evidence_refs=evaluation.evidence_refs,
             verification_refs=evaluation.verification_refs,
             verification_freshness=evaluation.verification_freshness,
+            verification_valid_until=evaluation.verification_valid_until,
         )
 
 
