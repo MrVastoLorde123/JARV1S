@@ -30,6 +30,7 @@ class ExternalObservationState(str, Enum):
 
 class ExternalVerificationState(str, Enum):
     UNVERIFIED = "UNVERIFIED"
+    UNADMITTED = "UNADMITTED"
     VERIFIED = "VERIFIED"
     CONTRADICTED = "CONTRADICTED"
     INCONCLUSIVE = "INCONCLUSIVE"
@@ -83,12 +84,31 @@ class ExternalObservation:
 
 
 @dataclass(frozen=True)
+class VerificationProvenance:
+    """Typed provenance identifying the source and method behind verification evidence."""
+
+    source_id: str
+    source_kind: str
+    method: str
+
+    def __post_init__(self) -> None:
+        for field_name, value in (
+            ("source_id", self.source_id),
+            ("source_kind", self.source_kind),
+            ("method", self.method),
+        ):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{field_name} must be a non-empty string")
+
+
+@dataclass(frozen=True)
 class ExternalVerification:
     verification_id: str
     observation_id: str
     verifier: str
     passed: bool | None
     evidence_refs: tuple[str, ...] = ()
+    provenance: VerificationProvenance | None = None
 
     def __post_init__(self) -> None:
         for field_name, value in (
@@ -102,6 +122,16 @@ class ExternalVerification:
             raise TypeError("passed must be bool or None")
         if any(not isinstance(ref, str) or not ref.strip() for ref in self.evidence_refs):
             raise TypeError("evidence_refs must contain non-empty strings")
+        provenance = self.provenance
+        if provenance is None:
+            provenance = VerificationProvenance(
+                source_id=self.verifier,
+                source_kind="legacy",
+                method="unspecified",
+            )
+        if not isinstance(provenance, VerificationProvenance):
+            raise TypeError("provenance must be a VerificationProvenance or None")
+        object.__setattr__(self, "provenance", provenance)
 
 
 @dataclass(frozen=True)
@@ -390,6 +420,8 @@ class ToolOutcomeService:
     def verify(
         outcome: ToolOutcome,
         verification: ExternalVerification,
+        *,
+        admissible_sources: tuple[str, ...] | list[str] | set[str] = (),
     ) -> ToolOutcome:
         if not isinstance(outcome, ToolOutcome):
             raise TypeError("outcome must be a ToolOutcome")
@@ -401,16 +433,29 @@ class ToolOutcomeService:
             raise TypeError("verification must be an ExternalVerification")
         if verification.observation_id != outcome.observation.observation_id:
             raise ValueError("verification must reference the exact observation identity")
+        if not isinstance(admissible_sources, (tuple, list, set)):
+            raise TypeError("admissible_sources must be a tuple, list, or set")
+        normalized_sources = {
+            source.strip()
+            for source in admissible_sources
+            if isinstance(source, str) and source.strip()
+        }
 
-        state = (
-            ExternalVerificationState.VERIFIED
-            if verification.passed is True
-            else (
-                ExternalVerificationState.CONTRADICTED
-                if verification.passed is False
-                else ExternalVerificationState.INCONCLUSIVE
+        if (
+            verification.provenance.source_id != verification.verifier
+            or verification.provenance.source_id not in normalized_sources
+        ):
+            state = ExternalVerificationState.UNADMITTED
+        else:
+            state = (
+                ExternalVerificationState.VERIFIED
+                if verification.passed is True
+                else (
+                    ExternalVerificationState.CONTRADICTED
+                    if verification.passed is False
+                    else ExternalVerificationState.INCONCLUSIVE
+                )
             )
-        )
         return ToolOutcome(
             outcome_id=outcome.outcome_id,
             tool_name=outcome.tool_name,
@@ -431,6 +476,7 @@ __all__ = [
     "ExternalObservationState",
     "ExternalVerification",
     "ExternalVerificationState",
+    "VerificationProvenance",
     "ExternalOutcomeState",
     "ToolExecutionState",
     "ToolOutcome",
