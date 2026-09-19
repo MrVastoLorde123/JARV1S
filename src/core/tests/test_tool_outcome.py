@@ -60,6 +60,7 @@ class OutcomeTests(unittest.TestCase):
             ExternalObservation(
                 observation_id="observation-1",
                 source="independent_status_reader",
+                subject_ref=outcome.target_ref,
                 payload={"external_status": "ok"},
             ),
         )
@@ -69,6 +70,34 @@ class OutcomeTests(unittest.TestCase):
         self.assertTrue(observed.observed)
         self.assertFalse(observed.verified)
         self.assertFalse(observed.truth_established)
+
+    def test_verification_rejects_unrelated_observation_target(self):
+        request = ToolRequest(
+            tool_name="read_status",
+            invocation_id="invoke-1",
+            arguments={"host": "10.0.0.1"},
+        )
+        outcome = ToolOutcomeService.classify(request, self._result())
+        unrelated = ToolOutcomeService.observe(
+            outcome,
+            ExternalObservation(
+                observation_id="observation-unrelated",
+                source="independent_status_reader",
+                subject_ref="tool-target-unrelated",
+                payload={"external_status": "ok"},
+            ),
+        )
+
+        with self.assertRaises(ValueError):
+            ToolOutcomeService.verify(
+                unrelated,
+                ExternalVerification(
+                    verification_id="verification-unrelated",
+                    observation_id="observation-unrelated",
+                    verifier="status_policy_check",
+                    passed=True,
+                ),
+            )
 
     def test_verification_requires_exact_observation_identity(self):
         request = ToolRequest(
