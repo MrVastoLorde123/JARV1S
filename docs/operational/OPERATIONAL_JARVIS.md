@@ -1207,7 +1207,24 @@ VERIFIED ≠ authority
 
 ### Exact OPS-29 implementation verification
 
-Implementation head will be recorded after the exact-head verifier receipt.
+Implementation head:
+`32ab46e54b4dcd6b8a76eb81a54f7aa2e0f6c475`
+
+Fresh exact-head verifier PR #506 was closed unmerged after a green verification matrix:
+- Deployment Closure Verification run `35416568797` — **SUCCESS**
+- Backend verification job `105826272567` — **SUCCESS**
+- UI verification job `105826272759` — **SUCCESS**
+- Deployment Acceptance run `35416568840` — **SUCCESS**
+- CS8 Boundary Red-Team run `35416568801` — **SUCCESS**
+- CS9 Architecture Cleanup run `35416568790` — **SUCCESS**
+
+A duplicate workflow trigger set for the same exact head also completed successfully:
+- Deployment Closure Verification run `35416572204` — **SUCCESS**
+- Deployment Acceptance run `35416572207` — **SUCCESS**
+- CS8 Boundary Red-Team run `35416572177` — **SUCCESS**
+- CS9 Architecture Cleanup run `35416572174` — **SUCCESS**
+
+Temporary verifier PR #506 was closed **unmerged**.
 
 ## Operational acceptance
 
