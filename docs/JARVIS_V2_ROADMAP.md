@@ -1,8 +1,10 @@
 # JARVIS V2 Roadmap — Trusted Daily Agency
 
-Status: design baseline. No implementation implied.
+Status: **LOCKED DESIGN BASELINE — 2026-09-19**. No implementation implied by this document.
 
 V1 is the frozen operational baseline. V2 is the transition from proving the organism works to making the organism materially more useful through repeated real use.
+
+**Lock rule:** this roadmap is now the governing V2 direction. Individual mechanisms, model choices, implementation order, and exact boundaries may change only when evidence from real use, experiments, security findings, or an explicit architectural decision justifies the change. Do not reopen V1 closure merely to satisfy this roadmap.
 
 ## 1. North star
 
