@@ -24,6 +24,7 @@ class AutonomousJobStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
+    RECONCILED = "RECONCILED"
 
 
 class AutonomousJobEventKind(str, Enum):
@@ -346,6 +347,70 @@ class AutonomousJob:
             result=None,
             failure_reason=reason_value,
             events=self._next_event(AutonomousJobEventKind.FAILED, f"Job failed: {reason_value}"),
+        )
+
+    def reconcile_completed(self, result: str, evidence: str) -> "AutonomousJob":
+        if self.status is not AutonomousJobStatus.PAUSED:
+            raise AutonomousJobValidationError("only paused jobs can be reconciled")
+        if self.working_context.get("recovery_required") != "AMBIGUOUS_EXECUTION":
+            raise AutonomousJobValidationError("job does not require ambiguous execution reconciliation")
+        result_value = _text(result, "result", _MAX_RESULT_LENGTH)
+        evidence_value = _text(evidence, "evidence", _MAX_REASON_LENGTH)
+        context = dict(_thaw(self.working_context))
+        context.update(
+            {
+                "recovery_required": None,
+                "reconciliation_source": "operator",
+                "external_effect_verified": False,
+                "reconciliation_evidence": evidence_value,
+            }
+        )
+        return self._replace(
+            status=AutonomousJobStatus.COMPLETED,
+            waiting_reason=None,
+            result=result_value,
+            failure_reason=None,
+            working_context=context,
+            events=self._next_event(
+                AutonomousJobEventKind.RECONCILED,
+                "Ambiguous execution outcome reconciled by operator.",
+                metadata={
+                    "outcome": "COMPLETED",
+                    "external_effect_verified": False,
+                },
+            ),
+        )
+
+    def reconcile_failed(self, reason: str, evidence: str) -> "AutonomousJob":
+        if self.status is not AutonomousJobStatus.PAUSED:
+            raise AutonomousJobValidationError("only paused jobs can be reconciled")
+        if self.working_context.get("recovery_required") != "AMBIGUOUS_EXECUTION":
+            raise AutonomousJobValidationError("job does not require ambiguous execution reconciliation")
+        reason_value = _text(reason, "failure_reason", _MAX_REASON_LENGTH)
+        evidence_value = _text(evidence, "evidence", _MAX_REASON_LENGTH)
+        context = dict(_thaw(self.working_context))
+        context.update(
+            {
+                "recovery_required": None,
+                "reconciliation_source": "operator",
+                "external_effect_verified": False,
+                "reconciliation_evidence": evidence_value,
+            }
+        )
+        return self._replace(
+            status=AutonomousJobStatus.FAILED,
+            waiting_reason=None,
+            result=None,
+            failure_reason=reason_value,
+            working_context=context,
+            events=self._next_event(
+                AutonomousJobEventKind.RECONCILED,
+                "Ambiguous execution outcome reconciled as failed by operator.",
+                metadata={
+                    "outcome": "FAILED",
+                    "external_effect_verified": False,
+                },
+            ),
         )
 
     def cancel(self, reason: str = "Job cancelled") -> "AutonomousJob":
