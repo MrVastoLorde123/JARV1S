@@ -27,7 +27,6 @@ from .models import ToolError, ToolRequest, ToolResult
 from .outcome import ExternalObservation, ExternalVerification
 from .protocol import (
     ToolObservationProvider,
-    ToolVerificationProvider,
     ToolVerificationBindingProvider,
 )
 from .registry import ToolRegistry, normalize_name
@@ -83,7 +82,7 @@ class ToolService:
         result: ToolResult,
         observation: ExternalObservation,
     ) -> ExternalVerification | None:
-        """Expose optional typed verification evidence from the capability."""
+        """Expose evidence from the registry-bound independent verifier."""
         self._validate_request(request)
         if not isinstance(result, ToolResult):
             raise InvalidResultError(
@@ -92,11 +91,11 @@ class ToolService:
         if not isinstance(observation, ExternalObservation):
             raise TypeError("observation must be an ExternalObservation")
 
-        handler = self._registry.get(request.tool_name)
-        if not isinstance(handler, ToolVerificationProvider):
+        provider = self._registry.verification_provider(request.tool_name)
+        if provider is None:
             return None
 
-        return handler.provide_external_verification(
+        return provider.provide_external_verification(
             request,
             result,
             observation,

@@ -1147,6 +1147,68 @@ Focused regressions added:
 
 Temporary verifier PR #504 was closed **unmerged**.
 
+### OPS-29 — Executor / Verifier Independence
+
+A registry-bound verification source must now be backed by a concrete verifier
+provider that is distinct from the capability instance that executes the
+operation.
+
+The live boundary is now:
+
+```text
+EXECUTOR CAPABILITY
+    ↓
+external effect
+    ↓
+OBSERVATION
+    ↓
+registry-bound VERIFIER PROVIDER
+    ↓
+provider is concrete-instance distinct from executor
+    ↓
+source identity + admissibility
+    ↓
+ToolOutcomeService
+    ↓
+VERIFIED
+```
+
+The registry therefore refuses to bind the executing handler as its own live
+verification provider. It also prevents the same concrete verifier object from
+being registered as an executor anywhere in the registry, and prevents one
+concrete verifier object from being bound to multiple source identities.
+
+The live `ToolService` no longer asks the executing handler for verification
+evidence. It resolves the independently registered verifier provider from the
+registry and uses that provider to produce the typed verification evidence.
+
+Therefore:
+
+- handler self-verification cannot become live `VERIFIED`;
+- a separate registered verifier can produce admissible verification when its
+  source identity is bound to the capability;
+- an independent verifier that claims a different source identity remains
+  `UNADMITTED`;
+- executor/verifier separation is enforced by concrete registered-provider
+  identity, not by a string in the evidence payload;
+- this is a concrete non-self-verification boundary, not a claim that two
+  software objects are epistemically independent or that verified evidence is
+  truth.
+
+The semantic wall is now:
+
+```text
+typed ≠ admissible
+admissible ≠ bound identity
+bound identity ≠ executor self-verification
+executor/verifier separation ≠ truth
+VERIFIED ≠ authority
+```
+
+### Exact OPS-29 implementation verification
+
+Implementation head will be recorded after the exact-head verifier receipt.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.

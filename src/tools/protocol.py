@@ -46,7 +46,12 @@ class ToolObservationProvider(Protocol):
 
 @runtime_checkable
 class ToolVerificationProvider(Protocol):
-    """Optional typed verification evidence for one observed invocation."""
+    """Optional typed verification evidence from a concrete verifier provider.
+
+    The live registry must bind this provider as a distinct concrete object
+    from the executor capability. An executor handler implementing this
+    protocol does not become an admissible live verifier by itself.
+    """
 
     def provide_external_verification(
         self,

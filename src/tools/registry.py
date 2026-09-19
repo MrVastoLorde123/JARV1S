@@ -2,8 +2,8 @@
 
 The registry owns no execution logic and no tool-specific conditionals.
 It also owns the registration-time binding between a concrete capability
-handler instance and an explicitly configured verification-source identity.
-That binding is a trust anchor for the live outcome path.
+handler and a distinct concrete verification provider identity. That binding
+is the trust anchor for the live outcome path.
 """
 
 from __future__ import annotations
@@ -28,12 +28,14 @@ def normalize_name(name: str) -> str:
 
 
 class ToolRegistry:
-    """Maps normalized tool names to handlers and binds verifier identities."""
+    """Maps normalized tool names to handlers and independent verifier bindings."""
 
     def __init__(self) -> None:
         self._handlers: Dict[str, ToolHandler] = {}
         self._verification_source_bindings: Dict[int, str] = {}
-        self._verification_source_owners: Dict[str, int] = {}
+        self._verification_source_owners: Dict[str, tuple[int, int]] = {}
+        self._verification_providers: Dict[int, ToolVerificationProvider] = {}
+        self._verification_provider_owners: Dict[int, str] = {}
 
     def register(
         self,
@@ -41,12 +43,14 @@ class ToolRegistry:
         *,
         replace: bool = False,
         verification_source_id: str | None = None,
+        verification_provider: ToolVerificationProvider | None = None,
     ) -> ToolDefinition:
-        """Register a handler and optionally bind its concrete verifier identity.
+        """Register a handler and optionally bind an independent verifier.
 
-        verification_source_id is registration authority. A capability
-        cannot make an arbitrary source identity admissible merely by emitting
-        that string in verification provenance.
+        verification_source_id and verification_provider are registration
+        authority. A capability cannot make an arbitrary source identity
+        admissible merely by emitting that string in verification provenance,
+        and the executing handler instance cannot be its own live verifier.
         """
         if not isinstance(handler, ToolHandler):
             raise InvalidHandlerError(
@@ -61,16 +65,37 @@ class ToolRegistry:
                 f"got {type(definition).__name__}"
             )
 
+        if verification_source_id is None and verification_provider is not None:
+            raise InvalidHandlerError(
+                "verification_provider requires verification_source_id"
+            )
+
         normalized_source_id = None
         if verification_source_id is not None:
-            if not isinstance(verification_source_id, str) or not verification_source_id.strip():
+            if (
+                not isinstance(verification_source_id, str)
+                or not verification_source_id.strip()
+            ):
                 raise InvalidHandlerError(
                     "verification_source_id must be a non-empty string or None"
                 )
             normalized_source_id = verification_source_id.strip()
-            if not isinstance(handler, ToolVerificationProvider):
+
+            if not isinstance(verification_provider, ToolVerificationProvider):
                 raise InvalidHandlerError(
-                    "verification_source_id requires a ToolVerificationProvider handler"
+                    "verification_source_id requires a separate "
+                    "ToolVerificationProvider instance"
+                )
+            if verification_provider is handler:
+                raise InvalidHandlerError(
+                    "executor capability cannot also be its live verification provider"
+                )
+            if any(
+                registered_handler is verification_provider
+                for registered_handler in self._handlers.values()
+            ):
+                raise InvalidHandlerError(
+                    "a concrete verification provider cannot also be a registered executor"
                 )
             if normalized_source_id not in definition.admissible_verification_sources:
                 raise InvalidHandlerError(
@@ -86,30 +111,66 @@ class ToolRegistry:
                 f"(normalized: '{key}')"
             )
 
+        if id(handler) in self._verification_provider_owners:
+            raise InvalidHandlerError(
+                "a concrete verifier provider cannot also be registered as an executor"
+            )
+
         previous_source = (
             self._verification_source_bindings.get(id(previous))
             if previous is not None
             else None
         )
+        previous_provider = (
+            self._verification_providers.get(id(previous))
+            if previous is not None
+            else None
+        )
+
         if normalized_source_id is not None:
-            owner = self._verification_source_owners.get(normalized_source_id)
-            if owner is not None and owner != id(previous):
+            source_owner = self._verification_source_owners.get(normalized_source_id)
+            if source_owner is not None and source_owner[0] != id(previous):
                 raise DuplicateVerificationSourceError(
                     f"Verification source '{normalized_source_id}' is already "
                     "bound to another registered handler"
+                )
+
+            provider_identity = id(verification_provider)
+            provider_owner = self._verification_provider_owners.get(provider_identity)
+            if (
+                provider_owner is not None
+                and provider_owner != normalized_source_id
+            ):
+                raise DuplicateVerificationSourceError(
+                    "the concrete verification provider instance is already "
+                    "bound to another verification source"
                 )
 
         if previous is not None:
             self._verification_source_bindings.pop(id(previous), None)
             if previous_source is not None:
                 self._verification_source_owners.pop(previous_source, None)
+            if previous_provider is not None:
+                previous_provider_identity = id(previous_provider)
+                self._verification_providers.pop(id(previous), None)
+                self._verification_provider_owners.pop(
+                    previous_provider_identity,
+                    None,
+                )
 
         self._handlers[key] = handler
 
         if normalized_source_id is not None:
+            assert verification_provider is not None
             handler_identity = id(handler)
+            provider_identity = id(verification_provider)
             self._verification_source_bindings[handler_identity] = normalized_source_id
-            self._verification_source_owners[normalized_source_id] = handler_identity
+            self._verification_source_owners[normalized_source_id] = (
+                handler_identity,
+                provider_identity,
+            )
+            self._verification_providers[handler_identity] = verification_provider
+            self._verification_provider_owners[provider_identity] = normalized_source_id
 
         return definition
 
@@ -119,9 +180,17 @@ class ToolRegistry:
         handler = self._handlers.get(key)
         if handler is None:
             raise UnknownToolError(f"No tool registered under the name '{name}'")
+
         source_id = self._verification_source_bindings.pop(id(handler), None)
         if source_id is not None:
-            self._verification_source_owners.pop(source_id, None)
+            source_owner = self._verification_source_owners.pop(source_id, None)
+            if source_owner is not None:
+                self._verification_provider_owners.pop(source_owner[1], None)
+
+        provider = self._verification_providers.pop(id(handler), None)
+        if provider is not None:
+            self._verification_provider_owners.pop(id(provider), None)
+
         del self._handlers[key]
 
     def get(self, name: str) -> ToolHandler:
@@ -136,6 +205,11 @@ class ToolRegistry:
         """Return the registration-bound verifier identity for one capability."""
         handler = self.get(name)
         return self._verification_source_bindings.get(id(handler))
+
+    def verification_provider(self, name: str) -> ToolVerificationProvider | None:
+        """Return the concrete verifier provider bound to one capability."""
+        handler = self.get(name)
+        return self._verification_providers.get(id(handler))
 
     def has(self, name: str) -> bool:
         """Return whether a tool is registered under the given name."""

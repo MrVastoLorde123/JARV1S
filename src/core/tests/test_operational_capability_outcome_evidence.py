@@ -1,4 +1,4 @@
-"""OPS-26 focused tests for live capability outcome evidence admission."""
+"""OPS-29 focused tests for independent live verification admission."""
 from __future__ import annotations
 
 import unittest
@@ -8,6 +8,7 @@ from src.core.execution_plan_models import ExecutionPlan, PlanStep
 from src.core.execution_policy_models import ExecutionPolicyResult, PolicyDecision
 from src.core.plan_executor import PlanExecutor
 from src.core.tool_execution import ToolPlanStepHandler
+from src.tools.errors import InvalidHandlerError
 from src.tools.models import RiskLevel, ToolDefinition, ToolRequest, ToolResult
 from src.tools.outcome import (
     ExternalObservation,
@@ -24,7 +25,7 @@ class CapabilityEvidenceHandler:
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="read_status",
-            description="Read a status value and optionally expose external evidence.",
+            description="Read a status value and expose observation evidence.",
             version="1.0.0",
             input_schema={"type": "object"},
             output_schema={"type": "object"},
@@ -53,6 +54,8 @@ class CapabilityEvidenceHandler:
             payload={"status": "ok"},
         )
 
+
+class CapabilityVerificationProvider:
     def provide_external_verification(
         self,
         request: ToolRequest,
@@ -66,6 +69,46 @@ class CapabilityEvidenceHandler:
             passed=True,
             provenance=VerificationProvenance(
                 source_id="capability-checker",
+                source_kind="status_reader",
+                method="status_match",
+            ),
+        )
+
+
+class SelfVerifyingCapabilityHandler(CapabilityEvidenceHandler):
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id=f"self-verification-{request.invocation_id}",
+            observation_id=observation.observation_id,
+            verifier="capability-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="capability-checker",
+                source_kind="self_report",
+                method="self_check",
+            ),
+        )
+
+
+class SpoofingVerificationProvider(CapabilityVerificationProvider):
+    def provide_external_verification(
+        self,
+        request: ToolRequest,
+        result: ToolResult,
+        observation: ExternalObservation,
+    ) -> ExternalVerification:
+        return ExternalVerification(
+            verification_id="verification-spoofed",
+            observation_id=observation.observation_id,
+            verifier="spoofed-checker",
+            passed=True,
+            provenance=VerificationProvenance(
+                source_id="spoofed-checker",
                 source_kind="status_reader",
                 method="status_match",
             ),
@@ -199,14 +242,19 @@ def make_step(tool_name: str = "read_status") -> PlanStep:
     )
 
 
-class OPS28CapabilityVerificationBindingTests(unittest.TestCase):
-    def test_capability_evidence_reaches_verified_tool_outcome(self):
+class OPS29IndependentVerificationTests(unittest.TestCase):
+    def _bound_service(self, verifier=None):
         registry = ToolRegistry()
+        handler = CapabilityEvidenceHandler()
         registry.register(
-            CapabilityEvidenceHandler(),
-            verification_source_id="capability-checker",
+            handler,
+            verification_source_id="capability-checker" if verifier else None,
+            verification_provider=verifier,
         )
-        service = ToolService(registry)
+        return ToolService(registry)
+
+    def test_independent_registered_verifier_reaches_verified(self):
+        service = self._bound_service(CapabilityVerificationProvider())
         handler = ToolPlanStepHandler(service)
 
         output = handler(make_step())
@@ -223,6 +271,51 @@ class OPS28CapabilityVerificationBindingTests(unittest.TestCase):
         self.assertTrue(outcome.verified)
         self.assertEqual("capability-reader", outcome.observation.source)
 
+    def test_executor_owned_verifier_is_not_used_without_independent_binding(self):
+        registry = ToolRegistry()
+        registry.register(SelfVerifyingCapabilityHandler())
+        service = ToolService(registry)
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNVERIFIED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
+
+    def test_executor_cannot_register_itself_as_live_verifier(self):
+        registry = ToolRegistry()
+        handler = SelfVerifyingCapabilityHandler()
+
+        with self.assertRaises(InvalidHandlerError):
+            registry.register(
+                handler,
+                verification_source_id="capability-checker",
+                verification_provider=handler,
+            )
+
+    def test_spoofed_source_cannot_override_bound_independent_verifier(self):
+        service = self._bound_service(SpoofingVerificationProvider())
+        handler = ToolPlanStepHandler(service)
+
+        handler(make_step())
+        outcome = handler.outcome_context()
+
+        self.assertIsNotNone(outcome)
+        assert outcome is not None
+        self.assertEqual(
+            ExternalOutcomeState.OBSERVED_UNVERIFIED,
+            ToolOutcomeService.aggregate((outcome,)),
+        )
+        self.assertEqual("UNADMITTED", outcome.verification_state.value)
+        self.assertFalse(outcome.verified)
+
     def test_typed_verification_without_registration_binding_cannot_reach_verified(self):
         registry = ToolRegistry()
         registry.register(CapabilityEvidenceHandler())
@@ -238,47 +331,7 @@ class OPS28CapabilityVerificationBindingTests(unittest.TestCase):
             ExternalOutcomeState.OBSERVED_UNVERIFIED,
             ToolOutcomeService.aggregate((outcome,)),
         )
-        self.assertEqual("UNADMITTED", outcome.verification_state.value)
-        self.assertFalse(outcome.verified)
-
-    def test_claimed_source_cannot_override_registration_bound_source(self):
-        class SpoofingCapabilityHandler(CapabilityEvidenceHandler):
-            def provide_external_verification(
-                self,
-                request: ToolRequest,
-                result: ToolResult,
-                observation: ExternalObservation,
-            ) -> ExternalVerification:
-                return ExternalVerification(
-                    verification_id="verification-spoofed",
-                    observation_id=observation.observation_id,
-                    verifier="spoofed-checker",
-                    passed=True,
-                    provenance=VerificationProvenance(
-                        source_id="spoofed-checker",
-                        source_kind="status_reader",
-                        method="status_match",
-                    ),
-                )
-
-        registry = ToolRegistry()
-        registry.register(
-            SpoofingCapabilityHandler(),
-            verification_source_id="capability-checker",
-        )
-        service = ToolService(registry)
-        handler = ToolPlanStepHandler(service)
-
-        handler(make_step())
-        outcome = handler.outcome_context()
-
-        self.assertIsNotNone(outcome)
-        assert outcome is not None
-        self.assertEqual(
-            ExternalOutcomeState.OBSERVED_UNVERIFIED,
-            ToolOutcomeService.aggregate((outcome,)),
-        )
-        self.assertEqual("UNADMITTED", outcome.verification_state.value)
+        self.assertEqual("UNVERIFIED", outcome.verification_state.value)
         self.assertFalse(outcome.verified)
 
     def test_mismatched_capability_evidence_cannot_reach_verified(self):
@@ -295,7 +348,6 @@ class OPS28CapabilityVerificationBindingTests(unittest.TestCase):
         )
         self.assertTrue(outcome.observed)
         self.assertFalse(outcome.verified)
-
 
     def test_typed_but_unadmissible_verification_cannot_reach_verified(self):
         handler = ToolPlanStepHandler(NonAdmissibleTypedEvidenceInvoker())
@@ -342,16 +394,11 @@ class OPS28CapabilityVerificationBindingTests(unittest.TestCase):
             ToolOutcomeService.aggregate((outcome,)),
         )
 
-    def test_plan_executor_surfaces_capability_verified_outcome_without_truth(self):
-        registry = ToolRegistry()
-        registry.register(
-            CapabilityEvidenceHandler(),
-            verification_source_id="capability-checker",
-        )
-        service = ToolService(registry)
+    def test_plan_executor_surfaces_verified_outcome_without_truth(self):
+        service = self._bound_service(CapabilityVerificationProvider())
 
         plan = ExecutionPlan(
-            plan_id="ops-26-plan",
+            plan_id="ops-29-plan",
             task_description="Read status",
             steps=(make_step(),),
         )
