@@ -250,7 +250,7 @@ class LivingJARVISOperationalAcceptanceTests(unittest.TestCase):
             ),
         )
 
-        response = restarted_runtime.ask("Report the current runtime status.")
+        response = restarted_runtime.ask("Report the current JARVIS runtime status.")
 
         cognitive = response.metadata["cognitive_context"]
         self.assertIn(str(memory_id), cognitive["memory_ids"])
