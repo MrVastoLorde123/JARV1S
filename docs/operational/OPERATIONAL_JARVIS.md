@@ -951,6 +951,65 @@ Focused regression added:
 
 Temporary verifier PR #498 was closed **unmerged**.
 
+
+### OPS-26 — Live Capability → Typed External Outcome Evidence
+
+The live capability boundary can now contribute optional typed external observation and verification evidence without changing the meaning of `ToolResult`.
+
+The causal path is now:
+
+```
+CAPABILITY
+    ↓
+ToolResult
+    ↓
+optional typed ExternalObservation
+    ↓
+optional typed ExternalVerification
+    ↓
+ToolOutcomeService
+    ↓
+OBSERVED / VERIFIED
+```
+
+Capabilities may implement the additive `ToolObservationProvider` and `ToolVerificationProvider` contracts. `ToolService` exposes those typed providers without embedding verification logic into the handler result itself.
+
+The existing `ToolOutcomeService.observe()` and `ToolOutcomeService.verify()` methods remain the only state-transition boundary. Therefore:
+
+- typed observation is admitted only as `ExternalObservation`;
+- typed verification is admitted only as `ExternalVerification`;
+- verification still requires the exact observation identity and exact execution target;
+- untyped, mismatched, or unavailable evidence cannot elevate an execution to `VERIFIED`;
+- optional evidence failure never rewrites a successful handler execution into a failed execution;
+- verified evidence remains evidence, not truth, authority, authorization, retry permission, or policy mutation.
+
+This closes the previous live-path gap without creating a parallel verification framework.
+
+### Exact OPS-26 verification
+
+Implementation head:
+`5aa378b84e44e7ed5acdff58e699d7a96f907cc3`
+
+Fresh exact-head verifier PR #500, based on:
+`8e3adf736dff884a169ecb55cb8718cc74413e03`
+
+Verification matrix:
+- Deployment Closure Verification #309 — **SUCCESS**
+- Backend core regression: **3376/3376 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #265 — **SUCCESS**
+- CS8 Boundary Red-Team #288 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #276 — **SUCCESS**
+
+Focused regressions added:
+- a live capability can provide typed observation + verification and reach `VERIFIED`;
+- mismatched observation scope cannot reach `VERIFIED`;
+- untyped evidence cannot advance the outcome;
+- optional evidence-provider failure does not change execution success;
+- plan execution surfaces the verified evidence without claiming truth.
+
+Temporary verifier PR #500 was closed **unmerged**.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
