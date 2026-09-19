@@ -1,6 +1,6 @@
 # JARVIS Documentation
 
-This directory contains the architectural documentation, milestone records, operational guides, and Architecture Decision Records (ADRs) for JARVIS.
+This directory contains the architectural documentation, milestone records, operational guides, research studies, and Architecture Decision Records (ADRs) for JARVIS.
 
 ## Current Operational Baseline
 
@@ -10,9 +10,16 @@ The current operational feature branch has crossed the pre-operational assembly 
 
 - [JARVIS V1 User Guide](JARVIS_V1_USER_GUIDE.md) — detailed operator manual for daily use, autonomous work, verification, recovery, UI, and troubleshooting
 - [JARVIS V1 Freeze and Post-V1 Milestone Map](JARVIS_V1_FREEZE_AND_NEXT_MILESTONE.md) — frozen baseline, V1 scope, post-V1 engineering doctrine, and candidate V2 north star
-- [JARVIS Ideas Ledger](JARVIS_IDEAS_LEDGER.md) — durable archive of recovered ideas, principles, future capabilities, adjacent product concepts, and their implementation status
+- [JARVIS Ideas Ledger](JARVIS_IDEAS_LEDGER.md) — durable archive of recovered ideas, principles, future capabilities, adjacent product concepts, and implementation status
+- [JARVIS V2 Roadmap](JARVIS_V2_ROADMAP.md) — system-level roadmap from V1 freeze to Trusted Daily Agency
 - [Operational JARVIS](operational/OPERATIONAL_JARVIS.md) — implementation receipts and causal-boundary history
 - [Running JARVIS Locally](operations/RUNNING_JARVIS_LOCAL.md) — local startup and deployment instructions
+
+## V2 Architecture Concepts
+
+- [JARVIS V2 Agency Fabric](architecture/JARVIS_V2_AGENCY_FABRIC.md) — multi-agent decomposition, routing, communication, specialization, aggregation, recursion, and agency budgets
+- [JARVIS Anywhere Access](architecture/JARVIS_ANYWHERE_ACCESS_CONCEPT.md) — secure remote-access architecture for continuous JARVIS availability
+- [JARVIS External System Study](research/JARVIS_EXTERNAL_SYSTEM_STUDY.md) — mechanism extraction from JEV, PRAXIST, recursive-agent research, MapReduce, ticket triage, and related patterns
 
 ## Architecture Guides
 
