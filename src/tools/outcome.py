@@ -192,6 +192,34 @@ class ToolOutcome:
 
 
     @staticmethod
+    def aggregate_contexts(
+        contexts: tuple[Mapping[str, Any], ...] | list[Mapping[str, Any]],
+    ) -> ExternalOutcomeState:
+        """Aggregate serialized outcome context without manufacturing verification."""
+        if not isinstance(contexts, (tuple, list)):
+            raise TypeError("contexts must be a tuple or list of mappings")
+        if not contexts:
+            return ExternalOutcomeState.NOT_APPLICABLE
+        states: set[str] = set()
+        observed = False
+        for context in contexts:
+            if not isinstance(context, Mapping):
+                raise TypeError("contexts must contain only mappings")
+            verification = str(context.get("verification_state", "")).upper()
+            observation = str(context.get("observation_state", "")).upper()
+            states.add(verification)
+            observed = observed or observation == ExternalObservationState.OBSERVED.value
+        if ExternalVerificationState.CONTRADICTED.value in states:
+            return ExternalOutcomeState.CONTRADICTED
+        if ExternalVerificationState.INCONCLUSIVE.value in states:
+            return ExternalOutcomeState.INCONCLUSIVE
+        if states == {ExternalVerificationState.VERIFIED.value}:
+            return ExternalOutcomeState.VERIFIED
+        if observed:
+            return ExternalOutcomeState.OBSERVED_UNVERIFIED
+        return ExternalOutcomeState.EXECUTED_UNVERIFIED
+
+    @staticmethod
     def aggregate(outcomes: tuple[ToolOutcome, ...] | list[ToolOutcome]) -> ExternalOutcomeState:
         """Aggregate tool evidence without converting it into truth."""
         if not isinstance(outcomes, (tuple, list)):
