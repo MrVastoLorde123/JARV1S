@@ -84,13 +84,14 @@ class AutonomousJobExecutionPulse:
         if current.status is AutonomousJobStatus.RUNNING:
             current = self._driver.tick(current)
 
-        current = current.with_working_context(
-            {
-                "active_execution_attempt_id": None,
-                "active_execution_attempt_state": None,
-                "active_execution_attempt_step_count": None,
-            }
-        )
+        if not current.terminal:
+            current = current.with_working_context(
+                {
+                    "active_execution_attempt_id": None,
+                    "active_execution_attempt_state": None,
+                    "active_execution_attempt_step_count": None,
+                }
+            )
 
         progressed = current != job
         receipt = self._persistence.persist(current)
