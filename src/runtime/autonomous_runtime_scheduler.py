@@ -171,14 +171,14 @@ class AutonomousRuntimeScheduler:
                     heartbeat_state["error"]
                     or "scheduler lease was lost during execution"
                 )
-                completed = self._complete_claim(schedule, claim, None)
+                # A fenced-out owner must not mutate durable schedule state.
                 results.append(
                     AutonomousRuntimeScheduleResult(
                         schedule,
                         run,
                         False,
                         claim,
-                        completed,
+                        False,
                         failure,
                     )
                 )
