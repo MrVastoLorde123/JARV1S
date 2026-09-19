@@ -10,6 +10,7 @@ The current operational feature branch has crossed the pre-operational assembly 
 
 - [JARVIS V1 User Guide](JARVIS_V1_USER_GUIDE.md) — detailed operator manual for daily use, autonomous work, verification, recovery, UI, and troubleshooting
 - [JARVIS V1 Freeze and Post-V1 Milestone Map](JARVIS_V1_FREEZE_AND_NEXT_MILESTONE.md) — frozen baseline, V1 scope, post-V1 engineering doctrine, and candidate V2 north star
+- [JARVIS Ideas Ledger](JARVIS_IDEAS_LEDGER.md) — durable archive of recovered ideas, principles, future capabilities, adjacent product concepts, and their implementation status
 - [Operational JARVIS](operational/OPERATIONAL_JARVIS.md) — implementation receipts and causal-boundary history
 - [Running JARVIS Locally](operations/RUNNING_JARVIS_LOCAL.md) — local startup and deployment instructions
 
