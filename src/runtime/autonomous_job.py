@@ -24,7 +24,6 @@ class AutonomousJobStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
-    RECONCILED = "RECONCILED"
 
 
 class AutonomousJobEventKind(str, Enum):
@@ -39,6 +38,7 @@ class AutonomousJobEventKind(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
+    RECONCILED = "RECONCILED"
 
 
 _TERMINAL = frozenset(
@@ -330,22 +330,40 @@ class AutonomousJob:
     def complete(self, result: str) -> "AutonomousJob":
         self._require_running()
         result_value = _text(result, "result", _MAX_RESULT_LENGTH)
+        context = dict(_thaw(self.working_context))
+        context.update(
+            {
+                "active_execution_attempt_id": None,
+                "active_execution_attempt_state": None,
+                "active_execution_attempt_step_count": None,
+            }
+        )
         return self._replace(
             status=AutonomousJobStatus.COMPLETED,
             waiting_reason=None,
             result=result_value,
             failure_reason=None,
+            working_context=context,
             events=self._next_event(AutonomousJobEventKind.COMPLETED, "Job completed"),
         )
 
     def fail(self, reason: str) -> "AutonomousJob":
         self._require_running()
         reason_value = _text(reason, "failure_reason", _MAX_REASON_LENGTH)
+        context = dict(_thaw(self.working_context))
+        context.update(
+            {
+                "active_execution_attempt_id": None,
+                "active_execution_attempt_state": None,
+                "active_execution_attempt_step_count": None,
+            }
+        )
         return self._replace(
             status=AutonomousJobStatus.FAILED,
             waiting_reason=None,
             result=None,
             failure_reason=reason_value,
+            working_context=context,
             events=self._next_event(AutonomousJobEventKind.FAILED, f"Job failed: {reason_value}"),
         )
 
