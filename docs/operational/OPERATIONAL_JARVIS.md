@@ -653,6 +653,39 @@ Fresh exact-head verification PR #473:
 
 Temporary verifier PRs #472 and #473 were closed unmerged.
 
+### OPS-18 — Verification Scope Binding
+
+External verification is now bound to the exact execution target that produced the outcome artifact.
+
+Every tool outcome derives a deterministic `target_ref` from the tool identity and exact request arguments. An external observation carries its own `subject_ref`. A successful observation can only advance to `VERIFIED` when those identities match.
+
+```
+execution target
+      ↓
+external observation
+      ↓
+exact target match
+      ↓
+verification
+```
+
+This prevents a passing verifier from being attached to an unrelated execution merely because both belong to the same broad task. `VERIFIED` remains evidence state, not truth.
+
+### Exact OPS-18 verification
+
+Final repaired feature head:
+`5e7086da44fe1cb52c326b32f391548d0672ceff`
+
+Fresh exact-head verification PR #477:
+- Deployment Closure Verification #239 — **SUCCESS**
+- Backend core regression: **3356/3356 OK**
+- UI install/build — **SUCCESS**
+- Deployment Acceptance #195 — **SUCCESS**
+- CS8 Boundary Red-Team #218 — **SUCCESS**
+- CS9 Architecture Cleanup + Regression #206 — **SUCCESS**
+
+Temporary verifier PRs #475, #476, and #477 were closed unmerged.
+
 ## Operational acceptance
 
 Operationalization is complete only when real end-to-end scenarios demonstrate the living loop.
